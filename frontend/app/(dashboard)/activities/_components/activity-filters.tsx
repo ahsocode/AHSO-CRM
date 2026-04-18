@@ -35,16 +35,16 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
             Loại hoạt động
           </label>
           <SelectRoot
-            value={filters.type || ''}
+            value={filters.type || 'all'}
             onValueChange={(value) =>
-              onFiltersChange({ ...filters, type: value || undefined, page: 1 })
+              onFiltersChange({ ...filters, type: value === 'all' ? undefined : value, page: 1 })
             }
           >
             <SelectTrigger className="border-[#D5D8DC]">
               <SelectValue placeholder="Tất cả loại" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tất cả loại</SelectItem>
+              <SelectItem value="all">Tất cả loại</SelectItem>
               {ACTIVITY_TYPES.map((type) => (
                 <SelectItem key={type.value} value={type.value}>
                   {type.label}
@@ -62,7 +62,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
           <SelectRoot
             value={
               filters.isCompleted === undefined
-                ? ''
+                ? 'all'
                 : filters.isCompleted
                   ? 'completed'
                   : 'pending'
@@ -81,7 +81,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tất cả</SelectItem>
+              <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value="pending">Chưa xong</SelectItem>
               <SelectItem value="completed">Hoàn tất</SelectItem>
             </SelectContent>

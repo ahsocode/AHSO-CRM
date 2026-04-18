@@ -79,12 +79,15 @@ export function CalendarFilters({
         <label className="text-sm font-semibold text-text-primary">
           Loại việc
         </label>
-        <SelectRoot value={type} onValueChange={(value) => onTypeChange(value as ActivityType | "")}>
+        <SelectRoot
+          value={type || "all"}
+          onValueChange={(value) => onTypeChange(value === "all" ? "" : (value as ActivityType))}
+        >
           <SelectTrigger>
             <SelectValue placeholder="Tất cả loại" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tất cả loại</SelectItem>
+            <SelectItem value="all">Tất cả loại</SelectItem>
             {Object.entries(ACTIVITY_TYPE_LABELS).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
@@ -120,14 +123,14 @@ export function CalendarFilters({
           </label>
           <SelectRoot
             disabled={assigneesUnavailable}
-            value={assigneeId}
-            onValueChange={(value) => onAssigneeIdChange(value)}
+            value={assigneeId || "all"}
+            onValueChange={(value) => onAssigneeIdChange(value === "all" ? "" : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder={assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"}</SelectItem>
+              <SelectItem value="all">{assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"}</SelectItem>
               {assignees.map((assignee) => (
                 <SelectItem key={assignee.id} value={assignee.id}>
                   {assignee.name}

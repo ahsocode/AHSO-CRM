@@ -27,3 +27,9 @@ frontend/.env.*.local
 !.env.example
 !backend/.env.example
 !frontend/.env.local.example
+
+# Ignore duplicate/backup folders created by Docker/Finder sync issues
+*\ 2/
+*/\ 2/
+* 2/
+? 2/

@@ -11,6 +11,7 @@ import { ContactsModule } from "./contacts/contacts.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { QuotesModule } from "./quotes/quotes.module";
 import { ContractsModule } from "./contracts/contracts.module";
+import { ActivitiesModule } from "./activities/activities.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { ReportsModule } from "./reports/reports.module";
 
@@ -43,6 +44,7 @@ import { ReportsModule } from "./reports/reports.module";
     ProjectsModule,
     QuotesModule,
     ContractsModule,
+    ActivitiesModule,
     CalendarModule,
     ReportsModule
   ],

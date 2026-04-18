@@ -73,8 +73,11 @@ export function useActivities(filters: ActivityFilters) {
   return useQuery({
     queryKey: ['activities', filters],
     queryFn: async () => {
-      const res = await apiClient.get('/activities', { params: filters });
-      return res.data;
+      const res = await apiClient.get<{ data: ActivityListItem[]; meta: any }>('/activities', { params: filters });
+      return {
+        items: res.data.data,
+        meta: res.data.meta
+      };
     },
     staleTime: 30_000,
   });

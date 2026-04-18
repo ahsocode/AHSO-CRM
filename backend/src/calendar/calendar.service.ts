@@ -114,7 +114,9 @@ export class CalendarService {
     filters: Partial<CalendarFilterDto> & { dateFrom?: Date; dateTo?: Date },
     user: JwtUser
   ): Prisma.ActivityWhereInput {
-    const conditions: Prisma.ActivityWhereInput[] = [];
+    const conditions: Prisma.ActivityWhereInput[] = [
+      { deletedAt: null } // Soft delete filter
+    ];
 
     if (user.role === "STAFF") {
       conditions.push({

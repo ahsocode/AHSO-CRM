@@ -6,6 +6,21 @@ AHSO CRM là hệ thống quản trị quan hệ khách hàng dành cho thị tr
 
 Tiến độ triển khai và handoff mới nhất cho agent tiếp theo: [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md).
 
+## 🚀 Cập nhật mới nhất (2026-04-18)
+
+**Docker images được rebuild với code mới nhất:**
+- ✅ Backend: NestJS compiled, Prisma migrations ready, Activities + Upload modules
+- ✅ Frontend: Next.js optimized build, all UI components (Radix UI + shadcn), Activities pages
+- ✅ Test infrastructure: 12.77% code coverage baseline (3 test suites passing)
+- ✅ Select component: Hỗ trợ cả HTML select API và Radix UI SelectRoot
+- ✅ Toast notifications: Sonner + Shadcn-compatible API
+- ✅ All imports fixed: viLocale → vi, type-only imports, proper component refs
+
+**Chạy ngay với:**
+```bash
+docker compose up -d
+```
+
 <p>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-14-black?logo=nextdotjs" />
   <img alt="NestJS" src="https://img.shields.io/badge/NestJS-10-e0234e?logo=nestjs" />
@@ -43,13 +58,13 @@ Tiến độ triển khai và handoff mới nhất cho agent tiếp theo: [`docs
 | **Authentication** | JWT access + refresh token rotation, bcrypt, rate-limit đăng nhập | ✅ |
 | **Dashboard** | KPI (doanh thu, dự án, công nợ), biểu đồ 6 tháng, pipeline, công việc hôm nay | ✅ |
 | **Customers** | Danh sách + chi tiết, phân quyền theo role, hệ thống contact & activity | ✅ BE / 🚧 FE |
+| **Activities** | Log gọi / email / họp / khảo sát, timeline, filter, form | ✅ BE / ✅ FE form |
 | **Projects** | Pipeline kiểu Kanban theo stage (SURVEY → COMPLETED), drag-drop status | 🚧 |
 | **Quotes** | Tạo báo giá nhiều phiên bản, xuất PDF Puppeteer, chuyển đổi thành Contract | 🚧 |
 | **Contracts** | Hợp đồng + Milestone + Payment tracking, số ngày quá hạn | 🚧 |
-| **Activities** | Log gọi / email / họp / khảo sát, timeline theo khách hàng & dự án | 🚧 |
 | **Calendar** | Lịch công việc, reminder, gán task cho nhân viên | 🚧 |
 | **Reports** | Báo cáo doanh thu, pipeline, retention, export | 🚧 |
-| **File Upload** | Tài liệu khảo sát, hợp đồng ký, attachments | 🚧 |
+| **File Upload** | Tài liệu khảo sát, hợp đồng ký, attachments | ✅ BE / 🚧 FE |
 
 **Phân quyền (RBAC):**
 - `ADMIN` — toàn quyền, quản lý user
@@ -220,21 +235,78 @@ Mở trình duyệt:
 
 ## Chạy bằng Docker
 
+### ⚡ Quickstart (Khuyến nghị)
+
 Chạy cả stack (postgres + redis + backend + frontend) trong containers:
 
 ```bash
-# Production build
-docker compose up -d --build
+# Bước 1: Chuẩn bị biến môi trường
+cp .env.example .env
 
-# Dev mode (bind mount + hot reload)
+# Bước 2: Khởi động tất cả services
+docker compose up -d
+
+# Bước 3: Kiểm tra containers đang chạy
+docker ps
+```
+
+**Kết quả:**
+```
+CONTAINER ID   IMAGE                  STATUS    PORTS
+xxxxx          ahso-crm-frontend:latest    Up    0.0.0.0:3000->3000/tcp
+xxxxx          ahso-crm-backend:latest     Up    0.0.0.0:3001->3001/tcp
+xxxxx          postgres:16-alpine          Up    0.0.0.0:5432->5432/tcp
+xxxxx          redis:7-alpine              Up    0.0.0.0:6379->6379/tcp
+```
+
+Mở trình duyệt:
+- **Frontend:** http://localhost:3000
+- **API Docs:** http://localhost:3001/api/docs
+- **Đăng nhập:** admin@ahso.vn / AHSO123!
+
+### Docker Image Sizes (2026-04-18)
+
+| Service | Image | Size | Base |
+|---------|-------|------|------|
+| **Backend** | `ahso-crm-backend:latest` | 117MB | node:20-alpine |
+| **Frontend** | `ahso-crm-frontend:latest` | 202MB | node:20-alpine |
+
+### Development Mode (với hot reload)
+
+```bash
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
-Xem logs:
+### Xem logs
 
 ```bash
+# Backend logs
 docker compose logs -f backend
+
+# Frontend logs
 docker compose logs -f frontend
+
+# Database logs
+docker compose logs -f postgres
+```
+
+### Production Build
+
+```bash
+docker compose up -d --build
+```
+
+### Dừng & Xoá
+
+```bash
+# Dừng tất cả
+docker compose down
+
+# Dừng và xoá volume (xoá DB)
+docker compose down -v
+
+# Rebuild images
+docker compose build --no-cache
 ```
 
 ---

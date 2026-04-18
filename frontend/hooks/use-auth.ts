@@ -4,11 +4,21 @@ import axios from "axios";
 import { create } from "zustand";
 import { clearSession, getAccessToken, getRefreshToken, getStoredUser, persistSession } from "@/lib/auth";
 import { API_URL } from "@/lib/constants";
-import { ApiResponse, AuthSession, AuthUser } from "@/lib/types";
+import { ActionResponse, ApiResponse, AuthSession, AuthUser, ForgotPasswordResponse } from "@/lib/types";
 
 interface LoginInput {
   email: string;
   password: string;
+}
+
+interface ForgotPasswordInput {
+  email: string;
+}
+
+interface ResetPasswordInput {
+  token: string;
+  password: string;
+  confirmPassword: string;
 }
 
 interface AuthState {
@@ -16,6 +26,8 @@ interface AuthState {
   isHydrated: boolean;
   hydrate: () => void;
   login: (input: LoginInput) => Promise<AuthSession>;
+  requestPasswordReset: (input: ForgotPasswordInput) => Promise<ForgotPasswordResponse>;
+  resetPassword: (input: ResetPasswordInput) => Promise<ActionResponse>;
   refreshSession: () => Promise<AuthSession>;
   logout: () => Promise<void>;
 }
@@ -36,6 +48,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: response.data.data.user,
       isHydrated: true
     });
+    return response.data.data;
+  },
+  requestPasswordReset: async (input) => {
+    const response = await axios.post<ApiResponse<ForgotPasswordResponse>>(`${API_URL}/auth/forgot-password`, input);
+    return response.data.data;
+  },
+  resetPassword: async (input) => {
+    const response = await axios.post<ApiResponse<ActionResponse>>(`${API_URL}/auth/reset-password`, input);
     return response.data.data;
   },
   refreshSession: async () => {

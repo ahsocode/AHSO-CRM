@@ -20,6 +20,40 @@ const optionalDateString = z.preprocess(
     .optional()
 );
 
+export const contractFormSchema = z
+  .object({
+    projectId: z.string().trim().min(1, "Dự án là bắt buộc"),
+    sourceQuoteId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+    signDate: optionalDateString,
+    startDate: optionalDateString,
+    endDate: optionalDateString,
+    value: z.coerce.number().positive("Giá trị hợp đồng phải lớn hơn 0").max(999_999_999_999),
+    status: z.enum(["ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"]),
+    fileUrl: optionalString(1000),
+    notes: optionalString(2000)
+  })
+  .refine(
+    (value) => !value.startDate || !value.endDate || value.endDate >= value.startDate,
+    {
+      message: "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu",
+      path: ["endDate"]
+    }
+  );
+
+export type ContractFormValues = z.infer<typeof contractFormSchema>;
+
+export const defaultContractFormValues: ContractFormValues = {
+  projectId: "",
+  sourceQuoteId: undefined,
+  signDate: new Date().toISOString().slice(0, 10),
+  startDate: new Date().toISOString().slice(0, 10),
+  endDate: "",
+  value: 0,
+  status: "ACTIVE",
+  fileUrl: "",
+  notes: ""
+};
+
 export const milestoneFormSchema = z.object({
   name: z.string().trim().min(2, "Tên milestone phải có ít nhất 2 ký tự").max(160),
   description: optionalString(800),

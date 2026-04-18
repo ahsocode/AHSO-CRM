@@ -46,9 +46,14 @@ export function ContractsClient() {
         title="Hợp đồng"
         description="Contract board gom hợp đồng, công nợ và tiến độ delivery trên cùng một bề mặt để đội vận hành theo dõi sát hơn."
         action={
-          <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
-            Về báo giá
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
+              Về báo giá
+            </Link>
+            <Link href="/contracts/new" className={cn(buttonVariants({ variant: "primary" }))}>
+              Tạo hợp đồng
+            </Link>
+          </div>
         }
       />
 

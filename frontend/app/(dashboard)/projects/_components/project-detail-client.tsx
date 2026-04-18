@@ -107,6 +107,15 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             <Link href={`/projects/${projectId}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
               Sửa dự án
             </Link>
+            {project.contract ? (
+              <Link href={`/contracts/${project.contract.id}`} className={cn(buttonVariants({ variant: "outline" }))}>
+                Mở hợp đồng
+              </Link>
+            ) : (
+              <Link href={`/contracts/new?projectId=${projectId}`} className={cn(buttonVariants({ variant: "outline" }))}>
+                Tạo hợp đồng
+              </Link>
+            )}
             <Link href={`/quotes/new?projectId=${projectId}`} className={cn(buttonVariants({ variant: "primary" }))}>
               Tạo báo giá
             </Link>

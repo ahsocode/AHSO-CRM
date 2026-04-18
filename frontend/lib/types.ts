@@ -690,6 +690,28 @@ export interface ContractDetail {
   payments: ProjectDetailPayment[];
 }
 
+export interface ContractCreateInput {
+  projectId: string;
+  sourceQuoteId?: string;
+  signDate?: string;
+  startDate?: string;
+  endDate?: string;
+  value: number;
+  status: ContractStatus;
+  fileUrl?: string;
+  notes?: string;
+}
+
+export interface ContractUpdateInput {
+  signDate?: string;
+  startDate?: string;
+  endDate?: string;
+  value?: number;
+  status?: ContractStatus;
+  fileUrl?: string;
+  notes?: string;
+}
+
 export interface ContractMilestoneCreateInput {
   name: string;
   description?: string;

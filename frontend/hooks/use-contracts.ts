@@ -4,13 +4,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import {
   ApiResponse,
+  ContractCreateInput,
   ContractDetail,
   ContractFilters,
   ContractListItem,
   ContractListMeta,
   ContractMilestoneCreateInput,
   ContractMilestoneUpdateInput,
-  ContractPaymentCreateInput
+  ContractPaymentCreateInput,
+  ContractStatus,
+  ContractUpdateInput
 } from "@/lib/types";
 
 export function useContracts(filters: ContractFilters) {
@@ -36,6 +39,47 @@ export function useContract(contractId: string) {
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<ContractDetail>>(`/contracts/${contractId}`);
       return response.data.data;
+    }
+  });
+}
+
+export function useCreateContract() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ContractCreateInput) => {
+      const response = await apiClient.post<
+        ApiResponse<{ id: string; contractNo: string; status: ContractStatus }>
+      >("/contracts", payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
+export function useUpdateContract(contractId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ContractUpdateInput) => {
+      const response = await apiClient.patch<
+        ApiResponse<{ id: string; contractNo: string; status: ContractStatus }>
+      >(`/contracts/${contractId}`, payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      await queryClient.invalidateQueries({ queryKey: ["contracts", contractId] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }

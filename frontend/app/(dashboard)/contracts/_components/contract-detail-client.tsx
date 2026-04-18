@@ -73,6 +73,9 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
             <Link href="/contracts" className={cn(buttonVariants({ variant: "outline" }))}>
               Về danh sách
             </Link>
+            <Link href={`/contracts/${contract.id}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
+              Sửa hợp đồng
+            </Link>
             <Link href={`/projects/${contract.project.id}`} className={cn(buttonVariants({ variant: "outline" }))}>
               Mở dự án
             </Link>
@@ -108,6 +111,18 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
               <MiniPanel label="Bắt đầu" value={contract.startDate ? formatDate(contract.startDate) : "Chưa cập nhật"} />
               <MiniPanel label="Kết thúc" value={contract.endDate ? formatDate(contract.endDate) : "Chưa cập nhật"} />
             </div>
+            {contract.fileUrl ? (
+              <div className="mt-6">
+                <a
+                  href={contract.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(buttonVariants({ variant: "outline" }))}
+                >
+                  Mở file hợp đồng
+                </a>
+              </div>
+            ) : null}
           </div>
 
           <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">

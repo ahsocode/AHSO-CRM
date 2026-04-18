@@ -111,12 +111,20 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
               Về danh sách
             </Link>
+            {quote.status === "ACCEPTED" && !hasContract ? (
+              <Link
+                href={`/contracts/new?projectId=${quote.project.id}&sourceQuoteId=${quote.id}`}
+                className={cn(buttonVariants({ variant: "primary" }))}
+              >
+                Tạo hợp đồng
+              </Link>
+            ) : null}
             {canEdit ? (
               <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
                 Chỉnh sửa
               </Link>
             ) : null}
-            <Link href={`/quotes/${quote.id}/preview`} className={cn(buttonVariants({ variant: "primary" }))}>
+            <Link href={`/quotes/${quote.id}/preview`} className={cn(buttonVariants({ variant: "outline" }))}>
               Xem bản in
             </Link>
           </div>
@@ -356,6 +364,19 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                   >
                     Mở hợp đồng liên quan
                   </Link>
+                ) : null}
+
+                {quote.status === "ACCEPTED" && !hasContract ? (
+                  <Link
+                    href={`/contracts/new?projectId=${quote.project.id}&sourceQuoteId=${quote.id}`}
+                    className={cn(buttonVariants({ variant: "primary", size: "lg" }))}
+                  >
+                    Tạo hợp đồng từ quote này
+                  </Link>
+                ) : quote.project.contract ? (
+                  <div className="rounded-xl bg-bg-muted px-4 py-3 text-sm text-text-secondary">
+                    Quote này đã có hợp đồng đi kèm.
+                  </div>
                 ) : null}
 
                 {actionItems.length > 0 ? (

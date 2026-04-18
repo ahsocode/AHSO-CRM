@@ -38,6 +38,18 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+export interface ActionResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface ForgotPasswordResponse extends ActionResponse {
+  debug?: {
+    resetToken: string;
+    resetUrl: string;
+  };
+}
+
 export interface DashboardKpis {
   monthlyRevenue: {
     value: number;
@@ -110,6 +122,13 @@ export interface UserListItem {
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface UserUpdateInput {
+  name?: string;
+  avatarUrl?: string | null;
+  role?: Role;
+  isActive?: boolean;
 }
 
 export interface CustomerPrimaryContact {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const ACCESS_TOKEN_KEY = "ahso_access_token";
 const REFRESH_TOKEN_KEY = "ahso_refresh_token";
-const PUBLIC_ROUTES = ["/login", "/forgot-password"];
+const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/customers",
@@ -10,7 +10,8 @@ const PROTECTED_PREFIXES = [
   "/quotes",
   "/contracts",
   "/calendar",
-  "/reports"
+  "/reports",
+  "/users"
 ] as const;
 
 export function middleware(request: NextRequest) {
@@ -54,7 +55,9 @@ export const config = {
     "/contracts/:path*",
     "/calendar/:path*",
     "/reports/:path*",
+    "/users/:path*",
     "/login",
-    "/forgot-password"
+    "/forgot-password",
+    "/reset-password"
   ]
 };

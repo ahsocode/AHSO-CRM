@@ -4,6 +4,8 @@
 
 AHSO CRM là hệ thống quản trị quan hệ khách hàng dành cho thị trường B2B (cơ khí — tự động hoá — điện công nghiệp) tại Việt Nam. Dự án được thiết kế theo spec trong [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) với UX tham chiếu từ bộ thiết kế Google Stitch (xem `docs/design/`).
 
+Tiến độ triển khai và handoff mới nhất cho agent tiếp theo: [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md).
+
 <p>
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-14-black?logo=nextdotjs" />
   <img alt="NestJS" src="https://img.shields.io/badge/NestJS-10-e0234e?logo=nestjs" />

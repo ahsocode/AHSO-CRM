@@ -18,7 +18,8 @@ export const NAV_ITEMS = [
   { href: "/quotes", label: "Báo giá", icon: "description" },
   { href: "/contracts", label: "Hợp đồng", icon: "contract" },
   { href: "/calendar", label: "Lịch công tác", icon: "calendar" },
-  { href: "/reports", label: "Báo cáo", icon: "analytics" }
+  { href: "/reports", label: "Báo cáo", icon: "analytics" },
+  { href: "/users", label: "Người dùng", icon: "settings" }
 ] as const;
 
 export const PROJECT_STATUS_LABELS = {

@@ -55,7 +55,7 @@ function ResetPasswordContent() {
   }, [form, tokenFromQuery]);
 
   // Validate token exists early
-  const hasValidToken = tokenFromQuery && tokenFromQuery.trim().length > 0;
+  const hasValidToken = !!(tokenFromQuery && tokenFromQuery.trim().length > 0);
   const showTokenError = !hasValidToken && form.formState.isSubmitted;
 
   const resetPasswordMutation = useMutation({

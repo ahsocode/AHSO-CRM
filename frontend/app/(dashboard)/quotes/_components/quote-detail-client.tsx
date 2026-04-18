@@ -1,21 +1,52 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
+import { AppIcon } from "@/components/shared/app-icon";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuote } from "@/hooks/use-quotes";
+import { useDuplicateQuote, useQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import { QuoteStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
+
+const STATUS_ACTIONS: Partial<
+  Record<
+    QuoteStatus,
+    Array<{
+      label: string;
+      nextStatus: QuoteStatus;
+      variant: "primary" | "outline" | "destructive";
+    }>
+  >
+> = {
+  DRAFT: [{ label: "Đánh dấu đã gửi", nextStatus: "SENT", variant: "primary" }],
+  REJECTED: [
+    { label: "Chuyển về nháp", nextStatus: "DRAFT", variant: "outline" },
+    { label: "Gửi lại báo giá", nextStatus: "SENT", variant: "primary" }
+  ],
+  SENT: [
+    { label: "Chấp nhận", nextStatus: "ACCEPTED", variant: "primary" },
+    { label: "Từ chối", nextStatus: "REJECTED", variant: "destructive" },
+    { label: "Hết hạn", nextStatus: "EXPIRED", variant: "outline" }
+  ],
+  EXPIRED: [{ label: "Mở lại bản nháp", nextStatus: "DRAFT", variant: "outline" }]
+};
+
 export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
+  const router = useRouter();
   const quoteQuery = useQuote(quoteId);
+  const duplicateQuoteMutation = useDuplicateQuote();
+  const updateQuoteStatusMutation = useUpdateQuoteStatus();
 
   if (quoteQuery.isLoading) {
     return (
@@ -59,6 +90,16 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   }
 
   const quote = quoteQuery.data;
+  const canEdit = EDITABLE_QUOTE_STATUSES.includes(quote.status);
+  const hasContract = Boolean(quote.project.contract);
+  const actionItems = hasContract ? [] : STATUS_ACTIONS[quote.status] ?? [];
+  const duplicateErrorMessage = duplicateQuoteMutation.isError
+    ? getApiErrorMessage(duplicateQuoteMutation.error, "Không thể tạo version báo giá mới.")
+    : null;
+  const statusErrorMessage = updateQuoteStatusMutation.isError
+    ? getApiErrorMessage(updateQuoteStatusMutation.error, "Không thể cập nhật trạng thái báo giá.")
+    : null;
+  const isMutating = duplicateQuoteMutation.isPending || updateQuoteStatusMutation.isPending;
 
   return (
     <div className="space-y-8">
@@ -70,9 +111,11 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
               Về danh sách
             </Link>
-            <Link href={`/quotes/new?projectId=${quote.project.id}`} className={cn(buttonVariants({ variant: "outline" }))}>
-              Tạo bản mới
-            </Link>
+            {canEdit ? (
+              <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
+                Chỉnh sửa
+              </Link>
+            ) : null}
             <Link href={`/quotes/${quote.id}/preview`} className={cn(buttonVariants({ variant: "primary" }))}>
               Xem bản in
             </Link>
@@ -87,7 +130,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <h2 className="font-heading text-3xl font-extrabold text-text-primary">{quote.quoteNo}</h2>
               <Badge variant="neutral">v{quote.version}</Badge>
-              <StatusBadge status={quote.status} />
+              <StatusBadge kind="quote" status={quote.status} />
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2 text-sm text-text-secondary">
@@ -260,6 +303,105 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
         </div>
 
         <div className="space-y-6">
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Action Desk</p>
+              <CardTitle>Workflow báo giá</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm text-text-secondary">
+                <p className="font-semibold text-text-primary">
+                  Version hiện tại: {quote.quoteNo} · v{quote.version}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span>Trạng thái:</span>
+                  <StatusBadge kind="quote" status={quote.status} />
+                </div>
+                <p className="mt-2">
+                  {hasContract
+                    ? "Dự án đã có hợp đồng nên báo giá này được khóa cho việc tạo version mới và đổi trạng thái."
+                    : "Bạn có thể chỉnh sửa nội dung ở bản nháp/bị từ chối, hoặc chuyển trạng thái để bám workflow sales."}
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                {canEdit ? (
+                  <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+                    <AppIcon name="description" className="h-4 w-4" />
+                    Chỉnh sửa version hiện tại
+                  </Link>
+                ) : null}
+
+                {!hasContract ? (
+                  <Button
+                    className="justify-start"
+                    disabled={isMutating}
+                    onClick={() => {
+                      duplicateQuoteMutation.mutate(quote.id, {
+                        onSuccess: (duplicatedQuote) => {
+                          router.push(`/quotes/${duplicatedQuote.id}`);
+                        }
+                      });
+                    }}
+                    size="lg"
+                    variant="outline"
+                  >
+                    <AppIcon name="plus" className="h-4 w-4" />
+                    {duplicateQuoteMutation.isPending ? "Đang tạo version mới..." : "Tạo version kế tiếp"}
+                  </Button>
+                ) : quote.project.contract ? (
+                  <Link
+                    href={`/contracts/${quote.project.contract.id}`}
+                    className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+                  >
+                    Mở hợp đồng liên quan
+                  </Link>
+                ) : null}
+
+                {actionItems.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {actionItems.map((action) => {
+                      const isCurrentActionPending =
+                        updateQuoteStatusMutation.isPending &&
+                        updateQuoteStatusMutation.variables?.quoteId === quote.id &&
+                        updateQuoteStatusMutation.variables?.payload.status === action.nextStatus;
+
+                      return (
+                        <Button
+                          key={action.nextStatus}
+                          disabled={isMutating}
+                          onClick={() => {
+                            updateQuoteStatusMutation.mutate({
+                              quoteId: quote.id,
+                              payload: {
+                                status: action.nextStatus
+                              }
+                            });
+                          }}
+                          size="lg"
+                          variant={action.variant}
+                        >
+                          {isCurrentActionPending ? "Đang cập nhật..." : action.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-bg-muted px-4 py-3 text-sm text-text-secondary">
+                    Không còn action trạng thái trực tiếp cho quote này.
+                  </div>
+                )}
+              </div>
+
+              {duplicateErrorMessage ? (
+                <div className="rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">{duplicateErrorMessage}</div>
+              ) : null}
+              {statusErrorMessage ? (
+                <div className="rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">{statusErrorMessage}</div>
+              ) : null}
+            </CardContent>
+          </Card>
+
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Timeline</p>

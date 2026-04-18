@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
@@ -15,11 +16,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateQuote } from "@/hooks/use-quotes";
+import {
+  useCreateQuote,
+  useQuote,
+  useUpdateQuote
+} from "@/hooks/use-quotes";
 import { useProject, useProjects } from "@/hooks/use-projects";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { QUOTE_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { QuoteStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   createEmptyQuoteItem,
@@ -28,9 +34,21 @@ import {
   type QuoteFormValues
 } from "./form-schemas";
 
-export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: string }) {
+const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
+
+export function QuoteFormScreen({
+  mode = "create",
+  initialProjectId = "",
+  quoteId
+}: {
+  mode?: "create" | "edit";
+  initialProjectId?: string;
+  quoteId?: string;
+}) {
   const router = useRouter();
   const createQuoteMutation = useCreateQuote();
+  const updateQuoteMutation = useUpdateQuote(quoteId ?? "");
+  const quoteQuery = useQuote(mode === "edit" ? quoteId ?? "" : "");
   const projectsQuery = useProjects({
     page: 1,
     limit: 100
@@ -49,6 +67,36 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
     name: "items"
   });
 
+  useEffect(() => {
+    if (mode === "create") {
+      form.reset({
+        ...defaultQuoteFormValues,
+        projectId: initialProjectId
+      });
+    }
+  }, [form, initialProjectId, mode]);
+
+  useEffect(() => {
+    if (mode === "edit" && quoteQuery.data) {
+      form.reset({
+        projectId: quoteQuery.data.project.id,
+        validUntil: quoteQuery.data.validUntil ? quoteQuery.data.validUntil.slice(0, 10) : "",
+        taxRate: quoteQuery.data.taxRate,
+        terms: quoteQuery.data.terms ?? "",
+        deliveryTerms: quoteQuery.data.deliveryTerms ?? "",
+        internalNote: quoteQuery.data.internalNote ?? "",
+        status: quoteQuery.data.status,
+        items: quoteQuery.data.items.map((item) => ({
+          name: item.name,
+          description: item.description ?? "",
+          unit: item.unit ?? "",
+          quantity: item.quantity,
+          unitPrice: item.unitPrice
+        }))
+      });
+    }
+  }, [form, mode, quoteQuery.data]);
+
   const selectedProjectId = form.watch("projectId");
   const watchedItems = form.watch("items") ?? [];
   const watchedTaxRate = form.watch("taxRate") ?? 0;
@@ -60,18 +108,69 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
   );
   const taxAmount = Math.round((subtotal * (Number(watchedTaxRate) || 0)) / 100);
   const grandTotal = subtotal + taxAmount;
-  const activeErrorMessage = createQuoteMutation.isError
-    ? getApiErrorMessage(createQuoteMutation.error, "Không thể tạo báo giá.")
+  const activeMutation = mode === "create" ? createQuoteMutation : updateQuoteMutation;
+  const activeErrorMessage = activeMutation.isError
+    ? getApiErrorMessage(
+        activeMutation.error,
+        mode === "create" ? "Không thể tạo báo giá." : "Không thể cập nhật báo giá."
+      )
     : null;
+  const activeQuote = quoteQuery.data;
+  const isEditableQuote =
+    mode === "create" ||
+    (activeQuote ? EDITABLE_QUOTE_STATUSES.includes(activeQuote.status) : false);
+
+  if (mode === "edit" && quoteQuery.isLoading) {
+    return (
+      <div className="space-y-8">
+        <LoadingSkeleton className="h-16 w-full" />
+        <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <LoadingSkeleton className="h-[980px] w-full" />
+          <LoadingSkeleton className="h-[720px] w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "edit" && (quoteQuery.isError || !activeQuote || !quoteId)) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Cập nhật báo giá"
+          description="Không thể tải dữ liệu báo giá để chỉnh sửa."
+          action={
+            <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
+              Về danh sách
+            </Link>
+          }
+        />
+        <Card className="border border-danger/20">
+          <CardContent className="p-6">
+            <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
+              {getApiErrorMessage(quoteQuery.error, "Không thể tải dữ liệu báo giá.")}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Tạo báo giá"
-        description="Tạo quote trực tiếp từ dự án thật, tính toán line item và khóa luôn payload để sang được màn hình preview/in."
+        title={mode === "create" ? "Tạo báo giá" : "Cập nhật báo giá"}
+        description={
+          mode === "create"
+            ? "Tạo quote trực tiếp từ dự án thật, tính toán line item và khóa luôn payload để sang được màn hình preview/in."
+            : "Chỉnh sửa nội dung thương mại của version hiện tại trước khi gửi khách hoặc tạo version kế tiếp."
+        }
         action={
           <div className="flex flex-wrap items-center gap-3">
-            {selectedProjectId ? (
+            {mode === "edit" && quoteId ? (
+              <Link href={`/quotes/${quoteId}`} className={cn(buttonVariants({ variant: "outline" }))}>
+                Về chi tiết quote
+              </Link>
+            ) : selectedProjectId ? (
               <Link href={`/projects/${selectedProjectId}`} className={cn(buttonVariants({ variant: "outline" }))}>
                 Về dự án
               </Link>
@@ -86,6 +185,15 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
       <form
         className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
         onSubmit={form.handleSubmit((values) => {
+          if (mode === "edit" && quoteId) {
+            updateQuoteMutation.mutate(values, {
+              onSuccess: (quote) => {
+                router.push(`/quotes/${quote.id}`);
+              }
+            });
+            return;
+          }
+
           createQuoteMutation.mutate(values, {
             onSuccess: (quote) => {
               router.push(`/quotes/${quote.id}`);
@@ -96,13 +204,19 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Quote Identity</p>
+              <p className="industrial-chip bg-primary/10 text-primary">
+                {mode === "create" ? "Quote Identity" : "Quote Revision"}
+              </p>
               <CardTitle>Thông tin cơ bản</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <Field className="md:col-span-2">
                 <Label htmlFor="projectId">Dự án</Label>
-                <Select id="projectId" disabled={projectsQuery.isLoading} {...form.register("projectId")}>
+                <Select
+                  id="projectId"
+                  disabled={projectsQuery.isLoading || mode === "edit"}
+                  {...form.register("projectId")}
+                >
                   <option value="">
                     {projectsQuery.isLoading ? "Đang tải danh sách dự án..." : "Chọn dự án để báo giá"}
                   </option>
@@ -113,11 +227,16 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                   ))}
                 </Select>
                 <ErrorText message={form.formState.errors.projectId?.message} />
+                {mode === "edit" ? (
+                  <p className="text-sm text-text-secondary">
+                    Version hiện tại được khóa với dự án gốc. Nếu cần báo giá cho dự án khác, hãy tạo quote mới.
+                  </p>
+                ) : null}
               </Field>
 
               <Field>
-                <Label htmlFor="status">Trạng thái khởi tạo</Label>
-                <Select id="status" {...form.register("status")}>
+                <Label htmlFor="status">Trạng thái</Label>
+                <Select id="status" disabled={!isEditableQuote} {...form.register("status")}>
                   {Object.entries(QUOTE_STATUS_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
@@ -129,7 +248,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
 
               <Field>
                 <Label htmlFor="validUntil">Hiệu lực đến</Label>
-                <Input id="validUntil" type="date" {...form.register("validUntil")} />
+                <Input id="validUntil" type="date" disabled={!isEditableQuote} {...form.register("validUntil")} />
                 <ErrorText message={form.formState.errors.validUntil?.message} />
               </Field>
 
@@ -140,6 +259,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                   min={0}
                   step="0.01"
                   type="number"
+                  disabled={!isEditableQuote}
                   {...form.register("taxRate", {
                     setValueAs: (value) => (value === "" ? 0 : Number(value))
                   })}
@@ -149,8 +269,14 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
 
               <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm text-text-secondary">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Số báo giá</p>
-                <p className="mt-2 font-semibold text-text-primary">Được sinh tự động khi lưu</p>
-                <p className="mt-1">Phiên bản sẽ tự tăng theo số quote đã có trên cùng dự án.</p>
+                <p className="mt-2 font-semibold text-text-primary">
+                  {mode === "edit" && activeQuote ? `${activeQuote.quoteNo} · v${activeQuote.version}` : "Được sinh tự động khi lưu"}
+                </p>
+                <p className="mt-1">
+                  {mode === "edit"
+                    ? "Version mới nên được tạo bằng thao tác duplicate trên màn chi tiết."
+                    : "Phiên bản sẽ tự tăng theo số quote đã có trên cùng dự án."}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -169,7 +295,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                       <p className="text-sm font-semibold text-text-primary">Hạng mục báo giá</p>
                     </div>
                     <Button
-                      disabled={itemsFieldArray.fields.length === 1}
+                      disabled={itemsFieldArray.fields.length === 1 || !isEditableQuote}
                       onClick={() => itemsFieldArray.remove(index)}
                       type="button"
                       variant="outline"
@@ -181,7 +307,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                   <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_120px_140px]">
                     <Field className="md:col-span-2 xl:col-span-1">
                       <Label htmlFor={`items.${index}.name`}>Tên hạng mục</Label>
-                      <Input id={`items.${index}.name`} {...form.register(`items.${index}.name`)} />
+                      <Input id={`items.${index}.name`} disabled={!isEditableQuote} {...form.register(`items.${index}.name`)} />
                       <ErrorText message={form.formState.errors.items?.[index]?.name?.message} />
                     </Field>
 
@@ -189,6 +315,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                       <Label htmlFor={`items.${index}.description`}>Mô tả</Label>
                       <Input
                         id={`items.${index}.description`}
+                        disabled={!isEditableQuote}
                         placeholder="Quy cách / phạm vi / model"
                         {...form.register(`items.${index}.description`)}
                       />
@@ -197,7 +324,12 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
 
                     <Field>
                       <Label htmlFor={`items.${index}.unit`}>ĐVT</Label>
-                      <Input id={`items.${index}.unit`} placeholder="Bộ / Gói / Cái" {...form.register(`items.${index}.unit`)} />
+                      <Input
+                        id={`items.${index}.unit`}
+                        disabled={!isEditableQuote}
+                        placeholder="Bộ / Gói / Cái"
+                        {...form.register(`items.${index}.unit`)}
+                      />
                       <ErrorText message={form.formState.errors.items?.[index]?.unit?.message} />
                     </Field>
 
@@ -208,6 +340,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                         min={0}
                         step="0.01"
                         type="number"
+                        disabled={!isEditableQuote}
                         {...form.register(`items.${index}.quantity`, {
                           setValueAs: (value) => (value === "" ? 0 : Number(value))
                         })}
@@ -222,6 +355,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                         min={0}
                         step="1"
                         type="number"
+                        disabled={!isEditableQuote}
                         {...form.register(`items.${index}.unitPrice`, {
                           setValueAs: (value) => (value === "" ? 0 : Number(value))
                         })}
@@ -243,7 +377,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                 </article>
               ))}
 
-              <Button onClick={() => itemsFieldArray.append(createEmptyQuoteItem())} type="button" variant="outline">
+              <Button disabled={!isEditableQuote} onClick={() => itemsFieldArray.append(createEmptyQuoteItem())} type="button" variant="outline">
                 <AppIcon name="plus" className="h-4 w-4" />
                 Thêm hạng mục
               </Button>
@@ -260,6 +394,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                 <Label htmlFor="terms">Điều khoản thanh toán</Label>
                 <Textarea
                   id="terms"
+                  disabled={!isEditableQuote}
                   placeholder="Ví dụ: 50% khi xác nhận PO, 50% khi nghiệm thu."
                   {...form.register("terms")}
                 />
@@ -270,6 +405,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                 <Label htmlFor="deliveryTerms">Điều khoản giao hàng / triển khai</Label>
                 <Textarea
                   id="deliveryTerms"
+                  disabled={!isEditableQuote}
                   placeholder="Ví dụ: triển khai trong 21 ngày kể từ PO."
                   {...form.register("deliveryTerms")}
                 />
@@ -280,6 +416,7 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                 <Label htmlFor="internalNote">Ghi chú nội bộ</Label>
                 <Textarea
                   id="internalNote"
+                  disabled={!isEditableQuote}
                   placeholder="Nêu lưu ý thương mại, phạm vi chào giá, điểm cần follow-up."
                   {...form.register("internalNote")}
                 />
@@ -365,6 +502,16 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                   <p className="font-semibold text-text-primary">{selectedProject.customer.name}</p>
                   <p className="mt-2">Dự án tạo lúc: {formatDateTime(selectedProject.createdAt)}</p>
                   <p>Cập nhật cuối: {formatDateTime(selectedProject.updatedAt)}</p>
+                  {mode === "edit" && activeQuote ? (
+                    <p>Quote hiện tại: {activeQuote.quoteNo} · v{activeQuote.version}</p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {mode === "edit" && activeQuote && !isEditableQuote ? (
+                <div className="rounded-xl bg-warning-bg/80 px-4 py-3 text-sm text-warning">
+                  Quote ở trạng thái <strong>{QUOTE_STATUS_LABELS[activeQuote.status]}</strong> không còn cho chỉnh sửa nội dung.
+                  Hãy quay về màn chi tiết để dùng các action trạng thái hoặc tạo version mới.
                 </div>
               ) : null}
 
@@ -372,9 +519,15 @@ export function QuoteFormScreen({ initialProjectId = "" }: { initialProjectId?: 
                 <div className="rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">{activeErrorMessage}</div>
               ) : null}
 
-              <Button className="h-11 rounded-xl" disabled={createQuoteMutation.isPending} type="submit">
+              <Button className="h-11 rounded-xl" disabled={activeMutation.isPending || !isEditableQuote} type="submit">
                 <AppIcon name="arrow-right" className="h-4 w-4" />
-                {createQuoteMutation.isPending ? "Đang tạo báo giá..." : "Tạo báo giá"}
+                {activeMutation.isPending
+                  ? mode === "create"
+                    ? "Đang tạo báo giá..."
+                    : "Đang cập nhật báo giá..."
+                  : mode === "create"
+                    ? "Tạo báo giá"
+                    : "Lưu thay đổi"}
               </Button>
             </CardContent>
           </Card>

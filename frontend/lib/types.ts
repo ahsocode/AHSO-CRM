@@ -565,6 +565,12 @@ export interface QuoteCreateInput {
   items: QuoteCreateItemInput[];
 }
 
+export interface QuoteUpdateInput extends QuoteCreateInput {}
+
+export interface QuoteStatusUpdateInput {
+  status: QuoteStatus;
+}
+
 export interface ContractListProject {
   id: string;
   code: string;

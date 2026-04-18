@@ -8,7 +8,10 @@ import {
   QuoteDetail,
   QuoteFilters,
   QuoteListItem,
-  QuoteListMeta
+  QuoteListMeta,
+  QuoteStatus,
+  QuoteStatusUpdateInput,
+  QuoteUpdateInput
 } from "@/lib/types";
 
 export function useQuotes(filters: QuoteFilters) {
@@ -48,6 +51,69 @@ export function useCreateQuote() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  });
+}
+
+export function useUpdateQuote(quoteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: QuoteUpdateInput) => {
+      const response = await apiClient.patch<ApiResponse<{ id: string; quoteNo: string }>>(
+        `/quotes/${quoteId}`,
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      await queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  });
+}
+
+export function useDuplicateQuote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (quoteId: string) => {
+      const response = await apiClient.post<ApiResponse<{ id: string; quoteNo: string; version: number }>>(
+        `/quotes/${quoteId}/duplicate`
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  });
+}
+
+export function useUpdateQuoteStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      quoteId,
+      payload
+    }: {
+      quoteId: string;
+      payload: QuoteStatusUpdateInput;
+    }) => {
+      const response = await apiClient.patch<
+        ApiResponse<{ id: string; status: QuoteStatus; sentAt?: string | null; acceptedAt?: string | null }>
+      >(`/quotes/${quoteId}/status`, payload);
+      return response.data.data;
+    },
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      await queryClient.invalidateQueries({ queryKey: ["quotes", variables.quoteId] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     }

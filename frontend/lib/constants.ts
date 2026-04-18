@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
   { href: "/projects", label: "Dự án", icon: "factory" },
   { href: "/quotes", label: "Báo giá", icon: "description" },
   { href: "/contracts", label: "Hợp đồng", icon: "contract" },
+  { href: "/activities", label: "Hoạt động", icon: "history" },
   { href: "/calendar", label: "Lịch công tác", icon: "calendar" },
   { href: "/reports", label: "Báo cáo", icon: "analytics" },
   { href: "/users", label: "Người dùng", icon: "settings" }

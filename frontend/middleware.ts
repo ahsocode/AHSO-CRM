@@ -9,6 +9,7 @@ const PROTECTED_PREFIXES = [
   "/projects",
   "/quotes",
   "/contracts",
+  "/activities",
   "/calendar",
   "/reports",
   "/users"
@@ -53,6 +54,7 @@ export const config = {
     "/projects/:path*",
     "/quotes/:path*",
     "/contracts/:path*",
+    "/activities/:path*",
     "/calendar/:path*",
     "/reports/:path*",
     "/users/:path*",

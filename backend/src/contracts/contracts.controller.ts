@@ -1,9 +1,12 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { ContractFilterDto, contractFilterSchema } from "./dto/contract-filter.dto";
+import { CreateMilestoneDto, createMilestoneSchema } from "./dto/create-milestone.dto";
+import { CreatePaymentDto, createPaymentSchema } from "./dto/create-payment.dto";
+import { UpdateMilestoneDto, updateMilestoneSchema } from "./dto/update-milestone.dto";
 import { ContractsService } from "./contracts.service";
 
 @Controller("contracts")
@@ -22,5 +25,32 @@ export class ContractsController {
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.contractsService.findOne(id, user);
+  }
+
+  @Post(":id/milestones")
+  createMilestone(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(createMilestoneSchema)) dto: CreateMilestoneDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.contractsService.createMilestone(id, dto, user);
+  }
+
+  @Patch("milestones/:id")
+  updateMilestone(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateMilestoneSchema)) dto: UpdateMilestoneDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.contractsService.updateMilestone(id, dto, user);
+  }
+
+  @Post(":id/payments")
+  createPayment(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(createPaymentSchema)) dto: CreatePaymentDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.contractsService.createPayment(id, dto, user);
   }
 }

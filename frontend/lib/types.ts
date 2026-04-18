@@ -657,3 +657,125 @@ export interface ContractDetail {
   milestones: ContractDetailMilestone[];
   payments: ProjectDetailPayment[];
 }
+
+export interface ContractMilestoneCreateInput {
+  name: string;
+  description?: string;
+  dueDate?: string;
+  status: MilestoneStatus;
+  paymentAmount?: number;
+  notes?: string;
+}
+
+export interface ContractMilestoneUpdateInput {
+  name?: string;
+  description?: string;
+  dueDate?: string;
+  status?: MilestoneStatus;
+  completedAt?: string;
+  paymentAmount?: number;
+  notes?: string;
+}
+
+export interface ContractPaymentCreateInput {
+  amount: number;
+  paidAt: string;
+  method?: string;
+  reference?: string;
+  notes?: string;
+}
+
+export interface CalendarEventItem {
+  id: string;
+  title: string;
+  content?: string | null;
+  type: ActivityType;
+  scheduledAt?: string | null;
+  doneAt?: string | null;
+  isCompleted: boolean;
+  updatedAt: string;
+  anchorAt: string;
+  user: Pick<UserListItem, "id" | "name" | "role">;
+  customer: {
+    id: string;
+    name: string;
+    status: CustomerStatus;
+  } | null;
+  project: {
+    id: string;
+    code: string;
+    name: string;
+    status: ProjectStatus;
+  } | null;
+}
+
+export interface CalendarSummary {
+  total: number;
+  openCount: number;
+  completedCount: number;
+  overdueCount: number;
+  todayCount: number;
+}
+
+export interface CalendarListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  summary: CalendarSummary;
+}
+
+export interface CalendarFilters {
+  page: number;
+  limit: number;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  isCompleted?: boolean;
+  type?: ActivityType;
+  assigneeId?: string;
+  customerId?: string;
+  projectId?: string;
+}
+
+export interface ReportRecentPayment {
+  id: string;
+  amount: number;
+  paidAt: string;
+  contractNo: string;
+  customerName: string;
+  projectName: string;
+  method?: string | null;
+  reference?: string | null;
+}
+
+export interface ReportsOverview {
+  collectionsValue: number;
+  openPipelineValue: number;
+  outstandingDebt: number;
+  quoteAcceptanceRate: number;
+  activeContracts: number;
+  activeCustomers: number;
+  recentPayments: ReportRecentPayment[];
+}
+
+export interface ReportStatusBucket {
+  key: string;
+  label: string;
+  count: number;
+  totalValue: number;
+}
+
+export interface ReportStatusBreakdown {
+  projects: ReportStatusBucket[];
+  quotes: ReportStatusBucket[];
+  contracts: ReportStatusBucket[];
+}
+
+export interface ReportTopCustomer {
+  customerId: string;
+  name: string;
+  paidAmount: number;
+  contractValue: number;
+  projectCount: number;
+}

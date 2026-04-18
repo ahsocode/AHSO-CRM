@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import type { MilestoneStatus, Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { ContractFilterDto } from "./dto/contract-filter.dto";
+import { CreateMilestoneDto } from "./dto/create-milestone.dto";
+import { CreatePaymentDto } from "./dto/create-payment.dto";
+import { UpdateMilestoneDto } from "./dto/update-milestone.dto";
 
 const CLOSED_CONTRACT_STATUSES = ["COMPLETED", "CANCELLED"] as const;
 
@@ -236,6 +239,70 @@ export class ContractsService {
     };
   }
 
+  async createMilestone(contractId: string, dto: CreateMilestoneDto, user: JwtUser) {
+    const contract = await this.findAccessibleContractEntity(contractId, user);
+    const milestone = await this.prisma.milestone.create({
+      data: {
+        name: dto.name,
+        description: dto.description,
+        dueDate: dto.dueDate,
+        status: dto.status,
+        completedAt: this.resolveMilestoneCompletedAt(dto.status),
+        paymentAmount: dto.paymentAmount ?? null,
+        notes: dto.notes,
+        contractId: contract.id,
+        projectId: contract.projectId
+      }
+    });
+
+    return this.mapMilestone(milestone);
+  }
+
+  async updateMilestone(milestoneId: string, dto: UpdateMilestoneDto, user: JwtUser) {
+    const milestone = await this.findAccessibleMilestone(milestoneId, user);
+    const nextStatus = dto.status ?? milestone.status;
+    const nextCompletedAt = this.resolveMilestoneCompletedAt(nextStatus, milestone.completedAt, dto.completedAt);
+    const updatedMilestone = await this.prisma.milestone.update({
+      where: {
+        id: milestoneId
+      },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.dueDate !== undefined ? { dueDate: dto.dueDate } : {}),
+        ...(dto.status !== undefined ? { status: dto.status } : {}),
+        ...(dto.paymentAmount !== undefined ? { paymentAmount: dto.paymentAmount } : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+        completedAt: nextCompletedAt
+      }
+    });
+
+    return this.mapMilestone(updatedMilestone);
+  }
+
+  async createPayment(contractId: string, dto: CreatePaymentDto, user: JwtUser) {
+    const contract = await this.findAccessibleContractEntity(contractId, user);
+    const payment = await this.prisma.payment.create({
+      data: {
+        amount: dto.amount,
+        paidAt: dto.paidAt,
+        method: dto.method,
+        reference: dto.reference,
+        notes: dto.notes,
+        contractId: contract.id
+      }
+    });
+
+    return {
+      id: payment.id,
+      amount: Number(payment.amount),
+      paidAt: payment.paidAt,
+      method: payment.method,
+      reference: payment.reference,
+      notes: payment.notes
+    };
+  }
+
   private buildWhere(filters: Partial<ContractFilterDto>, user: JwtUser): Prisma.ContractWhereInput {
     const projectWhere: Prisma.ProjectWhereInput = this.buildAccessibleProjectWhere(user);
     const where: Prisma.ContractWhereInput = {
@@ -397,5 +464,79 @@ export class ContractsService {
     }
 
     return contract;
+  }
+
+  private async findAccessibleContractEntity(id: string, user: JwtUser) {
+    const contract = await this.prisma.contract.findFirst({
+      where: {
+        id,
+        project: this.buildAccessibleProjectWhere(user)
+      },
+      select: {
+        id: true,
+        projectId: true
+      }
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Không tìm thấy hợp đồng");
+    }
+
+    return contract;
+  }
+
+  private async findAccessibleMilestone(id: string, user: JwtUser) {
+    const milestone = await this.prisma.milestone.findFirst({
+      where: {
+        id,
+        contract: {
+          project: this.buildAccessibleProjectWhere(user)
+        }
+      }
+    });
+
+    if (!milestone) {
+      throw new NotFoundException("Không tìm thấy milestone");
+    }
+
+    return milestone;
+  }
+
+  private resolveMilestoneCompletedAt(
+    status: MilestoneStatus,
+    currentCompletedAt?: Date | null,
+    explicitCompletedAt?: Date
+  ) {
+    if (explicitCompletedAt) {
+      return explicitCompletedAt;
+    }
+
+    if (status === "DONE" || status === "ACCEPTED") {
+      return currentCompletedAt ?? new Date();
+    }
+
+    return null;
+  }
+
+  private mapMilestone(milestone: {
+    id: string;
+    name: string;
+    description: string | null;
+    dueDate: Date | null;
+    completedAt: Date | null;
+    status: MilestoneStatus;
+    paymentAmount: Prisma.Decimal | null;
+    notes: string | null;
+  }) {
+    return {
+      id: milestone.id,
+      name: milestone.name,
+      description: milestone.description,
+      dueDate: milestone.dueDate,
+      completedAt: milestone.completedAt,
+      status: milestone.status,
+      paymentAmount: Number(milestone.paymentAmount ?? 0),
+      notes: milestone.notes
+    };
   }
 }

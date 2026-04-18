@@ -13,21 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useContract } from "@/hooks/use-contracts";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
-import { MilestoneStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-const MILESTONE_STATUS_CONFIG: Record<
-  MilestoneStatus,
-  {
-    label: string;
-    variant: "neutral" | "info" | "success" | "warning";
-  }
-> = {
-  PENDING: { label: "Chờ xử lý", variant: "neutral" },
-  IN_PROGRESS: { label: "Đang làm", variant: "info" },
-  DONE: { label: "Đã xong", variant: "success" },
-  ACCEPTED: { label: "Đã nghiệm thu", variant: "warning" }
-};
+import { ContractMilestoneManager } from "./contract-milestone-manager";
+import { ContractPaymentManager } from "./contract-payment-manager";
 
 export function ContractDetailClient({ contractId }: { contractId: string }) {
   const contractQuery = useContract(contractId);
@@ -160,76 +148,9 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
-          <Card className="border border-white/70">
-            <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Milestone Map</p>
-              <CardTitle>Mốc triển khai</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {contract.milestones.length === 0 ? (
-                <EmptyState
-                  title="Chưa có milestone"
-                  description="Hợp đồng này chưa được lập milestone. Khi mở rộng CRUD delivery, card này sẽ là trung tâm theo dõi."
-                />
-              ) : (
-                contract.milestones.map((milestone) => (
-                  <article key={milestone.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-text-primary">{milestone.name}</p>
-                          <Badge variant={MILESTONE_STATUS_CONFIG[milestone.status].variant}>
-                            {MILESTONE_STATUS_CONFIG[milestone.status].label}
-                          </Badge>
-                        </div>
-                        {milestone.description ? <p className="mt-2 text-sm text-text-secondary">{milestone.description}</p> : null}
-                      </div>
-                      <div className="text-right text-sm text-text-secondary">
-                        <p>{milestone.dueDate ? `Hạn ${formatDate(milestone.dueDate)}` : "Chưa đặt hạn"}</p>
-                        <p>{milestone.completedAt ? `Xong ${formatDate(milestone.completedAt)}` : "Chưa hoàn tất"}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 text-sm text-text-secondary">
-                      <span>Ngân sách mốc: <CurrencyDisplay amount={milestone.paymentAmount} short /></span>
-                      {milestone.notes ? <p className="mt-1">{milestone.notes}</p> : null}
-                    </div>
-                  </article>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <ContractMilestoneManager contractId={contract.id} milestones={contract.milestones} />
 
-          <Card className="border border-white/70">
-            <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Cash Flow</p>
-              <CardTitle>Lịch sử thanh toán</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {contract.payments.length === 0 ? (
-                <EmptyState
-                  title="Chưa có thanh toán"
-                  description="Khi thu tiền được log vào hệ thống, bảng này sẽ phản ánh dòng tiền và công nợ tức thì."
-                />
-              ) : (
-                contract.payments.map((payment) => (
-                  <article key={payment.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <p className="font-semibold text-text-primary">
-                          <CurrencyDisplay amount={payment.amount} short />
-                        </p>
-                        <p className="mt-2 text-sm text-text-secondary">
-                          {payment.method ?? "Chưa rõ phương thức"} · {payment.reference ?? "Chưa có mã tham chiếu"}
-                        </p>
-                        {payment.notes ? <p className="mt-2 text-sm text-text-secondary">{payment.notes}</p> : null}
-                      </div>
-                      <div className="text-right text-sm text-text-secondary">{formatDate(payment.paidAt)}</div>
-                    </div>
-                  </article>
-                ))
-              )}
-            </CardContent>
-          </Card>
+          <ContractPaymentManager contractId={contract.id} payments={contract.payments} />
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">

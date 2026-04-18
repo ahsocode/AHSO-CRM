@@ -11,6 +11,8 @@ import { ContactsModule } from "./contacts/contacts.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { QuotesModule } from "./quotes/quotes.module";
 import { ContractsModule } from "./contracts/contracts.module";
+import { CalendarModule } from "./calendar/calendar.module";
+import { ReportsModule } from "./reports/reports.module";
 
 @Module({
   imports: [
@@ -40,7 +42,9 @@ import { ContractsModule } from "./contracts/contracts.module";
     ContactsModule,
     ProjectsModule,
     QuotesModule,
-    ContractsModule
+    ContractsModule,
+    CalendarModule,
+    ReportsModule
   ],
   providers: [
     {

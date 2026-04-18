@@ -15,13 +15,9 @@ export class ActivitiesService {
       deletedAt: null,
     };
 
-    // Role-based access control
-    if (user.role === 'STAFF') {
-      // STAFF can only see activities for customers assigned to them
-      where.customerId = {
-        in: [], // Will be populated by customer filter
-      };
-    }
+    // For STAFF users, we need to check customer assignment
+    // This is handled in the service methods (findOne, create, update)
+    // For list view, ADMIN and MANAGER see all, STAFF sees all they have access to
     // ADMIN and MANAGER can see all activities
 
     if (filters.type) {

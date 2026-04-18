@@ -9,7 +9,7 @@ import { useActivity, useDeleteActivity, useUpdateActivity } from '@/hooks/use-a
 import { ActivityStatusBadge } from './activity-status-badge';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { viLocale } from 'date-fns/locale';
+import { vi } from 'date-fns/locale';
 import { ArrowLeft, Edit, Trash2, CheckCircle, Circle } from 'lucide-react';
 import {
   AlertDialog,
@@ -95,7 +95,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
                 Tạo bởi {activity.user?.name} •{' '}
                 {formatDistanceToNow(new Date(activity.createdAt), {
                   addSuffix: true,
-                  locale: viLocale,
+                  locale: vi,
                 })}
               </CardDescription>
             </div>
@@ -227,7 +227,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
               <p className="text-[#5D6D7E]">
                 {formatDistanceToNow(new Date(activity.updatedAt), {
                   addSuffix: true,
-                  locale: viLocale,
+                  locale: vi,
                 })}
               </p>
             </div>

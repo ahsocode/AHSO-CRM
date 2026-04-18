@@ -17,7 +17,8 @@ type IconName =
   | "mail"
   | "phone"
   | "activity"
-  | "logout";
+  | "logout"
+  | "history";
 
 const ICONS: Record<IconName, React.ReactNode> = {
   dashboard: <path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z" />,
@@ -36,7 +37,8 @@ const ICONS: Record<IconName, React.ReactNode> = {
   mail: <path d="M3 6h18v12H3zM3 7l9 6 9-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   phone: <path d="M6.5 4h3l1.5 4-2 1.5a15 15 0 0 0 5.5 5.5L16 13l4 1.5v3a2 2 0 0 1-2.18 2A17 17 0 0 1 4.5 6.18 2 2 0 0 1 6.5 4Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   activity: <path d="M3 12h4l2-5 4 10 2-5h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-  logout: <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  logout: <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  history: <path d="M12 3a9 9 0 0 1 9 9M3 12a9 9 0 0 1 9-9M9 12l3-3v6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 };
 
 export function AppIcon({

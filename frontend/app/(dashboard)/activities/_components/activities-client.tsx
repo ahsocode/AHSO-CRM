@@ -4,12 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { useActivities } from '@/hooks/use-activities';
+import { useActivities, ActivityFilters } from '@/hooks/use-activities';
 import { ActivityTable } from './activity-table';
-import { ActivityFilters } from './activity-filters';
+import { ActivityFilters as ActivityFiltersComponent } from './activity-filters';
 
 export function ActivitiesClient() {
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<ActivityFilters>({
     page: 1,
     limit: 10,
   });
@@ -35,7 +35,7 @@ export function ActivitiesClient() {
       </div>
 
       {/* Filters */}
-      <ActivityFilters filters={filters} onFiltersChange={setFilters} />
+      <ActivityFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
       {/* Table */}
       <ActivityTable

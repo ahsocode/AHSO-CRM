@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
-import { viLocale } from 'date-fns/locale';
+import { vi } from 'date-fns/locale';
 import { ActivityListItem } from '@/hooks/use-activities';
 import { ActivityStatusBadge } from './activity-status-badge';
 import { Eye } from 'lucide-react';
@@ -80,7 +80,7 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
                 {activity.scheduledAt
                   ? formatDistanceToNow(new Date(activity.scheduledAt), {
                       addSuffix: true,
-                      locale: viLocale,
+                      locale: vi,
                     })
                   : '—'}
               </TableCell>

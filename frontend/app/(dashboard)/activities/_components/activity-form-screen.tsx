@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
+  SelectRoot,
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -147,7 +147,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-[#1C2833]">Loại hoạt động *</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectRoot value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger className="border-[#D5D8DC]">
                           <SelectValue />
@@ -160,7 +160,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                           </SelectItem>
                         ))}
                       </SelectContent>
-                    </Select>
+                    </SelectRoot>
                     <FormMessage />
                   </FormItem>
                 )}

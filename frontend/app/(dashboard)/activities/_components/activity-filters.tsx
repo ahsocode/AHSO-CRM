@@ -2,13 +2,13 @@
 
 import { Input } from '@/components/ui/input';
 import {
-  Select,
+  SelectRoot,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ActivityFilters } from '@/hooks/use-activities';
+import type { ActivityFilters } from '@/hooks/use-activities';
 
 interface ActivityFiltersProps {
   filters: ActivityFilters;
@@ -34,7 +34,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
           <label className="text-sm font-medium text-[#1C2833] block mb-2">
             Loại hoạt động
           </label>
-          <Select
+          <SelectRoot
             value={filters.type || ''}
             onValueChange={(value) =>
               onFiltersChange({ ...filters, type: value || undefined, page: 1 })
@@ -51,7 +51,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+          </SelectRoot>
         </div>
 
         {/* Completion Status */}
@@ -59,7 +59,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
           <label className="text-sm font-medium text-[#1C2833] block mb-2">
             Trạng thái
           </label>
-          <Select
+          <SelectRoot
             value={
               filters.isCompleted === undefined
                 ? ''
@@ -85,7 +85,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
               <SelectItem value="pending">Chưa xong</SelectItem>
               <SelectItem value="completed">Hoàn tất</SelectItem>
             </SelectContent>
-          </Select>
+          </SelectRoot>
         </div>
 
         {/* Search */}

@@ -2,7 +2,13 @@ import { ACTIVITY_TYPE_LABELS } from "@/lib/constants";
 import { ActivityType, UserListItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import {
+  SelectRoot,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function CalendarFilters({
   search,
@@ -70,52 +76,65 @@ export function CalendarFilters({
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-type">
+        <label className="text-sm font-semibold text-text-primary">
           Loại việc
         </label>
-        <Select id="calendar-type" value={type} onChange={(event) => onTypeChange(event.target.value as ActivityType | "")}>
-          <option value="">Tất cả loại</option>
-          {Object.entries(ACTIVITY_TYPE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
+        <SelectRoot value={type} onValueChange={(value) => onTypeChange(value as ActivityType | "")}>
+          <SelectTrigger>
+            <SelectValue placeholder="Tất cả loại" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Tất cả loại</SelectItem>
+            {Object.entries(ACTIVITY_TYPE_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </SelectRoot>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-completion">
+        <label className="text-sm font-semibold text-text-primary">
           Trạng thái
         </label>
-        <Select
-          id="calendar-completion"
+        <SelectRoot
           value={completion}
-          onChange={(event) => onCompletionChange(event.target.value as "all" | "open" | "completed")}
+          onValueChange={(value) => onCompletionChange(value as "all" | "open" | "completed")}
         >
-          <option value="all">Tất cả</option>
-          <option value="open">Chưa hoàn tất</option>
-          <option value="completed">Đã hoàn tất</option>
-        </Select>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả</SelectItem>
+            <SelectItem value="open">Chưa hoàn tất</SelectItem>
+            <SelectItem value="completed">Đã hoàn tất</SelectItem>
+          </SelectContent>
+        </SelectRoot>
       </div>
 
       {canFilterAssignee ? (
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-assignee">
+          <label className="text-sm font-semibold text-text-primary">
             Người phụ trách
           </label>
-          <Select
-            id="calendar-assignee"
+          <SelectRoot
             disabled={assigneesUnavailable}
             value={assigneeId}
-            onChange={(event) => onAssigneeIdChange(event.target.value)}
+            onValueChange={(value) => onAssigneeIdChange(value)}
           >
-            <option value="">{assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"}</option>
-            {assignees.map((assignee) => (
-              <option key={assignee.id} value={assignee.id}>
-                {assignee.name}
-              </option>
-            ))}
-          </Select>
+            <SelectTrigger>
+              <SelectValue placeholder={assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">{assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"}</SelectItem>
+              {assignees.map((assignee) => (
+                <SelectItem key={assignee.id} value={assignee.id}>
+                  {assignee.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
         </div>
       ) : null}
 

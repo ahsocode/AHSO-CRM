@@ -25,6 +25,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useActivity, useCreateActivity, useUpdateActivity } from '@/hooks/use-activities';
+import { useCustomers } from '@/hooks/use-customers';
+import { useProjects } from '@/hooks/use-projects';
 import { activityFormSchema, ActivityFormValues } from './form-schemas';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { ArrowLeft } from 'lucide-react';
@@ -48,6 +50,11 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
   const { data: activity, isLoading: isLoadingActivity } = useActivity(id || '');
   const createMutation = useCreateActivity();
   const updateMutation = useUpdateActivity();
+  const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
+    page: 1,
+    limit: 100,
+  });
+  const customers = customersData?.items ?? [];
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
@@ -62,6 +69,17 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
       isCompleted: false,
     },
   });
+
+  const selectedCustomerId = form.watch('customerId');
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjects(
+    {
+      page: 1,
+      limit: 100,
+      customerId: selectedCustomerId || undefined,
+    },
+    Boolean(selectedCustomerId)
+  );
+  const projects = projectsData?.items ?? [];
 
   useEffect(() => {
     if (activity) {
@@ -213,13 +231,37 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[#1C2833]">Khách hàng</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Mã khách hàng (nếu có)"
-                          className="border-[#D5D8DC]"
-                          {...field}
-                        />
-                      </FormControl>
+                      <SelectRoot
+                        value={field.value || 'none'}
+                        onValueChange={(value) => {
+                          const next = value === 'none' ? '' : value;
+                          field.onChange(next);
+                          // Reset project when customer changes
+                          if (next !== field.value) {
+                            form.setValue('projectId', '');
+                          }
+                        }}
+                        disabled={isLoadingCustomers}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="border-[#D5D8DC]">
+                            <SelectValue
+                              placeholder={
+                                isLoadingCustomers ? 'Đang tải...' : 'Chọn khách hàng (nếu có)'
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">— Không chọn —</SelectItem>
+                          {customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.name}
+                              {customer.shortName ? ` (${customer.shortName})` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </SelectRoot>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -231,13 +273,37 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[#1C2833]">Dự án</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Mã dự án (nếu có)"
-                          className="border-[#D5D8DC]"
-                          {...field}
-                        />
-                      </FormControl>
+                      <SelectRoot
+                        value={field.value || 'none'}
+                        onValueChange={(value) =>
+                          field.onChange(value === 'none' ? '' : value)
+                        }
+                        disabled={!selectedCustomerId || isLoadingProjects}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="border-[#D5D8DC]">
+                            <SelectValue
+                              placeholder={
+                                !selectedCustomerId
+                                  ? 'Chọn khách hàng trước'
+                                  : isLoadingProjects
+                                    ? 'Đang tải...'
+                                    : projects.length === 0
+                                      ? 'Khách hàng chưa có dự án'
+                                      : 'Chọn dự án (nếu có)'
+                              }
+                            />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">— Không chọn —</SelectItem>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.code} - {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </SelectRoot>
                       <FormMessage />
                     </FormItem>
                   )}

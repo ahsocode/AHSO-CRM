@@ -340,6 +340,7 @@ export interface ProjectFilters {
   status?: ProjectStatus;
   priority?: Priority;
   assignedToId?: string;
+  customerId?: string;
 }
 
 export interface ProjectUpsertInput {

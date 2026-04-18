@@ -98,7 +98,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
         router.push(`/activities/${id}`);
       } else {
         const result = await createMutation.mutateAsync(input);
-        router.push(`/activities/${result.data.id}`);
+        router.push(`/activities/${result.data.data.id}`);
       }
     } catch (error) {
       // Error handled by mutation

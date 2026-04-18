@@ -87,8 +87,8 @@ export function useActivity(id: string) {
   return useQuery({
     queryKey: ['activities', id],
     queryFn: async () => {
-      const res = await apiClient.get(`/activities/${id}`);
-      return res.data;
+      const res = await apiClient.get<{ data: ActivityDetail }>(`/activities/${id}`);
+      return res.data.data;
     },
     enabled: !!id,
     staleTime: 30_000,

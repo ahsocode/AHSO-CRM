@@ -54,6 +54,10 @@ function ResetPasswordContent() {
     }
   }, [form, tokenFromQuery]);
 
+  // Validate token exists early
+  const hasValidToken = tokenFromQuery && tokenFromQuery.trim().length > 0;
+  const showTokenError = !hasValidToken && form.formState.isSubmitted;
+
   const resetPasswordMutation = useMutation({
     mutationFn: (values: ResetPasswordFormValues) => resetPassword(values),
     onSuccess: () => {
@@ -62,6 +66,10 @@ function ResetPasswordContent() {
         password: "",
         confirmPassword: ""
       });
+      // Auto-redirect to login after 2 seconds
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
     }
   });
 
@@ -78,9 +86,26 @@ function ResetPasswordContent() {
         </p>
       </div>
 
+      {!hasValidToken && (
+        <div className="mb-5 rounded-xl bg-warning-bg px-4 py-3 text-sm text-warning">
+          ⚠️ Liên kết khôi phục không hợp lệ hoặc đã hết hạn. Vui lòng{" "}
+          <Link className="font-semibold underline hover:no-underline" href="/forgot-password">
+            yêu cầu liên kết mới
+          </Link>
+          .
+        </div>
+      )}
+
       <form
         className="space-y-5"
         onSubmit={form.handleSubmit((values) => {
+          if (!hasValidToken) {
+            form.setError("token", {
+              type: "manual",
+              message: "Token khôi phục là bắt buộc"
+            });
+            return;
+          }
           resetPasswordMutation.mutate(values);
         })}
       >
@@ -88,7 +113,12 @@ function ResetPasswordContent() {
           <label className="text-sm font-semibold text-text-primary" htmlFor="reset-token">
             Token khôi phục
           </label>
-          <Input id="reset-token" placeholder="Dán token hoặc mở từ liên kết reset" {...form.register("token")} />
+          <Input
+            id="reset-token"
+            placeholder="Dán token hoặc mở từ liên kết reset"
+            disabled={hasValidToken}
+            {...form.register("token")}
+          />
           {form.formState.errors.token ? (
             <p className="text-sm text-danger">{form.formState.errors.token.message}</p>
           ) : null}

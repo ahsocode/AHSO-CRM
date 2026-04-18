@@ -4,8 +4,10 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { ContractFilterDto, contractFilterSchema } from "./dto/contract-filter.dto";
+import { CreateContractDto, createContractSchema } from "./dto/create-contract.dto";
 import { CreateMilestoneDto, createMilestoneSchema } from "./dto/create-milestone.dto";
 import { CreatePaymentDto, createPaymentSchema } from "./dto/create-payment.dto";
+import { UpdateContractDto, updateContractSchema } from "./dto/update-contract.dto";
 import { UpdateMilestoneDto, updateMilestoneSchema } from "./dto/update-milestone.dto";
 import { ContractsService } from "./contracts.service";
 
@@ -22,9 +24,26 @@ export class ContractsController {
     return this.contractsService.findAll(filters, user);
   }
 
+  @Post()
+  create(
+    @Body(new ZodValidationPipe(createContractSchema)) dto: CreateContractDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.contractsService.create(dto, user);
+  }
+
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.contractsService.findOne(id, user);
+  }
+
+  @Patch(":id")
+  update(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateContractSchema)) dto: UpdateContractDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.contractsService.update(id, dto, user);
   }
 
   @Post(":id/milestones")

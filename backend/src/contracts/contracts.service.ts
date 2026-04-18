@@ -1,10 +1,12 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { MilestoneStatus, Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { ContractFilterDto } from "./dto/contract-filter.dto";
+import { CreateContractDto } from "./dto/create-contract.dto";
 import { CreateMilestoneDto } from "./dto/create-milestone.dto";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
+import { UpdateContractDto } from "./dto/update-contract.dto";
 import { UpdateMilestoneDto } from "./dto/update-milestone.dto";
 
 const CLOSED_CONTRACT_STATUSES = ["COMPLETED", "CANCELLED"] as const;
@@ -138,6 +140,47 @@ export class ContractsService {
     };
   }
 
+  async create(dto: CreateContractDto, user: JwtUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const project = await this.findAccessibleProjectForContract(tx, dto.projectId, user);
+
+      if (project.contract) {
+        throw new BadRequestException("Dự án này đã có hợp đồng");
+      }
+
+      if (dto.sourceQuoteId) {
+        const sourceQuote = project.quotes.find((quote) => quote.id === dto.sourceQuoteId);
+
+        if (!sourceQuote) {
+          throw new BadRequestException("Không tìm thấy báo giá nguồn đã được chấp nhận cho dự án này");
+        }
+      }
+
+      const contract = await tx.contract.create({
+        data: {
+          contractNo: await this.generateNextContractNo(tx),
+          signDate: dto.signDate,
+          startDate: dto.startDate,
+          endDate: dto.endDate,
+          value: dto.value,
+          status: dto.status,
+          fileUrl: dto.fileUrl,
+          notes: dto.notes,
+          projectId: dto.projectId
+        },
+        select: {
+          id: true,
+          contractNo: true,
+          status: true
+        }
+      });
+
+      await this.syncProjectStatusForContract(tx, project.id, project.status, dto.status);
+
+      return contract;
+    });
+  }
+
   async findOne(id: string, user: JwtUser) {
     const contract = await this.findAccessibleContract(id, user);
     const paidAmount = contract.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
@@ -237,6 +280,47 @@ export class ContractsService {
         notes: payment.notes
       }))
     };
+  }
+
+  async update(id: string, dto: UpdateContractDto, user: JwtUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const contract = await this.findAccessibleContractForMutation(tx, id, user);
+      const nextStartDate = dto.startDate ?? contract.startDate;
+      const nextEndDate = dto.endDate ?? contract.endDate;
+
+      if (nextStartDate && nextEndDate && nextEndDate.getTime() < nextStartDate.getTime()) {
+        throw new BadRequestException("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+      }
+
+      const updatedContract = await tx.contract.update({
+        where: {
+          id
+        },
+        data: {
+          ...(dto.signDate !== undefined ? { signDate: dto.signDate } : {}),
+          ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
+          ...(dto.endDate !== undefined ? { endDate: dto.endDate } : {}),
+          ...(dto.value !== undefined ? { value: dto.value } : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(dto.fileUrl !== undefined ? { fileUrl: dto.fileUrl } : {}),
+          ...(dto.notes !== undefined ? { notes: dto.notes } : {})
+        },
+        select: {
+          id: true,
+          contractNo: true,
+          status: true
+        }
+      });
+
+      await this.syncProjectStatusForContract(
+        tx,
+        contract.projectId,
+        contract.project.status,
+        updatedContract.status
+      );
+
+      return updatedContract;
+    });
   }
 
   async createMilestone(contractId: string, dto: CreateMilestoneDto, user: JwtUser) {
@@ -485,6 +569,74 @@ export class ContractsService {
     return contract;
   }
 
+  private async findAccessibleContractForMutation(
+    tx: Prisma.TransactionClient,
+    id: string,
+    user: JwtUser
+  ) {
+    const contract = await tx.contract.findFirst({
+      where: {
+        id,
+        project: this.buildAccessibleProjectWhere(user)
+      },
+      select: {
+        id: true,
+        projectId: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        project: {
+          select: {
+            status: true
+          }
+        }
+      }
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Không tìm thấy hợp đồng");
+    }
+
+    return contract;
+  }
+
+  private async findAccessibleProjectForContract(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    user: JwtUser
+  ) {
+    const project = await tx.project.findFirst({
+      where: {
+        ...this.buildAccessibleProjectWhere(user),
+        id: projectId
+      },
+      select: {
+        id: true,
+        status: true,
+        contract: {
+          select: {
+            id: true
+          }
+        },
+        quotes: {
+          where: {
+            status: "ACCEPTED"
+          },
+          select: {
+            id: true
+          },
+          orderBy: [{ acceptedAt: "desc" }, { createdAt: "desc" }, { version: "desc" }]
+        }
+      }
+    });
+
+    if (!project) {
+      throw new NotFoundException("Không tìm thấy dự án để tạo hợp đồng");
+    }
+
+    return project;
+  }
+
   private async findAccessibleMilestone(id: string, user: JwtUser) {
     const milestone = await this.prisma.milestone.findFirst({
       where: {
@@ -538,5 +690,55 @@ export class ContractsService {
       paymentAmount: Number(milestone.paymentAmount ?? 0),
       notes: milestone.notes
     };
+  }
+
+  private async generateNextContractNo(tx: Prisma.TransactionClient) {
+    const year = new Date().getFullYear();
+    const prefix = `HD-${year}-`;
+    const latestContract = await tx.contract.findFirst({
+      where: {
+        contractNo: {
+          startsWith: prefix
+        }
+      },
+      orderBy: {
+        contractNo: "desc"
+      },
+      select: {
+        contractNo: true
+      }
+    });
+
+    const currentSequence = latestContract?.contractNo.split("-").at(-1);
+    const nextSequence = currentSequence ? Number.parseInt(currentSequence, 10) + 1 : 1;
+
+    return `${prefix}${String(nextSequence).padStart(3, "0")}`;
+  }
+
+  private async syncProjectStatusForContract(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    currentStatus: string,
+    contractStatus: string
+  ) {
+    const nextProjectStatus =
+      contractStatus === "COMPLETED"
+        ? "COMPLETED"
+        : contractStatus === "ACTIVE" || contractStatus === "SUSPENDED"
+          ? "DELIVERING"
+          : "WON";
+
+    if (currentStatus === nextProjectStatus) {
+      return;
+    }
+
+    await tx.project.update({
+      where: {
+        id: projectId
+      },
+      data: {
+        status: nextProjectStatus
+      }
+    });
   }
 }

@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { SonnerToaster } from "./ui/sonner";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -12,11 +13,19 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             staleTime: 30_000,
             retry: 1,
             refetchOnWindowFocus: false
+          },
+          mutations: {
+            retry: 1
           }
         }
       })
   );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+      <SonnerToaster />
+    </QueryClientProvider>
+  );
 }
 

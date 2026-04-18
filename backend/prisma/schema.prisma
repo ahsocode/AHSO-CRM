@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  name              String
+  password          String
+  role              Role       @default(STAFF)
+  avatarUrl         String?
+  refreshToken      String?
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  assignedCustomers Customer[] @relation("AssignedTo")
+  createdQuotes     Quote[]
+  activities        Activity[]
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+model Customer {
+  id           String         @id @default(cuid())
+  name         String
+  shortName    String?
+  taxCode      String?        @unique
+  industry     String?
+  address      String?
+  website      String?
+  phone        String?
+  email        String?
+  source       String?
+  notes        String?
+  status       CustomerStatus @default(LEAD)
+  isVip        Boolean        @default(false)
+  deletedAt    DateTime?
+  assignedTo   User           @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  contacts     Contact[]
+  projects     Project[]
+  activities   Activity[]
+}
+
+enum CustomerStatus {
+  LEAD
+  PROSPECT
+  ACTIVE
+  INACTIVE
+}
+
+model Contact {
+  id         String   @id @default(cuid())
+  name       String
+  title      String?
+  email      String?
+  phone      String?
+  isPrimary  Boolean  @default(false)
+  notes      String?
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  code            String        @unique @default(cuid())
+  name            String
+  description     String?
+  status          ProjectStatus @default(SURVEY)
+  priority        Priority      @default(NORMAL)
+  estimatedValue  Decimal?      @db.Decimal(15, 0)
+  startDate       DateTime?
+  expectedEndDate DateTime?
+  notes           String?
+  deletedAt       DateTime?
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  customerId      String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  quotes          Quote[]
+  contract        Contract?
+  activities      Activity[]
+  milestones      Milestone[]
+}
+
+enum ProjectStatus {
+  SURVEY
+  QUOTING
+  NEGOTIATING
+  WON
+  LOST
+  DELIVERING
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model Quote {
+  id            String      @id @default(cuid())
+  quoteNo       String      @unique
+  version       Int         @default(1)
+  status        QuoteStatus @default(DRAFT)
+  validUntil    DateTime?
+  subtotal      Decimal     @default(0) @db.Decimal(15, 0)
+  taxRate       Decimal     @default(10) @db.Decimal(5, 2)
+  taxAmount     Decimal     @default(0) @db.Decimal(15, 0)
+  total         Decimal     @default(0) @db.Decimal(15, 0)
+  terms         String?
+  deliveryTerms String?
+  internalNote  String?
+  sentAt        DateTime?
+  acceptedAt    DateTime?
+  project       Project     @relation(fields: [projectId], references: [id])
+  projectId     String
+  createdBy     User        @relation(fields: [createdById], references: [id])
+  createdById   String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         QuoteItem[]
+}
+
+model QuoteItem {
+  id          String   @id @default(cuid())
+  order       Int
+  name        String
+  description String?
+  unit        String?
+  quantity    Decimal  @db.Decimal(10, 2)
+  unitPrice   Decimal  @db.Decimal(15, 0)
+  total       Decimal  @db.Decimal(15, 0)
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId     String
+
+  @@index([quoteId, order])
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Contract {
+  id         String         @id @default(cuid())
+  contractNo String         @unique
+  signDate   DateTime?
+  startDate  DateTime?
+  endDate    DateTime?
+  value      Decimal        @db.Decimal(15, 0)
+  status     ContractStatus @default(ACTIVE)
+  fileUrl    String?
+  notes      String?
+  project    Project        @relation(fields: [projectId], references: [id])
+  projectId  String         @unique
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  milestones Milestone[]
+  payments   Payment[]
+}
+
+enum ContractStatus {
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  CANCELLED
+}
+
+model Milestone {
+  id            String          @id @default(cuid())
+  name          String
+  description   String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  status        MilestoneStatus @default(PENDING)
+  paymentAmount Decimal?        @db.Decimal(15, 0)
+  notes         String?
+  project       Project         @relation(fields: [projectId], references: [id])
+  projectId     String
+  contract      Contract?       @relation(fields: [contractId], references: [id])
+  contractId    String?
+  createdAt     DateTime        @default(now())
+}
+
+enum MilestoneStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  ACCEPTED
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  amount     Decimal  @db.Decimal(15, 0)
+  paidAt     DateTime
+  method     String?
+  reference  String?
+  notes      String?
+  contract   Contract @relation(fields: [contractId], references: [id])
+  contractId String
+  createdAt  DateTime @default(now())
+}
+
+model Activity {
+  id            String       @id @default(cuid())
+  type          ActivityType
+  title         String
+  content       String?
+  scheduledAt   DateTime?
+  doneAt        DateTime?
+  isCompleted   Boolean      @default(false)
+  attachmentUrl String?
+  customer      Customer?    @relation(fields: [customerId], references: [id])
+  customerId    String?
+  project       Project?     @relation(fields: [projectId], references: [id])
+  projectId     String?
+  user          User         @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  SURVEY
+  DEMO
+  NOTE
+  FOLLOWUP
+}
+

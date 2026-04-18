@@ -304,6 +304,16 @@ export interface ProjectListMeta {
   summary: ProjectsSummary;
 }
 
+export type ProjectViewMode = "kanban" | "list";
+
+export interface ProjectKanbanColumn {
+  key: ProjectStatus;
+  label: string;
+  itemCount: number;
+  totalValue: number;
+  items: ProjectListItem[];
+}
+
 export interface ProjectFilters {
   page: number;
   limit: number;
@@ -311,6 +321,22 @@ export interface ProjectFilters {
   status?: ProjectStatus;
   priority?: Priority;
   assignedToId?: string;
+}
+
+export interface ProjectUpsertInput {
+  customerId: string;
+  name: string;
+  description?: string;
+  status: ProjectStatus;
+  priority: Priority;
+  estimatedValue?: number;
+  startDate?: string;
+  expectedEndDate?: string;
+  notes?: string;
+}
+
+export interface ProjectStatusUpdateInput {
+  status: ProjectStatus;
 }
 
 export interface ProjectDetailCustomer {

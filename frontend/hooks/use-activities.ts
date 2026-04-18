@@ -55,6 +55,7 @@ export interface ActivityInput {
   projectId?: string;
   attachmentUrl?: string;
   scheduledAt?: Date;
+  isCompleted?: boolean;
 }
 
 export interface ActivityFilters {

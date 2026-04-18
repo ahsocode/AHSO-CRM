@@ -11,6 +11,7 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 .DS_Store
 npm-debug.log*
+*.tsbuildinfo
 
 # Environment files — never commit real secrets
 .env

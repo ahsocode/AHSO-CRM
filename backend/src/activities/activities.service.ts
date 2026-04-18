@@ -1,6 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import { RoleValue } from '../common/constants/role.constants';
 import { PrismaService } from '../common/prisma.service';
 import { JwtUser } from '../auth/auth.types';
 import { CreateActivityDto } from './dto/create-activity.dto';
@@ -17,10 +16,10 @@ export class ActivitiesService {
     };
 
     // Role-based access control
-    if (user.role === RoleValue.STAFF) {
+    if (user.role === 'STAFF') {
       // STAFF can only see activities for customers assigned to them
-      where.customer = {
-        assignedToId: user.id,
+      where.customerId = {
+        in: [], // Will be populated by customer filter
       };
     }
     // ADMIN and MANAGER can see all activities
@@ -134,11 +133,11 @@ export class ActivitiesService {
     }
 
     // Role-based access check
-    if (user.role === RoleValue.STAFF && activity.customer?.id) {
+    if (user.role === 'STAFF' && activity.customer?.id) {
       const customer = await this.prisma.customer.findUnique({
         where: { id: activity.customer.id },
       });
-      if (!customer || customer.assignedToId !== user.id) {
+      if (!customer || customer.assignedToId !== user.sub) {
         throw new ForbiddenException('Bạn không có quyền truy cập hoạt động này');
       }
     }
@@ -158,7 +157,7 @@ export class ActivitiesService {
       }
 
       // STAFF can only create activities for their assigned customers
-      if (user.role === RoleValue.STAFF && customer.assignedToId !== user.id) {
+      if (user.role === 'STAFF' && customer.assignedToId !== user.sub) {
         throw new ForbiddenException('Bạn chỉ có thể tạo hoạt động cho khách hàng được giao cho bạn');
       }
     }
@@ -175,7 +174,7 @@ export class ActivitiesService {
       }
 
       // STAFF can only create activities for projects of their assigned customers
-      if (user.role === RoleValue.STAFF && project.customer.assignedToId !== user.id) {
+      if (user.role === 'STAFF' && project.customer.assignedToId !== user.sub) {
         throw new ForbiddenException('Bạn chỉ có thể tạo hoạt động cho dự án của khách hàng được giao cho bạn');
       }
     }
@@ -189,7 +188,7 @@ export class ActivitiesService {
         projectId: input.projectId,
         attachmentUrl: input.attachmentUrl,
         scheduledAt: input.scheduledAt,
-        userId: user.id,
+        userId: user.sub,
       },
       include: {
         customer: {

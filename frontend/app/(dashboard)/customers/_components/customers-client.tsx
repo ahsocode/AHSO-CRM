@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useCustomers } from "@/hooks/use-customers";
+import { useCreateCustomer, useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { cn } from "@/lib/utils";
-import { CustomerStatus } from "@/lib/types";
+import { CustomerStatus, CustomerUpsertInput } from "@/lib/types";
+import { CsvImportDialog, CsvColumnSpec } from "@/components/shared/csv-import-dialog";
 import { CustomerFilters, type VipFilterValue } from "./customer-filters";
 import { CustomerOverviewCards } from "./customer-overview-cards";
 import { CustomerTable } from "./customer-table";
@@ -24,6 +26,21 @@ function getErrorMessage(error: unknown) {
   return "Đã xảy ra lỗi khi tải dữ liệu khách hàng.";
 }
 
+const CUSTOMER_STATUS_MAP: Record<string, CustomerStatus> = {
+  lead: "LEAD",
+  prospect: "PROSPECT",
+  active: "ACTIVE",
+  inactive: "INACTIVE",
+  "tiềm năng": "LEAD",
+  "đang làm việc": "ACTIVE",
+  "ngưng": "INACTIVE"
+};
+
+const parseBoolean = (value: string): boolean => {
+  const normalized = value.trim().toLowerCase();
+  return ["true", "1", "yes", "y", "vip", "x", "có", "co"].includes(normalized);
+};
+
 export function CustomersClient() {
   const user = useAuthStore((state) => state.user);
   const [search, setSearch] = useState("");
@@ -32,8 +49,11 @@ export function CustomersClient() {
   const [assignedToId, setAssignedToId] = useState("");
   const [vipFilter, setVipFilter] = useState<VipFilterValue>("all");
   const [page, setPage] = useState(1);
+  const [importOpen, setImportOpen] = useState(false);
   const deferredSearch = useDeferredValue(search.trim());
   const normalizedIndustry = industry.trim();
+  const createCustomer = useCreateCustomer();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     setPage(1);
@@ -58,6 +78,73 @@ export function CustomersClient() {
     assignedToId.length > 0 ||
     vipFilter !== "all";
 
+  const assigneeList = usersQuery.data ?? [];
+  const findAssigneeIdByEmail = (email: string): string | undefined => {
+    const needle = email.trim().toLowerCase();
+    if (!needle) return undefined;
+    return assigneeList.find((u) => u.email?.toLowerCase() === needle)?.id;
+  };
+
+  const importColumns: CsvColumnSpec<CustomerUpsertInput>[] = [
+    {
+      header: "Tên khách hàng *",
+      key: "name",
+      required: true,
+      example: "Công ty Vinamilk",
+      transform: (value) => {
+        if (!value) throw new Error("Thiếu tên khách hàng");
+        return value;
+      }
+    },
+    { header: "Tên viết tắt", key: "shortName", example: "VNM", transform: (v) => v || undefined },
+    { header: "Mã số thuế", key: "taxCode", example: "0300588569", transform: (v) => v || undefined },
+    { header: "Ngành", key: "industry", example: "FMCG", transform: (v) => v || undefined },
+    { header: "Địa chỉ", key: "address", example: "10 Tân Trào, Q.7, TP.HCM", transform: (v) => v || undefined },
+    { header: "Website", key: "website", example: "https://vinamilk.com.vn", transform: (v) => v || undefined },
+    { header: "Điện thoại", key: "phone", example: "02854 155 555", transform: (v) => v || undefined },
+    { header: "Email", key: "email", example: "contact@vinamilk.com.vn", transform: (v) => v || undefined },
+    { header: "Nguồn", key: "source", example: "Hội chợ VIFA", transform: (v) => v || undefined },
+    {
+      header: "Trạng thái",
+      key: "status",
+      example: "LEAD",
+      transform: (v) => {
+        if (!v) return "LEAD" as CustomerStatus;
+        const normalized = v.trim().toLowerCase();
+        const mapped = CUSTOMER_STATUS_MAP[normalized] ?? (v.trim().toUpperCase() as CustomerStatus);
+        if (!["LEAD", "PROSPECT", "ACTIVE", "INACTIVE"].includes(mapped)) {
+          throw new Error(`Trạng thái "${v}" không hợp lệ (LEAD/PROSPECT/ACTIVE/INACTIVE)`);
+        }
+        return mapped;
+      }
+    },
+    {
+      header: "VIP",
+      key: "isVip",
+      example: "false",
+      transform: (v) => parseBoolean(v)
+    },
+    {
+      header: "Email người phụ trách *",
+      key: "assignedToId",
+      required: true,
+      example: user?.email ?? "admin@ahso.vn",
+      transform: (v) => {
+        const trimmed = v.trim();
+        if (!trimmed) {
+          if (user?.id) return user.id;
+          throw new Error("Thiếu email người phụ trách");
+        }
+        const found = findAssigneeIdByEmail(trimmed);
+        if (!found) {
+          throw new Error(`Không tìm thấy user với email "${trimmed}"`);
+        }
+        return found;
+      }
+    },
+    { header: "Ghi chú", key: "notes", example: "Khách đã ký NDA", transform: (v) => v || undefined }
+  ];
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -69,11 +156,30 @@ export function CustomersClient() {
               <AppIcon name="plus" className="h-4 w-4" />
               Thêm khách hàng
             </Link>
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
             <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
               Về dashboard
             </Link>
           </div>
         }
+      />
+
+      <CsvImportDialog<CustomerUpsertInput>
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Import danh sách khách hàng từ CSV"
+        description="Tải file mẫu, điền dữ liệu theo cột, rồi upload để nhập hàng loạt."
+        templateFilename="khach-hang-mau.csv"
+        columns={importColumns}
+        submitRow={async (input) => {
+          const result = await createCustomer.mutateAsync(input);
+          return { displayName: input.name + (result?.id ? ` (ID: ${result.id.slice(0, 6)}…)` : "") };
+        }}
+        onFinish={() => {
+          queryClient.invalidateQueries({ queryKey: ["customers"] });
+        }}
       />
 
       <CustomerOverviewCards meta={customersQuery.data?.meta} isLoading={customersQuery.isLoading} />

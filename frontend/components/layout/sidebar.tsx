@@ -83,7 +83,7 @@ export function Sidebar() {
                 "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 isActive
                   ? "bg-gradient-to-r from-white to-info-bg/70 text-primary shadow-[0_10px_24px_rgba(26,82,118,0.14)] ring-1 ring-primary/25"
-                  : "text-text-secondary hover:bg-white hover:text-primary hover:shadow-[0_10px_20px_rgba(21,67,96,0.08)]"
+                  : "text-slate-600 hover:bg-white hover:text-primary hover:shadow-[0_10px_20px_rgba(21,67,96,0.08)]"
               )}
             >
               <div
@@ -91,7 +91,7 @@ export function Sidebar() {
                   "flex h-9 w-9 items-center justify-center rounded-xl transition-all",
                   isActive
                     ? "bg-primary text-white shadow-[0_10px_18px_rgba(26,82,118,0.22)]"
-                    : "bg-slate-100 text-text-secondary group-hover:bg-primary/12 group-hover:text-primary"
+                    : "bg-slate-100 text-slate-500 group-hover:bg-primary/12 group-hover:text-primary"
                 )}
               >
                 <AppIcon name={item.icon} className="h-[18px] w-[18px]" />

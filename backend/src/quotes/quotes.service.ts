@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { CreateQuoteDto } from "./dto/create-quote.dto";
 import { QuoteFilterDto } from "./dto/quote-filter.dto";
+import { UpdateQuoteDto } from "./dto/update-quote.dto";
+import { UpdateQuoteStatusDto } from "./dto/update-quote-status.dto";
 
 const EXPIRING_SOON_WINDOW_DAYS = 7;
+const EDITABLE_QUOTE_STATUSES = ["DRAFT", "REJECTED"] as const;
+const PRE_SALE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING"] as const;
 
 @Injectable()
 export class QuotesService {
@@ -219,9 +223,7 @@ export class QuotesService {
 
       const quoteNo = await this.generateNextQuoteNo(tx);
       const version = (nextVersion._max.version ?? 0) + 1;
-      const subtotal = dto.items.reduce((sum, item) => sum + Math.round(item.quantity * item.unitPrice), 0);
-      const taxAmount = Math.round((subtotal * dto.taxRate) / 100);
-      const total = subtotal + taxAmount;
+      const totals = this.buildQuoteTotals(dto.items, dto.taxRate);
 
       const quote = await tx.quote.create({
         data: {
@@ -229,27 +231,25 @@ export class QuotesService {
           version,
           status: dto.status,
           validUntil: dto.validUntil,
-          subtotal,
+          subtotal: totals.subtotal,
           taxRate: dto.taxRate,
-          taxAmount,
-          total,
+          taxAmount: totals.taxAmount,
+          total: totals.total,
           terms: dto.terms,
           deliveryTerms: dto.deliveryTerms,
           internalNote: dto.internalNote,
-          sentAt: dto.status === "SENT" || dto.status === "ACCEPTED" ? new Date() : null,
-          acceptedAt: dto.status === "ACCEPTED" ? new Date() : null,
+          ...this.resolveQuoteStatusPayload(
+            {
+              status: "DRAFT",
+              sentAt: null,
+              acceptedAt: null
+            },
+            dto.status
+          ),
           projectId: dto.projectId,
           createdById: user.sub,
           items: {
-            create: dto.items.map((item, index) => ({
-              order: index + 1,
-              name: item.name,
-              description: item.description,
-              unit: item.unit,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: Math.round(item.quantity * item.unitPrice)
-            }))
+            create: this.buildQuoteItemsCreateInput(dto.items)
           }
         },
         select: {
@@ -258,18 +258,157 @@ export class QuotesService {
         }
       });
 
-      if (project.status === "SURVEY") {
-        await tx.project.update({
-          where: {
-            id: project.id
-          },
-          data: {
-            status: "QUOTING"
-          }
-        });
-      }
+      await this.syncProjectStatusForQuote(tx, project.id, project.status, dto.status);
 
       return quote;
+    });
+  }
+
+  async update(id: string, dto: UpdateQuoteDto, user: JwtUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const quote = await this.findAccessibleQuoteForMutation(tx, id, user);
+
+      if (quote.projectId !== dto.projectId) {
+        throw new BadRequestException("Không thể chuyển báo giá sang dự án khác");
+      }
+
+      if (!EDITABLE_QUOTE_STATUSES.includes(quote.status as (typeof EDITABLE_QUOTE_STATUSES)[number])) {
+        throw new BadRequestException("Chỉ có thể sửa báo giá ở trạng thái nháp hoặc bị từ chối");
+      }
+
+      const totals = this.buildQuoteTotals(dto.items, dto.taxRate);
+      const updatedQuote = await tx.quote.update({
+        where: {
+          id
+        },
+        data: {
+          status: dto.status,
+          validUntil: dto.validUntil,
+          subtotal: totals.subtotal,
+          taxRate: dto.taxRate,
+          taxAmount: totals.taxAmount,
+          total: totals.total,
+          terms: dto.terms,
+          deliveryTerms: dto.deliveryTerms,
+          internalNote: dto.internalNote,
+          ...this.resolveQuoteStatusPayload(quote, dto.status),
+          items: {
+            deleteMany: {},
+            create: this.buildQuoteItemsCreateInput(dto.items)
+          }
+        },
+        select: {
+          id: true,
+          quoteNo: true
+        }
+      });
+
+      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status);
+
+      return updatedQuote;
+    });
+  }
+
+  async duplicate(id: string, user: JwtUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const quote = await this.findAccessibleQuoteForMutation(tx, id, user);
+
+      if (quote.project.contract) {
+        throw new BadRequestException("Dự án đã có hợp đồng, không thể tạo version báo giá mới");
+      }
+
+      const nextVersion = await tx.quote.aggregate({
+        _max: {
+          version: true
+        },
+        where: {
+          projectId: quote.projectId
+        }
+      });
+
+      const quoteNo = await this.generateNextQuoteNo(tx);
+      const itemInputs = quote.items.map((item) => ({
+        name: item.name,
+        description: item.description ?? undefined,
+        unit: item.unit ?? undefined,
+        quantity: Number(item.quantity),
+        unitPrice: Number(item.unitPrice)
+      }));
+      const totals = this.buildQuoteTotals(itemInputs, Number(quote.taxRate));
+      const duplicatedQuote = await tx.quote.create({
+        data: {
+          quoteNo,
+          version: (nextVersion._max.version ?? 0) + 1,
+          status: "DRAFT",
+          validUntil: quote.validUntil,
+          subtotal: totals.subtotal,
+          taxRate: quote.taxRate,
+          taxAmount: totals.taxAmount,
+          total: totals.total,
+          terms: quote.terms,
+          deliveryTerms: quote.deliveryTerms,
+          internalNote: quote.internalNote,
+          sentAt: null,
+          acceptedAt: null,
+          projectId: quote.projectId,
+          createdById: user.sub,
+          items: {
+            create: this.buildQuoteItemsCreateInput(itemInputs)
+          }
+        },
+        select: {
+          id: true,
+          quoteNo: true,
+          version: true
+        }
+      });
+
+      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, "DRAFT");
+
+      return duplicatedQuote;
+    });
+  }
+
+  async updateStatus(id: string, dto: UpdateQuoteStatusDto, user: JwtUser) {
+    return this.prisma.$transaction(async (tx) => {
+      const quote = await this.findAccessibleQuoteForMutation(tx, id, user);
+
+      if (quote.status === "ACCEPTED" && dto.status !== "ACCEPTED") {
+        throw new BadRequestException("Báo giá đã được chấp nhận, không thể chuyển về trạng thái trước đó");
+      }
+
+      if (quote.project.contract && dto.status !== "ACCEPTED") {
+        throw new BadRequestException("Dự án đã có hợp đồng, không thể đổi trạng thái báo giá này");
+      }
+
+      if (dto.status === quote.status) {
+        return {
+          id: quote.id,
+          status: quote.status,
+          sentAt: quote.sentAt,
+          acceptedAt: quote.acceptedAt
+        };
+      }
+
+      const updatedQuote = await tx.quote.update({
+        where: {
+          id
+        },
+        data: {
+          status: dto.status,
+          ...this.resolveQuoteStatusPayload(quote, dto.status)
+        },
+        select: {
+          id: true,
+          status: true,
+          sentAt: true,
+          acceptedAt: true
+        }
+      });
+
+      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status);
+
+      return updatedQuote;
     });
   }
 
@@ -444,6 +583,43 @@ export class QuotesService {
     return quote;
   }
 
+  private async findAccessibleQuoteForMutation(
+    tx: Prisma.TransactionClient,
+    id: string,
+    user: JwtUser
+  ) {
+    const quote = await tx.quote.findFirst({
+      where: {
+        ...this.buildWhere({}, user),
+        id
+      },
+      include: {
+        items: {
+          orderBy: {
+            order: "asc"
+          }
+        },
+        project: {
+          select: {
+            id: true,
+            status: true,
+            contract: {
+              select: {
+                id: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!quote) {
+      throw new NotFoundException("Không tìm thấy báo giá");
+    }
+
+    return quote;
+  }
+
   private async generateNextQuoteNo(tx: Prisma.TransactionClient) {
     const year = new Date().getFullYear();
     const prefix = `BG-${year}-`;
@@ -478,5 +654,115 @@ export class QuotesService {
     }
 
     return validUntil >= now && validUntil <= expiringSoonBoundary;
+  }
+
+  private buildQuoteItemsCreateInput(
+    items: Array<{
+      name: string;
+      description?: string;
+      unit?: string;
+      quantity: number;
+      unitPrice: number;
+    }>
+  ) {
+    return items.map((item, index) => ({
+      order: index + 1,
+      name: item.name,
+      description: item.description,
+      unit: item.unit,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      total: Math.round(item.quantity * item.unitPrice)
+    }));
+  }
+
+  private buildQuoteTotals(
+    items: Array<{
+      quantity: number;
+      unitPrice: number;
+    }>,
+    taxRate: number
+  ) {
+    const subtotal = items.reduce(
+      (sum, item) => sum + Math.round(item.quantity * item.unitPrice),
+      0
+    );
+    const taxAmount = Math.round((subtotal * taxRate) / 100);
+
+    return {
+      subtotal,
+      taxAmount,
+      total: subtotal + taxAmount
+    };
+  }
+
+  private resolveQuoteStatusPayload(
+    quote: {
+      status: string;
+      sentAt: Date | null;
+      acceptedAt: Date | null;
+    },
+    nextStatus: string
+  ) {
+    const now = new Date();
+
+    if (nextStatus === "DRAFT") {
+      return {
+        sentAt: null,
+        acceptedAt: null
+      };
+    }
+
+    if (nextStatus === "SENT") {
+      return {
+        sentAt: quote.sentAt ?? now,
+        acceptedAt: null
+      };
+    }
+
+    if (nextStatus === "ACCEPTED") {
+      return {
+        sentAt: quote.sentAt ?? now,
+        acceptedAt: quote.acceptedAt ?? now
+      };
+    }
+
+    return {
+      sentAt: quote.sentAt,
+      acceptedAt: null
+    };
+  }
+
+  private async syncProjectStatusForQuote(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    currentStatus: string,
+    quoteStatus: string
+  ) {
+    if (
+      quoteStatus === "ACCEPTED" &&
+      PRE_SALE_PROJECT_STATUSES.includes(currentStatus as (typeof PRE_SALE_PROJECT_STATUSES)[number])
+    ) {
+      await tx.project.update({
+        where: {
+          id: projectId
+        },
+        data: {
+          status: "WON"
+        }
+      });
+      return;
+    }
+
+    if (currentStatus === "SURVEY") {
+      await tx.project.update({
+        where: {
+          id: projectId
+        },
+        data: {
+          status: "QUOTING"
+        }
+      });
+    }
   }
 }

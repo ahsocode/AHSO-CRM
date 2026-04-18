@@ -14,6 +14,7 @@ import { ContractsModule } from "./contracts/contracts.module";
 import { ActivitiesModule } from "./activities/activities.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { ReportsModule } from "./reports/reports.module";
+import { UploadModule } from "./upload/upload.module";
 
 @Module({
   imports: [
@@ -46,7 +47,8 @@ import { ReportsModule } from "./reports/reports.module";
     ContractsModule,
     ActivitiesModule,
     CalendarModule,
-    ReportsModule
+    ReportsModule,
+    UploadModule
   ],
   providers: [
     {

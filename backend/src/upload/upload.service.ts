@@ -1,90 +1,127 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import * as fs from "fs";
-import * as path from "path";
+import { randomUUID } from "crypto";
+import { mkdir, rm, stat, writeFile } from "fs/promises";
+import { extname, isAbsolute, join, normalize, resolve } from "path";
+import type { UploadResponseDto } from "./dto/upload-response.dto";
 
 @Injectable()
 export class UploadService {
-  private readonly allowedMimeTypes = [
+  readonly logoMimeTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"] as const;
+  readonly fileMimeTypes = [
     "application/pdf",
-    "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "image/png",
     "image/jpeg"
-  ];
+  ] as const;
+  readonly maxLogoSize = 5 * 1024 * 1024;
+  readonly maxFileSize = 10 * 1024 * 1024;
 
-  private readonly maxFileSize = 10 * 1024 * 1024; // 10MB
+  private readonly extensionMap: Record<string, string> = {
+    "application/pdf": ".pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/svg+xml": ".svg",
+    "image/webp": ".webp"
+  };
 
-  constructor(private configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) {}
 
-  validateFileType(mimetype: string): boolean {
-    return this.allowedMimeTypes.includes(mimetype);
+  validateLogoType(mimeType: string) {
+    return this.logoMimeTypes.includes(mimeType as (typeof this.logoMimeTypes)[number]);
   }
 
-  validateFileSize(size: number): boolean {
+  validateFileType(mimeType: string) {
+    return this.fileMimeTypes.includes(mimeType as (typeof this.fileMimeTypes)[number]);
+  }
+
+  validateLogoSize(size: number) {
+    return size <= this.maxLogoSize;
+  }
+
+  validateFileSize(size: number) {
     return size <= this.maxFileSize;
   }
 
-  getFileDirectory(userId: string): string {
-    const uploadDir = this.configService.get<string>("UPLOAD_DIR") ?? "./uploads";
-    const userDir = path.join(uploadDir, userId);
-
-    // Ensure directory exists
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
-    }
-
-    return userDir;
+  getFileUrl(filename: string, subfolder = "files") {
+    return `/uploads/${subfolder}/${filename}`;
   }
 
-  generateFileName(originalName: string): string {
-    const timestamp = Date.now();
-    const ext = path.extname(originalName);
-    const name = path.basename(originalName, ext);
-    return `${timestamp}-${name}${ext}`;
-  }
+  async saveFile(file: Express.Multer.File, subfolder: string): Promise<UploadResponseDto> {
+    const uploadRoot = this.getUploadRoot();
+    const targetDirectory = resolve(uploadRoot, subfolder);
+    const extension = this.resolveExtension(file.originalname, file.mimetype);
+    const filename = `${randomUUID()}${extension}`;
 
-  getFileUrl(userId: string, filename: string): string {
-    return `/api/upload/${userId}/${filename}`;
-  }
-
-  async saveFile(userId: string, file: Express.Multer.File): Promise<{url: string; filename: string; size: number; uploadedAt: string}> {
-    const userDir = this.getFileDirectory(userId);
-    const filename = this.generateFileName(file.originalname);
-    const filepath = path.join(userDir, filename);
-
-    fs.writeFileSync(filepath, file.buffer);
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(join(targetDirectory, filename), file.buffer);
 
     return {
-      url: this.getFileUrl(userId, filename),
+      url: this.getFileUrl(filename, subfolder),
       filename,
       size: file.size,
-      uploadedAt: new Date().toISOString()
+      mimeType: file.mimetype
     };
   }
 
-  deleteFile(userId: string, filename: string): boolean {
-    const userDir = this.getFileDirectory(userId);
-    const filepath = path.join(userDir, filename);
+  async deleteFile(filePathOrUrl?: string | null) {
+    const absolutePath = this.resolveStoredPath(filePathOrUrl);
 
-    if (fs.existsSync(filepath)) {
-      fs.unlinkSync(filepath);
-      return true;
+    if (!absolutePath) {
+      return false;
     }
 
-    return false;
+    try {
+      await stat(absolutePath);
+    } catch {
+      return false;
+    }
+
+    await rm(absolutePath, { force: true });
+    return true;
   }
 
-  getFileStream(userId: string, filename: string) {
-    const userDir = this.getFileDirectory(userId);
-    const filepath = path.join(userDir, filename);
+  private getUploadRoot() {
+    const configuredUploadDir = this.configService.get<string>("UPLOAD_DIR") ?? "./uploads";
+    return isAbsolute(configuredUploadDir)
+      ? configuredUploadDir
+      : resolve(process.cwd(), configuredUploadDir);
+  }
 
-    if (!fs.existsSync(filepath)) {
+  private resolveExtension(originalName: string, mimeType: string) {
+    const extensionFromName = extname(originalName).trim().toLowerCase();
+
+    if (extensionFromName) {
+      return extensionFromName;
+    }
+
+    return this.extensionMap[mimeType] ?? "";
+  }
+
+  private resolveStoredPath(filePathOrUrl?: string | null) {
+    if (!filePathOrUrl) {
       return null;
     }
 
-    return fs.createReadStream(filepath);
+    const uploadRoot = this.getUploadRoot();
+    const relativePath = filePathOrUrl.startsWith("/uploads/")
+      ? filePathOrUrl.replace(/^\/uploads\//, "")
+      : filePathOrUrl.replace(/^\/+/, "");
+    const normalizedRelativePath = normalize(relativePath);
+
+    if (normalizedRelativePath.startsWith("..")) {
+      return null;
+    }
+
+    const absolutePath = resolve(uploadRoot, normalizedRelativePath);
+
+    if (!absolutePath.startsWith(uploadRoot)) {
+      return null;
+    }
+
+    return absolutePath;
   }
 }

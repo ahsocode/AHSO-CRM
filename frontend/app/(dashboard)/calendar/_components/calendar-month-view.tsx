@@ -13,6 +13,7 @@ import { ACTIVITY_TYPE_LABELS } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { ActivityType, CalendarEventItem, CalendarListMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { MonthViewScale, getMonthViewGridConfig } from "./calendar-utils";
 
 const WEEKDAY_SHORT_VI = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const MONTH_NAMES_VI = [
@@ -121,6 +122,8 @@ interface CalendarMonthViewProps {
   /** Controls the visible month — derived from dateFrom */
   dateFrom: string;
   onMonthChange: (year: number, month: number) => void;
+  /** Scale: single (1 month), double (2 months), triple (3 months) */
+  scale?: MonthViewScale;
 }
 
 export function CalendarMonthView({
@@ -129,7 +132,8 @@ export function CalendarMonthView({
   isError,
   errorMessage,
   dateFrom,
-  onMonthChange
+  onMonthChange,
+  scale = "single"
 }: CalendarMonthViewProps) {
   const router = useRouter();
   const updateMutation = useUpdateActivity();
@@ -144,7 +148,36 @@ export function CalendarMonthView({
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [rescheduleDialog, setRescheduleDialog] = useState<RescheduleState | null>(null);
 
-  const gridDays = getMonthGridDays(viewYear, viewMonth);
+  // Get grid config based on scale
+  const gridConfig = getMonthViewGridConfig(scale);
+
+  // Collect months to display based on scale
+  const months: Array<{ year: number; month: number }> = [];
+  if (scale === "single") {
+    months.push({ year: viewYear, month: viewMonth });
+  } else if (scale === "double") {
+    months.push({ year: viewYear, month: viewMonth });
+    const nextMonth = viewMonth + 1;
+    months.push({
+      year: nextMonth > 11 ? viewYear + 1 : viewYear,
+      month: nextMonth > 11 ? 0 : nextMonth
+    });
+  } else {
+    months.push({ year: viewYear, month: viewMonth });
+    const nextMonth = viewMonth + 1;
+    const nextNextMonth = viewMonth + 2;
+    months.push({
+      year: nextMonth > 11 ? viewYear + 1 : viewYear,
+      month: nextMonth > 11 ? 0 : nextMonth
+    });
+    months.push({
+      year: nextNextMonth > 11 ? viewYear + 1 : viewYear,
+      month: nextNextMonth > 11 ? nextNextMonth - 12 : nextNextMonth
+    });
+  }
+
+  // Collect all days from all months
+  const allGridDays = months.flatMap(({ year, month }) => getMonthGridDays(year, month));
   const itemsByDay = groupItemsByDay(items);
 
   // Navigation
@@ -214,9 +247,10 @@ export function CalendarMonthView({
     } catch { /* toast handled by hook */ }
   };
 
+  // Generate weeks for all months
   const weeks: string[][] = [];
-  for (let i = 0; i < gridDays.length; i += 7) {
-    weeks.push(gridDays.slice(i, i + 7));
+  for (let i = 0; i < allGridDays.length; i += 7) {
+    weeks.push(allGridDays.slice(i, i + 7));
   }
 
   if (isLoading) {
@@ -250,7 +284,8 @@ export function CalendarMonthView({
             Lịch công tác
           </p>
           <h2 className="font-heading text-xl font-bold text-text-primary">
-            {MONTH_NAMES_VI[viewMonth]} {viewYear}
+            {months.map(m => `${MONTH_NAMES_VI[m.month]}`).join(" - ")} {viewYear}
+            {scale !== "single" && ` (${scale === "double" ? "2" : "3"} tháng)`}
           </h2>
           <p className="mt-1 text-sm text-text-secondary">
             {items.length} activity · Kéo thả giữa các ngày để dời lịch, click để sửa
@@ -270,108 +305,138 @@ export function CalendarMonthView({
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Weekday header row */}
-        <div className="grid grid-cols-7 border-b border-border/50 bg-bg-hover/20">
-          {WEEKDAY_SHORT_VI.map((label) => (
-            <div
-              key={label}
-              className="px-2 py-2 text-center text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary"
-            >
-              {label}
-            </div>
-          ))}
-        </div>
+        {/* Render months side-by-side based on scale */}
+        <div className={cn("grid gap-0", {
+          "grid-cols-1": scale === "single",
+          "grid-cols-2": scale === "double",
+          "grid-cols-3": scale === "triple"
+        })}>
+          {months.map((month) => {
+            const monthDays = getMonthGridDays(month.year, month.month);
+            const monthWeeks: string[][] = [];
+            for (let i = 0; i < monthDays.length; i += 7) {
+              monthWeeks.push(monthDays.slice(i, i + 7));
+            }
 
-        {/* Calendar grid */}
-        <div>
-          {weeks.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 border-b border-border/40 last:border-b-0">
-              {week.map((day) => {
-                const dayItems = itemsByDay.get(day) ?? [];
-                const today = isToday(day);
-                const inMonth = isCurrentMonth(day, viewYear, viewMonth);
-                const isDragTarget = dragOverDate === day;
-                const dayNum = parseInt(day.split("-")[2], 10);
+            return (
+              <div key={`${month.year}-${month.month}`} className="border-r border-border/40 last:border-r-0">
+                {/* Month title */}
+                <div className="border-b border-border/50 bg-bg-hover/30 px-2 py-2 text-center">
+                  <p className={cn("font-semibold", gridConfig.dayNameClass)}>
+                    {MONTH_NAMES_VI[month.month]}
+                  </p>
+                </div>
 
-                return (
-                  <div
-                    key={day}
-                    className={cn(
-                      "min-h-[110px] border-r border-border/40 p-1.5 transition-colors last:border-r-0",
-                      !inMonth && "bg-bg-hover/10",
-                      today && "bg-primary/[0.04]",
-                      isDragTarget && "bg-primary/10 ring-2 ring-inset ring-primary/40"
-                    )}
-                    onDragOver={(e) => handleDragOver(e, day)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, day)}
-                  >
-                    {/* Day number */}
-                    <div className="mb-1 flex justify-end">
-                      <span
-                        className={cn(
-                          "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
-                          today
-                            ? "bg-primary text-white"
-                            : inMonth
-                              ? "text-text-primary"
-                              : "text-text-muted"
-                        )}
-                      >
-                        {dayNum}
-                      </span>
+                {/* Weekday header */}
+                <div className={cn("grid grid-cols-7 border-b border-border/50 bg-bg-hover/20")}>
+                  {WEEKDAY_SHORT_VI.map((label) => (
+                    <div
+                      key={label}
+                      className={cn("px-1 py-1 text-center font-semibold uppercase tracking-wider text-text-secondary", gridConfig.dayNameClass)}
+                    >
+                      {label}
                     </div>
+                  ))}
+                </div>
 
-                    {/* Activity bars */}
-                    <div className="space-y-0.5">
-                      {dayItems.slice(0, 3).map((item) => {
-                        const isOverdue =
-                          !item.isCompleted &&
-                          Boolean(item.scheduledAt && new Date(item.scheduledAt) < new Date());
-                        return (
-                          <div
-                            key={item.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, item)}
-                            onDragEnd={handleDragEnd}
-                            onClick={() => router.push(`/activities/${item.id}`)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                router.push(`/activities/${item.id}`);
-                              }
-                            }}
-                            title={`${item.title}\n${ACTIVITY_TYPE_LABELS[item.type]}${item.customer ? " · " + item.customer.name : ""}`}
-                            className={cn(
-                              "group flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium leading-tight transition-all hover:brightness-95 focus:outline-none focus:ring-1 focus:ring-primary/40",
-                              ACTIVITY_TYPE_BAR[item.type],
-                              item.isCompleted && "opacity-50 line-through",
-                              draggedItem?.id === item.id && "opacity-30"
-                            )}
-                          >
-                            {/* Time dot */}
-                            <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", ACTIVITY_TYPE_DOT[item.type])} />
-                            <span className="truncate flex-1">
-                              {item.scheduledAt ? `${formatTimeShort(item.scheduledAt)} ` : ""}
-                              {item.title}
+                {/* Days grid */}
+                {monthWeeks.map((week, wi) => (
+                  <div key={wi} className="grid grid-cols-7 border-b border-border/40 last:border-b-0">
+                    {week.map((day) => {
+                      const dayItems = itemsByDay.get(day) ?? [];
+                      const today = isToday(day);
+                      const inMonth = day.substring(0, 7) === `${month.year}-${String(month.month + 1).padStart(2, "0")}`;
+                      const isDragTarget = dragOverDate === day;
+                      const dayNum = parseInt(day.split("-")[2], 10);
+
+                      return (
+                        <div
+                          key={day}
+                          className={cn(
+                            "border-r border-border/40 p-1 transition-colors last:border-r-0",
+                            gridConfig.cellHeightClass,
+                            !inMonth && "bg-bg-hover/10",
+                            today && "bg-primary/[0.04]",
+                            isDragTarget && "bg-primary/10 ring-2 ring-inset ring-primary/40"
+                          )}
+                          onDragOver={(e) => handleDragOver(e, day)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, day)}
+                        >
+                          {/* Day number */}
+                          <div className="mb-0.5 flex justify-end">
+                            <span
+                              className={cn(
+                                "flex items-center justify-center rounded-full font-bold",
+                                gridConfig.dayNumberClass,
+                                today
+                                  ? "bg-primary text-white"
+                                  : inMonth
+                                    ? "text-text-primary"
+                                    : "text-text-muted"
+                              )}
+                            >
+                              {dayNum}
                             </span>
-                            {isOverdue && <span className="shrink-0 text-[9px] font-bold text-danger">!</span>}
                           </div>
-                        );
-                      })}
-                      {dayItems.length > 3 && (
-                        <p className="px-1.5 text-[11px] font-semibold text-text-secondary">
-                          +{dayItems.length - 3} nữa
-                        </p>
-                      )}
-                    </div>
+
+                          {/* Activity bars */}
+                          {dayItems.length > 0 && (
+                            <div className="space-y-0.5 overflow-hidden">
+                              {dayItems.slice(0, scale === "single" ? 3 : 1).map((item) => {
+                                const isOverdue =
+                                  !item.isCompleted &&
+                                  Boolean(item.scheduledAt && new Date(item.scheduledAt) < new Date());
+                                return (
+                                  <div
+                                    key={item.id}
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, item)}
+                                    onDragEnd={handleDragEnd}
+                                    onClick={() => router.push(`/activities/${item.id}`)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        router.push(`/activities/${item.id}`);
+                                      }
+                                    }}
+                                    title={`${item.title}\n${ACTIVITY_TYPE_LABELS[item.type]}${item.customer ? " · " + item.customer.name : ""}`}
+                                    className={cn(
+                                      "flex cursor-pointer items-center gap-0.5 rounded px-1 py-0.5 leading-tight transition-all hover:brightness-95 focus:outline-none focus:ring-1 focus:ring-primary/40",
+                                      gridConfig.activityClass,
+                                      ACTIVITY_TYPE_BAR[item.type],
+                                      item.isCompleted && "opacity-50 line-through",
+                                      draggedItem?.id === item.id && "opacity-30"
+                                    )}
+                                  >
+                                    <span className={cn("shrink-0 rounded-full", ACTIVITY_TYPE_DOT[item.type], {
+                                      "h-1 w-1": scale === "single",
+                                      "h-0.5 w-0.5": scale !== "single"
+                                    })} />
+                                    <span className="truncate flex-1">
+                                      {scale === "single" && item.scheduledAt ? `${formatTimeShort(item.scheduledAt)} ` : ""}
+                                      {item.title}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                              {dayItems.length > (scale === "single" ? 3 : 1) && (
+                                <p className={cn("px-1 font-semibold text-text-secondary", gridConfig.activityClass)}>
+                                  +{dayItems.length - (scale === "single" ? 3 : 1)}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          ))}
+                ))}
+              </div>
+            );
+          })}
         </div>
 
         {items.length === 0 && (

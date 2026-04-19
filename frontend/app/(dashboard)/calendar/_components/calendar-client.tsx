@@ -16,6 +16,14 @@ import { CalendarWeekView } from "./calendar-week-view";
 import { CalendarMonthView, getMonthGridDays } from "./calendar-month-view";
 import { CalendarFilters } from "./calendar-filters";
 import { CalendarOverviewCards } from "./calendar-overview-cards";
+import {
+  calculateDaysDiff,
+  validateDateRange,
+  getAllowedViewModes,
+  getMonthViewScale,
+  getAutoSwitchedView,
+  CALENDAR_LIMITS,
+} from "./calendar-utils";
 
 type ViewMode = "week" | "month";
 
@@ -70,6 +78,38 @@ export function CalendarClient() {
   // Compute active date range based on view mode
   const dateFrom = viewMode === "week" ? weekDateFrom : getMonthRange(monthYear, monthMonth).dateFrom;
   const dateTo   = viewMode === "week" ? weekDateTo   : getMonthRange(monthYear, monthMonth).dateTo;
+
+  // Calculate days and validate date range
+  const dayCount = calculateDaysDiff(dateFrom, dateTo);
+  const allowedModes = getAllowedViewModes(dayCount);
+  const monthScale = getMonthViewScale(dayCount);
+
+  // Validate and clamp date range if needed
+  const { dateTo: clampedDateTo, clamped } = validateDateRange(
+    dateFrom,
+    dateTo,
+    CALENDAR_LIMITS.MONTH_MAX_DAYS
+  );
+
+  // If clamped, update state
+  useEffect(() => {
+    if (clamped && dateTo !== clampedDateTo) {
+      if (viewMode === "week") {
+        setWeekDateTo(clampedDateTo);
+      } else {
+        const d = new Date(`${clampedDateTo}T00:00:00`);
+        setMonthMonth(d.getMonth());
+      }
+    }
+  }, [clamped, dateTo, clampedDateTo, viewMode]);
+
+  // Auto-switch view if current mode becomes invalid
+  const effectiveViewMode = getAutoSwitchedView(viewMode, allowedModes);
+  useEffect(() => {
+    if (effectiveViewMode !== viewMode) {
+      setViewMode(effectiveViewMode);
+    }
+  }, [effectiveViewMode, viewMode]);
 
   useEffect(() => { setPage(1); }, [assigneeId, completion, dateFrom, dateTo, debouncedSearch, type]);
 
@@ -166,32 +206,45 @@ export function CalendarClient() {
         description="Xem lịch công tác theo tuần hoặc tháng. Kéo activity sang ngày khác để dời lịch, click để sửa."
         action={
           <div className="flex flex-wrap items-center gap-3">
-            {/* View mode toggle */}
-            <div className="flex items-center rounded-lg border border-border bg-bg-card p-0.5 shadow-sm">
-              <button
-                type="button"
-                onClick={() => handleViewModeChange("week")}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                  viewMode === "week"
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-text-secondary hover:text-text-primary"
-                )}
-              >
-                Tuần
-              </button>
-              <button
-                type="button"
-                onClick={() => handleViewModeChange("month")}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-                  viewMode === "month"
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-text-secondary hover:text-text-primary"
-                )}
-              >
-                Tháng
-              </button>
+{/* View mode toggle with smart enable/disable */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center rounded-lg border border-border bg-bg-card p-0.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => handleViewModeChange("week")}
+                  disabled={!allowedModes.week}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                    !allowedModes.week && "cursor-not-allowed opacity-50",
+                    viewMode === "week" && allowedModes.week
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-text-secondary hover:text-text-primary hover:disabled:text-text-secondary"
+                  )}
+                  title={!allowedModes.week ? `Tuần chỉ cho phép ≤ ${CALENDAR_LIMITS.WEEK_MAX_DAYS} ngày` : ""}
+                >
+                  Tuần
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleViewModeChange("month")}
+                  disabled={!allowedModes.month}
+                  className={cn(
+                    "rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                    !allowedModes.month && "cursor-not-allowed opacity-50",
+                    viewMode === "month" && allowedModes.month
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-text-secondary hover:text-text-primary hover:disabled:text-text-secondary"
+                  )}
+                  title={!allowedModes.month ? `Tháng chỉ cho phép ≤ ${CALENDAR_LIMITS.MONTH_MAX_DAYS} ngày` : ""}
+                >
+                  Tháng
+                </button>
+              </div>
+              {dayCount > CALENDAR_LIMITS.WEEK_MAX_DAYS && (
+                <p className="text-xs text-text-secondary">
+                  📌 {dayCount} ngày — Tuần bị tắt, dùng Tháng hoặc rút ngắn khoảng ngày
+                </p>
+              )}
             </div>
 
             <Link href="/activities/new" className={cn(buttonVariants({ variant: "primary" }))}>
@@ -247,6 +300,7 @@ export function CalendarClient() {
           meta={calendarQuery.data?.meta}
           dateFrom={dateFrom}
           onMonthChange={handleMonthChange}
+          scale={monthScale}
         />
       )}
     </div>

@@ -2,7 +2,7 @@ import { ACTIVITY_TYPE_LABELS } from "@/lib/constants";
 import { ActivityType, UserListItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   SelectRoot,
   SelectContent,
@@ -75,17 +75,11 @@ export function CalendarFilters({
 
   return (
     <Card className="border border-white/70">
-      <CardHeader className="border-b border-border/50">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">
-          💡 Mẹo: nhập ngày (DD/MM/YYYY hoặc YYYY-MM-DD) vào tìm kiếm để nhảy tới ngày đó
-        </p>
-      </CardHeader>
-
       <CardContent className="p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_170px_170px_170px_200px_auto]">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-search">
-              Tìm kiếm / Nhảy tới ngày
+              Tìm kiếm
             </label>
             <Input
               id="calendar-search"

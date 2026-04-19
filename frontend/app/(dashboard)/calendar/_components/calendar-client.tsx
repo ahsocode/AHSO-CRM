@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useEffect, useState, useCallback } from "react";
+import { useDeferredValue, useEffect, useState, useCallback, useRef } from "react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -55,6 +56,7 @@ export function CalendarClient() {
 
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [defaultWeekRange] = useState(() => getDefaultWeekRange());
+  const warningShownRef = useRef(false);
 
   // Week view state
   const [weekDateFrom, setWeekDateFrom] = useState(defaultWeekRange.dateFrom);
@@ -110,6 +112,16 @@ export function CalendarClient() {
       setViewMode(effectiveViewMode);
     }
   }, [effectiveViewMode, viewMode]);
+
+  // Show warning when week mode exceeds 7 days
+  useEffect(() => {
+    if (dayCount > CALENDAR_LIMITS.WEEK_MAX_DAYS && !warningShownRef.current) {
+      warningShownRef.current = true;
+      toast.info(`📌 ${dayCount} ngày — Tuần bị tắt, dùng Tháng hoặc rút ngắn khoảng ngày`);
+    } else if (dayCount <= CALENDAR_LIMITS.WEEK_MAX_DAYS) {
+      warningShownRef.current = false;
+    }
+  }, [dayCount]);
 
   useEffect(() => { setPage(1); }, [assigneeId, completion, dateFrom, dateTo, debouncedSearch, type]);
 
@@ -240,11 +252,6 @@ export function CalendarClient() {
                   Tháng
                 </button>
               </div>
-              {dayCount > CALENDAR_LIMITS.WEEK_MAX_DAYS && (
-                <p className="text-xs text-text-secondary">
-                  📌 {dayCount} ngày — Tuần bị tắt, dùng Tháng hoặc rút ngắn khoảng ngày
-                </p>
-              )}
             </div>
 
             <Link href="/activities/new" className={cn(buttonVariants({ variant: "primary" }))}>
@@ -266,12 +273,19 @@ export function CalendarClient() {
         canFilterAssignee={canManageUsers}
         canReset={canReset}
         completion={completion}
-        dateFrom={viewMode === "week" ? weekDateFrom : dateFrom}
-        dateTo={viewMode === "week" ? weekDateTo : dateTo}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
         onAssigneeIdChange={setAssigneeId}
         onCompletionChange={setCompletion}
-        onDateFromChange={(v) => { setWeekDateFrom(v); if (viewMode === "month") { const d = new Date(`${v}T00:00:00`); setMonthYear(d.getFullYear()); setMonthMonth(d.getMonth()); } }}
-        onDateToChange={(v) => { setWeekDateTo(v); }}
+        onDateFromChange={(v) => {
+          setWeekDateFrom(v);
+          const d = new Date(`${v}T00:00:00`);
+          setMonthYear(d.getFullYear());
+          setMonthMonth(d.getMonth());
+        }}
+        onDateToChange={(v) => {
+          setWeekDateTo(v);
+        }}
         onReset={handleReset}
         onSearchChange={setSearch}
         onTypeChange={setType}

@@ -1,476 +1,312 @@
 # AHSO CRM
 
-> B2B CRM cho vòng đời bán hàng kỹ thuật công nghiệp: **Khách hàng → Dự án → Báo giá → Hợp đồng → Nghiệm thu → Thanh toán**.
+CRM B2B cho vòng đời bán hàng kỹ thuật công nghiệp: `Khách hàng -> Dự án -> Báo giá -> Hợp đồng -> Nghiệm thu -> Thanh toán`.
 
-AHSO CRM là hệ thống quản trị quan hệ khách hàng dành cho thị trường B2B (cơ khí — tự động hoá — điện công nghiệp) tại Việt Nam. Dự án được thiết kế theo spec trong [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) với UX tham chiếu từ bộ thiết kế Google Stitch (xem `docs/design/`).
+Repo này là monorepo gồm:
+- `backend/`: NestJS + Prisma + PostgreSQL
+- `frontend/`: Next.js 14 App Router
+- `docker-compose.yml`: stack `postgres + redis + backend + frontend`
 
-Tiến độ triển khai và handoff mới nhất cho agent tiếp theo: [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md).
+Spec gốc và tài liệu tham chiếu:
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
+- [docs/BLUEPRINT.md](docs/BLUEPRINT.md)
+- [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md)
+- [docs/admin-panel-verification.md](docs/admin-panel-verification.md)
 
-## 🚀 Cập nhật mới nhất (2026-04-18)
+## Trạng thái hiện tại
 
-**Docker images được rebuild với code mới nhất:**
-- ✅ Backend: NestJS compiled, Prisma migrations ready, Activities + Upload modules
-- ✅ Frontend: Next.js optimized build, all UI components (Radix UI + shadcn), Activities pages
-- ✅ Test infrastructure: 12.77% code coverage baseline (3 test suites passing)
-- ✅ Select component: Hỗ trợ cả HTML select API và Radix UI SelectRoot
-- ✅ Toast notifications: Sonner + Shadcn-compatible API
-- ✅ All imports fixed: viLocale → vi, type-only imports, proper component refs
+Các module đã có và đang dùng được:
+- `Auth`: login, refresh, logout, forgot/reset password
+- `Dashboard`: KPI, pipeline, revenue chart, tasks, activity feed
+- `Customers`: list, detail, create, edit, soft delete, contacts
+- `Projects`: list, detail, create, edit, soft delete, kanban, native drag-drop status
+- `Quotes`: list, detail, create, edit, duplicate/versioning, status actions, HTML preview, backend PDF
+- `Contracts`: list, detail, create, edit, milestone, payment, attachment upload, acceptance preview, acceptance PDF
+- `Activities`: list, detail, create, edit, delete
+- `Calendar`: week view, interaction, reschedule
+- `Reports`: overview, revenue trend, status breakdown, top customers
+- `Users`: admin user management page
+- `Admin Panel`: company info, logo upload, policies, roles, permissions, RBAC
 
-**Chạy ngay với:**
-```bash
-docker compose up -d
+Các điểm đã được xác minh gần nhất:
+- `backend` build pass
+- `frontend` build pass
+- `docker compose up -d --build backend frontend` pass
+- PDF routes hoạt động:
+  - `GET /api/quotes/:id/pdf`
+  - `GET /api/contracts/:id/acceptance-pdf`
+- Contract attachment upload hoạt động qua `POST /api/upload/file`
+- Projects kanban drag-drop hoạt động và persist sau reload
+- Admin panel smoke script có tại [scripts/test-admin-panel.sh](scripts/test-admin-panel.sh)
+
+## Kiến trúc
+
+```text
+frontend (Next.js 14, port 3000)
+  -> REST /api/*
+backend (NestJS 10, port 3001)
+  -> Prisma ORM
+PostgreSQL 16
+Redis 7
+uploads/ local disk
+Puppeteer PDF rendering
 ```
-
-<p>
-  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-14-black?logo=nextdotjs" />
-  <img alt="NestJS" src="https://img.shields.io/badge/NestJS-10-e0234e?logo=nestjs" />
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript" />
-  <img alt="Prisma" src="https://img.shields.io/badge/Prisma-5-2D3748?logo=prisma" />
-  <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql" />
-  <img alt="TailwindCSS" src="https://img.shields.io/badge/Tailwind-3-38bdf8?logo=tailwindcss" />
-  <img alt="Docker" src="https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker" />
-</p>
-
----
-
-## Mục lục
-
-- [Tính năng chính](#tính-năng-chính)
-- [Kiến trúc & Tech stack](#kiến-trúc--tech-stack)
-- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-- [Yêu cầu hệ thống](#yêu-cầu-hệ-thống)
-- [Khởi động nhanh (Local)](#khởi-động-nhanh-local)
-- [Chạy bằng Docker](#chạy-bằng-docker)
-- [Biến môi trường](#biến-môi-trường)
-- [Database & Prisma](#database--prisma)
-- [API Reference](#api-reference)
-- [Quy ước code](#quy-ước-code)
-- [Roadmap](#roadmap)
-- [Tài khoản seed & dữ liệu mẫu](#tài-khoản-seed--dữ-liệu-mẫu)
-- [Tham khảo](#tham-khảo)
-
----
-
-## Tính năng chính
-
-| Module | Mô tả | Trạng thái |
-|---|---|---|
-| **Authentication** | JWT access + refresh token rotation, bcrypt, rate-limit đăng nhập | ✅ |
-| **Dashboard** | KPI (doanh thu, dự án, công nợ), biểu đồ 6 tháng, pipeline, công việc hôm nay | ✅ |
-| **Customers** | Danh sách + chi tiết, phân quyền theo role, hệ thống contact & activity | ✅ BE / 🚧 FE |
-| **Activities** | Log gọi / email / họp / khảo sát, timeline, filter, form | ✅ BE / ✅ FE form |
-| **Projects** | Pipeline kiểu Kanban theo stage (SURVEY → COMPLETED), drag-drop status | 🚧 |
-| **Quotes** | Tạo báo giá nhiều phiên bản, xuất PDF Puppeteer, chuyển đổi thành Contract | 🚧 |
-| **Contracts** | Hợp đồng + Milestone + Payment tracking, số ngày quá hạn | 🚧 |
-| **Calendar** | Lịch công việc, reminder, gán task cho nhân viên | 🚧 |
-| **Reports** | Báo cáo doanh thu, pipeline, retention, export | 🚧 |
-| **File Upload** | Tài liệu khảo sát, hợp đồng ký, attachments | ✅ BE / 🚧 FE |
-
-**Phân quyền (RBAC):**
-- `ADMIN` — toàn quyền, quản lý user
-- `MANAGER` — quản lý toàn bộ dự án & khách hàng
-- `STAFF` — chỉ thấy khách hàng / dự án được assign
-
----
-
-## Kiến trúc & Tech stack
-
-```
-┌──────────────────┐     HTTP/JSON      ┌──────────────────┐     Prisma      ┌────────────┐
-│  Next.js 14      │ ─────────────────▶ │  NestJS 10       │ ───────────────▶│ PostgreSQL │
-│  App Router      │  Bearer JWT        │  REST /api/*     │                 │     16     │
-│  (frontend:3000) │                    │  (backend:3001)  │                 └────────────┘
-└──────────────────┘                    │                  │ ◀─── session ──▶ ┌─────────┐
-                                        └──────────────────┘                  │ Redis 7 │
-                                                                              └─────────┘
-```
-
-### Frontend
-- **Next.js 14** App Router, TypeScript strict
-- **TanStack Query** (server state) + **Zustand** (auth state)
-- **React Hook Form** + **Zod** cho forms + validation
-- **shadcn/ui** + **Tailwind CSS** (design tokens khớp Stitch)
-- **Recharts** cho dashboard charts
-- Axios client với refresh-token interceptor
 
 ### Backend
-- **NestJS 10** với Prisma ORM
-- **PostgreSQL 16** (chính), **Redis 7** (cache/session)
-- Auth: `@nestjs/jwt` + `bcrypt` + refresh token rotation (hash trong DB)
-- Validation: Zod + `ZodValidationPipe` custom
-- Security: `helmet`, `@nestjs/throttler` (rate limiting auth endpoints)
-- API docs: **Swagger** tại `/api/docs`
-- File upload: local disk (`backend/uploads/`)
-- PDF: Puppeteer (cho quotes & contracts)
+- NestJS 10
+- Prisma 5
+- PostgreSQL 16
+- Redis 7
+- JWT access/refresh
+- Zod validation pipe
+- Transform interceptor với response `{ data, meta }`
+- Local file upload tại `backend/uploads/`
+- Puppeteer cho PDF quotes/contracts
 
-### DevOps
-- Docker Compose (1 VPS đủ chạy cả stack)
-- Prisma migrations + seed script
-- `.env` per service
+### Frontend
+- Next.js 14 App Router
+- TypeScript strict
+- Tailwind CSS
+- TanStack Query
+- Zustand
+- React Hook Form + Zod
+- Axios client với refresh-token interceptor
 
----
+## Cấu trúc repo
 
-## Cấu trúc thư mục
-
-```
+```text
 AHSO-CRM/
-├── backend/                       # NestJS API
+├── backend/
 │   ├── prisma/
-│   │   ├── schema.prisma          # 10 models + 8 enums
+│   │   ├── schema.prisma
 │   │   ├── migrations/
-│   │   └── seed.ts                # Dữ liệu mẫu
+│   │   └── seed.ts
 │   └── src/
-│       ├── main.ts                # Bootstrap + Swagger + CORS + helmet
-│       ├── app.module.ts
-│       ├── common/                # Filters, interceptors, guards, pipes
-│       ├── auth/                  # login / refresh / logout
-│       ├── users/
-│       ├── customers/
+│       ├── auth/
+│       ├── common/
 │       ├── contacts/
+│       ├── customers/
+│       ├── dashboard/
 │       ├── projects/
 │       ├── quotes/
 │       ├── contracts/
 │       ├── activities/
 │       ├── calendar/
 │       ├── reports/
-│       ├── dashboard/
-│       └── upload/
-├── frontend/                      # Next.js 14
+│       ├── settings/
+│       ├── roles/
+│       ├── permissions/
+│       ├── upload/
+│       └── users/
+├── frontend/
 │   ├── app/
-│   │   ├── (auth)/                # login, forgot-password
-│   │   └── (dashboard)/           # dashboard, customers, projects, quotes, contracts, calendar, reports
+│   │   ├── (auth)/
+│   │   └── (dashboard)/
 │   ├── components/
-│   │   ├── ui/                    # shadcn components
-│   │   ├── layout/                # sidebar, topbar, dashboard-shell
-│   │   └── shared/                # app-icon, module-placeholder, …
-│   ├── hooks/                     # use-auth, use-customers, use-projects, …
-│   ├── lib/                       # api-client, auth, constants, format, types
-│   └── middleware.ts              # Route protection
+│   ├── hooks/
+│   └── lib/
 ├── docs/
-│   ├── PROJECT_STRUCTURE.md       # Spec chi tiết (nguồn sự thật)
-│   ├── BLUEPRINT.md
-│   └── design/                    # Screenshots từ Google Stitch
-├── docker-compose.yml             # Production stack
-├── docker-compose.dev.yml         # Override cho dev (bind mount + watch)
-└── .env.example
+├── scripts/
+├── docker-compose.yml
+└── docker-compose.dev.yml
 ```
 
----
+## Routes chính
 
-## Yêu cầu hệ thống
+### Frontend
+- `/login`
+- `/forgot-password`
+- `/reset-password`
+- `/dashboard`
+- `/customers`
+- `/projects`
+- `/quotes`
+- `/contracts`
+- `/activities`
+- `/calendar`
+- `/reports`
+- `/users`
+- `/admin`
 
-| Công cụ | Phiên bản tối thiểu |
-|---|---|
-| Node.js | 20 LTS |
-| npm | 10 |
-| Docker + Docker Compose | 24 / v2 |
-| PostgreSQL | 16 *(không cần nếu dùng Docker)* |
-| Redis | 7 *(không cần nếu dùng Docker)* |
+### API
+- `/api/auth/*`
+- `/api/dashboard/*`
+- `/api/customers/*`
+- `/api/projects/*`
+- `/api/quotes/*`
+- `/api/contracts/*`
+- `/api/activities/*`
+- `/api/calendar/*`
+- `/api/reports/*`
+- `/api/settings/*`
+- `/api/roles/*`
+- `/api/permissions/*`
+- `/api/upload/*`
 
----
-
-## Khởi động nhanh (Local)
-
-### 1. Clone repo
-
-```bash
-git clone https://github.com/ahsocode/AHSO-CRM.git
-cd AHSO-CRM
-```
-
-### 2. Cài dependencies
-
-```bash
-# Backend
-cd backend && npm install
-
-# Frontend
-cd ../frontend && npm install
-```
-
-### 3. Chuẩn bị env
-
-```bash
-# Root (dùng cho Docker)
-cp .env.example .env
-
-# Backend
-cp backend/.env.example backend/.env
-
-# Frontend
-cp frontend/.env.local.example frontend/.env.local
-```
-
-### 4. Khởi chạy PostgreSQL + Redis (Docker)
-
-```bash
-docker compose up -d postgres redis
-```
-
-### 5. Migrate + seed database
-
-```bash
-cd backend
-npm run prisma:migrate          # apply migrations
-npm run prisma:seed             # seed dữ liệu demo
-```
-
-### 6. Chạy dev servers
-
-```bash
-# Terminal 1
-cd backend && npm run start:dev   # http://localhost:3001
-
-# Terminal 2
-cd frontend && npm run dev        # http://localhost:3000
-```
-
-Mở trình duyệt:
-
-- UI: http://localhost:3000
-- API docs (Swagger): http://localhost:3001/api/docs
-- Health check: http://localhost:3001/api
-
----
+Swagger:
+- `http://localhost:3001/api/docs`
 
 ## Chạy bằng Docker
 
-### ⚡ Quickstart (Khuyến nghị)
+Yêu cầu:
+- Docker Desktop / Docker Compose v2
 
-Chạy cả stack (postgres + redis + backend + frontend) trong containers:
+### 1. Chuẩn bị env
 
 ```bash
-# Bước 1: Chuẩn bị biến môi trường
 cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.local.example frontend/.env.local
+```
 
-# Bước 2: Khởi động tất cả services
-docker compose up -d
+### 2. Khởi động stack
 
-# Bước 3: Kiểm tra containers đang chạy
+```bash
+docker compose up -d --build backend frontend
+```
+
+Services:
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:3001`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+
+### 3. Kiểm tra nhanh
+
+```bash
 docker ps
+docker logs ahso-crm-backend-1 --tail 50
+docker exec ahso-crm-backend-1 npx prisma migrate status
 ```
 
-**Kết quả:**
-```
-CONTAINER ID   IMAGE                  STATUS    PORTS
-xxxxx          ahso-crm-frontend:latest    Up    0.0.0.0:3000->3000/tcp
-xxxxx          ahso-crm-backend:latest     Up    0.0.0.0:3001->3001/tcp
-xxxxx          postgres:16-alpine          Up    0.0.0.0:5432->5432/tcp
-xxxxx          redis:7-alpine              Up    0.0.0.0:6379->6379/tcp
-```
+## Chạy local không dùng full Docker
 
-Mở trình duyệt:
-- **Frontend:** http://localhost:3000
-- **API Docs:** http://localhost:3001/api/docs
-- **Đăng nhập:** admin@ahso.vn / AHSO123!
-
-### Docker Image Sizes (2026-04-18)
-
-| Service | Image | Size | Base |
-|---------|-------|------|------|
-| **Backend** | `ahso-crm-backend:latest` | 117MB | node:20-alpine |
-| **Frontend** | `ahso-crm-frontend:latest` | 202MB | node:20-alpine |
-
-### Development Mode (với hot reload)
+### Backend
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+cd backend
+npm install
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:seed
+npm run start:dev
 ```
 
-### Xem logs
+### Frontend
 
 ```bash
-# Backend logs
-docker compose logs -f backend
-
-# Frontend logs
-docker compose logs -f frontend
-
-# Database logs
-docker compose logs -f postgres
+cd frontend
+npm install
+npm run dev
 ```
 
-### Production Build
-
-```bash
-docker compose up -d --build
-```
-
-### Dừng & Xoá
-
-```bash
-# Dừng tất cả
-docker compose down
-
-# Dừng và xoá volume (xoá DB)
-docker compose down -v
-
-# Rebuild images
-docker compose build --no-cache
-```
-
----
+Lưu ý:
+- Nếu chạy PDF ngoài Docker, máy local cần có Chrome/Chromium để Puppeteer render PDF.
 
 ## Biến môi trường
 
-### `backend/.env`
+### Root
 
-| Key | Mặc định | Mô tả |
-|---|---|---|
-| `DATABASE_URL` | `postgresql://ahso:ahso_dev_password@localhost:5432/ahso_crm?schema=public` | Prisma connection string |
-| `REDIS_URL` | `redis://localhost:6379` | Redis |
-| `JWT_SECRET` | — | **BẮT BUỘC ĐỔI ở production** |
-| `JWT_EXPIRES_IN` | `15m` | Access token TTL |
-| `JWT_REFRESH_EXPIRES_IN` | `7d` | Refresh token TTL |
-| `UPLOAD_DIR` | `./uploads` | Thư mục lưu file tải lên |
-| `PORT` | `3001` | Port backend |
-| `NODE_ENV` | `development` | `development` / `production` |
-| `CORS_ORIGIN` | `http://localhost:3000` | Có thể là danh sách, ngăn cách bằng dấu phẩy |
-| `SWAGGER_ENABLED` | auto | Ép bật Swagger ở production (`true`) |
-| `AUTH_THROTTLE_TTL` | `60` | Thời gian window (giây) cho rate limit `/auth/*` |
-| `AUTH_THROTTLE_LIMIT` | `10` | Số request tối đa / window / IP |
+```env
+POSTGRES_PASSWORD="ahso_dev_password"
+```
 
-### `frontend/.env.local`
+### Backend
 
-| Key | Mặc định | Mô tả |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:3001` | URL gốc của backend (prefix `/api` sẽ được tự thêm) |
-| `NEXT_PUBLIC_APP_NAME` | `AHSO CRM` | Hiển thị trên UI |
+Các biến mẫu nằm trong [backend/.env.example](backend/.env.example), gồm:
+- `DATABASE_URL`
+- `REDIS_URL`
+- `JWT_SECRET`
+- `JWT_REFRESH_EXPIRES_IN`
+- `JWT_RESET_SECRET`
+- `UPLOAD_DIR`
+- `PORT`
+- `CORS_ORIGIN`
+- `SWAGGER_ENABLED`
 
-### Root `.env` (cho docker compose)
+### Frontend
 
-| Key | Mô tả |
-|---|---|
-| `POSTGRES_PASSWORD` | Password DB dùng bởi service `postgres` |
+Các biến mẫu nằm trong [frontend/.env.local.example](frontend/.env.local.example):
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_APP_NAME`
 
----
+## Tài khoản seed
 
-## Database & Prisma
+```text
+ADMIN   admin@ahso.vn    / AHSO123!
+MANAGER manager@ahso.vn  / AHSO123!
+STAFF   staff@ahso.vn    / AHSO123!
+```
 
-**Models chính:** `User`, `Customer`, `Contact`, `Project`, `Quote`, `QuoteItem`, `Contract`, `Milestone`, `Payment`, `Activity`.
+## Commands hay dùng
 
-**Enums:** `Role`, `CustomerStatus`, `ProjectStatus`, `QuoteStatus`, `ContractStatus`, `MilestoneStatus`, `ActivityType`, `Priority`.
-
-Tất cả bảng đều có `deletedAt` (soft delete) và timestamps.
+### Build
 
 ```bash
-# Tạo migration mới sau khi sửa schema.prisma
-cd backend && npx prisma migrate dev --name <tên_migration>
-
-# Chỉ regen Prisma Client (không chạm DB)
-npm run prisma:generate
-
-# Apply migration ở production
-npm run prisma:deploy
-
-# Mở Prisma Studio
-npx prisma studio
+cd backend && npm run build
+cd frontend && npm run build
 ```
 
----
+### Seed lại dữ liệu dev
 
-## API Reference
-
-### Format response chuẩn
-
-Tất cả response đi qua `TransformInterceptor` và có dạng:
-
-```jsonc
-// Success — single item
-{ "data": { /* ... */ }, "meta": null }
-
-// Success — list có pagination
-{
-  "data": [ /* ... */ ],
-  "meta": { "total": 42, "page": 1, "limit": 20, "totalPages": 3 }
-}
-
-// Error
-{ "statusCode": 400, "message": "Thông điệp tiếng Việt", "errors": ["field: lỗi"] }
+```bash
+cd backend && npm run prisma:seed
 ```
 
-### Endpoints (prefix `/api`)
+### Rebuild app containers
 
-| Method | Path | Auth | Mô tả |
-|---|---|---|---|
-| POST | `/api/auth/login` | — | Đăng nhập (rate-limited) |
-| POST | `/api/auth/refresh` | — | Đổi refresh → access mới |
-| POST | `/api/auth/logout` | ✅ | Thu hồi refresh token |
-| GET | `/api/dashboard/kpis` | ✅ | KPI tổng quan |
-| GET | `/api/dashboard/revenue-chart` | ✅ | Doanh thu 6 tháng |
-| GET | `/api/dashboard/pipeline` | ✅ | Pipeline theo stage |
-| GET | `/api/customers` | ✅ | List + filter + pagination |
-| POST | `/api/customers` | ✅ | Tạo khách hàng |
-| GET | `/api/customers/:id` | ✅ | Chi tiết + relations |
-| PATCH | `/api/customers/:id` | ✅ | Cập nhật |
-| DELETE | `/api/customers/:id` | ✅ | Soft delete |
-| GET | `/api/projects` | ✅ | Pipeline Kanban |
-| … | … | … | Xem đầy đủ ở Swagger |
+```bash
+docker compose up -d --build backend frontend
+```
 
-**Xem interactive docs:** http://localhost:3001/api/docs (Swagger UI, Bearer Auth).
+### Smoke test admin panel
 
----
+```bash
+./scripts/test-admin-panel.sh
+```
 
-## Quy ước code
+## Kiểm thử hiện có
 
-> Trích từ [`docs/PROJECT_STRUCTURE.md §10`](docs/PROJECT_STRUCTURE.md) — AI Coding Rules.
+Backend unit tests:
+- `auth.service.spec.ts`
+- `quotes.service.spec.ts`
+- `contracts.service.spec.ts`
 
-1. **TypeScript strict** — không `any`, luôn export types từ `lib/types.ts`.
-2. **Files kebab-case** (`customer-table.tsx`), **Components PascalCase** (`CustomerTable`), **Enum values UPPER_SNAKE_CASE**.
-3. **React Hook Form + Zod** cho mọi form, không dùng state manual.
-4. **Error messages tiếng Việt** — hiển thị cho end-user.
-5. **Format ngày `dd/MM/yyyy`, tiền `VND` không lẻ** — dùng `lib/format.ts`.
-6. **Soft delete** — không DELETE thực, set `deletedAt`.
-7. **Response format `{data, meta}`** — không lệch khỏi `TransformInterceptor`.
-8. **Service layer purity** — không gọi Prisma từ controller.
-9. **Auth: JWT short (15m) + refresh rotation** — không bao giờ lưu plain password / token.
-10. **Tailwind tokens** — không hard-code màu, dùng CSS variables từ `tailwind.config.ts`.
+Chạy:
 
----
+```bash
+cd backend
+npm test
+```
 
-## Roadmap
+## File quan trọng cho phase gần nhất
 
-- [x] **Week 1** — Setup + Docker + Auth + Layouts
-- [ ] **Week 2** — Customers (BE ✅ / FE 🚧)
-- [ ] **Week 3** — Projects + Kanban drag-drop
-- [ ] **Week 4** — Quotes + Puppeteer PDF
-- [ ] **Week 5** — Contracts + Milestones + Payments
-- [ ] **Week 6** — Dashboard polish + real-time
-- [ ] **Week 7** — Activities + Calendar
-- [ ] **Week 8** — Reports + Testing + Deploy
+- Quotes PDF:
+  - [backend/src/quotes/quotes-pdf.service.ts](backend/src/quotes/quotes-pdf.service.ts)
+  - [frontend/app/(dashboard)/quotes/_components/quote-preview-client.tsx](frontend/app/(dashboard)/quotes/_components/quote-preview-client.tsx)
+- Contracts acceptance PDF:
+  - [backend/src/contracts/contracts-pdf.service.ts](backend/src/contracts/contracts-pdf.service.ts)
+  - [frontend/app/(dashboard)/contracts/_components/contract-acceptance-preview-client.tsx](frontend/app/(dashboard)/contracts/_components/contract-acceptance-preview-client.tsx)
+- Projects drag-drop:
+  - [frontend/app/(dashboard)/projects/_components/project-kanban-board.tsx](frontend/app/(dashboard)/projects/_components/project-kanban-board.tsx)
+  - [frontend/hooks/use-projects.ts](frontend/hooks/use-projects.ts)
+- Contract attachment upload:
+  - [frontend/app/(dashboard)/contracts/_components/contract-file-uploader.tsx](frontend/app/(dashboard)/contracts/_components/contract-file-uploader.tsx)
+  - [backend/src/upload/upload.service.ts](backend/src/upload/upload.service.ts)
 
-Chi tiết kế hoạch: xem [`docs/PROJECT_STRUCTURE.md §9`](docs/PROJECT_STRUCTURE.md).
+## Phần còn mở
 
----
+Những phần chưa khóa hoàn toàn ở thời điểm hiện tại:
+- frontend automated tests
+- CI/CD pipeline
+- hardening production deploy
+- một số polish UI giữa các module cũ/mới
 
-## Tài khoản seed & dữ liệu mẫu
+## Ghi chú
 
-Sau khi chạy `npm run prisma:seed`:
+- `docs/AGENT_HANDOFF.md` hữu ích cho handoff, nhưng source of truth vẫn là code hiện tại trong repo.
+- Nếu Docker báo `no space left on device`, dọn build cache:
 
-| Email | Mật khẩu | Role |
-|---|---|---|
-| `admin@ahso.vn` | `AHSO123!` | ADMIN |
-| `manager@ahso.vn` | `AHSO123!` | MANAGER |
-
-**Customers (4):** Vinamilk, Thaco, Bệnh viện Chợ Rẫy, DNP
-**Projects (6):** Trải qua cả 6 stage (SURVEY → COMPLETED)
-**Plus:** 3 quotes, 2 contracts, 3 milestones, 5 payments, 5 activities.
-
-> ⚠️ `seed.ts` hiện xoá sạch DB trước khi seed — chỉ dùng ở dev.
-
----
-
-## Tham khảo
-
-- 📘 [Project Structure Spec](docs/PROJECT_STRUCTURE.md) — spec đầy đủ, **single source of truth**
-- 📘 [Blueprint](docs/BLUEPRINT.md)
-- 🎨 [Design screenshots](docs/design/) — từ Google Stitch
-- 🏛️ [NestJS docs](https://docs.nestjs.com/)
-- ⚡ [Next.js App Router](https://nextjs.org/docs/app)
-- 🔷 [Prisma docs](https://www.prisma.io/docs)
-
----
-
-## License
-
-Private project — © AHSO Industrial Automation.
+```bash
+docker builder prune -af
+```

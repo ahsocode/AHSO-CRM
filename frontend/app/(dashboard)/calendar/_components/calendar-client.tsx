@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState, useCallback } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useCalendarEvents } from "@/hooks/use-calendar";
 import { useUsers } from "@/hooks/use-users";
+import { useDebounce } from "@/hooks/use-debounce";
 import { isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { ActivityType } from "@/lib/types";
@@ -62,13 +63,15 @@ export function CalendarClient() {
   const [completion, setCompletion] = useState<"all" | "open" | "completed">("all");
   const [assigneeId, setAssigneeId] = useState("");
   const [page, setPage] = useState(1);
-  const deferredSearch = useDeferredValue(search.trim());
+
+  // Debounce search to avoid rapid API calls on every keystroke
+  const debouncedSearch = useDebounce(search.trim(), 500);
 
   // Compute active date range based on view mode
   const dateFrom = viewMode === "week" ? weekDateFrom : getMonthRange(monthYear, monthMonth).dateFrom;
   const dateTo   = viewMode === "week" ? weekDateTo   : getMonthRange(monthYear, monthMonth).dateTo;
 
-  useEffect(() => { setPage(1); }, [assigneeId, completion, dateFrom, dateTo, deferredSearch, type]);
+  useEffect(() => { setPage(1); }, [assigneeId, completion, dateFrom, dateTo, debouncedSearch, type]);
 
   // When user manually changes date range via filter inputs while in week mode
   const handleWeekDateRangeChange = (from: string, to: string) => {
@@ -115,7 +118,7 @@ export function CalendarClient() {
   const calendarQuery = useCalendarEvents({
     page,
     limit: PAGE_SIZE,
-    search: deferredSearch || undefined,
+    search: debouncedSearch || undefined,
     dateFrom,
     dateTo,
     type: type || undefined,

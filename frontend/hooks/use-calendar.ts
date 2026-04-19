@@ -21,6 +21,9 @@ export function useCalendarEvents(filters: CalendarFilters) {
         items: response.data.data,
         meta: response.data.meta as CalendarListMeta
       };
-    }
+    },
+    // Keep data fresh for 5 minutes, avoid rapid refetch on view switches
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }

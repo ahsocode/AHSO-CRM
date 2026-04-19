@@ -139,6 +139,23 @@ export function CalendarClient() {
     }
   };
 
+  // Jump to a specific date
+  const handleJumpToDate = (dateStr: string) => {
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (viewMode === "week") {
+      // Jump week to the week containing this date
+      const dayIndex = (d.getDay() + 6) % 7;
+      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dayIndex);
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+      setWeekDateFrom(toDateStr(start));
+      setWeekDateTo(toDateStr(end));
+    } else {
+      // Jump month to the month containing this date
+      setMonthYear(d.getFullYear());
+      setMonthMonth(d.getMonth());
+    }
+  };
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -185,6 +202,20 @@ export function CalendarClient() {
       />
 
       <CalendarOverviewCards meta={calendarQuery.data?.meta} isLoading={calendarQuery.isLoading} />
+
+      {/* Jump to date quick nav */}
+      <div className="surface-card flex flex-wrap items-center gap-3 border border-white/70 p-4">
+        <label className="text-sm font-semibold text-text-primary">Nhảy tới ngày:</label>
+        <input
+          type="date"
+          defaultValue={toDateStr(new Date())}
+          onChange={(e) => handleJumpToDate(e.target.value)}
+          className="rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <span className="text-xs text-text-muted">
+          {viewMode === "week" ? "→ Nhảy tới tuần chứa ngày này" : "→ Nhảy tới tháng chứa ngày này"}
+        </span>
+      </div>
 
       <CalendarFilters
         assigneeId={assigneeId}

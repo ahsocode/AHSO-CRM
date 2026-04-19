@@ -203,20 +203,6 @@ export function CalendarClient() {
 
       <CalendarOverviewCards meta={calendarQuery.data?.meta} isLoading={calendarQuery.isLoading} />
 
-      {/* Jump to date quick nav */}
-      <div className="surface-card flex flex-wrap items-center gap-3 border border-white/70 p-4">
-        <label className="text-sm font-semibold text-text-primary">Nhảy tới ngày:</label>
-        <input
-          type="date"
-          defaultValue={toDateStr(new Date())}
-          onChange={(e) => handleJumpToDate(e.target.value)}
-          className="rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
-        <span className="text-xs text-text-muted">
-          {viewMode === "week" ? "→ Nhảy tới tuần chứa ngày này" : "→ Nhảy tới tháng chứa ngày này"}
-        </span>
-      </div>
-
       <CalendarFilters
         assigneeId={assigneeId}
         assignees={usersQuery.data ?? []}
@@ -233,6 +219,7 @@ export function CalendarClient() {
         onReset={handleReset}
         onSearchChange={setSearch}
         onTypeChange={setType}
+        onJumpToDate={handleJumpToDate}
         search={search}
         type={type}
       />

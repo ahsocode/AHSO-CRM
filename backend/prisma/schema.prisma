@@ -12,7 +12,8 @@ model User {
   email             String     @unique
   name              String
   password          String
-  role              Role       @default(STAFF)
+  role              UserRole   @relation(fields: [roleId], references: [id])
+  roleId            String
   avatarUrl         String?
   refreshToken      String?
   isActive          Boolean    @default(true)
@@ -23,10 +24,44 @@ model User {
   activities        Activity[]
 }
 
-enum Role {
-  ADMIN
-  MANAGER
-  STAFF
+model UserRole {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  isSystem    Boolean      @default(false) // ADMIN, MANAGER, STAFF are system roles
+  permissions Permission[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([name])
+}
+
+model Permission {
+  id         String     @id @default(cuid())
+  resource   String     // "activities", "customers", "projects", "quotes", "contracts", "payments", "settings", "users"
+  action     String     // "view", "create", "edit", "delete"
+  roles      UserRole[]
+  createdAt  DateTime   @default(now())
+
+  @@unique([resource, action])
+  @@index([resource])
+}
+
+model Setting {
+  key         String   @id @unique
+  value       String   // JSON-stringified values
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model Logo {
+  id         String   @id @default(cuid())
+  url        String   // URL to /uploads or CDN
+  filename   String
+  uploadedAt DateTime @default(now())
+
+  @@index([uploadedAt])
 }
 
 model Customer {

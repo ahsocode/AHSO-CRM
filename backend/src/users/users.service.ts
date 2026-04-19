@@ -8,6 +8,9 @@ export class UsersService {
 
   async findAll() {
     const users = await this.prisma.user.findMany({
+      include: {
+        role: true
+      },
       orderBy: {
         createdAt: "asc"
       }
@@ -17,7 +20,8 @@ export class UsersService {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: user.role?.name || "STAFF",
+      roleId: user.roleId,
       avatarUrl: user.avatarUrl,
       isActive: user.isActive,
       createdAt: user.createdAt
@@ -39,14 +43,18 @@ export class UsersService {
       where: {
         id
       },
-      data: dto
+      data: dto,
+      include: {
+        role: true
+      }
     });
 
     return {
       id: updatedUser.id,
       email: updatedUser.email,
       name: updatedUser.name,
-      role: updatedUser.role,
+      role: updatedUser.role?.name || "STAFF",
+      roleId: updatedUser.roleId,
       avatarUrl: updatedUser.avatarUrl,
       isActive: updatedUser.isActive,
       createdAt: updatedUser.createdAt,

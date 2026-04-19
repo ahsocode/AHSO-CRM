@@ -22,6 +22,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: {
         email: dto.email
+      },
+      include: {
+        role: true
       }
     });
 
@@ -59,6 +62,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: {
         id: payload.sub
+      },
+      include: {
+        role: true
       }
     });
 
@@ -151,12 +157,12 @@ export class AuthService {
     };
   }
 
-  private buildPayload(user: User): JwtUser {
+  private buildPayload(user: any): JwtUser {
     return {
       sub: user.id,
       email: user.email,
       name: user.name,
-      role: user.role
+      role: user.role?.name || "STAFF"
     };
   }
 
@@ -205,12 +211,12 @@ export class AuthService {
     });
   }
 
-  private serializeUser(user: User) {
+  private serializeUser(user: any) {
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: user.role?.name || "STAFF",
       avatarUrl: user.avatarUrl,
       isActive: user.isActive
     };

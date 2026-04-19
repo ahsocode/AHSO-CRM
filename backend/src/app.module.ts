@@ -15,6 +15,9 @@ import { ActivitiesModule } from "./activities/activities.module";
 import { CalendarModule } from "./calendar/calendar.module";
 import { ReportsModule } from "./reports/reports.module";
 import { UploadModule } from "./upload/upload.module";
+import { SettingsModule } from "./settings/settings.module";
+import { RolesModule } from "./roles/roles.module";
+import { PermissionsModule } from "./permissions/permissions.module";
 
 @Module({
   imports: [
@@ -48,7 +51,10 @@ import { UploadModule } from "./upload/upload.module";
     ActivitiesModule,
     CalendarModule,
     ReportsModule,
-    UploadModule
+    UploadModule,
+    SettingsModule,
+    RolesModule,
+    PermissionsModule
   ],
   providers: [
     {

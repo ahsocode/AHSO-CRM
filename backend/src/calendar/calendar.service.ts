@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { JwtUser } from "../auth/auth.types";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { CalendarFilterDto } from "./dto/calendar-filter.dto";
 
@@ -122,7 +122,7 @@ export class CalendarService {
       { deletedAt: null } // Soft delete filter
     ];
 
-    if (user.role === "STAFF") {
+    if (isStaff(user)) {
       conditions.push({
         OR: [
           { userId: user.sub },
@@ -145,7 +145,7 @@ export class CalendarService {
       });
     }
 
-    if (filters.assigneeId && user.role !== "STAFF") {
+    if (filters.assigneeId && !isStaff(user)) {
       conditions.push({
         userId: filters.assigneeId
       });

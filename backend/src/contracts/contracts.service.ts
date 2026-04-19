@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { MilestoneStatus, Prisma } from "@prisma/client";
-import { JwtUser } from "../auth/auth.types";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { ContractFilterDto } from "./dto/contract-filter.dto";
 import { CreateContractDto } from "./dto/create-contract.dto";
@@ -460,7 +460,7 @@ export class ContractsService {
       deletedAt: null
     };
 
-    if (user.role === "STAFF") {
+    if (isStaff(user)) {
       customerWhere.assignedToId = user.sub;
     }
 

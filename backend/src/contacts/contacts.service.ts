@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../common/prisma.service";
-import { JwtUser } from "../auth/auth.types";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { CustomersService } from "../customers/customers.service";
 import { CreateContactDto } from "./dto/create-contact.dto";
 import { UpdateContactDto } from "./dto/update-contact.dto";
@@ -103,11 +103,10 @@ export class ContactsService {
       throw new NotFoundException("Không tìm thấy đầu mối liên hệ");
     }
 
-    if (user.role === "STAFF" && contact.customer.assignedToId !== user.sub) {
+    if (isStaff(user) && contact.customer.assignedToId !== user.sub) {
       throw new ForbiddenException("Bạn không có quyền thao tác liên hệ này");
     }
 
     return contact;
   }
 }
-

@@ -9,9 +9,9 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
-import { Roles } from "src/common/decorators/roles.decorator";
+import { RequirePermissions } from "src/common/decorators/permissions.decorator";
 import { ZodValidationPipe } from "src/common/pipes/zod-validation.pipe";
-import { ROLE_VALUES } from "src/common/constants/role.constants";
+import { PermissionsGuard } from "src/common/guards/permissions.guard";
 import { RolesService } from "./roles.service";
 import { CreateRoleSchema, CreateRoleInput } from "./dto/create-role.dto";
 import { UpdateRoleSchema, UpdateRoleInput } from "./dto/update-role.dto";
@@ -43,8 +43,8 @@ export class RolesController {
    * Create a new custom role (admin-only)
    */
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @Roles(ROLE_VALUES[0]) // ADMIN only
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions("roles.create")
   async create(
     @Body(new ZodValidationPipe(CreateRoleSchema))
     input: CreateRoleInput
@@ -57,8 +57,8 @@ export class RolesController {
    * Update a role (admin-only, cannot update system roles)
    */
   @Patch(":id")
-  @UseGuards(JwtAuthGuard)
-  @Roles(ROLE_VALUES[0]) // ADMIN only
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions("roles.edit")
   async update(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(UpdateRoleSchema))
@@ -72,8 +72,8 @@ export class RolesController {
    * Delete a role (admin-only, cannot delete system roles)
    */
   @Delete(":id")
-  @UseGuards(JwtAuthGuard)
-  @Roles(ROLE_VALUES[0]) // ADMIN only
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions("roles.delete")
   async delete(@Param("id") id: string) {
     return this.rolesService.delete(id);
   }

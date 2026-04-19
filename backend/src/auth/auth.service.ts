@@ -24,7 +24,11 @@ export class AuthService {
         email: dto.email
       },
       include: {
-        role: true
+        role: {
+          include: {
+            permissions: true
+          }
+        }
       }
     });
 
@@ -64,7 +68,11 @@ export class AuthService {
         id: payload.sub
       },
       include: {
-        role: true
+        role: {
+          include: {
+            permissions: true
+          }
+        }
       }
     });
 
@@ -158,11 +166,20 @@ export class AuthService {
   }
 
   private buildPayload(user: any): JwtUser {
+    const permissions = user.role?.permissions?.map(
+      (permission: { resource: string; action: string }) => `${permission.resource}.${permission.action}`
+    ) ?? [];
+
     return {
       sub: user.id,
       email: user.email,
       name: user.name,
-      role: user.role?.name || "STAFF"
+      role: {
+        id: user.role?.id ?? "",
+        name: user.role?.name || "STAFF",
+        permissions
+      },
+      permissions
     };
   }
 
@@ -212,11 +229,19 @@ export class AuthService {
   }
 
   private serializeUser(user: any) {
+    const permissions = user.role?.permissions?.map(
+      (permission: { resource: string; action: string }) => `${permission.resource}.${permission.action}`
+    ) ?? [];
+
     return {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role?.name || "STAFF",
+      role: {
+        id: user.role?.id ?? "",
+        name: user.role?.name || "STAFF",
+        permissions
+      },
       avatarUrl: user.avatarUrl,
       isActive: user.isActive
     };

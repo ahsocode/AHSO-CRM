@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
-import { JwtUser } from '../auth/auth.types';
+import { JwtUser, isStaff } from '../auth/auth.types';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { ActivityFilterDto } from './dto/activity-filter.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -129,7 +129,7 @@ export class ActivitiesService {
     }
 
     // Role-based access check
-    if (user.role === 'STAFF' && activity.customer?.id) {
+    if (isStaff(user) && activity.customer?.id) {
       const customer = await this.prisma.customer.findUnique({
         where: { id: activity.customer.id },
       });
@@ -153,7 +153,7 @@ export class ActivitiesService {
       }
 
       // STAFF can only create activities for their assigned customers
-      if (user.role === 'STAFF' && customer.assignedToId !== user.sub) {
+      if (isStaff(user) && customer.assignedToId !== user.sub) {
         throw new ForbiddenException('Bạn chỉ có thể tạo hoạt động cho khách hàng được giao cho bạn');
       }
     }
@@ -170,7 +170,7 @@ export class ActivitiesService {
       }
 
       // STAFF can only create activities for projects of their assigned customers
-      if (user.role === 'STAFF' && project.customer.assignedToId !== user.sub) {
+      if (isStaff(user) && project.customer.assignedToId !== user.sub) {
         throw new ForbiddenException('Bạn chỉ có thể tạo hoạt động cho dự án của khách hàng được giao cho bạn');
       }
     }

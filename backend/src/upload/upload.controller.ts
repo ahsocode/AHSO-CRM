@@ -9,9 +9,11 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { JwtUser } from "../auth/auth.types";
+import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { PrismaService } from "../common/prisma.service";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { UploadService } from "./upload.service";
 
 @Controller("upload")
@@ -47,13 +49,15 @@ export class UploadController {
   }
 
   @Post("logo")
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions("settings.edit")
   @UseInterceptors(FileInterceptor("file"))
   async uploadLogo(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: JwtUser
   ) {
     this.ensureFilePresent(file);
-    this.ensureAdmin(user);
+    void user;
 
     if (!this.uploadService.validateLogoType(file.mimetype)) {
       throw new BadRequestException("Logo chỉ chấp nhận PNG, JPG, SVG hoặc WEBP");
@@ -121,15 +125,6 @@ export class UploadController {
 
     if (!this.uploadService.validateFileSize(file.size)) {
       throw new BadRequestException("Kích thước tệp vượt quá 10MB");
-    }
-  }
-
-  private ensureAdmin(user: JwtUser) {
-    const roleValue = user.role as string | { name?: string };
-    const roleName = typeof roleValue === "string" ? roleValue : roleValue?.name;
-
-    if (roleName !== "ADMIN") {
-      throw new ForbiddenException("Bạn không có quyền thực hiện thao tác này");
     }
   }
 }

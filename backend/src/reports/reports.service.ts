@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { JwtUser } from "../auth/auth.types";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { ReportFilterDto } from "./dto/report-filter.dto";
 
@@ -275,7 +275,7 @@ export class ReportsService {
       ...extra
     };
 
-    if (user.role === "STAFF") {
+    if (isStaff(user)) {
       where.assignedToId = user.sub;
     }
 

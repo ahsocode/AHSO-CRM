@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { JwtUser } from "../auth/auth.types";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { CreateQuoteDto } from "./dto/create-quote.dto";
 import { QuoteFilterDto } from "./dto/quote-filter.dto";
@@ -431,7 +431,7 @@ export class QuotesService {
       where.status = filters.status;
     }
 
-    if (filters.createdById && user.role !== "STAFF") {
+    if (filters.createdById && !isStaff(user)) {
       where.createdById = filters.createdById;
     }
 
@@ -500,7 +500,7 @@ export class QuotesService {
       deletedAt: null
     };
 
-    if (user.role === "STAFF") {
+    if (isStaff(user)) {
       customerWhere.assignedToId = user.sub;
     }
 

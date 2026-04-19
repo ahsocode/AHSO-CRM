@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/commo
 import type { Prisma } from "@prisma/client";
 import { RoleValue } from "../common/constants/role.constants";
 import { PrismaService } from "../common/prisma.service";
-import { JwtUser } from "../auth/auth.types";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { CustomerFilterDto } from "./dto/customer-filter.dto";
 import { UpdateCustomerDto } from "./dto/update-customer.dto";
@@ -370,7 +370,7 @@ export class CustomersService {
       deletedAt: null
     };
 
-    if (user.role === "STAFF") {
+    if (isStaff(user)) {
       where.assignedToId = user.sub;
     }
 
@@ -420,7 +420,7 @@ export class CustomersService {
       };
     }
 
-    if (filters.assignedToId && user.role !== "STAFF") {
+    if (filters.assignedToId && !isStaff(user)) {
       where.assignedToId = filters.assignedToId;
     }
 
@@ -453,7 +453,7 @@ export class CustomersService {
       throw new NotFoundException("Không tìm thấy khách hàng");
     }
 
-    if (user.role === "STAFF" && customer.assignedTo.id !== user.sub) {
+    if (isStaff(user) && customer.assignedTo.id !== user.sub) {
       throw new ForbiddenException("Bạn không có quyền truy cập khách hàng này");
     }
 

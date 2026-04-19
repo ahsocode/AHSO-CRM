@@ -36,6 +36,8 @@ const optionalBoolean = z.preprocess((value) => {
 
 export const calendarFilterSchema = paginationSchema
   .extend({
+    // Calendar view needs to render a full week at once, so raise the cap.
+    limit: z.coerce.number().int().min(1).max(500).default(200),
     search: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
     dateFrom: optionalDate,
     dateTo: optionalDate,

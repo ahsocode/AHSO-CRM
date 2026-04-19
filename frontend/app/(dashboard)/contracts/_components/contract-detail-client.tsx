@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -10,6 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useDownloadContractAcceptancePdf, useContract } from "@/hooks/use-contracts";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -21,6 +23,7 @@ import { ContractPaymentManager } from "./contract-payment-manager";
 
 export function ContractDetailClient({ contractId }: { contractId: string }) {
   const contractQuery = useContract(contractId);
+  const customFieldsQuery = useCustomFields("contract");
   const downloadAcceptancePdf = useDownloadContractAcceptancePdf();
   const { error: showError } = useToast();
 
@@ -188,6 +191,21 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
         <MetricCard label="Còn lại" value={<CurrencyDisplay amount={contract.stats.outstandingAmount} short />} />
         <MetricCard label="Tiến độ milestone" value={`${contract.stats.completionRate}%`} />
       </div>
+
+      <Card className="border border-white/70">
+        <CardHeader className="mb-0 gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dynamic Schema</p>
+          <CardTitle>Custom fields</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CustomFieldRenderer
+            fields={customFieldsQuery.data ?? []}
+            values={contract.customFieldValues ?? {}}
+            emptyTitle="Chưa có custom field cho hợp đồng"
+            emptyDescription="Khi admin tạo field động cho resource hợp đồng, dữ liệu sẽ hiện ở đây."
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">

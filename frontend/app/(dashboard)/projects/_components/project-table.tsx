@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PRIORITY_LABELS } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { ProjectListItem, ProjectListMeta } from "@/lib/types";
@@ -30,7 +31,11 @@ export function ProjectTable({
   isLoading,
   isError,
   errorMessage,
-  onPageChange
+  onPageChange,
+  selectedIds,
+  allVisibleSelected,
+  onToggleSelect,
+  onToggleSelectAll
 }: {
   items: ProjectListItem[];
   meta?: ProjectListMeta;
@@ -38,6 +43,10 @@ export function ProjectTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  selectedIds: string[];
+  allVisibleSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleSelectAll: () => void;
 }) {
   if (isLoading) {
     return (
@@ -120,6 +129,9 @@ export function ProjectTable({
         <div className="grid gap-4 md:hidden">
           {items.map((project) => (
             <article key={project.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+              <div className="mb-3">
+                <Checkbox checked={selectedIds.includes(project.id)} onCheckedChange={() => onToggleSelect(project.id)} />
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Link href={`/projects/${project.id}`} className="font-heading text-lg font-bold text-text-primary hover:text-primary">
                   {project.name}
@@ -157,6 +169,9 @@ export function ProjectTable({
           <table className="min-w-full border-separate border-spacing-y-3">
             <thead>
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+                <th className="px-4">
+                  <Checkbox checked={allVisibleSelected} onCheckedChange={onToggleSelectAll} />
+                </th>
                 <th className="px-4">Dự án</th>
                 <th className="px-4">Khách hàng</th>
                 <th className="px-4">Giá trị & HĐ</th>
@@ -166,6 +181,9 @@ export function ProjectTable({
             <tbody>
               {items.map((project) => (
                 <tr key={project.id} className="bg-white/80 shadow-sm">
+                  <td className="px-4 py-4 align-top">
+                    <Checkbox checked={selectedIds.includes(project.id)} onCheckedChange={() => onToggleSelect(project.id)} />
+                  </td>
                   <td className="rounded-l-2xl px-4 py-4 align-top">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">

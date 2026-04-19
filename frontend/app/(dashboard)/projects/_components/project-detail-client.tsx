@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -10,6 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useProject } from "@/hooks/use-projects";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
@@ -50,6 +52,7 @@ const MILESTONE_STATUS_CONFIG: Record<
 
 export function ProjectDetailClient({ projectId }: { projectId: string }) {
   const projectQuery = useProject(projectId);
+  const customFieldsQuery = useCustomFields("project");
 
   if (projectQuery.isLoading) {
     return (
@@ -184,6 +187,21 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
         <MetricCard label="Còn lại" value={<CurrencyDisplay amount={project.stats.outstandingAmount} short />} />
         <MetricCard label="Tiến độ" value={`${project.stats.progressPercent}%`} />
       </div>
+
+      <Card className="border border-white/70">
+        <CardHeader className="mb-0 gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dynamic Schema</p>
+          <CardTitle>Custom fields</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CustomFieldRenderer
+            fields={customFieldsQuery.data ?? []}
+            values={project.customFieldValues ?? {}}
+            emptyTitle="Chưa có custom field cho dự án"
+            emptyDescription="Khi admin tạo field động cho resource dự án, dữ liệu sẽ hiện ở đây."
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">

@@ -5,14 +5,19 @@ import { useDeferredValue, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
+import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useCreateCustomer, useCustomers } from "@/hooks/use-customers";
+import { useBulkCustomers, useCreateCustomer, useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
+import { useToast } from "@/hooks/use-toast";
 import { isLeadershipRole } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { CustomerStatus, CustomerUpsertInput } from "@/lib/types";
 import { CsvImportDialog, CsvColumnSpec } from "@/components/shared/csv-import-dialog";
+import { buildCsv, downloadCsv } from "@/lib/csv";
+import { downloadExcelRows } from "@/lib/utils";
 import { CustomerFilters, type VipFilterValue } from "./customer-filters";
 import { CustomerOverviewCards } from "./customer-overview-cards";
 import { CustomerTable } from "./customer-table";
@@ -51,14 +56,23 @@ export function CustomersClient() {
   const [vipFilter, setVipFilter] = useState<VipFilterValue>("all");
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<"assign" | "delete">("assign");
+  const [bulkAssignedToId, setBulkAssignedToId] = useState("");
   const deferredSearch = useDeferredValue(search.trim());
   const normalizedIndustry = industry.trim();
   const createCustomer = useCreateCustomer();
+  const bulkCustomers = useBulkCustomers();
   const queryClient = useQueryClient();
+  const { error: showError, success } = useToast();
 
   useEffect(() => {
     setPage(1);
   }, [deferredSearch, status, normalizedIndustry, assignedToId, vipFilter]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [page, deferredSearch, status, normalizedIndustry, assignedToId, vipFilter]);
 
   const canManageUsers = isLeadershipRole(user?.role);
   const usersQuery = useUsers(canManageUsers);
@@ -80,6 +94,8 @@ export function CustomersClient() {
     vipFilter !== "all";
 
   const assigneeList = usersQuery.data ?? [];
+  const visibleIds = customersQuery.data?.items.map((customer) => customer.id) ?? [];
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const findAssigneeIdByEmail = (email: string): string | undefined => {
     const needle = email.trim().toLowerCase();
     if (!needle) return undefined;
@@ -209,13 +225,120 @@ export function CustomersClient() {
         usersUnavailable={!canManageUsers || usersQuery.isError}
       />
 
+      {selectedIds.length > 0 ? (
+        <BulkActionsBar count={selectedIds.length} onClear={() => setSelectedIds([])}>
+          {canManageUsers ? (
+            <Select value={bulkAction} onChange={(event) => setBulkAction(event.target.value as "assign" | "delete")}>
+              <option value="assign">Chuyển người phụ trách</option>
+              <option value="delete">Xóa mềm</option>
+            </Select>
+          ) : (
+            <Select value={bulkAction} onChange={(event) => setBulkAction(event.target.value as "assign" | "delete")}>
+              <option value="delete">Xóa mềm</option>
+            </Select>
+          )}
+
+          {bulkAction === "assign" && canManageUsers ? (
+            <Select value={bulkAssignedToId} onChange={(event) => setBulkAssignedToId(event.target.value)}>
+              <option value="">Chọn người phụ trách</option>
+              {assigneeList.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={bulkCustomers.isPending}
+            onClick={() => {
+              if (bulkAction === "assign" && !bulkAssignedToId) {
+                showError("Chọn người phụ trách trước khi áp dụng.");
+                return;
+              }
+
+              if (bulkAction === "delete" && !window.confirm(`Xóa mềm ${selectedIds.length} khách hàng đã chọn?`)) {
+                return;
+              }
+
+              bulkCustomers.mutate(
+                {
+                  action: bulkAction,
+                  ids: selectedIds,
+                  assignedToId: bulkAction === "assign" ? bulkAssignedToId : undefined
+                },
+                {
+                  onSuccess: () => {
+                    setSelectedIds([]);
+                    success(`Đã xử lý ${selectedIds.length} khách hàng.`);
+                  },
+                  onError: (error) => {
+                    showError(error instanceof Error ? error.message : "Không thể thực hiện bulk action.");
+                  }
+                }
+              );
+            }}
+          >
+            Áp dụng
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={bulkCustomers.isPending}
+            onClick={() => {
+              bulkCustomers.mutate(
+                {
+                  action: "export",
+                  ids: selectedIds
+                },
+                {
+                  onSuccess: async (data) => {
+                    const items = data.items ?? [];
+                    if (!items.length) {
+                      showError("Không có dữ liệu để export.");
+                      return;
+                    }
+                    const csv = buildCsv(Object.keys(items[0]), items);
+                    downloadCsv("customers-selected.csv", csv);
+                    await downloadExcelRows("customers-selected.xlsx", items);
+                    success("Đã xuất danh sách khách hàng đã chọn.");
+                  },
+                  onError: (error) => {
+                    showError(error instanceof Error ? error.message : "Không thể export dữ liệu.");
+                  }
+                }
+              );
+            }}
+          >
+            Export CSV + Excel
+          </Button>
+        </BulkActionsBar>
+      ) : null}
+
       <CustomerTable
+        allVisibleSelected={allVisibleSelected}
         items={customersQuery.data?.items ?? []}
         meta={customersQuery.data?.meta}
         isLoading={customersQuery.isLoading}
         isError={customersQuery.isError}
         errorMessage={getErrorMessage(customersQuery.error)}
         onPageChange={setPage}
+        onToggleSelect={(id) =>
+          setSelectedIds((current) =>
+            current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]
+          )
+        }
+        onToggleSelectAll={() =>
+          setSelectedIds((current) =>
+            allVisibleSelected
+              ? current.filter((id) => !visibleIds.includes(id))
+              : [...new Set([...current, ...visibleIds])]
+          )
+        }
+        selectedIds={selectedIds}
       />
     </div>
   );

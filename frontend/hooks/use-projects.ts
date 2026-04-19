@@ -225,6 +225,27 @@ export function useDeleteProject(projectId: string) {
   });
 }
 
+export function useBulkProjects() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { action: "status" | "delete" | "export"; ids: string[]; status?: ProjectStatus }) => {
+      const response = await apiClient.post<ApiResponse<{ action: string; processedCount?: number; items?: Record<string, unknown>[] }>>(
+        "/projects/bulk",
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async (data) => {
+      if (data.action !== "export") {
+        await queryClient.invalidateQueries({ queryKey: ["projects"] });
+        await queryClient.invalidateQueries({ queryKey: ["customers"] });
+        await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      }
+    }
+  });
+}
+
 function updateKanbanSnapshot(
   snapshot: { columns: ProjectKanbanColumn[]; meta: ProjectListMeta },
   projectId: string,

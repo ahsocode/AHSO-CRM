@@ -5,15 +5,20 @@ import { useDeferredValue, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
+import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useCreateProject, useProjectKanban, useProjects, useUpdateProjectStatus } from "@/hooks/use-projects";
+import { useBulkProjects, useCreateProject, useProjectKanban, useProjects, useUpdateProjectStatus } from "@/hooks/use-projects";
 import { useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
+import { useToast } from "@/hooks/use-toast";
 import { isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { Priority, ProjectStatus, ProjectUpsertInput, ProjectViewMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CsvImportDialog, CsvColumnSpec } from "@/components/shared/csv-import-dialog";
+import { buildCsv, downloadCsv } from "@/lib/csv";
+import { downloadExcelRows } from "@/lib/utils";
 import { ProjectFilters } from "./project-filters";
 import { ProjectKanbanBoard } from "./project-kanban-board";
 import { ProjectOverviewCards } from "./project-overview-cards";
@@ -51,16 +56,25 @@ export function ProjectsClient() {
   const [page, setPage] = useState(1);
   const [view, setView] = useState<ProjectViewMode>("kanban");
   const [importOpen, setImportOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<"status" | "delete">("status");
+  const [bulkStatus, setBulkStatus] = useState<ProjectStatus>("QUOTING");
   const deferredSearch = useDeferredValue(search.trim());
   const canManageUsers = isLeadershipRole(user?.role);
   const createProject = useCreateProject();
+  const bulkProjects = useBulkProjects();
   const queryClient = useQueryClient();
+  const { error: showError, success } = useToast();
   const importCustomersQuery = useCustomers({ page: 1, limit: 200 });
   const customerLookup = importCustomersQuery.data?.items ?? [];
 
   useEffect(() => {
     setPage(1);
   }, [assignedToId, deferredSearch, priority, status, view]);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [page, assignedToId, deferredSearch, priority, status, view]);
 
   const usersQuery = useUsers(canManageUsers);
   const projectsQuery = useProjects(
@@ -90,6 +104,8 @@ export function ProjectsClient() {
   const activeMeta = view === "kanban" ? kanbanQuery.data?.meta : projectsQuery.data?.meta;
   const activeError = view === "kanban" ? kanbanQuery.error : projectsQuery.error;
   const isLoading = view === "kanban" ? kanbanQuery.isLoading : projectsQuery.isLoading;
+  const visibleIds = projectsQuery.data?.items.map((project) => project.id) ?? [];
+  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 
   const findCustomerId = (taxCode: string, name: string): string | undefined => {
     if (taxCode) {
@@ -268,6 +284,87 @@ export function ProjectsClient() {
         usersUnavailable={!canManageUsers || usersQuery.isError}
       />
 
+      {view === "list" && selectedIds.length > 0 ? (
+        <BulkActionsBar count={selectedIds.length} onClear={() => setSelectedIds([])}>
+          <Select value={bulkAction} onChange={(event) => setBulkAction(event.target.value as "status" | "delete")}>
+            <option value="status">Đổi trạng thái</option>
+            <option value="delete">Xóa mềm</option>
+          </Select>
+
+          {bulkAction === "status" ? (
+            <Select value={bulkStatus} onChange={(event) => setBulkStatus(event.target.value as ProjectStatus)}>
+              {PROJECT_STATUS_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </Select>
+          ) : null}
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={bulkProjects.isPending}
+            onClick={() => {
+              if (bulkAction === "delete" && !window.confirm(`Xóa mềm ${selectedIds.length} dự án đã chọn?`)) {
+                return;
+              }
+
+              bulkProjects.mutate(
+                {
+                  action: bulkAction,
+                  ids: selectedIds,
+                  status: bulkAction === "status" ? bulkStatus : undefined
+                },
+                {
+                  onSuccess: () => {
+                    setSelectedIds([]);
+                    success(`Đã xử lý ${selectedIds.length} dự án.`);
+                  },
+                  onError: (error) => {
+                    showError(error instanceof Error ? error.message : "Không thể thực hiện bulk action.");
+                  }
+                }
+              );
+            }}
+          >
+            Áp dụng
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={bulkProjects.isPending}
+            onClick={() => {
+              bulkProjects.mutate(
+                {
+                  action: "export",
+                  ids: selectedIds
+                },
+                {
+                  onSuccess: async (data) => {
+                    const items = data.items ?? [];
+                    if (!items.length) {
+                      showError("Không có dữ liệu để export.");
+                      return;
+                    }
+                    const csv = buildCsv(Object.keys(items[0]), items);
+                    downloadCsv("projects-selected.csv", csv);
+                    await downloadExcelRows("projects-selected.xlsx", items);
+                    success("Đã xuất danh sách dự án đã chọn.");
+                  },
+                  onError: (error) => {
+                    showError(error instanceof Error ? error.message : "Không thể export dữ liệu.");
+                  }
+                }
+              );
+            }}
+          >
+            Export CSV + Excel
+          </Button>
+        </BulkActionsBar>
+      ) : null}
+
       {view === "kanban" ? (
         <ProjectKanbanBoard
           columns={kanbanQuery.data?.columns ?? []}
@@ -288,12 +385,26 @@ export function ProjectsClient() {
         />
       ) : (
         <ProjectTable
+          allVisibleSelected={allVisibleSelected}
           errorMessage={getApiErrorMessage(activeError, "Không thể tải danh sách dự án.")}
           isError={projectsQuery.isError}
           isLoading={projectsQuery.isLoading}
           items={projectsQuery.data?.items ?? []}
           meta={projectsQuery.data?.meta}
           onPageChange={setPage}
+          onToggleSelect={(id) =>
+            setSelectedIds((current) =>
+              current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]
+            )
+          }
+          onToggleSelectAll={() =>
+            setSelectedIds((current) =>
+              allVisibleSelected
+                ? current.filter((id) => !visibleIds.includes(id))
+                : [...new Set([...current, ...visibleIds])]
+            )
+          }
+          selectedIds={selectedIds}
         />
       )}
     </div>

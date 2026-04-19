@@ -1,5 +1,7 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "AHSO CRM";
-export const API_URL = `${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "")}/api`;
+export const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
+export const API_URL = `${BACKEND_URL}/api`;
+export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 export const ACCESS_TOKEN_KEY = "ahso_access_token";
 export const REFRESH_TOKEN_KEY = "ahso_refresh_token";

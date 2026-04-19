@@ -1,0 +1,17 @@
+{
+  "name": "AHSO CRM",
+  "short_name": "AHSO CRM",
+  "description": "CRM quản lý vòng đời bán hàng kỹ thuật công nghiệp cho AHSO",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#1a5276",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

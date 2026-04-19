@@ -17,7 +17,8 @@ const brandFont = localFont({
 
 export const metadata: Metadata = {
   title: "AHSO CRM",
-  description: "CRM quản lý vòng đời bán hàng kỹ thuật công nghiệp cho AHSO"
+  description: "CRM quản lý vòng đời bán hàng kỹ thuật công nghiệp cho AHSO",
+  manifest: "/manifest.json"
 };
 
 export default function RootLayout({
@@ -27,6 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
+      <head>
+        <meta name="theme-color" content="#1a5276" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
       <body className={brandFont.variable}>
         <AppProviders>{children}</AppProviders>
       </body>

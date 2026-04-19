@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import {
+  ActionResponse,
   ApiResponse,
   ContactUpsertInput,
   CustomerContact,
@@ -144,6 +145,26 @@ export function useDeleteContact(customerId: string) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       await queryClient.invalidateQueries({ queryKey: ["customers", customerId] });
+    }
+  });
+}
+
+export function useBulkCustomers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { action: "assign" | "delete" | "export"; ids: string[]; assignedToId?: string }) => {
+      const response = await apiClient.post<ApiResponse<{ action: string; processedCount?: number; items?: Record<string, unknown>[] }>>(
+        "/customers/bulk",
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async (data) => {
+      if (data.action !== "export") {
+        await queryClient.invalidateQueries({ queryKey: ["customers"] });
+        await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      }
     }
   });
 }

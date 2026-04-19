@@ -268,6 +268,7 @@ export interface CustomerUpsertInput {
   status: CustomerStatus;
   isVip: boolean;
   assignedToId: string;
+  customFieldValues?: CustomFieldValues;
 }
 
 export interface ContactUpsertInput {
@@ -352,6 +353,7 @@ export interface CustomerDetail {
   contacts: CustomerContact[];
   projects: CustomerProject[];
   activities: CustomerDetailActivity[];
+  customFieldValues?: CustomFieldValues;
 }
 
 export interface ProjectListCustomer {
@@ -428,6 +430,7 @@ export interface ProjectUpsertInput {
   startDate?: string;
   expectedEndDate?: string;
   notes?: string;
+  customFieldValues?: CustomFieldValues;
 }
 
 export interface ProjectStatusUpdateInput {
@@ -525,6 +528,7 @@ export interface ProjectDetail {
   quotes: ProjectDetailQuote[];
   milestones: ProjectDetailMilestone[];
   activities: ProjectDetailActivity[];
+  customFieldValues?: CustomFieldValues;
 }
 
 export interface QuoteListProject {
@@ -783,6 +787,7 @@ export interface ContractDetail {
   project: ContractDetailProject;
   milestones: ContractDetailMilestone[];
   payments: ProjectDetailPayment[];
+  customFieldValues?: CustomFieldValues;
 }
 
 export interface ContractCreateInput {
@@ -795,6 +800,7 @@ export interface ContractCreateInput {
   status: ContractStatus;
   fileUrl?: string | null;
   notes?: string;
+  customFieldValues?: CustomFieldValues;
 }
 
 export interface ContractUpdateInput {
@@ -805,6 +811,7 @@ export interface ContractUpdateInput {
   status?: ContractStatus;
   fileUrl?: string | null;
   notes?: string;
+  customFieldValues?: CustomFieldValues;
 }
 
 export interface ContractMilestoneCreateInput {

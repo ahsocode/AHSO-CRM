@@ -3,15 +3,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useCustomers } from "@/hooks/use-customers";
 import {
   useCreateProject,
@@ -22,7 +24,7 @@ import {
 import { PRIORITY_LABELS, PROJECT_STATUS_LABELS } from "@/lib/constants";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
-import { CustomerListItem } from "@/lib/types";
+import { CustomerListItem, CustomFieldValues } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   defaultProjectFormValues,
@@ -77,9 +79,11 @@ export function ProjectFormScreen({
     page: 1,
     limit: 100
   });
+  const customFieldsQuery = useCustomFields("project");
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject(projectId ?? "");
   const deleteProjectMutation = useDeleteProject(projectId ?? "");
+  const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -89,6 +93,7 @@ export function ProjectFormScreen({
   useEffect(() => {
     if (mode === "create") {
       form.reset(defaultProjectFormValues);
+      setCustomFieldValues({});
     }
   }, [form, mode]);
 
@@ -105,6 +110,7 @@ export function ProjectFormScreen({
         expectedEndDate: projectQuery.data.expectedEndDate ? projectQuery.data.expectedEndDate.slice(0, 10) : "",
         notes: projectQuery.data.notes ?? ""
       });
+      setCustomFieldValues(projectQuery.data.customFieldValues ?? {});
     }
   }, [form, mode, projectQuery.data]);
 
@@ -181,8 +187,13 @@ export function ProjectFormScreen({
       <form
         className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
         onSubmit={form.handleSubmit((values) => {
+          const payload = {
+            ...values,
+            customFieldValues
+          };
+
           if (mode === "create") {
-            createProjectMutation.mutate(values, {
+            createProjectMutation.mutate(payload, {
               onSuccess: (project) => {
                 router.push(`/projects/${project.id}`);
               }
@@ -190,7 +201,7 @@ export function ProjectFormScreen({
             return;
           }
 
-          updateProjectMutation.mutate(values, {
+          updateProjectMutation.mutate(payload, {
             onSuccess: () => {
               router.push(`/projects/${projectId}`);
             }
@@ -300,6 +311,23 @@ export function ProjectFormScreen({
         </Card>
 
         <div className="space-y-6">
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="industrial-chip bg-primary/10 text-primary">Dynamic Schema</p>
+              <CardTitle>Custom fields</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomFieldRenderer
+                editable
+                fields={customFieldsQuery.data ?? []}
+                values={customFieldValues}
+                onChange={setCustomFieldValues}
+                emptyTitle="Chưa có custom field cho dự án"
+                emptyDescription="Admin có thể tạo thêm field động tại Quản trị > Custom Fields."
+              />
+            </CardContent>
+          </Card>
+
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="industrial-chip bg-accent/10 text-accent">Delivery Notes</p>

@@ -7,6 +7,7 @@ import { AppIcon } from "@/components/shared/app-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ROLE_LABELS } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { CustomerListItem, CustomerListMeta } from "@/lib/types";
@@ -17,7 +18,11 @@ export function CustomerTable({
   isLoading,
   isError,
   errorMessage,
-  onPageChange
+  onPageChange,
+  selectedIds,
+  allVisibleSelected,
+  onToggleSelect,
+  onToggleSelectAll
 }: {
   items: CustomerListItem[];
   meta?: CustomerListMeta;
@@ -25,6 +30,10 @@ export function CustomerTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  selectedIds: string[];
+  allVisibleSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleSelectAll: () => void;
 }) {
   if (isLoading) {
     return (
@@ -111,6 +120,9 @@ export function CustomerTable({
             <article key={customer.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
+                  <div className="mb-3">
+                    <Checkbox checked={selectedIds.includes(customer.id)} onCheckedChange={() => onToggleSelect(customer.id)} />
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/customers/${customer.id}`}
@@ -156,6 +168,9 @@ export function CustomerTable({
           <table className="min-w-full border-separate border-spacing-y-3">
             <thead>
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+                <th className="px-4">
+                  <Checkbox checked={allVisibleSelected} onCheckedChange={onToggleSelectAll} />
+                </th>
                 <th className="px-4">Khách hàng</th>
                 <th className="px-4">Liên hệ chính</th>
                 <th className="px-4">Phụ trách</th>
@@ -166,6 +181,9 @@ export function CustomerTable({
             <tbody>
               {items.map((customer) => (
                 <tr key={customer.id} className="rounded-2xl bg-white/80 shadow-sm">
+                  <td className="px-4 py-4 align-top">
+                    <Checkbox checked={selectedIds.includes(customer.id)} onCheckedChange={() => onToggleSelect(customer.id)} />
+                  </td>
                   <td className="rounded-l-2xl px-4 py-4 align-top">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">

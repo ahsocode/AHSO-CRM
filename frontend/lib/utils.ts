@@ -42,3 +42,26 @@ export function getFilenameFromContentDisposition(contentDisposition?: string | 
 
   return fallback;
 }
+
+export async function downloadExcelRows(filename: string, rows: Array<Record<string, unknown>>) {
+  if (typeof window === "undefined" || rows.length === 0) {
+    return;
+  }
+
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Data");
+  const headers = Object.keys(rows[0]);
+
+  worksheet.addRow(headers);
+  rows.forEach((row) => {
+    worksheet.addRow(headers.map((header) => row[header]));
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  });
+
+  downloadBlob(blob, filename);
+}

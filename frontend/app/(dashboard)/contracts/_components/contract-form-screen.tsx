@@ -3,10 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -17,12 +18,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useContract, useCreateContract, useUpdateContract } from "@/hooks/use-contracts";
 import { useProject, useProjects } from "@/hooks/use-projects";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { CONTRACT_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { ContractStatus } from "@/lib/types";
+import { ContractStatus, CustomFieldValues } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ContractFileUploader } from "./contract-file-uploader";
 import { ErrorText, Field, Label } from "./form-primitives";
@@ -75,10 +77,12 @@ export function ContractFormScreen({
   const createContractMutation = useCreateContract();
   const updateContractMutation = useUpdateContract(contractId ?? "");
   const contractQuery = useContract(mode === "edit" ? contractId ?? "" : "");
+  const customFieldsQuery = useCustomFields("contract");
   const projectsQuery = useProjects({
     page: 1,
     limit: 100
   });
+  const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
   const form = useForm<ContractFormValues>({
     resolver: zodResolver(contractFormSchema),
     defaultValues: {
@@ -95,6 +99,7 @@ export function ContractFormScreen({
         projectId: initialProjectId,
         sourceQuoteId: initialSourceQuoteId || undefined
       });
+      setCustomFieldValues({});
     }
   }, [form, initialProjectId, initialSourceQuoteId, mode]);
 
@@ -111,6 +116,7 @@ export function ContractFormScreen({
         fileUrl: contractQuery.data.fileUrl ?? null,
         notes: contractQuery.data.notes ?? ""
       });
+      setCustomFieldValues(contractQuery.data.customFieldValues ?? {});
     }
   }, [contractQuery.data, form, mode]);
 
@@ -250,8 +256,17 @@ export function ContractFormScreen({
       <form
         className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
         onSubmit={form.handleSubmit((values) => {
+          const createPayload = {
+            ...toCreatePayload(values),
+            customFieldValues
+          };
+          const updatePayload = {
+            ...toUpdatePayload(values),
+            customFieldValues
+          };
+
           if (mode === "edit" && contractId) {
-            updateContractMutation.mutate(toUpdatePayload(values), {
+            updateContractMutation.mutate(updatePayload, {
               onSuccess: (contract) => {
                 router.push(`/contracts/${contract.id}`);
               }
@@ -259,7 +274,7 @@ export function ContractFormScreen({
             return;
           }
 
-          createContractMutation.mutate(toCreatePayload(values), {
+          createContractMutation.mutate(createPayload, {
             onSuccess: (contract) => {
               router.push(`/contracts/${contract.id}`);
             }
@@ -404,6 +419,23 @@ export function ContractFormScreen({
                 />
                 <ErrorText message={form.formState.errors.notes?.message} />
               </Field>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="industrial-chip bg-primary/10 text-primary">Dynamic Schema</p>
+              <CardTitle>Custom fields</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomFieldRenderer
+                editable
+                fields={customFieldsQuery.data ?? []}
+                values={customFieldValues}
+                onChange={setCustomFieldValues}
+                emptyTitle="Chưa có custom field cho hợp đồng"
+                emptyDescription="Admin có thể tạo thêm field động tại Quản trị > Custom Fields."
+              />
             </CardContent>
           </Card>
         </div>

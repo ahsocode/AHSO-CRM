@@ -3,9 +3,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { AppIcon } from "@/components/shared/app-icon";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,12 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useCreateCustomer, useCustomer, useDeleteCustomer, useUpdateCustomer } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { getRoleLabel, isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
-import { CustomerStatus, Role, UserListItem } from "@/lib/types";
+import { CustomerStatus, CustomFieldValues, Role, UserListItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   customerFormSchema,
@@ -62,10 +64,12 @@ export function CustomerFormScreen({
   const user = useAuthStore((state) => state.user);
   const canManageUsers = isLeadershipRole(user?.role);
   const usersQuery = useUsers(canManageUsers);
+  const customFieldsQuery = useCustomFields("customer");
   const customerQuery = useCustomer(mode === "edit" ? customerId ?? "" : "");
   const createCustomerMutation = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer(customerId ?? "");
   const deleteCustomerMutation = useDeleteCustomer(customerId ?? "");
+  const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
@@ -81,6 +85,7 @@ export function CustomerFormScreen({
         ...defaultCustomerFormValues,
         assignedToId: user?.id ?? ""
       });
+      setCustomFieldValues({});
     }
   }, [form, mode, user?.id]);
 
@@ -101,6 +106,7 @@ export function CustomerFormScreen({
         isVip: customerQuery.data.isVip,
         assignedToId: customerQuery.data.assignedTo.id
       });
+      setCustomFieldValues(customerQuery.data.customFieldValues ?? {});
     }
   }, [customerQuery.data, form, mode]);
 
@@ -177,8 +183,13 @@ export function CustomerFormScreen({
       <form
         className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
         onSubmit={form.handleSubmit((values) => {
+          const payload = {
+            ...values,
+            customFieldValues
+          };
+
           if (mode === "create") {
-            createCustomerMutation.mutate(values, {
+            createCustomerMutation.mutate(payload, {
               onSuccess: (createdCustomer) => {
                 router.push(`/customers/${createdCustomer.id}`);
               }
@@ -186,7 +197,7 @@ export function CustomerFormScreen({
             return;
           }
 
-          updateCustomerMutation.mutate(values, {
+          updateCustomerMutation.mutate(payload, {
             onSuccess: () => {
               router.push(`/customers/${customerId}`);
             }
@@ -318,6 +329,23 @@ export function CustomerFormScreen({
                   <p className="text-sm text-text-secondary">Ưu tiên nổi bật trong danh sách và dashboard.</p>
                 </div>
               </label>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="industrial-chip bg-primary/10 text-primary">Dynamic Schema</p>
+              <CardTitle>Custom fields</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomFieldRenderer
+                editable
+                fields={customFieldsQuery.data ?? []}
+                values={customFieldValues}
+                onChange={setCustomFieldValues}
+                emptyTitle="Chưa có custom field cho khách hàng"
+                emptyDescription="Admin có thể tạo thêm field động tại Quản trị > Custom Fields."
+              />
             </CardContent>
           </Card>
 

@@ -6,6 +6,7 @@ const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 const PROTECTED_PREFIXES = [
   "/dashboard",
   "/admin",
+  "/notifications",
   "/customers",
   "/projects",
   "/quotes",
@@ -52,6 +53,7 @@ export const config = {
     "/",
     "/dashboard/:path*",
     "/admin/:path*",
+    "/notifications/:path*",
     "/customers/:path*",
     "/projects/:path*",
     "/quotes/:path*",

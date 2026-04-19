@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { QuoteListItem, QuoteListMeta } from "@/lib/types";
 
@@ -16,7 +17,11 @@ export function QuoteTable({
   isLoading,
   isError,
   errorMessage,
-  onPageChange
+  onPageChange,
+  selectedIds,
+  allVisibleSelected,
+  onToggleSelect,
+  onToggleSelectAll
 }: {
   items: QuoteListItem[];
   meta?: QuoteListMeta;
@@ -24,6 +29,10 @@ export function QuoteTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  selectedIds: string[];
+  allVisibleSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onToggleSelectAll: () => void;
 }) {
   if (isLoading) {
     return (
@@ -103,6 +112,9 @@ export function QuoteTable({
         <div className="grid gap-4 md:hidden">
           {items.map((quote) => (
             <article key={quote.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+              <div className="mb-3">
+                <Checkbox checked={selectedIds.includes(quote.id)} onCheckedChange={() => onToggleSelect(quote.id)} />
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Link href={`/quotes/${quote.id}`} className="font-heading text-lg font-bold text-text-primary hover:text-primary">
                   {quote.quoteNo}
@@ -128,6 +140,9 @@ export function QuoteTable({
           <table className="min-w-full border-separate border-spacing-y-3">
             <thead>
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
+                <th className="px-4">
+                  <Checkbox checked={allVisibleSelected} onCheckedChange={onToggleSelectAll} />
+                </th>
                 <th className="px-4">Báo giá</th>
                 <th className="px-4">Dự án & khách hàng</th>
                 <th className="px-4">Giá trị</th>
@@ -137,6 +152,9 @@ export function QuoteTable({
             <tbody>
               {items.map((quote) => (
                 <tr key={quote.id} className="bg-white/80 shadow-sm">
+                  <td className="px-4 py-4 align-top">
+                    <Checkbox checked={selectedIds.includes(quote.id)} onCheckedChange={() => onToggleSelect(quote.id)} />
+                  </td>
                   <td className="rounded-l-2xl px-4 py-4 align-top">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-2">

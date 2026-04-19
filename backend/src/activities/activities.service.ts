@@ -223,6 +223,7 @@ export class ActivitiesService {
         content: input.content ?? activity.content,
         isCompleted: input.isCompleted ?? activity.isCompleted,
         doneAt: input.isCompleted ? new Date() : activity.doneAt,
+        scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : activity.scheduledAt,
       },
       include: {
         customer: {

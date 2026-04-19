@@ -24,7 +24,11 @@ export class CalendarService {
           select: {
             id: true,
             name: true,
-            role: true
+            role: {
+              select: {
+                name: true
+              }
+            }
           }
         },
         customer: {

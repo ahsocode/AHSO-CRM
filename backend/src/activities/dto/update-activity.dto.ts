@@ -16,6 +16,7 @@ export const updateActivitySchema = z.object({
   title: z.string().trim().min(2, 'Tiêu đề phải có ít nhất 2 ký tự').max(200).optional(),
   content: optionalString(5000),
   isCompleted: z.boolean().optional(),
+  scheduledAt: z.string().datetime().or(z.date()).optional(), // Support drag-drop reschedule
 });
 
 export type UpdateActivityDto = z.infer<typeof updateActivitySchema>;

@@ -11,6 +11,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+function parseSearchAsDate(value: string): string | null {
+  // Try YYYY-MM-DD format (exact date picker format)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+  // Try DD/MM/YYYY format
+  const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  }
+  return null;
+}
+
 export function CalendarFilters({
   search,
   dateFrom,
@@ -50,31 +64,34 @@ export function CalendarFilters({
   onReset: () => void;
   onJumpToDate?: (value: string) => void;
 }) {
+  const handleSearchChange = (value: string) => {
+    onSearchChange(value);
+    // Auto-detect date format and jump if matches
+    const detectedDate = parseSearchAsDate(value);
+    if (detectedDate) {
+      onJumpToDate?.(detectedDate);
+    }
+  };
+
   return (
     <Card className="border border-white/70">
       <CardHeader className="border-b border-border/50">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-text-primary">Nhảy tới ngày:</span>
-          <input
-            type="date"
-            defaultValue={new Date().toISOString().split("T")[0]}
-            onChange={(e) => onJumpToDate?.(e.target.value)}
-            className="rounded-md border border-border px-3 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">
+          💡 Mẹo: nhập ngày (DD/MM/YYYY hoặc YYYY-MM-DD) vào tìm kiếm để nhảy tới ngày đó
+        </p>
       </CardHeader>
 
       <CardContent className="p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_170px_170px_170px_200px_auto]">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-search">
-              Tìm kiếm
+              Tìm kiếm / Nhảy tới ngày
             </label>
             <Input
               id="calendar-search"
-              placeholder="Tìm theo tiêu đề, khách hàng, dự án hoặc người phụ trách..."
+              placeholder="Tiêu đề, khách hàng, dự án... hoặc ngày (DD/MM/YYYY)"
               value={search}
-              onChange={(event) => onSearchChange(event.target.value)}
+              onChange={(event) => handleSearchChange(event.target.value)}
             />
           </div>
 

@@ -13,12 +13,14 @@ type IconName =
   | "bell"
   | "plus"
   | "arrow-right"
+  | "arrow-left"
   | "clock"
   | "mail"
   | "phone"
   | "activity"
   | "logout"
-  | "history";
+  | "history"
+  | "briefcase";
 
 const ICONS: Record<IconName, React.ReactNode> = {
   dashboard: <path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z" />,
@@ -33,6 +35,8 @@ const ICONS: Record<IconName, React.ReactNode> = {
   bell: <path d="M6 8a6 6 0 1 1 12 0v5l2 3H4l2-3zm4 11a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   plus: <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   "arrow-right": <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "arrow-left": <path d="M19 12H5M11 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  briefcase: <path d="M3 7h18v13H3zM8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   clock: <path d="M12 7v5l3 3M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   mail: <path d="M3 6h18v12H3zM3 7l9 6 9-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   phone: <path d="M6.5 4h3l1.5 4-2 1.5a15 15 0 0 0 5.5 5.5L16 13l4 1.5v3a2 2 0 0 1-2.18 2A17 17 0 0 1 4.5 6.18 2 2 0 0 1 6.5 4Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,

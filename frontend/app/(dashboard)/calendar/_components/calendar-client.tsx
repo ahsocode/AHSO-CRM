@@ -10,11 +10,11 @@ import { useUsers } from "@/hooks/use-users";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { ActivityType } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { AgendaBoard } from "./agenda-board";
+import { CalendarWeekView } from "./calendar-week-view";
 import { CalendarFilters } from "./calendar-filters";
 import { CalendarOverviewCards } from "./calendar-overview-cards";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 200;
 
 function getDefaultDateRange() {
   const today = new Date();
@@ -40,6 +40,11 @@ export function CalendarClient() {
   const [assigneeId, setAssigneeId] = useState("");
   const [page, setPage] = useState(1);
   const deferredSearch = useDeferredValue(search.trim());
+
+  const handleDateRangeChange = (from: string, to: string) => {
+    setDateFrom(from);
+    setDateTo(to);
+  };
 
   useEffect(() => {
     setPage(1);
@@ -70,11 +75,16 @@ export function CalendarClient() {
     <div className="space-y-8">
       <PageHeader
         title="Lịch & Công việc"
-        description="Agenda screen gom toàn bộ activity đã lên lịch hoặc đã hoàn tất để sales và delivery theo dõi chung trên cùng một mặt phẳng."
+        description="Xem toàn bộ lịch công tác theo tuần. Kéo activity sang ngày khác để dời lịch, click để xem/sửa chi tiết."
         action={
-          <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
-            Về dashboard
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/activities/new" className={cn(buttonVariants({ variant: "primary" }))}>
+              + Tạo hoạt động
+            </Link>
+            <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
+              Về dashboard
+            </Link>
+          </div>
         }
       />
 
@@ -108,13 +118,15 @@ export function CalendarClient() {
         type={type}
       />
 
-      <AgendaBoard
+      <CalendarWeekView
         errorMessage={getApiErrorMessage(calendarQuery.error, "Không thể tải lịch công việc.")}
         isError={calendarQuery.isError}
         isLoading={calendarQuery.isLoading}
         items={calendarQuery.data?.items ?? []}
         meta={calendarQuery.data?.meta}
-        onPageChange={setPage}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateRangeChange={handleDateRangeChange}
       />
     </div>
   );

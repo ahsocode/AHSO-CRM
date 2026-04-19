@@ -1,0 +1,124 @@
+{{!-- Phase 12: Warranty Cert Template (Bilingual VI-EN) --}}
+<div class="classic-header" style="margin-bottom: 30pt;">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+</div>
+
+<div style="text-align: center; margin-bottom: 40pt;">
+  <h1 style="font-size: 24pt; font-weight: 700; text-transform: uppercase; color: #1e3a8a; margin-bottom: 8pt;">{{t "document_title_warranty_cert"}}</h1>
+  <div style="font-size: 12pt; color: #4b5563;">
+    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> BH-{{contract.contractNo}}/{{date generatedAt "year"}}
+  </div>
+</div>
+
+<main class="classic-body">
+  <div style="text-align: center; font-style: italic; margin-bottom: 30pt;">
+    <p>
+      <span class="lang-vi">{{t "warranty_cert_statement" contractNo=contract.contractNo}}</span>
+      <span class="lang-en">Certify that the software system under Contract No. {{contract.contractNo}} has been handed over and the warranty is officially effective.</span>
+    </p>
+  </div>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">
+    <span class="lang-vi">ĐƠN VỊ PHÁT HÀNH</span><span class="lang-en">ISSUING PARTY</span> ({{t "party_b"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{company.address}}</td>
+    </tr>
+    <tr>
+      <th>Hotline:</th>
+      <td><strong>{{company.phone}}</strong></td>
+    </tr>
+    <tr>
+      <th>
+        <span class="lang-vi">{{t "warranty_contact"}}:</span>
+        <span class="lang-en">Tech Support:</span>
+      </th>
+      <td>{{company.email}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">
+    <span class="lang-vi">ĐƠN VỊ THỤ HƯỞNG</span><span class="lang-en">BENEFICIARY</span> ({{t "party_a"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th><span class="lang-vi">Hệ thống:</span><span class="lang-en">System:</span></th>
+      <td><strong>{{project.name}}</strong></td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 20pt; border-bottom: 2pt solid #1e3a8a; padding-bottom: 4pt; display: inline-block;">
+    <span class="lang-vi">I. {{t "warranty_period"}}</span>
+    <span class="lang-en">I. Warranty Period</span>
+  </h3>
+  <div style="margin-top: 10pt; padding-left: 12pt;">
+    <p>
+      <strong><span class="lang-vi">Thời gian:</span><span class="lang-en">Duration:</span></strong> 
+      <span style="font-size: 14pt; color: #b91c1c; font-weight: bold;">
+        {{warrantyPeriodMonths}} <span class="lang-vi">THÁNG</span><span class="lang-en">MONTHS</span>
+      </span>
+    </p>
+    <p><strong><span class="lang-vi">{{t "warranty_start_date"}}:</span><span class="lang-en">Start Date:</span></strong> {{date contract.expectedEndDate "long"}}</p>
+    <p><strong><span class="lang-vi">{{t "warranty_end_date"}}:</span><span class="lang-en">End Date:</span></strong> {{date warrantyEndDate "long"}}</p>
+  </div>
+
+  <h3 style="margin-top: 20pt; border-bottom: 2pt solid #1e3a8a; padding-bottom: 4pt; display: inline-block;">
+    <span class="lang-vi">II. {{t "warranty_conditions"}}</span>
+    <span class="lang-en">II. Warranty Conditions</span>
+  </h3>
+  <div style="margin-top: 10pt; padding-left: 12pt; text-align: justify;">
+    <p>
+      <span class="lang-vi">{{t "warranty_conditions_desc"}}</span>
+      <span class="lang-en">Free warranty for errors arising from programming or design techniques of the base system. No warranty for errors caused by user's incorrect operation procedures, or hardware, internal network, server incidents from the Customer's side.</span>
+    </p>
+    <ul style="margin-top: 8pt;">
+      <li>
+        <span class="lang-vi">Thời gian tiếp nhận sự cố: 24/7 qua Hotline.</span>
+        <span class="lang-en">Incident reception time: 24/7 via Hotline.</span>
+      </li>
+      <li>
+        <span class="lang-vi">Thời gian xử lý: Tối đa 48h làm việc kể từ khi xác nhận lỗi.</span>
+        <span class="lang-en">Processing time: Maximum 48 working hours from error confirmation.</span>
+      </li>
+      <li>
+        <span class="lang-vi">Mọi yêu cầu hỗ trợ vui lòng sử dụng Email định danh hoặc số điện thoại đã đăng ký.</span>
+        <span class="lang-en">For all support requests, please use the identified Email or registered phone number.</span>
+      </li>
+    </ul>
+  </div>
+
+  <div class="avoid-break" style="margin-top: 50pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center" style="width: 100%;">
+        <div class="signature-block__label">
+          <strong><span class="lang-vi">ĐẠI DIỆN</span><span class="lang-en">REPRESENTATIVE OF</span> {{company.name}}</strong>
+        </div>
+        <div style="height: 100pt;">
+          <div class="classic-stamp" style="margin-top: -10pt;">
+            <span class="lang-vi">ĐÓNG DẤU & KÝ TÊN</span><span class="lang-en">SIGNED AND STAMPED</span>
+          </div>
+        </div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+        <div style="font-size: 11pt; color: #4b5563;">{{company.representativeTitle}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

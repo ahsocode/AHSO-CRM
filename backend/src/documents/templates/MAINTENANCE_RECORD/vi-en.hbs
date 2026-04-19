@@ -1,0 +1,117 @@
+{{!-- Phase 13: Maintenance Record Template (Bilingual VI-EN) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_maintenance_record"}}</h1>
+  <div class="classic-header__meta">
+    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> BBBT-{{contract.contractNo}}/{{date generatedAt "year"}}
+  </div>
+</div>
+
+<main class="classic-body">
+  <p><strong>
+    <span class="lang-vi">{{t "maintenance_statement" date=(date maintenanceDate "long") contractNo=contract.contractNo}}</span>
+    <span class="lang-en">Today, on {{date maintenanceDate "short"}}, the parties conduct maintenance and technical support for the system under Contract No. {{contract.contractNo}}.</span>
+  </strong></p>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">
+    <span class="lang-vi">{{t "delivery_sender"}}</span><span class="lang-en">SUPPORTING PARTY</span> ({{t "party_b"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th><span class="lang-vi">{{t "technician"}}:</span><span class="lang-en">Technician:</span></th>
+      <td><span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span> <strong>{{technician}}</strong></td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">
+    <span class="lang-vi">{{t "delivery_recipient"}}</span><span class="lang-en">CUSTOMER</span> ({{t "party_a"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td><span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span> <strong>{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</strong> - <span class="lang-vi">Chức vụ:</span><span class="lang-en">Title:</span> {{#if primaryContact}}{{primaryContact.title}}{{else}}...................{{/if}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 16pt;">
+    <span class="lang-vi">{{t "maintenance_items"}}</span>
+    <span class="lang-en">Maintenance Items</span>
+  </h3>
+  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: 1pt solid text;">
+    <thead>
+      <tr style="background-color: #f3f4f6;">
+        <th style="width: 40pt; text-align: center;">STT/<span class="lang-en">No.</span></th>
+        <th>
+          <span class="lang-vi">{{t "maintenance_name"}}</span>
+          <br><span class="lang-en">Task / Item</span>
+        </th>
+        <th style="width: 120pt; text-align: center;">
+          <span class="lang-vi">{{t "maintenance_status"}}</span>
+          <br><span class="lang-en">Status</span>
+        </th>
+        <th style="width: 120pt; text-align: left;">
+          <span class="lang-vi">{{t "maintenance_note"}}</span>
+          <br><span class="lang-en">Note</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each issues}}
+      <tr>
+        <td style="text-align: center;">{{add @index 1}}</td>
+        <td><strong>{{this.name}}</strong></td>
+        <td style="text-align: center;">{{this.status}}</td>
+        <td>{{this.note}}</td>
+      </tr>
+      {{/each}}
+      {{#if (not issues.length)}}
+      <tr>
+        <td colspan="4" style="text-align: center; color: #6b7280;">
+          <span class="lang-vi">(Chi tiết bảo trì trống)</span>
+          <span class="lang-en">(Empty maintenance details)</span>
+        </td>
+      </tr>
+      {{/if}}
+    </tbody>
+  </table>
+
+  <p style="margin-top: 16pt;">
+    <span class="lang-vi">{{t "maintenance_confirmation"}}</span>
+    <span class="lang-en">The system is operating stably after maintenance. Both parties agree to this maintenance result.</span>
+  </p>
+
+  <div class="avoid-break" style="margin-top: 30pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label">
+          <strong><span class="lang-vi">XÁC NHẬN TỪ</span><span class="lang-en">CONFIRMED BY</span> {{t "delivery_recipient"}}</strong>
+        </div>
+        <div class="signature-block__line"></div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label">
+          <strong><span class="lang-vi">{{t "technician"}}</span><span class="lang-en">TECHNICIAN</span></strong>
+        </div>
+        <div class="signature-block__line"></div>
+        <div style="font-weight: bold;">{{technician}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

@@ -1,0 +1,120 @@
+{{!-- Phase 14: Payment Request Template (Bilingual VI-EN) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_payment_request"}}</h1>
+  <div class="classic-header__meta">
+    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> DNTT-{{contract.contractNo}}/{{date generatedAt "year"}}
+  </div>
+</div>
+
+<main class="classic-body">
+  <div style="margin-bottom: 20pt;">
+    <p>
+      <strong><span class="lang-vi">Kính gửi</span><span class="lang-en">To</span>:</strong> 
+      <span style="font-size: 14pt; font-weight: bold; text-transform: uppercase;">{{customer.name}}</span>
+    </p>
+  </div>
+
+  <p>
+    <span class="lang-vi">{{t "payment_request_content"}}</span>
+    <span class="lang-en">We kindly request your company to pay the amount below in accordance with the contract schedule.</span>
+  </p>
+
+  <table class="classic-parties" width="100%" style="margin-top: 12pt;">
+    <tr>
+      <th><span class="lang-vi">Hợp đồng/Dự án:</span><span class="lang-en">Contract/Project:</span></th>
+      <td><strong>{{contract.contractNo}}</strong> - {{project.name}}</td>
+    </tr>
+    <tr>
+      <th>
+        <span class="lang-vi">{{t "payment_reason"}}:</span>
+        <span class="lang-en">Reason:</span>
+      </th>
+      <td>{{paymentReason}}</td>
+    </tr>
+    <tr>
+      <th>
+        <span style="color: #b91c1c;">
+          <span class="lang-vi">{{t "payment_amount"}}:</span>
+          <span class="lang-en">Amount:</span>
+        </span>
+      </th>
+      <td><span style="font-size: 14pt; color: #b91c1c; font-weight: bold;">{{currency paymentAmount}}</span></td>
+    </tr>
+    <tr>
+      <th>
+        <span style="color: #4b5563;">
+          <span class="lang-vi">{{t "payment_amount_words"}}:</span>
+          <span class="lang-en">In words:</span>
+        </span>
+      </th>
+      <td><i style="color: #4b5563;">{{currency paymentAmount "words"}} đồng.</i></td>
+    </tr>
+    <tr>
+      <th>
+        <span class="lang-vi">{{t "payment_deadline"}}:</span>
+        <span class="lang-en">Deadline:</span>
+      </th>
+      <td>{{date requestDate "long"}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 20pt; border-bottom: 1pt solid #ccc; padding-bottom: 4pt;">
+    <span class="lang-vi">{{t "banking_info"}}</span>
+    <span class="lang-en">Banking Information</span>
+  </h3>
+  <table class="classic-parties" width="100%" style="margin-top: 8pt;">
+    <tr>
+      <th>
+        <span class="lang-vi">{{t "bank_account_name"}}:</span>
+        <span class="lang-en">Account Name:</span>
+      </th>
+      <td><strong>{{bankAccountName}}</strong></td>
+    </tr>
+    <tr>
+      <th>
+        <span class="lang-vi">{{t "bank_account_no"}}:</span>
+        <span class="lang-en">Account No:</span>
+      </th>
+      <td><strong>{{bankAccountNo}}</strong></td>
+    </tr>
+    <tr>
+      <th>
+        <span class="lang-vi">{{t "bank_name"}}:</span>
+        <span class="lang-en">Bank:</span>
+      </th>
+      <td>{{bankName}}</td>
+    </tr>
+  </table>
+
+  <div class="avoid-break" style="margin-top: 50pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label">
+          <strong><span class="lang-vi">{{t "payment_creator"}}</span><span class="lang-en">PREPARED BY</span></strong>
+        </div>
+        <div class="signature-block__line"></div>
+        <div style="font-weight: bold;">
+          <span class="lang-vi">(Ký, ghi rõ họ tên)</span>
+          <span class="lang-en">(Sign and write full name)</span>
+        </div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label">
+          <strong><span class="lang-vi">{{t "payment_approver"}}</span><span class="lang-en">APPROVED BY</span></strong>
+        </div>
+        <div style="height: 100pt;">
+          <div class="classic-stamp" style="margin-top: -10pt;">
+            <span class="lang-vi">KẾ TOÁN TRƯỞNG / GIÁM ĐỐC</span>
+            <span class="lang-en">CHIEF ACCOUNTANT / DIRECTOR</span>
+          </div>
+        </div>
+        <div style="font-weight: bold;">{{company.name}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

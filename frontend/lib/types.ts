@@ -52,6 +52,11 @@ export interface CompanyInfo {
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+  bankName?: string | null;
+  bankAccount?: string | null;
+  bankAccountName?: string | null;
+  bankBranch?: string | null;
+  swiftCode?: string | null;
 }
 
 export interface Policies {
@@ -226,6 +231,7 @@ export interface CustomerListItem {
   assignedTo: Pick<UserListItem, "id" | "name" | "role">;
   primaryContact: CustomerPrimaryContact | null;
   projectCount: number;
+  language?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -354,6 +360,7 @@ export interface CustomerDetail {
   projects: CustomerProject[];
   activities: CustomerDetailActivity[];
   customFieldValues?: CustomFieldValues;
+  language?: string | null;
 }
 
 export interface ProjectListCustomer {
@@ -362,6 +369,7 @@ export interface ProjectListCustomer {
   industry?: string | null;
   status: CustomerStatus;
   assignedTo: Pick<UserListItem, "id" | "name" | "role">;
+  language?: string | null;
 }
 
 export interface ProjectListItem {
@@ -446,6 +454,7 @@ export interface ProjectDetailCustomer {
   address?: string | null;
   assignedTo: Pick<UserListItem, "id" | "name" | "role">;
   primaryContact: CustomerPrimaryContact | null;
+  language?: string | null;
 }
 
 export interface ProjectDetailPayment {
@@ -544,6 +553,7 @@ export interface QuoteListCustomer {
   shortName?: string | null;
   status: CustomerStatus;
   assignedTo: Pick<UserListItem, "id" | "name" | "role">;
+  language?: string | null;
 }
 
 export interface QuoteListItem {
@@ -607,6 +617,7 @@ export interface QuoteDetailProject {
     status: CustomerStatus;
     assignedTo: Pick<UserListItem, "id" | "name" | "role">;
     primaryContact: CustomerPrimaryContact | null;
+    language?: string | null;
   };
   contract: CustomerContractSummary | null;
 }
@@ -683,6 +694,7 @@ export interface ContractListCustomer {
   shortName?: string | null;
   status: CustomerStatus;
   assignedTo: Pick<UserListItem, "id" | "name" | "role">;
+  language?: string | null;
 }
 
 export interface ContractListItem {
@@ -766,6 +778,7 @@ export interface ContractDetailProject {
     status: CustomerStatus;
     assignedTo: Pick<UserListItem, "id" | "name" | "role">;
     primaryContact: CustomerPrimaryContact | null;
+    language?: string | null;
   };
   quotes: ProjectDetailQuote[];
   activities: ProjectDetailActivity[];

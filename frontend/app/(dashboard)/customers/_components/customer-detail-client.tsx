@@ -10,6 +10,7 @@ import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { DocumentActions } from "@/components/shared/document-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomFields } from "@/hooks/use-custom-fields";
@@ -121,6 +122,11 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
             <Link href={`/customers/${customerId}/edit`} className={cn(buttonVariants({ variant: "primary" }))}>
               Chỉnh sửa
             </Link>
+            <DocumentActions 
+              entityType="customer" 
+              entityId={customerId} 
+              customerLanguage={customer.language ?? "vi"} 
+            />
             <Link href="/customers" className={cn(buttonVariants({ variant: "outline" }))}>
               Quay lại danh sách
             </Link>

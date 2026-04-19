@@ -34,6 +34,7 @@ export const customerFormSchema = z.object({
   source: optionalString(80),
   notes: optionalString(2000),
   status: z.enum(["LEAD", "PROSPECT", "ACTIVE", "INACTIVE"]),
+  language: z.enum(["vi", "vi-en"]),
   isVip: z.boolean(),
   assignedToId: z.string().trim().min(1, "Người phụ trách là bắt buộc")
 });
@@ -52,6 +53,7 @@ export const defaultCustomerFormValues: CustomerFormValues = {
   source: "",
   notes: "",
   status: "LEAD",
+  language: "vi",
   isVip: false,
   assignedToId: ""
 };

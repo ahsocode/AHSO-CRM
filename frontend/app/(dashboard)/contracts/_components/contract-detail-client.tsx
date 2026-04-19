@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useDownloadContractAcceptancePdf, useContract } from "@/hooks/use-contracts";
 import { useToast } from "@/hooks/use-toast";
+import { DocumentActions } from "@/components/shared/document-actions";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { resolveAssetUrl } from "@/lib/auth";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
@@ -87,29 +88,11 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
             <Link href={`/projects/${contract.project.id}`} className={cn(buttonVariants({ variant: "outline" }))}>
               Mở dự án
             </Link>
-            <Link
-              href={`/contracts/${contract.id}/acceptance-preview`}
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              Xem biên bản nghiệm thu
-            </Link>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={downloadAcceptancePdf.isPending}
-              onClick={() => {
-                downloadAcceptancePdf.mutate(contract.id, {
-                  onSuccess: ({ blob, filename }) => {
-                    downloadBlob(blob, filename);
-                  },
-                  onError: (downloadError) => {
-                    showError(getApiErrorMessage(downloadError, "Không thể tải PDF biên bản nghiệm thu."));
-                  }
-                });
-              }}
-            >
-              {downloadAcceptancePdf.isPending ? "Đang tạo PDF..." : "Tải PDF"}
-            </Button>
+            <DocumentActions 
+              entityType="contract" 
+              entityId={contract.id} 
+              customerLanguage={contract.project.customer.language} 
+            />
           </div>
         }
       />

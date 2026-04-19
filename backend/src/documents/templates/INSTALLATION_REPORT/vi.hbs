@@ -1,0 +1,90 @@
+{{!-- Phase 9: Installation Report Template (Vietnamese) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_installation"}}</h1>
+  <div class="classic-header__meta">{{t "doc_number"}}: BBCĐ-{{contract.contractNo}}/{{date generatedAt "year"}}</div>
+</div>
+
+<main class="classic-body">
+  <p><strong>{{t "installation_statement" date=(date installationDate "long") contractNo=contract.contractNo}}</strong></p>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "installation_sender"}} ({{t "party_b"}})</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th>Tên công ty:</th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{company.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td>Ông/Bà: <strong>{{company.representative}}</strong> - Chức vụ: {{company.representativeTitle}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "installation_recipient"}} ({{t "party_a"}})</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th>Tên công ty:</th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td>Ông/Bà: <strong>{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</strong> - Chức vụ: {{#if primaryContact}}{{primaryContact.title}}{{else}}...................{{/if}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 16pt;">{{t "installation_items"}}</h3>
+  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: 1pt solid text;">
+    <thead>
+      <tr style="background-color: #f3f4f6;">
+        <th style="width: 40pt; text-align: center;">STT</th>
+        <th>{{t "installation_name"}}</th>
+        <th style="width: 100pt; text-align: center;">{{t "installation_status"}}</th>
+        <th style="width: 120pt; text-align: left;">{{t "installation_note"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each installations}}
+      <tr>
+        <td style="text-align: center;">{{add @index 1}}</td>
+        <td><strong>{{this.name}}</strong></td>
+        <td style="text-align: center;">{{this.status}}</td>
+        <td>{{this.note}}</td>
+      </tr>
+      {{/each}}
+      {{#if (not installations.length)}}
+      <tr>
+        <td colspan="4" style="text-align: center; color: #6b7280;">(Danh mục cài đặt trống)</td>
+      </tr>
+      {{/if}}
+    </tbody>
+  </table>
+
+  <p style="margin-top: 16pt;">{{t "installation_confirmation"}}</p>
+
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong>ĐẠI DIỆN {{t "installation_recipient"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong>ĐẠI DIỆN {{t "installation_sender"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

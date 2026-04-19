@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DocumentActions } from "@/components/shared/document-actions";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useProject } from "@/hooks/use-projects";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -119,6 +120,11 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
                 Tạo hợp đồng
               </Link>
             )}
+            <DocumentActions 
+              entityType="project" 
+              entityId={projectId} 
+              customerLanguage={project.customer.language ?? "vi"} 
+            />
             <Link href={`/quotes/new?projectId=${projectId}`} className={cn(buttonVariants({ variant: "primary" }))}>
               Tạo báo giá
             </Link>

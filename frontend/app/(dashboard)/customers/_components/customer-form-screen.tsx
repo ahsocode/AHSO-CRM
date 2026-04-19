@@ -103,6 +103,7 @@ export function CustomerFormScreen({
         source: customerQuery.data.source ?? "",
         notes: customerQuery.data.notes ?? "",
         status: customerQuery.data.status,
+        language: customerQuery.data.language ?? "vi",
         isVip: customerQuery.data.isVip,
         assignedToId: customerQuery.data.assignedTo.id
       });
@@ -241,6 +242,15 @@ export function CustomerFormScreen({
                 ))}
               </Select>
               <ErrorText message={form.formState.errors.status?.message} />
+            </Field>
+
+            <Field>
+              <Label htmlFor="language">Ngôn ngữ tài liệu</Label>
+              <Select id="language" {...form.register("language")}>
+                <option value="vi">Tiếng Việt</option>
+                <option value="vi-en">Song ngữ Việt - Anh</option>
+              </Select>
+              <ErrorText message={form.formState.errors.language?.message} />
             </Field>
 
             <Field>

@@ -1,0 +1,133 @@
+{{!-- Phase 2: Project Proposal Template (Bilingual VI-EN) --}}
+<div class="proposal-cover page-break">
+  <div class="proposal-cover__band"></div>
+  
+  <div class="proposal-cover__title">{{project.name}}</div>
+  <div class="proposal-cover__subtitle">{{t "document_title_proposal"}}</div>
+
+  <div class="proposal-cover__customer">
+    {{t "attention_to"}}: <br/>
+    <strong>{{customer.name}}</strong>
+    {{#if primaryContact}}<div style="margin-top: 8pt; font-size: 11pt;">{{primaryContact.name}} - {{primaryContact.title}}</div>{{/if}}
+  </div>
+
+  <div style="margin-top: 60pt; font-size: 10pt; color: #6b7280;">
+    <div style="display: flex; justify-content: center; gap: 4pt;">
+      <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> {{docNumber}}
+    </div>
+    <div style="display: flex; justify-content: center; gap: 4pt;">
+      <span class="lang-vi">Ngày:</span><span class="lang-en">Date:</span> {{date generatedAt "short"}}
+    </div>
+  </div>
+</div>
+
+<main class="modern-content">
+  <div class="modern-grid modern-grid--2col">
+    <div class="avoid-break">
+      {{> company-info}}
+    </div>
+  </div>
+
+  <h2 class="modern-section-heading">01. {{t "executive_summary"}}</h2>
+  <div class="modern-grid modern-grid--2col">
+    <div class="section-card avoid-break">
+      <div class="section-card__title">{{t "context"}}</div>
+      <p><span class="lang-vi">{{#if project.description}}{{project.description}}{{else}}Chúng tôi hiểu rằng Quý Công ty đang tìm kiếm giải pháp tối ưu cho hoạt động kinh doanh.{{/if}}</span>
+         <span class="lang-en">We understand that your company is looking for an optimal solution for your business operations.</span>
+      </p>
+    </div>
+    <div class="section-card avoid-break">
+      <div class="section-card__title">{{t "solution"}}</div>
+      <p><span class="lang-vi">Giải pháp của AHSO được thiết kế chuyên biệt, mang tính mở rộng cao và tích hợp công nghệ hiện đại nhất nhằm giải quyết triệt để các bài toán hiện tại.</span>
+         <span class="lang-en">AHSO's solution is tailored, highly scalable, and integrates the latest technologies to comprehensively solve your current challenges.</span>
+      </p>
+    </div>
+  </div>
+  <div class="section-card avoid-break">
+    <div class="section-card__title">{{t "value_proposition"}}</div>
+    <p><span class="lang-vi">Tối ưu hóa quy trình, giảm thiểu chi phí quản lý, và nâng cao năng lực cạnh tranh cốt lõi trên thị trường.</span>
+       <span class="lang-en">Optimize processes, minimize management costs, and enhance core competitiveness in the market.</span>
+    </p>
+  </div>
+
+  <h2 class="modern-section-heading">02. {{t "scope_of_work"}}</h2>
+  <p><span class="lang-vi">Dưới đây là các hạng mục công việc chính sẽ được triển khai trong phạm vi dự án này:</span>
+     <span class="lang-en">Below are the main deliverables that will be implemented within the scope of this project:</span>
+  </p>
+  <ul>
+    {{#each milestones}}
+    <li><strong>{{this.name}}</strong>: {{#if this.description}}{{this.description}}{{else}}<span class="lang-vi">Thực hiện theo tiêu chuẩn AHSO.</span><span class="lang-en">Implemented according to AHSO standards.</span>{{/if}}</li>
+    {{/each}}
+    {{#if (not milestones.length)}}
+    <li><span class="lang-vi">Khảo sát và phân tích yêu cầu nghiệp vụ.</span><span class="lang-en">Survey and business requirements analysis.</span></li>
+    <li><span class="lang-vi">Thiết kế hệ thống và phát triển tính năng.</span><span class="lang-en">System design and feature development.</span></li>
+    <li><span class="lang-vi">Kiểm thử, đào tạo và chuyển giao.</span><span class="lang-en">Testing, training, and handover.</span></li>
+    {{/if}}
+  </ul>
+
+  <h2 class="modern-section-heading">03. {{t "timeline"}}</h2>
+  <div class="timeline">
+    {{#each milestones}}
+    <div class="timeline-item avoid-break">
+      <div class="timeline-dot"></div>
+      <div class="timeline-content">
+        <div class="timeline-title">{{this.name}}</div>
+        {{#if this.dueDate}}<div class="timeline-date">{{date this.dueDate "short"}}</div>{{/if}}
+      </div>
+    </div>
+    {{/each}}
+    {{#if (not milestones.length)}}
+    <div class="modern-callout">
+      <span class="lang-vi">Chi tiết lịch trình sẽ được thống nhất sau khi hoàn tất khảo sát sơ bộ.</span>
+      <span class="lang-en">Detailed schedule will be agreed upon after completing the preliminary survey.</span>
+    </div>
+    {{/if}}
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2 class="modern-section-heading">04. {{t "investment_summary"}}</h2>
+  {{#if linkedQuote}}
+  <div class="section-card avoid-break">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1pt solid #e5e7eb; padding-bottom: 8pt; margin-bottom: 8pt;">
+      <div style="font-weight: bold;">
+        <span class="lang-vi">Tổng giá trị đề xuất (Tham khảo Báo giá {{linkedQuote.quoteNo}})</span>
+        <span class="lang-en">Total Proposed Value (Ref: Quotation {{linkedQuote.quoteNo}})</span>
+      </div>
+      <div style="font-weight: bold; font-size: 14pt; color: var(--brand-primary);">{{currency linkedQuote.total}}</div>
+    </div>
+    <div class="modern-in-words">{{t "in_words"}}: {{currency linkedQuote.total "words"}}</div>
+  </div>
+  {{else}}
+  <div class="modern-callout">
+    <p>{{t "see_attached_quote"}}</p>
+  </div>
+  {{/if}}
+
+  <h2 class="modern-section-heading">05. {{t "terms_and_commitments"}}</h2>
+  <div class="section-card avoid-break">
+    <ul>
+      {{#if policies.paymentTerms}}<li><strong><span class="lang-vi">Thanh toán:</span><span class="lang-en">Payment terms:</span></strong> {{policies.paymentTerms}}</li>{{/if}}
+      {{#if policies.warrantyPeriodMonths}}<li><strong><span class="lang-vi">Bảo hành:</span><span class="lang-en">Warranty:</span></strong> <span class="lang-vi">Chúng tôi cam kết bảo hành {{policies.warrantyPeriodMonths}} tháng cho các hạng mục bàn giao.</span><span class="lang-en">We commit to a {{policies.warrantyPeriodMonths}}-month warranty for all deliverables.</span></li>{{/if}}
+      <li><strong><span class="lang-vi">Bảo mật:</span><span class="lang-en">Confidentiality:</span></strong> <span class="lang-vi">Mọi thông tin trong tài liệu này đều là thông tin bảo mật và không được chia sẻ cho bên thứ ba.</span><span class="lang-en">All information in this document is confidential and shall not be shared with any third party.</span></li>
+    </ul>
+  </div>
+
+  {{!-- Signature Section --}}
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid">
+      <div class="signature-col"></div>
+      <div class="signature-col text-center">
+        <div style="font-weight: bold; margin-bottom: 40pt;">
+          <span class="lang-vi">ĐẠI DIỆN AHSO</span>
+          <span class="lang-en">AHSO REPRESENTATIVE</span>
+        </div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+        <div style="font-size: 10pt; color: #4b5563;">{{company.representativeTitle}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}
+{{> legal-footer}}

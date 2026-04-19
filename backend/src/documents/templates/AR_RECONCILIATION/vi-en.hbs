@@ -1,0 +1,180 @@
+{{!-- Phase 16: AR Reconciliation Template (Bilingual VI-EN) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_ar_reconciliation"}}</h1>
+  <div class="classic-header__meta">
+    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span>
+    BBDC-{{customer.code}}/{{date generatedAt "year"}}
+  </div>
+</div>
+
+<main class="classic-body">
+  <h3 style="margin-top: 8pt;">
+    <span class="lang-vi">{{t "delivery_sender"}}</span><span class="lang-en">ISSUING PARTY</span> ({{t "party_b"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th style="width: 30%;"><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company:</span></th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{company.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td>
+        <span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span>
+        <strong>{{company.representative}}</strong> -
+        <span class="lang-vi">Chức vụ:</span><span class="lang-en">Title:</span> {{company.representativeTitle}}
+      </td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt;">
+    <span class="lang-vi">{{t "delivery_recipient"}}</span><span class="lang-en">RECEIVING PARTY</span> ({{t "party_a"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th style="width: 30%;"><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company:</span></th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td>
+        <span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span>
+        <strong>{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</strong> -
+        <span class="lang-vi">Chức vụ:</span><span class="lang-en">Title:</span> {{#if primaryContact}}{{primaryContact.title}}{{else}}...................{{/if}}
+      </td>
+    </tr>
+  </table>
+
+  <div style="margin-top: 16pt;">
+    <p>
+      <span class="lang-vi">{{t "ar_recon_statement"}}</span>
+      <span class="lang-en">Based on the contract and actual transactions, both parties conduct the AR reconciliation as follows:</span>
+    </p>
+    <p style="margin-top: 6pt;">
+      <strong>
+        <span class="lang-vi">{{t "ar_period"}}:</span>
+        <span class="lang-en">Period:</span>
+      </strong>
+      {{date periodStart "short"}} — {{date periodEnd "short"}}
+    </p>
+  </div>
+
+  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 12pt; font-size: 10pt; border: 1pt solid #374151;">
+    <thead>
+      <tr style="background-color: #1e3a8a; color: white; text-align: center;">
+        <th style="width: 30pt;">STT</th>
+        <th>
+          <span class="lang-vi">{{t "ar_contract_no"}}</span>
+          <span class="lang-en">Contract No.</span>
+        </th>
+        <th>
+          <span class="lang-vi">{{t "ar_project_name"}}</span>
+          <span class="lang-en">Project</span>
+        </th>
+        <th style="text-align: right;">
+          <span class="lang-vi">{{t "ar_contract_value"}}</span>
+          <span class="lang-en">Value</span>
+        </th>
+        <th style="text-align: right;">
+          <span class="lang-vi">{{t "ar_invoiced"}}</span>
+          <span class="lang-en">Invoiced</span>
+        </th>
+        <th style="text-align: right;">
+          <span class="lang-vi">{{t "ar_paid"}}</span>
+          <span class="lang-en">Paid</span>
+        </th>
+        <th style="text-align: right; color: #fca5a5;">
+          <span class="lang-vi">{{t "ar_outstanding"}}</span>
+          <span class="lang-en">Outstanding</span>
+        </th>
+        <th style="width: 70pt;">
+          <span class="lang-vi">{{t "ar_due_date"}}</span>
+          <span class="lang-en">Due Date</span>
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lineItems}}
+      <tr>
+        <td style="text-align: center;">{{add @index 1}}</td>
+        <td><strong>{{this.contractNo}}</strong></td>
+        <td>{{this.projectName}}</td>
+        <td style="text-align: right;">{{currency this.contractValue}}</td>
+        <td style="text-align: right;">{{currency this.invoiced}}</td>
+        <td style="text-align: right; color: #15803d;">{{currency this.paid}}</td>
+        <td style="text-align: right; font-weight: bold; color: #b91c1c;">{{currency this.outstanding}}</td>
+        <td style="text-align: center;">{{date this.dueDate "short"}}</td>
+      </tr>
+      {{/each}}
+      {{#if (not lineItems.length)}}
+      <tr>
+        <td colspan="8" style="text-align: center; color: #6b7280;">
+          <span class="lang-vi">(Không có dữ liệu)</span>
+          <span class="lang-en">(No data)</span>
+        </td>
+      </tr>
+      {{/if}}
+    </tbody>
+    <tfoot>
+      <tr style="background-color: #f3f4f6; font-weight: bold;">
+        <td colspan="3" style="text-align: right; padding-right: 8pt;">
+          <span class="lang-vi">{{t "ar_total"}}</span>
+          <span class="lang-en">Total</span>
+        </td>
+        <td style="text-align: right;">{{currency totals.contractValue}}</td>
+        <td style="text-align: right;">{{currency totals.invoiced}}</td>
+        <td style="text-align: right; color: #15803d;">{{currency totals.paid}}</td>
+        <td style="text-align: right; color: #b91c1c; font-size: 13pt;">{{currency totals.outstanding}}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <p style="margin-top: 16pt; font-style: italic;">
+    <span class="lang-vi">{{t "ar_confirmation"}}</span>
+    <span class="lang-en">Both parties have reconciled and agreed on the above AR figures. This minute is made in 02 copies with equal legal validity.</span>
+  </p>
+
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label">
+          <strong>
+            <span class="lang-vi">ĐẠI DIỆN {{t "delivery_recipient"}} ({{t "party_a"}})</span>
+            <span class="lang-en">REPRESENTATIVE OF RECEIVING PARTY (Party A)</span>
+          </strong>
+        </div>
+        <div style="height: 80pt;"></div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label">
+          <strong>
+            <span class="lang-vi">ĐẠI DIỆN {{t "delivery_sender"}} ({{t "party_b"}})</span>
+            <span class="lang-en">REPRESENTATIVE OF ISSUING PARTY (Party B)</span>
+          </strong>
+        </div>
+        <div style="height: 80pt;">
+          <div class="classic-stamp" style="margin-top: -10pt;">
+            <span class="lang-vi">ĐÓNG DẤU & KÝ TÊN</span>
+            <span class="lang-en">SIGNED AND STAMPED</span>
+          </div>
+        </div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+        <div style="font-size: 11pt; color: #4b5563;">{{company.representativeTitle}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

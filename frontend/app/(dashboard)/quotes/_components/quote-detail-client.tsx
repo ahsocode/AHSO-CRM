@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DocumentActions } from "@/components/shared/document-actions";
 import { useDuplicateQuote, useDownloadQuotePdf, useQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -122,31 +123,14 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 Tạo hợp đồng
               </Link>
             ) : null}
-            {canEdit ? (
-              <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
-                Chỉnh sửa
-              </Link>
-            ) : null}
-            <Link href={`/quotes/${quote.id}/preview`} className={cn(buttonVariants({ variant: "outline" }))}>
-              Xem bản in
+            <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
+              Chỉnh sửa
             </Link>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={downloadQuotePdfMutation.isPending}
-              onClick={() => {
-                downloadQuotePdfMutation.mutate(quote.id, {
-                  onSuccess: ({ blob, filename }) => {
-                    downloadBlob(blob, filename);
-                  },
-                  onError: (downloadError) => {
-                    showError(getApiErrorMessage(downloadError, "Không thể tải PDF báo giá."));
-                  }
-                });
-              }}
-            >
-              {downloadQuotePdfMutation.isPending ? "Đang tạo PDF..." : "Tải PDF"}
-            </Button>
+            <DocumentActions 
+              entityType="quote" 
+              entityId={quote.id} 
+              customerLanguage={quote.project.customer.language} 
+            />
           </div>
         }
       />

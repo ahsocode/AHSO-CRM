@@ -18,8 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useUpdateUser, useUsers } from "@/hooks/use-users";
+import { isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { AUTH_USER_KEY, ROLE_LABELS } from "@/lib/constants";
+import { ROLE_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { Role, UserListItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -91,7 +92,7 @@ export function UsersClient() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const canManageUsers = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const canManageUsers = isLeadershipRole(user?.role);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
   const [activityFilter, setActivityFilter] = useState<ActivityFilterValue>("all");
@@ -148,24 +149,14 @@ export function UsersClient() {
       setSelectedUserId(updatedUser.id);
 
       if (user && updatedUser.id === user.id) {
-        const nextUser = {
-          ...user,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          role: updatedUser.role,
-          avatarUrl: updatedUser.avatarUrl ?? null,
-          isActive: updatedUser.isActive
-        };
-
-        useAuthStore.setState({
-          user: nextUser
-        });
-
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(nextUser));
+        if (!updatedUser.isActive) {
+          await logout();
+          return;
         }
 
-        if (!updatedUser.isActive) {
+        try {
+          await useAuthStore.getState().refreshSession();
+        } catch {
           await logout();
           return;
         }

@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppIcon } from "@/components/shared/app-icon";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useCompanyInfo, useLogo } from "@/hooks/use-settings";
+import { resolveAssetUrl } from "@/lib/auth";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Email không hợp lệ"),
@@ -23,6 +25,10 @@ const isDev = process.env.NODE_ENV !== "production";
 export default function LoginPage() {
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
+  const companyQuery = useCompanyInfo();
+  const logoQuery = useLogo();
+  const brandName = companyQuery.data?.shortName || companyQuery.data?.name || "AHSO";
+  const logoUrl = resolveAssetUrl(logoQuery.data);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -47,8 +53,21 @@ export default function LoginPage() {
   return (
     <div>
       <div className="mb-8">
-        <p className="industrial-chip bg-primary/10 text-primary">Đăng nhập hệ thống</p>
-        <h2 className="mt-5 text-4xl font-extrabold tracking-tight text-text-primary">Xin chào, đội AHSO</h2>
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm">
+            {logoUrl ? (
+              <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-2" />
+            ) : (
+              <span className="font-heading text-sm font-extrabold tracking-[0.18em] text-primary">AHSO</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="industrial-chip bg-primary/10 text-primary">Đăng nhập hệ thống</p>
+            <p className="mt-2 truncate text-sm font-semibold text-text-primary">{companyQuery.data?.name ?? "AHSO CRM"}</p>
+          </div>
+        </div>
+
+        <h2 className="mt-5 text-4xl font-extrabold tracking-tight text-text-primary">Xin chào, đội {brandName}</h2>
         {isDev ? (
           <p className="mt-3 text-sm text-text-secondary">
             Sử dụng tài khoản dev mặc định để bắt đầu: <strong>admin@ahso.vn / AHSO123!</strong>
@@ -103,4 +122,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

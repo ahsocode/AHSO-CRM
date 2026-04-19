@@ -9,6 +9,7 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { useCreateProject, useProjectKanban, useProjects, useUpdateProjectStatus } from "@/hooks/use-projects";
 import { useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
+import { isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { Priority, ProjectStatus, ProjectUpsertInput, ProjectViewMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -51,7 +52,7 @@ export function ProjectsClient() {
   const [view, setView] = useState<ProjectViewMode>("kanban");
   const [importOpen, setImportOpen] = useState(false);
   const deferredSearch = useDeferredValue(search.trim());
-  const canManageUsers = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const canManageUsers = isLeadershipRole(user?.role);
   const createProject = useCreateProject();
   const queryClient = useQueryClient();
   const importCustomersQuery = useCustomers({ page: 1, limit: 200 });

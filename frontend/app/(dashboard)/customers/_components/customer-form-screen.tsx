@@ -16,8 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useCreateCustomer, useCustomer, useDeleteCustomer, useUpdateCustomer } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
+import { getRoleLabel, isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { ROLE_LABELS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format";
 import { CustomerStatus, Role, UserListItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -60,7 +60,7 @@ export function CustomerFormScreen({
 }) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const canManageUsers = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const canManageUsers = isLeadershipRole(user?.role);
   const usersQuery = useUsers(canManageUsers);
   const customerQuery = useCustomer(mode === "edit" ? customerId ?? "" : "");
   const createCustomerMutation = useCreateCustomer();
@@ -301,7 +301,7 @@ export function CustomerFormScreen({
                 ) : (
                   <div className="rounded-xl border border-border/60 bg-white/80 px-4 py-3 text-sm text-text-secondary">
                     <p className="font-semibold text-text-primary">{user?.name ?? "Tài khoản hiện tại"}</p>
-                    <p>{user ? ROLE_LABELS[user.role] : "Nhân sự đang thao tác"}</p>
+                    <p>{getRoleLabel(user?.role)}</p>
                   </div>
                 )}
                 <ErrorText message={form.formState.errors.assignedToId?.message} />

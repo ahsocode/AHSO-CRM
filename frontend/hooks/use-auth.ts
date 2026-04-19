@@ -2,7 +2,14 @@
 
 import axios from "axios";
 import { create } from "zustand";
-import { clearSession, getAccessToken, getRefreshToken, getStoredUser, persistSession } from "@/lib/auth";
+import {
+  clearSession,
+  getAccessToken,
+  getRefreshToken,
+  getStoredUser,
+  hasPermission as authHasPermission,
+  persistSession
+} from "@/lib/auth";
 import { API_URL } from "@/lib/constants";
 import { ActionResponse, ApiResponse, AuthSession, AuthUser, ForgotPasswordResponse } from "@/lib/types";
 
@@ -29,10 +36,11 @@ interface AuthState {
   requestPasswordReset: (input: ForgotPasswordInput) => Promise<ForgotPasswordResponse>;
   resetPassword: (input: ResetPasswordInput) => Promise<ActionResponse>;
   refreshSession: () => Promise<AuthSession>;
+  hasPermission: (permission: string) => boolean;
   logout: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>()((set, get) => ({
   user: null,
   isHydrated: false,
   hydrate: () => {
@@ -43,12 +51,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   login: async (input) => {
     const response = await axios.post<ApiResponse<AuthSession>>(`${API_URL}/auth/login`, input);
-    persistSession(response.data.data);
+    const session = persistSession(response.data.data);
+
+    void Promise.allSettled([
+      axios.get(`${API_URL}/settings/company`),
+      axios.get(`${API_URL}/settings/logo`)
+    ]);
+
     set({
-      user: response.data.data.user,
+      user: session.user,
       isHydrated: true
     });
-    return response.data.data;
+    return session;
   },
   requestPasswordReset: async (input) => {
     const response = await axios.post<ApiResponse<ForgotPasswordResponse>>(`${API_URL}/auth/forgot-password`, input);
@@ -74,13 +88,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken
     });
 
-    persistSession(response.data.data);
+    const session = persistSession(response.data.data);
     set({
-      user: response.data.data.user,
+      user: session.user,
       isHydrated: true
     });
-    return response.data.data;
+    return session;
   },
+  hasPermission: (permission) => authHasPermission(get().user, permission),
   logout: async () => {
     try {
       const accessToken = getAccessToken();

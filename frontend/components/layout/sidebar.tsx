@@ -1,9 +1,11 @@
 "use client";
 
+import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/constants";
 import { useAuthStore } from "@/hooks/use-auth";
+import { getAuthRoleName } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/shared/app-icon";
 
@@ -36,19 +38,28 @@ function getItemHint(href: string) {
     return "Phân tích vận hành";
   }
 
+  if (href === "/admin") {
+    return "Cấu hình hệ thống";
+  }
+
   return "Quyền truy cập nội bộ";
 }
 
 export function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
+  const roleName = getAuthRoleName(user?.role);
   const visibleItems = NAV_ITEMS.filter((item) => {
-    if (item.href === "/users" && user?.role === "STAFF") {
+    if (item.href === "/users" && roleName === "STAFF") {
       return false;
     }
 
     return true;
   });
+  const navItems =
+    roleName === "ADMIN"
+      ? [...visibleItems, { href: "/admin" as Route, label: "Quản trị", icon: "settings" as const }]
+      : visibleItems;
 
   return (
     <aside className="hide-scrollbar w-full overflow-x-auto border-b border-slate-200/80 bg-white/92 px-4 py-5 text-text-primary shadow-[0_18px_48px_rgba(21,67,96,0.08)] backdrop-blur-xl print:hidden md:sticky md:top-0 md:h-screen md:w-[260px] md:min-w-[260px] md:border-b-0 md:border-r">
@@ -66,19 +77,19 @@ export function Sidebar() {
         <div className="mt-4 rounded-2xl bg-gradient-to-br from-primary/10 via-info-bg/60 to-white px-4 py-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-primary/80">Sales Console</p>
           <p className="mt-2 text-sm font-medium text-text-primary">
-            Theo dõi pipeline, hợp đồng và người phụ trách trên cùng một nhịp vận hành.
+            Giúp quản lý công việc tốt hơn.
           </p>
         </div>
       </div>
 
       <nav className="mt-6 flex min-w-max gap-2 pb-1 md:min-w-0 md:flex-col md:gap-2">
-        {visibleItems.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={item.href as Route}
               className={cn(
                 "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 isActive

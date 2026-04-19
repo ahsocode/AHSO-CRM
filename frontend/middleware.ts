@@ -5,6 +5,7 @@ const REFRESH_TOKEN_KEY = "ahso_refresh_token";
 const PUBLIC_ROUTES = ["/login", "/forgot-password", "/reset-password"];
 const PROTECTED_PREFIXES = [
   "/dashboard",
+  "/admin",
   "/customers",
   "/projects",
   "/quotes",
@@ -50,6 +51,7 @@ export const config = {
   matcher: [
     "/",
     "/dashboard/:path*",
+    "/admin/:path*",
     "/customers/:path*",
     "/projects/:path*",
     "/quotes/:path*",

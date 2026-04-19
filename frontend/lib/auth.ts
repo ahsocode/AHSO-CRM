@@ -1,5 +1,8 @@
-import { ACCESS_TOKEN_KEY, AUTH_USER_KEY, REFRESH_TOKEN_KEY } from "./constants";
-import { AuthSession, AuthUser } from "./types";
+import { API_URL, ACCESS_TOKEN_KEY, AUTH_USER_KEY, REFRESH_TOKEN_KEY, ROLE_LABELS } from "./constants";
+import { AuthRoleInfo, AuthSession, AuthUser, Role } from "./types";
+
+type NormalizedAuthUser = Omit<AuthUser, "role"> & { role: AuthRoleInfo };
+type NormalizedAuthSession = Omit<AuthSession, "user"> & { user: NormalizedAuthUser };
 
 function isBrowser() {
   return typeof window !== "undefined";
@@ -31,13 +34,103 @@ function removeCookie(name: string) {
   document.cookie = `${name}=; path=/; max-age=0; samesite=lax`;
 }
 
+export function normalizeAuthRole(role: AuthUser["role"] | null | undefined): AuthRoleInfo {
+  if (!role) {
+    return {
+      id: "",
+      name: "STAFF",
+      permissions: []
+    };
+  }
+
+  if (typeof role === "string") {
+    return {
+      id: "",
+      name: role,
+      permissions: []
+    };
+  }
+
+  return {
+    id: role?.id ?? "",
+    name: (role?.name ?? "STAFF") as Role,
+    permissions: Array.isArray(role?.permissions) ? role.permissions : []
+  };
+}
+
+export function normalizeAuthUser(user: AuthUser | null | undefined): NormalizedAuthUser | null {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    ...user,
+    role: normalizeAuthRole(user.role)
+  };
+}
+
+export function normalizeAuthSession(session: AuthSession): NormalizedAuthSession {
+  return {
+    ...session,
+    user: normalizeAuthUser(session.user) ?? session.user
+  } as NormalizedAuthSession;
+}
+
+export function getAuthRoleName(role: AuthUser["role"] | null | undefined): Role | undefined {
+  if (!role) {
+    return undefined;
+  }
+
+  return normalizeAuthRole(role).name;
+}
+
+export function getAuthPermissions(user: AuthUser | null | undefined) {
+  return normalizeAuthUser(user)?.role.permissions ?? [];
+}
+
+export function getRoleLabel(role: AuthUser["role"] | null | undefined) {
+  const roleName = getAuthRoleName(role);
+  return roleName ? ROLE_LABELS[roleName] : "Phiên làm việc";
+}
+
+export function isLeadershipRole(role: AuthUser["role"] | null | undefined) {
+  const roleName = getAuthRoleName(role);
+  return roleName === "ADMIN" || roleName === "MANAGER";
+}
+
+export function hasPermission(user: AuthUser | null | undefined, permission: string) {
+  const roleName = getAuthRoleName(user?.role);
+
+  if (roleName === "ADMIN") {
+    return true;
+  }
+
+  return getAuthPermissions(user).includes(permission);
+}
+
+export function resolveAssetUrl(url: string | null | undefined) {
+  if (!url) {
+    return null;
+  }
+
+  try {
+    return new URL(url, API_URL).toString();
+  } catch {
+    return url;
+  }
+}
+
 export function persistSession(session: AuthSession) {
-  setCookie(ACCESS_TOKEN_KEY, session.accessToken, 15 * 60);
-  setCookie(REFRESH_TOKEN_KEY, session.refreshToken, 7 * 24 * 60 * 60);
+  const normalizedSession = normalizeAuthSession(session);
+
+  setCookie(ACCESS_TOKEN_KEY, normalizedSession.accessToken, 15 * 60);
+  setCookie(REFRESH_TOKEN_KEY, normalizedSession.refreshToken, 7 * 24 * 60 * 60);
 
   if (isBrowser()) {
-    window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(session.user));
+    window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(normalizedSession.user));
   }
+
+  return normalizedSession;
 }
 
 export function clearSession() {
@@ -68,9 +161,8 @@ export function getStoredUser(): AuthUser | null {
   }
 
   try {
-    return JSON.parse(rawUser) as AuthUser;
+    return normalizeAuthUser(JSON.parse(rawUser) as AuthUser);
   } catch {
     return null;
   }
 }
-

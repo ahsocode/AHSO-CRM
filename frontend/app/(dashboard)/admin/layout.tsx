@@ -5,18 +5,7 @@ import { useEffect, useRef } from "react";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-
-function getRoleName(role: unknown) {
-  if (typeof role === "string") {
-    return role;
-  }
-
-  if (role && typeof role === "object" && "name" in role) {
-    return (role as { name?: string }).name;
-  }
-
-  return undefined;
-}
+import { getAuthRoleName } from "@/lib/auth";
 
 export default function AdminLayout({
   children
@@ -28,7 +17,7 @@ export default function AdminLayout({
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const hasRedirected = useRef(false);
-  const roleName = getRoleName(user?.role);
+  const roleName = getAuthRoleName(user?.role);
   const isAdmin = roleName === "ADMIN";
 
   useEffect(() => {

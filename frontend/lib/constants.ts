@@ -20,7 +20,7 @@ export const NAV_ITEMS = [
   { href: "/activities", label: "Hoạt động", icon: "history" },
   { href: "/calendar", label: "Lịch công tác", icon: "calendar" },
   { href: "/reports", label: "Báo cáo", icon: "analytics" },
-  { href: "/users", label: "Người dùng", icon: "settings" }
+  { href: "/users", label: "Người dùng", icon: "briefcase" }
 ] as const;
 
 export const PROJECT_STATUS_LABELS = {

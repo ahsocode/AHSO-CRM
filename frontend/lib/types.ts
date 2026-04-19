@@ -7,6 +7,12 @@ export type MilestoneStatus = "PENDING" | "IN_PROGRESS" | "DONE" | "ACCEPTED";
 export type ActivityType = "CALL" | "EMAIL" | "MEETING" | "SURVEY" | "DEMO" | "NOTE" | "FOLLOWUP";
 export type Priority = "LOW" | "NORMAL" | "HIGH";
 
+export interface AuthRoleInfo {
+  id: string;
+  name: Role;
+  permissions: string[];
+}
+
 export interface ApiResponse<T> {
   data: T;
   meta: {
@@ -27,7 +33,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: Role;
+  role: AuthRoleInfo | Role;
   avatarUrl?: string | null;
   isActive: boolean;
 }

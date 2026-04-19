@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useCalendarEvents } from "@/hooks/use-calendar";
 import { useUsers } from "@/hooks/use-users";
+import { isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { ActivityType } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,7 @@ function getMonthRange(year: number, month: number) {
 
 export function CalendarClient() {
   const user = useAuthStore((state) => state.user);
-  const canManageUsers = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const canManageUsers = isLeadershipRole(user?.role);
 
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [defaultWeekRange] = useState(() => getDefaultWeekRange());

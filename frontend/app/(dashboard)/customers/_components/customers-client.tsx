@@ -9,6 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useCreateCustomer, useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
+import { isLeadershipRole } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { CustomerStatus, CustomerUpsertInput } from "@/lib/types";
 import { CsvImportDialog, CsvColumnSpec } from "@/components/shared/csv-import-dialog";
@@ -59,7 +60,7 @@ export function CustomersClient() {
     setPage(1);
   }, [deferredSearch, status, normalizedIndustry, assignedToId, vipFilter]);
 
-  const canManageUsers = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const canManageUsers = isLeadershipRole(user?.role);
   const usersQuery = useUsers(canManageUsers);
   const customersQuery = useCustomers({
     page,

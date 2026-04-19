@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type { MilestoneStatus, Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { UploadService } from "../upload/upload.service";
 import { ContractFilterDto } from "./dto/contract-filter.dto";
 import { CreateContractDto } from "./dto/create-contract.dto";
 import { CreateMilestoneDto } from "./dto/create-milestone.dto";
@@ -13,7 +14,10 @@ const CLOSED_CONTRACT_STATUSES = ["COMPLETED", "CANCELLED"] as const;
 
 @Injectable()
 export class ContractsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadService: UploadService
+  ) {}
 
   async findAll(filters: ContractFilterDto, user: JwtUser) {
     const page = filters.page ?? 1;
@@ -283,7 +287,7 @@ export class ContractsService {
   }
 
   async update(id: string, dto: UpdateContractDto, user: JwtUser) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const contract = await this.findAccessibleContractForMutation(tx, id, user);
       const nextStartDate = dto.startDate ?? contract.startDate;
       const nextEndDate = dto.endDate ?? contract.endDate;
@@ -319,8 +323,19 @@ export class ContractsService {
         updatedContract.status
       );
 
-      return updatedContract;
+      return {
+        updatedContract,
+        previousLocalFileUrl: this.shouldDeletePreviousLocalFile(contract.fileUrl, dto.fileUrl)
+          ? contract.fileUrl
+          : null
+      };
     });
+
+    if (result.previousLocalFileUrl) {
+      await this.uploadService.deleteFile(result.previousLocalFileUrl);
+    }
+
+    return result.updatedContract;
   }
 
   async createMilestone(contractId: string, dto: CreateMilestoneDto, user: JwtUser) {
@@ -584,6 +599,7 @@ export class ContractsService {
         projectId: true,
         startDate: true,
         endDate: true,
+        fileUrl: true,
         status: true,
         project: {
           select: {
@@ -713,6 +729,14 @@ export class ContractsService {
     const nextSequence = currentSequence ? Number.parseInt(currentSequence, 10) + 1 : 1;
 
     return `${prefix}${String(nextSequence).padStart(3, "0")}`;
+  }
+
+  private shouldDeletePreviousLocalFile(previousFileUrl?: string | null, nextFileUrl?: string | null) {
+    if (!previousFileUrl || nextFileUrl === undefined || previousFileUrl === nextFileUrl) {
+      return false;
+    }
+
+    return this.uploadService.isLocalUploadPath(previousFileUrl);
   }
 
   private async syncProjectStatusForContract(

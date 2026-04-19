@@ -15,6 +15,7 @@ import {
   ContractStatus,
   ContractUpdateInput
 } from "@/lib/types";
+import { getFilenameFromContentDisposition } from "@/lib/utils";
 
 export function useContracts(filters: ContractFilters) {
   return useQuery({
@@ -139,6 +140,24 @@ export function useCreateContractPayment(contractId: string) {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
+export function useDownloadContractAcceptancePdf() {
+  return useMutation({
+    mutationFn: async (contractId: string) => {
+      const response = await apiClient.get<Blob>(`/contracts/${contractId}/acceptance-pdf`, {
+        responseType: "blob"
+      });
+
+      return {
+        blob: response.data,
+        filename: getFilenameFromContentDisposition(
+          response.headers["content-disposition"],
+          `acceptance-${contractId}.pdf`
+        )
+      };
     }
   });
 }

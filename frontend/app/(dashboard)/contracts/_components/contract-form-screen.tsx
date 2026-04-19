@@ -24,6 +24,7 @@ import { CONTRACT_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ContractStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ContractFileUploader } from "./contract-file-uploader";
 import { ErrorText, Field, Label } from "./form-primitives";
 import {
   contractFormSchema,
@@ -42,7 +43,7 @@ function toCreatePayload(values: ContractFormValues) {
     endDate: values.endDate,
     value: values.value,
     status: values.status,
-    fileUrl: values.fileUrl,
+    fileUrl: values.fileUrl ?? null,
     notes: values.notes
   };
 }
@@ -54,7 +55,7 @@ function toUpdatePayload(values: ContractFormValues) {
     endDate: values.endDate,
     value: values.value,
     status: values.status,
-    fileUrl: values.fileUrl,
+    fileUrl: values.fileUrl ?? null,
     notes: values.notes
   };
 }
@@ -107,7 +108,7 @@ export function ContractFormScreen({
         endDate: contractQuery.data.endDate ? contractQuery.data.endDate.slice(0, 10) : "",
         value: contractQuery.data.value,
         status: contractQuery.data.status,
-        fileUrl: contractQuery.data.fileUrl ?? "",
+        fileUrl: contractQuery.data.fileUrl ?? null,
         notes: contractQuery.data.notes ?? ""
       });
     }
@@ -115,6 +116,7 @@ export function ContractFormScreen({
 
   const selectedProjectId = form.watch("projectId");
   const selectedSourceQuoteId = form.watch("sourceQuoteId");
+  const selectedFileUrl = form.watch("fileUrl");
   const selectedProjectQuery = useProject(selectedProjectId || "");
   const activeContract = contractQuery.data;
   const availableProjects = useMemo(
@@ -369,9 +371,19 @@ export function ContractFormScreen({
                 <ErrorText message={form.formState.errors.endDate?.message} />
               </Field>
 
-              <Field>
-                <Label htmlFor="fileUrl">File scan / liên kết</Label>
-                <Input id="fileUrl" placeholder="https://..." {...form.register("fileUrl")} />
+              <Field className="md:col-span-2">
+                <Label htmlFor="fileUrl">File đính kèm</Label>
+                <ContractFileUploader
+                  disabled={activeMutation.isPending}
+                  error={form.formState.errors.fileUrl?.message}
+                  value={selectedFileUrl}
+                  onChange={(nextValue) => {
+                    form.setValue("fileUrl", nextValue, {
+                      shouldDirty: true,
+                      shouldValidate: true
+                    });
+                  }}
+                />
                 <ErrorText message={form.formState.errors.fileUrl?.message} />
               </Field>
             </CardContent>

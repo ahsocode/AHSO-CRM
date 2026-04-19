@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
@@ -10,12 +11,16 @@ import {
   UpdateQuoteStatusDto,
   updateQuoteStatusSchema
 } from "./dto/update-quote-status.dto";
+import { QuotesPdfService } from "./quotes-pdf.service";
 import { QuotesService } from "./quotes.service";
 
 @Controller("quotes")
 @UseGuards(JwtAuthGuard)
 export class QuotesController {
-  constructor(private readonly quotesService: QuotesService) {}
+  constructor(
+    private readonly quotesService: QuotesService,
+    private readonly quotesPdfService: QuotesPdfService
+  ) {}
 
   @Get()
   findAll(
@@ -36,6 +41,18 @@ export class QuotesController {
   @Post(":id/duplicate")
   duplicate(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.quotesService.duplicate(id, user);
+  }
+
+  @Get(":id/pdf")
+  async downloadPdf(
+    @Param("id") id: string,
+    @CurrentUser() user: JwtUser,
+    @Res() response: Response
+  ) {
+    const pdf = await this.quotesPdfService.generatePdf(id, user);
+    response.setHeader("Content-Type", "application/pdf");
+    response.setHeader("Content-Disposition", `attachment; filename="${pdf.filename}"`);
+    response.send(pdf.buffer);
   }
 
   @Get(":id")

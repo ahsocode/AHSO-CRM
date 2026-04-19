@@ -8,17 +8,21 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useContract } from "@/hooks/use-contracts";
+import { useDownloadContractAcceptancePdf, useContract } from "@/hooks/use-contracts";
+import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { resolveAssetUrl } from "@/lib/auth";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { cn, downloadBlob } from "@/lib/utils";
 import { ContractMilestoneManager } from "./contract-milestone-manager";
 import { ContractPaymentManager } from "./contract-payment-manager";
 
 export function ContractDetailClient({ contractId }: { contractId: string }) {
   const contractQuery = useContract(contractId);
+  const downloadAcceptancePdf = useDownloadContractAcceptancePdf();
+  const { error: showError } = useToast();
 
   if (contractQuery.isLoading) {
     return (
@@ -62,6 +66,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
   }
 
   const contract = contractQuery.data;
+  const attachmentUrl = resolveAssetUrl(contract.fileUrl);
 
   return (
     <div className="space-y-8">
@@ -79,6 +84,29 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
             <Link href={`/projects/${contract.project.id}`} className={cn(buttonVariants({ variant: "outline" }))}>
               Mở dự án
             </Link>
+            <Link
+              href={`/contracts/${contract.id}/acceptance-preview`}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Xem biên bản nghiệm thu
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={downloadAcceptancePdf.isPending}
+              onClick={() => {
+                downloadAcceptancePdf.mutate(contract.id, {
+                  onSuccess: ({ blob, filename }) => {
+                    downloadBlob(blob, filename);
+                  },
+                  onError: (downloadError) => {
+                    showError(getApiErrorMessage(downloadError, "Không thể tải PDF biên bản nghiệm thu."));
+                  }
+                });
+              }}
+            >
+              {downloadAcceptancePdf.isPending ? "Đang tạo PDF..." : "Tải PDF"}
+            </Button>
           </div>
         }
       />
@@ -111,15 +139,15 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
               <MiniPanel label="Bắt đầu" value={contract.startDate ? formatDate(contract.startDate) : "Chưa cập nhật"} />
               <MiniPanel label="Kết thúc" value={contract.endDate ? formatDate(contract.endDate) : "Chưa cập nhật"} />
             </div>
-            {contract.fileUrl ? (
+            {attachmentUrl ? (
               <div className="mt-6">
                 <a
-                  href={contract.fileUrl}
+                  href={attachmentUrl}
                   target="_blank"
                   rel="noreferrer"
                   className={cn(buttonVariants({ variant: "outline" }))}
                 >
-                  Mở file hợp đồng
+                  Mở file đính kèm
                 </a>
               </div>
             ) : null}

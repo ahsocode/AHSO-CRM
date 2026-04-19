@@ -106,6 +106,13 @@ export interface LogoUploadResult extends Logo {
   mimeType: string;
 }
 
+export interface UploadedFileResult {
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+}
+
 export interface ActionResponse {
   success: boolean;
   message: string;
@@ -786,7 +793,7 @@ export interface ContractCreateInput {
   endDate?: string;
   value: number;
   status: ContractStatus;
-  fileUrl?: string;
+  fileUrl?: string | null;
   notes?: string;
 }
 
@@ -796,7 +803,7 @@ export interface ContractUpdateInput {
   endDate?: string;
   value?: number;
   status?: ContractStatus;
-  fileUrl?: string;
+  fileUrl?: string | null;
   notes?: string;
 }
 

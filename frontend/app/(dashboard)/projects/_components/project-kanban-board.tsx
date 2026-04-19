@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -39,6 +40,9 @@ export function ProjectKanbanBoard({
   updatingProjectId?: string;
   onStatusChange: (projectId: string, status: ProjectStatus) => void;
 }) {
+  const [draggingProjectId, setDraggingProjectId] = useState<string | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<ProjectStatus | null>(null);
+
   if (isLoading) {
     return (
       <div className="overflow-x-auto pb-2">
@@ -102,14 +106,49 @@ export function ProjectKanbanBoard({
           <h2 className="mt-2 font-heading text-2xl font-bold text-text-primary">Board theo trạng thái dự án</h2>
         </div>
         <p className="text-sm text-text-secondary">
-          {meta?.total ?? totalItems} dự án trong tập lọc hiện tại. Chuyển stage trực tiếp ngay trên từng card.
+          {meta?.total ?? totalItems} dự án trong tập lọc hiện tại. Có thể kéo thả card giữa các cột hoặc dùng select làm fallback.
         </p>
       </div>
 
       <div className="overflow-x-auto pb-2">
         <div className="flex min-w-max gap-4">
           {columns.map((column) => (
-            <Card key={column.key} className="flex w-[320px] shrink-0 flex-col border border-white/70">
+            <Card
+              key={column.key}
+              className={`flex w-[320px] shrink-0 flex-col border transition ${
+                dragOverStatus === column.key ? "border-primary/45 bg-primary/5 shadow-lg" : "border-white/70"
+              }`}
+              onDragOver={(event) => {
+                event.preventDefault();
+
+                if (!draggingProjectId) {
+                  return;
+                }
+
+                event.dataTransfer.dropEffect = "move";
+                setDragOverStatus(column.key);
+              }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  setDragOverStatus((current) => (current === column.key ? null : current));
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+
+                const projectId = event.dataTransfer.getData("text/project-id");
+                const currentStatus = event.dataTransfer.getData("text/project-status") as ProjectStatus;
+
+                setDraggingProjectId(null);
+                setDragOverStatus(null);
+
+                if (!projectId || !currentStatus || currentStatus === column.key) {
+                  return;
+                }
+
+                onStatusChange(projectId, column.key);
+              }}
+            >
               <CardHeader className="space-y-3 border-b border-border/60 bg-white/70">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -125,12 +164,36 @@ export function ProjectKanbanBoard({
 
               <CardContent className="flex-1 space-y-4 pt-4">
                 {column.items.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border/60 bg-bg-hover/50 p-4 text-sm text-text-secondary">
+                  <div
+                    className={`rounded-2xl border border-dashed p-4 text-sm transition ${
+                      dragOverStatus === column.key
+                        ? "border-primary/45 bg-primary/10 text-primary"
+                        : "border-border/60 bg-bg-hover/50 text-text-secondary"
+                    }`}
+                  >
                     Chưa có dự án ở stage này.
                   </div>
                 ) : (
                   column.items.map((project) => (
-                    <article key={project.id} className="rounded-2xl border border-border/60 bg-white/85 p-4 shadow-sm">
+                    <article
+                      key={project.id}
+                      draggable={!(isUpdating && updatingProjectId === project.id)}
+                      onDragStart={(event) => {
+                        event.dataTransfer.effectAllowed = "move";
+                        event.dataTransfer.setData("text/project-id", project.id);
+                        event.dataTransfer.setData("text/project-status", project.status);
+                        setDraggingProjectId(project.id);
+                      }}
+                      onDragEnd={() => {
+                        setDraggingProjectId(null);
+                        setDragOverStatus(null);
+                      }}
+                      className={`rounded-2xl border p-4 shadow-sm transition ${
+                        draggingProjectId === project.id
+                          ? "cursor-grabbing border-primary/45 bg-primary/5 opacity-60 shadow-xl"
+                          : "border-border/60 bg-white/85"
+                      } ${isUpdating && updatingProjectId === project.id ? "pointer-events-none opacity-60" : "cursor-grab"}`}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <Link

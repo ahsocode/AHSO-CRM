@@ -11,6 +11,14 @@ const emptyToUndefined = (value: unknown) => {
 
 const optionalString = (maxLength: number) =>
   z.preprocess(emptyToUndefined, z.string().trim().max(maxLength).optional());
+const optionalNullableString = (maxLength: number) =>
+  z.preprocess((value) => {
+    if (value === null) {
+      return null;
+    }
+
+    return emptyToUndefined(value);
+  }, z.string().trim().max(maxLength).nullable().optional());
 
 const optionalDateString = z.preprocess(
   emptyToUndefined,
@@ -29,7 +37,7 @@ export const contractFormSchema = z
     endDate: optionalDateString,
     value: z.coerce.number().positive("Giá trị hợp đồng phải lớn hơn 0").max(999_999_999_999),
     status: z.enum(["ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"]),
-    fileUrl: optionalString(1000),
+    fileUrl: optionalNullableString(1000),
     notes: optionalString(2000)
   })
   .refine(
@@ -50,7 +58,7 @@ export const defaultContractFormValues: ContractFormValues = {
   endDate: "",
   value: 0,
   status: "ACTIVE",
-  fileUrl: "",
+  fileUrl: null,
   notes: ""
 };
 

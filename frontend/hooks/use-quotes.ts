@@ -13,6 +13,7 @@ import {
   QuoteStatusUpdateInput,
   QuoteUpdateInput
 } from "@/lib/types";
+import { getFilenameFromContentDisposition } from "@/lib/utils";
 
 export function useQuotes(filters: QuoteFilters) {
   return useQuery({
@@ -116,6 +117,21 @@ export function useUpdateQuoteStatus() {
       await queryClient.invalidateQueries({ queryKey: ["quotes", variables.quoteId] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  });
+}
+
+export function useDownloadQuotePdf() {
+  return useMutation({
+    mutationFn: async (quoteId: string) => {
+      const response = await apiClient.get<Blob>(`/quotes/${quoteId}/pdf`, {
+        responseType: "blob"
+      });
+
+      return {
+        blob: response.data,
+        filename: getFilenameFromContentDisposition(response.headers["content-disposition"], `quote-${quoteId}.pdf`)
+      };
     }
   });
 }

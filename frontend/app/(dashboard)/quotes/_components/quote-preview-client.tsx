@@ -7,20 +7,21 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useQuote } from "@/hooks/use-quotes";
+import { useDownloadQuotePdf, useQuote } from "@/hooks/use-quotes";
+import { useCompanyInfo, useLogo, usePolicies } from "@/hooks/use-settings";
+import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { resolveAssetUrl } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { cn } from "@/lib/utils";
-
-const COMPANY_PROFILE = {
-  name: "CÔNG TY CỔ PHẦN CÔNG NGHỆ TỰ ĐỘNG HÓA AHSO",
-  address: "Số 123, Đường Công Nghệ, Khu Công Nghiệp Cao, TP. Thủ Đức, TP. HCM",
-  contact: "Hotline: (+84) 1900 8888 | Email: contact@ahso.vn",
-  website: "Website: www.ahso.vn | MST: 0312345678"
-};
+import { cn, downloadBlob } from "@/lib/utils";
 
 export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
   const quoteQuery = useQuote(quoteId);
+  const companyQuery = useCompanyInfo();
+  const policiesQuery = usePolicies();
+  const logoQuery = useLogo();
+  const downloadMutation = useDownloadQuotePdf();
+  const { error: showError } = useToast();
 
   if (quoteQuery.isLoading) {
     return (
@@ -55,18 +56,44 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
   }
 
   const quote = quoteQuery.data;
+  const company = companyQuery.data;
+  const policies = policiesQuery.data;
+  const logoUrl = resolveAssetUrl(logoQuery.data);
+  const brandName = company?.shortName || company?.name || "AHSO";
+  const paymentTerms = quote.terms?.trim() || policies?.paymentTerms?.trim() || "Điều khoản thanh toán sẽ được xác nhận khi chốt PO/HĐ.";
+  const deliveryTerms =
+    quote.deliveryTerms?.trim() ||
+    policies?.service?.trim() ||
+    "Tiến độ triển khai sẽ được xác nhận theo survey và lịch điều động kỹ thuật.";
 
   return (
     <div className="space-y-8 print:space-y-0">
       <PageHeader
         className="print:hidden"
         title="Xem trước bản in"
-        description="Canvas A4 để rà lại nội dung thương mại trước khi in hoặc lưu PDF."
+        description="Canvas A4 để rà lại nội dung thương mại trước khi in hoặc tải PDF chuẩn gửi khách."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Link href={`/quotes/${quote.id}`} className={cn(buttonVariants({ variant: "outline" }))}>
               Về chi tiết
             </Link>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={downloadMutation.isPending}
+              onClick={() => {
+                downloadMutation.mutate(quote.id, {
+                  onSuccess: ({ blob, filename }) => {
+                    downloadBlob(blob, filename);
+                  },
+                  onError: (downloadError) => {
+                    showError(getApiErrorMessage(downloadError, "Không thể tải PDF báo giá."));
+                  }
+                });
+              }}
+            >
+              {downloadMutation.isPending ? "Đang tạo PDF..." : "Tải PDF"}
+            </Button>
             <Button onClick={() => window.print()} type="button">
               In / Lưu PDF
             </Button>
@@ -79,11 +106,17 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
           <header className="flex items-start justify-between gap-8">
             <div className="max-w-[46%]">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-heading font-extrabold text-white">
-                  A
+                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
+                  {logoUrl ? (
+                    <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-2" />
+                  ) : (
+                    <span className="font-heading text-xl font-extrabold text-primary">A</span>
+                  )}
                 </div>
                 <div>
-                  <p className="font-heading text-2xl font-extrabold tracking-tight text-primary">AHSO CRM</p>
+                  <p className="font-heading text-2xl font-extrabold tracking-tight text-primary">
+                    {company?.name || "AHSO CRM"}
+                  </p>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-primary/70">
                     Automation Hub
                   </p>
@@ -92,10 +125,21 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
             </div>
 
             <div className="max-w-[48%] text-right text-[11px] leading-5 text-slate-600">
-              <p className="font-bold text-primary">{COMPANY_PROFILE.name}</p>
-              <p>{COMPANY_PROFILE.address}</p>
-              <p>{COMPANY_PROFILE.contact}</p>
-              <p>{COMPANY_PROFILE.website}</p>
+              {company?.address ? <p>{company.address}</p> : null}
+              {company?.phone || company?.email ? (
+                <p>
+                  {company?.phone ? `Hotline: ${company.phone}` : ""}
+                  {company?.phone && company?.email ? " | " : ""}
+                  {company?.email ? `Email: ${company.email}` : ""}
+                </p>
+              ) : null}
+              {company?.website || company?.taxId ? (
+                <p>
+                  {company?.website ? `Website: ${company.website}` : ""}
+                  {company?.website && company?.taxId ? " | " : ""}
+                  {company?.taxId ? `MST: ${company.taxId}` : ""}
+                </p>
+              ) : null}
             </div>
           </header>
 
@@ -189,15 +233,11 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
           <section className="mt-8 grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Điều khoản thanh toán</p>
-              <p className="mt-3 text-xs leading-6 text-slate-600">
-                {quote.terms ?? "Điều khoản thanh toán sẽ được thống nhất khi chốt PO/HĐ."}
-              </p>
+              <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-slate-600">{paymentTerms}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Giao hàng / triển khai</p>
-              <p className="mt-3 text-xs leading-6 text-slate-600">
-                {quote.deliveryTerms ?? "Tiến độ triển khai sẽ được xác nhận theo survey và lịch điều động kỹ thuật."}
-              </p>
+              <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-slate-600">{deliveryTerms}</p>
             </div>
           </section>
 

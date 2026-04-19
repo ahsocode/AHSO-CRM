@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "crypto";
-import { mkdir, rm, stat, writeFile } from "fs/promises";
+import { mkdir, readFile, rm, stat, writeFile } from "fs/promises";
 import { extname, isAbsolute, join, normalize, resolve } from "path";
 import type { UploadResponseDto } from "./dto/upload-response.dto";
 
@@ -68,7 +68,7 @@ export class UploadService {
   }
 
   async deleteFile(filePathOrUrl?: string | null) {
-    const absolutePath = this.resolveStoredPath(filePathOrUrl);
+    const absolutePath = this.resolveStoredFilePath(filePathOrUrl);
 
     if (!absolutePath) {
       return false;
@@ -82,6 +82,30 @@ export class UploadService {
 
     await rm(absolutePath, { force: true });
     return true;
+  }
+
+  isLocalUploadPath(filePathOrUrl?: string | null) {
+    return Boolean(this.resolveStoredFilePath(filePathOrUrl));
+  }
+
+  resolveStoredFilePath(filePathOrUrl?: string | null) {
+    return this.resolveStoredPath(filePathOrUrl);
+  }
+
+  async readFileAsDataUrl(filePathOrUrl?: string | null) {
+    const absolutePath = this.resolveStoredPath(filePathOrUrl);
+
+    if (!absolutePath) {
+      return null;
+    }
+
+    try {
+      const buffer = await readFile(absolutePath);
+      const mimeType = this.resolveMimeType(extname(absolutePath).toLowerCase());
+      return `data:${mimeType};base64,${buffer.toString("base64")}`;
+    } catch {
+      return null;
+    }
   }
 
   private getUploadRoot() {
@@ -123,5 +147,10 @@ export class UploadService {
     }
 
     return absolutePath;
+  }
+
+  private resolveMimeType(extension: string) {
+    const match = Object.entries(this.extensionMap).find(([, mappedExtension]) => mappedExtension === extension);
+    return match?.[0] ?? "application/octet-stream";
   }
 }

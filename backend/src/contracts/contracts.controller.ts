@@ -1,8 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { ContractsPdfService } from "./contracts-pdf.service";
 import { ContractFilterDto, contractFilterSchema } from "./dto/contract-filter.dto";
 import { CreateContractDto, createContractSchema } from "./dto/create-contract.dto";
 import { CreateMilestoneDto, createMilestoneSchema } from "./dto/create-milestone.dto";
@@ -14,7 +16,10 @@ import { ContractsService } from "./contracts.service";
 @Controller("contracts")
 @UseGuards(JwtAuthGuard)
 export class ContractsController {
-  constructor(private readonly contractsService: ContractsService) {}
+  constructor(
+    private readonly contractsService: ContractsService,
+    private readonly contractsPdfService: ContractsPdfService
+  ) {}
 
   @Get()
   findAll(
@@ -30,6 +35,18 @@ export class ContractsController {
     @CurrentUser() user: JwtUser
   ) {
     return this.contractsService.create(dto, user);
+  }
+
+  @Get(":id/acceptance-pdf")
+  async downloadAcceptancePdf(
+    @Param("id") id: string,
+    @CurrentUser() user: JwtUser,
+    @Res() response: Response
+  ) {
+    const pdf = await this.contractsPdfService.generateAcceptancePdf(id, user);
+    response.setHeader("Content-Type", "application/pdf");
+    response.setHeader("Content-Disposition", `attachment; filename="${pdf.filename}"`);
+    response.send(pdf.buffer);
   }
 
   @Get(":id")

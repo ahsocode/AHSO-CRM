@@ -134,7 +134,7 @@ export class RolesService {
 
     if (role.isSystem) {
       throw new ForbiddenException(
-        `Không thể chỉnh sửa system role "${role.name}"`
+        `Không thể sửa role hệ thống "${role.name}"`
       );
     }
 
@@ -188,7 +188,7 @@ export class RolesService {
 
     if (role.isSystem) {
       throw new ForbiddenException(
-        `Không thể xóa system role "${role.name}"`
+        `Không thể xóa role hệ thống "${role.name}"`
       );
     }
 
@@ -198,7 +198,7 @@ export class RolesService {
 
     if (userCount > 0) {
       throw new ForbiddenException(
-        `Không thể xóa role đã được gán cho ${userCount} user(s)`
+        `Không thể xóa role đã được gán cho ${userCount} người dùng`
       );
     }
 

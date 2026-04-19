@@ -9,7 +9,7 @@ export class SettingsService {
   /**
    * Get all settings as key-value pairs
    */
-  async getAllSettings() {
+  async getFlatSettings() {
     const settings = await this.prisma.setting.findMany();
     const result: Record<string, any> = {};
 
@@ -18,6 +18,23 @@ export class SettingsService {
     }
 
     return result;
+  }
+
+  /**
+   * Get settings grouped by domain for admin panel consumption
+   */
+  async getAllSettings() {
+    const [company, policies, logo] = await Promise.all([
+      this.getCompanyInfo(),
+      this.getPolicies(),
+      this.getLogoUrl()
+    ]);
+
+    return {
+      company,
+      policies,
+      logo
+    };
   }
 
   /**
@@ -74,7 +91,7 @@ export class SettingsService {
    * Get company info
    */
   async getCompanyInfo() {
-    const settings = await this.getAllSettings();
+    const settings = await this.getFlatSettings();
     const companyKeys = Object.keys(settings).filter((k) =>
       k.startsWith("company:")
     );
@@ -107,7 +124,7 @@ export class SettingsService {
    * Get policy settings
    */
   async getPolicies() {
-    const settings = await this.getAllSettings();
+    const settings = await this.getFlatSettings();
     const policyKeys = Object.keys(settings).filter((k) =>
       k.startsWith("policy:")
     );

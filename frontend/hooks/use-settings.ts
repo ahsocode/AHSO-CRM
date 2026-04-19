@@ -4,11 +4,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { ApiResponse, CompanyInfo, Policies } from "@/lib/types";
 
+interface SettingsBundle {
+  company: CompanyInfo;
+  policies: Policies;
+  logo: string | null;
+}
+
 export function useSettings() {
   return useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<Record<string, unknown>>>("/settings");
+      const response = await apiClient.get<ApiResponse<SettingsBundle>>("/settings");
       return response.data.data;
     }
   });

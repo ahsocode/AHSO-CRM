@@ -1,4 +1,4 @@
-import { PrismaClient, ActivityType, ContractStatus, CustomerStatus, Priority, ProjectStatus, QuoteStatus, Role } from "@prisma/client";
+import { PrismaClient, ActivityType, ContractStatus, CustomerStatus, Priority, ProjectStatus, QuoteStatus } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
@@ -23,13 +23,18 @@ async function main() {
   await prisma.user.deleteMany();
 
   const hashedPassword = await bcrypt.hash("AHSO123!", 10);
+  const [adminRole, managerRole, staffRole] = await Promise.all([
+    prisma.userRole.findUniqueOrThrow({ where: { id: "role_admin" } }),
+    prisma.userRole.findUniqueOrThrow({ where: { id: "role_manager" } }),
+    prisma.userRole.findUniqueOrThrow({ where: { id: "role_staff" } })
+  ]);
 
   const admin = await prisma.user.create({
     data: {
       email: "admin@ahso.vn",
       name: "Nguyễn Minh Quân",
       password: hashedPassword,
-      role: Role.ADMIN,
+      roleId: adminRole.id,
       isActive: true
     }
   });
@@ -39,7 +44,17 @@ async function main() {
       email: "manager@ahso.vn",
       name: "Trần Đức Nam",
       password: hashedPassword,
-      role: Role.MANAGER,
+      roleId: managerRole.id,
+      isActive: true
+    }
+  });
+
+  const staff = await prisma.user.create({
+    data: {
+      email: "staff@ahso.vn",
+      name: "Phạm Gia Huy",
+      password: hashedPassword,
+      roleId: staffRole.id,
       isActive: true
     }
   });
@@ -113,7 +128,7 @@ async function main() {
       email: "projects@dnpwater.vn",
       source: "cold-call",
       status: CustomerStatus.LEAD,
-      assignedToId: manager.id
+      assignedToId: staff.id
     }
   });
 
@@ -466,7 +481,10 @@ async function main() {
   });
 
   console.log("Seed dữ liệu AHSO CRM thành công.");
-  console.log("Tài khoản đăng nhập dev: admin@ahso.vn / AHSO123!");
+  console.log("Tài khoản đăng nhập dev:");
+  console.log("- admin@ahso.vn / AHSO123!");
+  console.log("- manager@ahso.vn / AHSO123!");
+  console.log("- staff@ahso.vn / AHSO123!");
 }
 
 main()
@@ -477,4 +495,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

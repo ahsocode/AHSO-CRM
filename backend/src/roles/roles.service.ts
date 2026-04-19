@@ -27,6 +27,11 @@ export class RolesService {
             action: true,
           },
         },
+        _count: {
+          select: {
+            users: true
+          }
+        }
       },
       orderBy: { name: "asc" },
     });
@@ -133,9 +138,22 @@ export class RolesService {
       );
     }
 
+    if (input.name && input.name !== role.name) {
+      const existingRole = await this.prisma.userRole.findUnique({
+        where: {
+          name: input.name
+        }
+      });
+
+      if (existingRole && existingRole.id !== id) {
+        throw new ConflictException(`Role "${input.name}" đã tồn tại`);
+      }
+    }
+
     const updated = await this.prisma.userRole.update({
       where: { id },
       data: {
+        name: input.name,
         description: input.description,
         permissions: input.permissionIds
           ? {
@@ -151,6 +169,11 @@ export class RolesService {
             action: true,
           },
         },
+        _count: {
+          select: {
+            users: true
+          }
+        }
       },
     });
 

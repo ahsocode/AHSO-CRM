@@ -15,9 +15,10 @@ export type CompanySettingInput = z.infer<typeof CompanySettingSchema>;
 
 // Policy settings schema
 export const PolicySettingSchema = z.object({
-  paymentTerms: z.string().max(1000).optional(),
-  warranty: z.string().max(2000).optional(),
-  service: z.string().max(2000).optional(),
+  paymentTerms: z.string().max(500, "Điều khoản thanh toán không được vượt quá 500 ký tự").optional(),
+  taxTypes: z.string().max(500, "Thông tin thuế không được vượt quá 500 ký tự").optional(),
+  warranty: z.string().max(500, "Chính sách bảo hành không được vượt quá 500 ký tự").optional(),
+  service: z.string().max(500, "Chính sách dịch vụ không được vượt quá 500 ký tự").optional(),
 });
 
 export type PolicySettingInput = z.infer<typeof PolicySettingSchema>;

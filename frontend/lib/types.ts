@@ -38,6 +38,68 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+export interface CompanyInfo {
+  name: string;
+  shortName?: string | null;
+  taxId?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+}
+
+export interface Policies {
+  paymentTerms?: string | null;
+  taxTypes?: string | null;
+  warranty?: string | null;
+  service?: string | null;
+}
+
+export interface Permission {
+  id: string;
+  resource: string;
+  action: string;
+}
+
+export interface PermissionGroup {
+  resource: string;
+  permissions: Array<Pick<Permission, "id" | "action">>;
+}
+
+export interface UserRole {
+  id: string;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  permissions: Permission[];
+  _count?: {
+    users: number;
+  };
+  users?: Array<{
+    id: string;
+    email: string;
+    name: string;
+  }>;
+}
+
+export interface RoleUpsertInput {
+  name: string;
+  description?: string;
+  permissionIds: string[];
+}
+
+export interface Logo {
+  id: string;
+  url: string;
+  filename: string;
+  uploadedAt: string;
+}
+
+export interface LogoUploadResult extends Logo {
+  size: number;
+  mimeType: string;
+}
+
 export interface ActionResponse {
   success: boolean;
   message: string;

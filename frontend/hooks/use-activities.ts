@@ -125,6 +125,8 @@ export function useUpdateActivity() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       queryClient.invalidateQueries({ queryKey: ['activities', variables.id] });
+      // Also refresh calendar so drag-drop reschedule reflects immediately
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
       toast({
         title: 'Thành công',
         description: 'Đã cập nhật hoạt động',

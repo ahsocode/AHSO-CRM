@@ -2,7 +2,13 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
+import { ScheduleModule } from "@nestjs/schedule";
+import { AiModule } from "./ai/ai.module";
+import { AuditModule } from "./audit/audit.module";
 import { CommonModule } from "./common/common.module";
+import { EmailModule } from "./email/email.module";
+import { SmsModule } from "./sms/sms.module";
+import { WebhooksModule } from "./webhooks/webhooks.module";
 import { AuthModule } from "./auth/auth.module";
 import { UsersModule } from "./users/users.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
@@ -18,28 +24,33 @@ import { UploadModule } from "./upload/upload.module";
 import { SettingsModule } from "./settings/settings.module";
 import { RolesModule } from "./roles/roles.module";
 import { PermissionsModule } from "./permissions/permissions.module";
+import { WebsocketModule } from "./websocket/websocket.module";
+import { NotificationsModule } from "./notifications/notifications.module";
+import { PushModule } from "./push/push.module";
+import { DomainEventsModule } from "./domain-events/domain-events.module";
+import { CustomFieldsModule } from "./custom-fields/custom-fields.module";
+import { SearchModule } from "./search/search.module";
+import { DocumentsModule } from "./documents/documents.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => [
         {
           name: "default",
           ttl: Number(config.get("THROTTLE_TTL") ?? 60) * 1000,
-          limit: Number(config.get("THROTTLE_LIMIT") ?? 120)
-        },
-        {
-          name: "auth",
-          ttl: Number(config.get("AUTH_THROTTLE_TTL") ?? 60) * 1000,
-          limit: Number(config.get("AUTH_THROTTLE_LIMIT") ?? 10)
+          limit: Number(config.get("THROTTLE_LIMIT") ?? 100)
         }
       ]
     }),
     CommonModule,
+    AiModule,
+    AuditModule,
     AuthModule,
     UsersModule,
     DashboardModule,
@@ -54,7 +65,17 @@ import { PermissionsModule } from "./permissions/permissions.module";
     UploadModule,
     SettingsModule,
     RolesModule,
-    PermissionsModule
+    PermissionsModule,
+    EmailModule,
+    SmsModule,
+    WebhooksModule,
+    WebsocketModule,
+    NotificationsModule,
+    PushModule,
+    DomainEventsModule,
+    CustomFieldsModule,
+    SearchModule,
+    DocumentsModule
   ],
   providers: [
     {

@@ -62,6 +62,8 @@ async function main() {
   const vinamilk = await prisma.customer.create({
     data: {
       name: "Vinamilk Corporation",
+      code: "VNM001",
+      language: "vi-en",
       shortName: "VPC",
       taxCode: "0300588569",
       industry: "Thực phẩm & Đồ uống",
@@ -91,6 +93,8 @@ async function main() {
   const thaco = await prisma.customer.create({
     data: {
       name: "Thaco Industries",
+      code: "THA002",
+      language: "vi",
       shortName: "THI",
       taxCode: "4000811952",
       industry: "Cơ khí & Ô tô",
@@ -107,6 +111,8 @@ async function main() {
   const choRay = await prisma.customer.create({
     data: {
       name: "Bệnh viện Chợ Rẫy",
+      code: "CHR003",
+      language: "vi",
       shortName: "CRH",
       industry: "Y tế",
       address: "201B Nguyễn Chí Thanh, Quận 5, TP.HCM",
@@ -121,6 +127,8 @@ async function main() {
   const dnp = await prisma.customer.create({
     data: {
       name: "DNP Water",
+      code: "DNP004",
+      language: "vi",
       shortName: "DNP",
       industry: "Hạ tầng nước",
       address: "Hà Nội",

@@ -5,6 +5,9 @@ module.exports = {
   roots: ["<rootDir>/src"],
   testRegex: ".*\\.spec\\.ts$",
   moduleFileExtensions: ["ts", "js", "json"],
+  moduleNameMapper: {
+    "^src/(.*)$": "<rootDir>/src/$1"
+  },
   clearMocks: true,
   collectCoverageFrom: [
     "src/**/*.ts",

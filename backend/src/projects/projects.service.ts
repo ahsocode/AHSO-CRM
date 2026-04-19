@@ -2,6 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { DomainEventsService } from "../domain-events/domain-events.service";
+import { BulkProjectDto } from "./dto/bulk-project.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { ProjectFilterDto } from "./dto/project-filter.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
@@ -77,7 +80,11 @@ type ProjectListRecord = Prisma.ProjectGetPayload<{
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly customFieldsService: CustomFieldsService,
+    private readonly domainEvents: DomainEventsService
+  ) {}
 
   async findAll(filters: ProjectFilterDto, user: JwtUser) {
     const page = filters.page ?? 1;
@@ -187,6 +194,16 @@ export class ProjectsService {
       }
     });
 
+    await this.customFieldsService.saveValues("project", project.id, dto.customFieldValues);
+
+    void this.domainEvents.emit("project.created", {
+      projectId: project.id,
+      code: project.code,
+      customerId: dto.customerId,
+      status: project.status,
+      estimatedValue: Number(project.estimatedValue ?? 0)
+    });
+
     return {
       id: project.id,
       code: project.code
@@ -195,6 +212,7 @@ export class ProjectsService {
 
   async findOne(id: string, user: JwtUser) {
     const project = await this.findAccessibleProject(id, user);
+    const customFieldValues = await this.customFieldsService.getValues("project", id);
 
     const [quotes, milestones, activities, contract] = await this.prisma.$transaction([
       this.prisma.quote.findMany({
@@ -266,6 +284,7 @@ export class ProjectsService {
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
       notes: project.notes,
+      customFieldValues,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
       stats: {
@@ -384,13 +403,15 @@ export class ProjectsService {
       }
     });
 
+    await this.customFieldsService.saveValues("project", updatedProject.id, dto.customFieldValues);
+
     return {
       id: updatedProject.id
     };
   }
 
   async updateStatus(id: string, dto: UpdateProjectStatusDto, user: JwtUser) {
-    await this.findAccessibleProjectRecord(id, user);
+    const project = await this.findAccessibleProjectRecord(id, user);
 
     const updatedProject = await this.prisma.project.update({
       where: {
@@ -400,6 +421,14 @@ export class ProjectsService {
         status: dto.status
       }
     });
+
+    if (project.status !== updatedProject.status) {
+      void this.domainEvents.emit("project.status_changed", {
+        projectId: updatedProject.id,
+        previousStatus: project.status,
+        status: updatedProject.status
+      });
+    }
 
     return {
       id: updatedProject.id,
@@ -425,6 +454,42 @@ export class ProjectsService {
 
     return {
       success: true
+    };
+  }
+
+  async bulk(dto: BulkProjectDto, user: JwtUser) {
+    const projects = await this.prisma.project.findMany({
+      where: {
+        ...this.buildWhere({}, user),
+        id: {
+          in: dto.ids
+        }
+      },
+      include: projectListInclude
+    });
+
+    if (dto.action === "export") {
+      return {
+        action: dto.action,
+        items: projects.map((project) => this.mapProjectListItem(project, new Date()))
+      };
+    }
+
+    if (dto.action === "status" && dto.status) {
+      await Promise.allSettled(
+        projects.map((project) =>
+          this.updateStatus(project.id, { status: dto.status! }, user)
+        )
+      );
+    }
+
+    if (dto.action === "delete") {
+      await Promise.allSettled(projects.map((project) => this.remove(project.id, user)));
+    }
+
+    return {
+      action: dto.action,
+      processedCount: projects.length
     };
   }
 
@@ -592,6 +657,7 @@ export class ProjectsService {
       select: {
         id: true,
         customerId: true,
+        status: true,
         startDate: true,
         expectedEndDate: true,
         contract: {

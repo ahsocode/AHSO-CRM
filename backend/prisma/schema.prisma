@@ -22,6 +22,10 @@ model User {
   assignedCustomers Customer[] @relation("AssignedTo")
   createdQuotes     Quote[]
   activities        Activity[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+  reportTemplates   ReportTemplate[]
+  documents         Document[]
 }
 
 model UserRole {
@@ -68,6 +72,8 @@ model Customer {
   id           String         @id @default(cuid())
   name         String
   shortName    String?
+  code         String?        @unique
+  language     String         @default("vi")
   taxCode      String?        @unique
   industry     String?
   address      String?
@@ -86,6 +92,7 @@ model Customer {
   contacts     Contact[]
   projects     Project[]
   activities   Activity[]
+  documents    Document[]
 }
 
 enum CustomerStatus {
@@ -274,6 +281,125 @@ model Activity {
   deletedAt     DateTime?    // soft delete
 }
 
+model Webhook {
+  id         String       @id @default(cuid())
+  url        String
+  events     String[]
+  secret     String
+  isActive   Boolean      @default(true)
+  createdBy  String
+  createdAt  DateTime     @default(now())
+  lastFired  DateTime?
+  failCount  Int          @default(0)
+  logs       WebhookLog[]
+
+  @@index([createdBy, createdAt])
+  @@index([isActive])
+}
+
+model WebhookLog {
+  id         String    @id @default(cuid())
+  webhookId  String
+  event      String
+  payload    Json
+  response   String?
+  statusCode Int?
+  firedAt    DateTime  @default(now())
+  webhook    Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, firedAt])
+  @@index([event, firedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String?
+  changes    Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([resource, resourceId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model CustomField {
+  id        String   @id @default(cuid())
+  resource  String
+  name      String
+  label     String
+  type      String
+  options   Json?
+  required  Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  values    CustomFieldValue[]
+
+  @@unique([resource, name])
+  @@index([resource, order])
+}
+
+model CustomFieldValue {
+  id         String      @id @default(cuid())
+  fieldId     String
+  resourceId  String
+  value       String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  field       CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([fieldId, resourceId])
+  @@index([resourceId])
+}
+
+model ReportTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdById String
+  resource    String
+  config      Json
+  isShared    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([createdById, createdAt])
+  @@index([resource, isShared])
+}
+
 enum ActivityType {
   CALL
   EMAIL
@@ -284,3 +410,42 @@ enum ActivityType {
   FOLLOWUP
 }
 
+model Document {
+  id          String       @id @default(cuid())
+  type        DocumentType
+  number      String       @unique
+  version     Int          @default(1)
+  language    String       @default("vi")
+  entityType  String
+  entityId    String
+  customerId  String?
+  pdfPath     String?
+  renderedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  createdById String
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  customer    Customer?    @relation(fields: [customerId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([customerId])
+  @@index([type, createdAt])
+}
+
+enum DocumentType {
+  QUOTATION
+  PROPOSAL
+  SURVEY_REPORT
+  CONTRACT
+  CONTRACT_ADDENDUM
+  NDA
+  DELIVERY_NOTE
+  DOC_HANDOVER
+  INSTALLATION_REPORT
+  ACCEPTANCE_REPORT
+  PARTIAL_ACCEPTANCE
+  WARRANTY_CERT
+  MAINTENANCE_RECORD
+  PAYMENT_REQUEST
+  PAYMENT_RECEIPT
+  AR_RECONCILIATION
+}

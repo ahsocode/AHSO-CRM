@@ -2,7 +2,9 @@ import { UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
+import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
+import { EmailService } from "../email/email.service";
 import { AuthService } from "./auth.service";
 
 jest.mock("bcrypt", () => ({
@@ -40,6 +42,12 @@ describe("AuthService", () => {
   let configService: {
     get: jest.Mock;
   };
+  let emailService: {
+    sendEmail: jest.Mock;
+  };
+  let auditService: {
+    recordLogin: jest.Mock;
+  };
 
   beforeEach(() => {
     prisma = {
@@ -63,11 +71,19 @@ describe("AuthService", () => {
     configService = {
       get: jest.fn((key: string) => configValues[key])
     };
+    emailService = {
+      sendEmail: jest.fn().mockResolvedValue({ success: true })
+    };
+    auditService = {
+      recordLogin: jest.fn().mockResolvedValue(undefined)
+    };
 
     service = new AuthService(
       prisma as unknown as PrismaService,
       jwtService as unknown as JwtService,
-      configService as unknown as ConfigService
+      configService as unknown as ConfigService,
+      emailService as unknown as EmailService,
+      auditService as unknown as AuditService
     );
   });
 
@@ -109,6 +125,15 @@ describe("AuthService", () => {
         secret: "reset-secret:stored-password-hash",
         expiresIn: "15m"
       }
+    );
+    expect(emailService.sendEmail).toHaveBeenCalledWith(
+      activeUser.email,
+      "Yêu cầu đặt lại mật khẩu AHSO CRM",
+      "password-reset",
+      expect.objectContaining({
+        email: activeUser.email,
+        resetUrl: "http://localhost:3000/reset-password?token=reset-token"
+      })
     );
   });
 

@@ -2,7 +2,11 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [
+      "src/email/templates/**/*",
+      "src/documents/templates/**/*",
+      "src/documents/i18n/**/*"
+    ]
   }
 }
-

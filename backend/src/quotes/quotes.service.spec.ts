@@ -1,5 +1,8 @@
 import { BadRequestException } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
+import { EmailService } from "../email/email.service";
 import { PrismaService } from "../common/prisma.service";
+import { WebhooksEmitter } from "../webhooks/webhooks.emitter";
 import { QuotesService } from "./quotes.service";
 
 describe("QuotesService", () => {
@@ -7,7 +10,8 @@ describe("QuotesService", () => {
     sub: "user-1",
     email: "admin@ahso.vn",
     name: "Admin",
-    role: "ADMIN" as const
+    role: "ADMIN" as const,
+    permissions: []
   };
 
   let service: QuotesService;
@@ -25,6 +29,15 @@ describe("QuotesService", () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+  };
+  let moduleRef: {
+    get: jest.Mock;
+  };
+  let emailService: {
+    sendEmail: jest.Mock;
+  };
+  let webhooksEmitter: {
+    emit: jest.Mock;
   };
 
   beforeEach(() => {
@@ -44,8 +57,22 @@ describe("QuotesService", () => {
     prisma = {
       $transaction: jest.fn(async (callback: (client: typeof tx) => unknown) => callback(tx))
     };
+    moduleRef = {
+      get: jest.fn()
+    };
+    emailService = {
+      sendEmail: jest.fn().mockResolvedValue({ success: true })
+    };
+    webhooksEmitter = {
+      emit: jest.fn()
+    };
 
-    service = new QuotesService(prisma as unknown as PrismaService);
+    service = new QuotesService(
+      prisma as unknown as PrismaService,
+      moduleRef as unknown as ModuleRef,
+      emailService as unknown as EmailService,
+      webhooksEmitter as unknown as WebhooksEmitter
+    );
   });
 
   it("creates a quote with calculated totals and moves survey projects into quoting", async () => {

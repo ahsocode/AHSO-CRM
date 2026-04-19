@@ -1,0 +1,123 @@
+/* Modern "Pre-sales" brand styling — used for quotations, proposals,
+   surveys, and other customer-facing documents. Uses the AHSO brand
+   accent palette (navy + orange). */
+
+:root {
+  --brand-primary: #1A5276;
+  --brand-accent: #E67E22;
+  --brand-muted: #F4F6F8;
+}
+
+.modern-header {
+  margin-bottom: 14pt;
+}
+
+.modern-header__band {
+  height: 6pt;
+  background: linear-gradient(90deg, #1A5276 0%, #E67E22 100%);
+  margin-bottom: 12pt;
+}
+
+.modern-header__grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24pt;
+}
+
+.modern-header__brand {
+  display: flex;
+  gap: 12pt;
+  align-items: center;
+}
+
+.modern-header__logo {
+  max-height: 42pt;
+  max-width: 120pt;
+  object-fit: contain;
+}
+
+.modern-header__logo-fallback {
+  width: 42pt;
+  height: 42pt;
+  border-radius: 6pt;
+  background: #1A5276;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18pt;
+}
+
+.modern-header__company {
+  font-weight: 700;
+  font-size: 13pt;
+  color: #1A5276;
+}
+
+.modern-header__tagline {
+  font-size: 9.5pt;
+  color: #6b7280;
+  margin-top: 1pt;
+}
+
+.modern-header__meta {
+  text-align: right;
+  min-width: 180pt;
+}
+
+.modern-header__title {
+  font-weight: 700;
+  font-size: 18pt;
+  color: #1A5276;
+  text-transform: uppercase;
+  margin: 0 0 6pt 0;
+}
+
+.modern-header__line {
+  font-size: 10pt;
+  color: #374151;
+}
+
+.modern-header__line span {
+  color: #9ca3af;
+  margin-right: 4pt;
+}
+
+/* Section heading used throughout modern documents. */
+.modern-section-heading {
+  font-weight: 700;
+  font-size: 12pt;
+  color: #1A5276;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1pt solid #E67E22;
+  padding-bottom: 2pt;
+  margin: 10pt 0 6pt 0;
+}
+
+/* Line items table with accent header. */
+.modern-items-table th {
+  background: #1A5276;
+  color: #fff;
+  border-color: #1A5276;
+}
+
+.modern-items-table tr:nth-child(even) td {
+  background: var(--brand-muted);
+}
+
+.modern-items-table .total-row td {
+  font-weight: 700;
+  background: var(--brand-muted);
+  color: #1A5276;
+}
+
+.modern-callout {
+  background: var(--brand-muted);
+  border-left: 3pt solid var(--brand-accent);
+  padding: 6pt 10pt;
+  margin: 6pt 0;
+  border-radius: 2pt;
+}

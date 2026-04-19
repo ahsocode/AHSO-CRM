@@ -4,6 +4,7 @@ import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { JwtUser } from "../auth/auth.types";
 import { CreateProjectDto, createProjectSchema } from "./dto/create-project.dto";
+import { BulkProjectDto, bulkProjectSchema } from "./dto/bulk-project.dto";
 import { ProjectFilterDto, projectFilterSchema } from "./dto/project-filter.dto";
 import { UpdateProjectDto, updateProjectSchema } from "./dto/update-project.dto";
 import { UpdateProjectStatusDto, updateProjectStatusSchema } from "./dto/update-project-status.dto";
@@ -28,6 +29,14 @@ export class ProjectsController {
     @CurrentUser() user: JwtUser
   ) {
     return this.projectsService.create(dto, user);
+  }
+
+  @Post("bulk")
+  bulk(
+    @Body(new ZodValidationPipe(bulkProjectSchema)) dto: BulkProjectDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.bulk(dto, user);
   }
 
   @Get(":id")

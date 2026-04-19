@@ -1,0 +1,21 @@
+{{!-- Two-party signature block. Expected context props:
+       {partyA: {label, name, title}, partyB: {label, name, title}}. Missing
+       props fall back to sensible defaults. --}}
+<section class="signature-block">
+  <div class="signature-block__col">
+    <div class="signature-block__label">
+      {{#if partyA.label}}{{partyA.label}}{{else}}{{t "party_a"}}{{/if}}
+    </div>
+    <div class="signature-block__line"></div>
+    {{#if partyA.name}}<div class="signature-block__name">{{partyA.name}}</div>{{/if}}
+    {{#if partyA.title}}<div class="signature-block__title">{{partyA.title}}</div>{{/if}}
+  </div>
+  <div class="signature-block__col">
+    <div class="signature-block__label">
+      {{#if partyB.label}}{{partyB.label}}{{else}}{{t "party_b"}}{{/if}}
+    </div>
+    <div class="signature-block__line"></div>
+    {{#if partyB.name}}<div class="signature-block__name">{{partyB.name}}</div>{{/if}}
+    {{#if partyB.title}}<div class="signature-block__title">{{partyB.title}}</div>{{/if}}
+  </div>
+</section>

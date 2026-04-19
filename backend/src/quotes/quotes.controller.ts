@@ -5,6 +5,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { CreateQuoteDto, createQuoteSchema } from "./dto/create-quote.dto";
+import { BulkQuoteDto, bulkQuoteSchema } from "./dto/bulk-quote.dto";
 import { QuoteFilterDto, quoteFilterSchema } from "./dto/quote-filter.dto";
 import { UpdateQuoteDto, updateQuoteSchema } from "./dto/update-quote.dto";
 import {
@@ -38,9 +39,22 @@ export class QuotesController {
     return this.quotesService.create(dto, user);
   }
 
+  @Post("bulk")
+  bulk(
+    @Body(new ZodValidationPipe(bulkQuoteSchema)) dto: BulkQuoteDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.quotesService.bulk(dto, user);
+  }
+
   @Post(":id/duplicate")
   duplicate(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.quotesService.duplicate(id, user);
+  }
+
+  @Post(":id/send")
+  send(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.quotesService.send(id, user);
   }
 
   @Get(":id/pdf")

@@ -1,0 +1,13 @@
+{{!-- Fine-print at the end of legal documents. Contains render metadata,
+       signed-copies note, and a confidentiality line. --}}
+<section class="legal-footer">
+  {{#if signedCopies}}
+    <p class="legal-footer__note">{{t "signed_copies_note"}}</p>
+  {{/if}}
+  <p class="legal-footer__confidential">{{t "confidential_info"}}</p>
+  <p class="legal-footer__meta">
+    {{#if docNumber}}{{docNumber}} &middot; {{/if}}
+    {{t "doc_date"}}: {{date generatedAt "short"}}
+    {{#if templateVersion}} &middot; v{{templateVersion}}{{/if}}
+  </p>
+</section>

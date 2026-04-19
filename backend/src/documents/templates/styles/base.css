@@ -1,0 +1,224 @@
+/* Base styles shared by every document (classic + modern). Designed for
+   Puppeteer PDF rendering at A4. Fonts use system fallbacks so rendering
+   works without bundled font files; when the `.woff2` files are present
+   alongside this stylesheet they will be picked up automatically. */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: local("Inter"), local("Inter-Regular");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: local("Be Vietnam Pro"), local("BeVietnamPro-Regular");
+  /* Vietnamese extended range including combining diacritics */
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+}
+
+@page {
+  size: A4;
+  margin: 20mm 18mm 22mm 22mm;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  font-family: "Be Vietnam Pro", "Inter", "Helvetica Neue", Arial, "Segoe UI", "Liberation Sans", sans-serif;
+  font-size: 11.5pt;
+  line-height: 1.55;
+  color: #1f2937;
+  margin: 0;
+  padding: 0;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0 0 6pt 0;
+  line-height: 1.25;
+  color: #111827;
+}
+
+p {
+  margin: 0 0 6pt 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 6pt 0 10pt 0;
+}
+
+th,
+td {
+  border: 0.5pt solid #d1d5db;
+  padding: 5pt 6pt;
+  vertical-align: top;
+}
+
+th {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.small {
+  font-size: 9.5pt;
+}
+
+.page-break {
+  page-break-after: always;
+  break-after: page;
+}
+
+.avoid-break {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Bilingual spans — only one variant is shown per language mode. */
+.lang-vi,
+.lang-en {
+  display: block;
+}
+
+.lang-en {
+  color: #4b5563;
+  font-size: 10.5pt;
+  font-style: italic;
+  margin-top: 1pt;
+}
+
+/* Running page footer (only visible when placed in tail). */
+.page-footer {
+  margin-top: 18pt;
+  padding-top: 6pt;
+  border-top: 0.5pt solid #d1d5db;
+  font-size: 9pt;
+  color: #6b7280;
+  display: flex;
+  justify-content: space-between;
+}
+
+.page-footer__brand {
+  font-weight: 500;
+}
+
+/* Signature block shared shape — details are themed per style. */
+.signature-block {
+  display: flex;
+  gap: 24pt;
+  margin-top: 18pt;
+}
+
+.signature-block__col {
+  flex: 1;
+  text-align: center;
+}
+
+.signature-block__label {
+  font-weight: 600;
+  margin-bottom: 36pt;
+}
+
+.signature-block__line {
+  border-bottom: 0.5pt dotted #9ca3af;
+  margin: 0 12pt 6pt 12pt;
+  height: 1pt;
+}
+
+.signature-block__name {
+  font-weight: 600;
+}
+
+.signature-block__title {
+  font-size: 10pt;
+  color: #4b5563;
+}
+
+/* Company + customer info blocks */
+.company-info,
+.customer-info {
+  margin: 6pt 0 10pt 0;
+}
+
+.company-info__heading,
+.customer-info__heading {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10pt;
+  color: #374151;
+  margin-bottom: 3pt;
+}
+
+.company-info__name,
+.customer-info__name {
+  font-weight: 600;
+  font-size: 12pt;
+  margin-bottom: 2pt;
+}
+
+.company-info__line span,
+.customer-info__line span {
+  color: #6b7280;
+  display: inline-block;
+  min-width: 64pt;
+}
+
+.company-info__bank {
+  margin-top: 6pt;
+  padding-top: 4pt;
+  border-top: 0.5pt dashed #e5e7eb;
+}
+
+.company-info__bank-heading {
+  font-weight: 600;
+  font-size: 9.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  margin-bottom: 2pt;
+}
+
+/* Legal footer */
+.legal-footer {
+  margin-top: 18pt;
+  padding-top: 6pt;
+  border-top: 0.5pt solid #e5e7eb;
+  font-size: 9pt;
+  color: #6b7280;
+}
+
+.legal-footer__note {
+  font-style: italic;
+}
+
+.legal-footer__confidential {
+  color: #9ca3af;
+}

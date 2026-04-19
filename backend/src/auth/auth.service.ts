@@ -3,22 +3,31 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import type { User } from "@prisma/client";
+import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
+import { EmailService } from "../email/email.service";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { AuthTokens, JwtUser, PasswordResetTokenPayload } from "./auth.types";
 
+interface AuthRequestMeta {
+  ip?: string | null;
+  userAgent?: string | null;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
+    private readonly auditService: AuditService
   ) {}
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto, meta?: AuthRequestMeta) {
     const user = await this.prisma.user.findUnique({
       where: {
         email: dto.email
@@ -45,6 +54,11 @@ export class AuthService {
     const payload = this.buildPayload(user);
     const tokens = await this.issueTokens(payload);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
+    await this.auditService.recordLogin({
+      userId: user.id,
+      ip: meta?.ip ?? null,
+      userAgent: meta?.userAgent ?? null
+    });
 
     return {
       ...tokens,
@@ -108,6 +122,13 @@ export class AuthService {
     }
 
     const resetToken = await this.issuePasswordResetToken(user);
+    const resetUrl = this.buildResetUrl(resetToken);
+
+    await this.emailService.sendEmail(user.email, "Yêu cầu đặt lại mật khẩu AHSO CRM", "password-reset", {
+      email: user.email,
+      resetUrl,
+      expiresIn: this.configService.get<string>("JWT_RESET_EXPIRES_IN") ?? "15 phút"
+    });
 
     return this.buildForgotPasswordResponse(resetToken);
   }
@@ -283,14 +304,7 @@ export class AuthService {
       };
     }
 
-    const frontendUrl =
-      this.configService.get<string>("FRONTEND_URL") ??
-      (this.configService.get<string>("CORS_ORIGIN") ?? "http://localhost:3000")
-        .split(",")
-        .map((origin) => origin.trim())
-        .find(Boolean) ??
-      "http://localhost:3000";
-    const resetUrl = `${frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(resetToken)}`;
+    const resetUrl = this.buildResetUrl(resetToken);
 
     return {
       success: true,
@@ -300,5 +314,17 @@ export class AuthService {
         resetUrl
       }
     };
+  }
+
+  private buildResetUrl(resetToken: string) {
+    const frontendUrl =
+      this.configService.get<string>("FRONTEND_URL") ??
+      (this.configService.get<string>("CORS_ORIGIN") ?? "http://localhost:3000")
+        .split(",")
+        .map((origin) => origin.trim())
+        .find(Boolean) ??
+      "http://localhost:3000";
+
+    return `${frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(resetToken)}`;
   }
 }

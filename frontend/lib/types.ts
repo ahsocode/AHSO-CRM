@@ -928,3 +928,168 @@ export interface ReportTopCustomer {
   contractValue: number;
   projectCount: number;
 }
+
+export interface RealtimeEvent<TPayload = Record<string, unknown>> {
+  event:
+    | "customer.created"
+    | "customer.updated"
+    | "customer.deleted"
+    | "customer.assigned"
+    | "project.created"
+    | "project.status_changed"
+    | "quote.sent"
+    | "quote.accepted"
+    | "quote.rejected"
+    | "contract.signed"
+    | "contract.completed"
+    | "payment.received"
+    | "payment.overdue"
+    | "milestone.due_soon"
+    | "activity.assigned"
+    | "mention.created";
+  payload: TPayload;
+  occurredAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: "info" | "success" | "warning" | "error" | string;
+  link?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  unreadCount: number;
+}
+
+export interface NotificationFilters {
+  page: number;
+  limit: number;
+  isRead?: boolean;
+  type?: string;
+}
+
+export interface PushSubscriptionPayload {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+export type CustomFieldResource = "customer" | "project" | "contract";
+export type CustomFieldType = "text" | "number" | "date" | "select" | "multiselect" | "boolean";
+export type CustomFieldValues = Record<string, unknown>;
+
+export interface CustomFieldDefinition {
+  id: string;
+  resource: CustomFieldResource;
+  name: string;
+  label: string;
+  type: CustomFieldType;
+  options?: string[] | null;
+  required: boolean;
+  order: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CustomFieldUpsertInput {
+  resource: CustomFieldResource;
+  name: string;
+  label: string;
+  type: CustomFieldType;
+  options?: string[];
+  required?: boolean;
+  order?: number;
+}
+
+export type ReportDataset = "customers" | "projects" | "quotes" | "contracts" | "activities" | "payments";
+export type ReportChartType = "bar" | "line" | "pie" | "area" | "table";
+export type ReportFilterOperator = "eq" | "neq" | "contains" | "gte" | "lte" | "in";
+
+export interface ReportBuilderFilter {
+  field: string;
+  operator: ReportFilterOperator;
+  value: string | number | boolean | Array<string | number>;
+}
+
+export interface ReportBuilderMeasure {
+  field: string;
+  label: string;
+  aggregator: "count" | "sum";
+}
+
+export interface ReportBuilderConfig {
+  dataset: ReportDataset;
+  dimensions: string[];
+  measures: ReportBuilderMeasure[];
+  filters: ReportBuilderFilter[];
+  chartType: ReportChartType;
+}
+
+export interface ReportTemplate {
+  id: string;
+  name: string;
+  description?: string | null;
+  resource: ReportDataset;
+  config: ReportBuilderConfig;
+  isShared: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SearchResultItem {
+  id: string;
+  type: "customer" | "project" | "quote" | "contract" | "activity";
+  title: string;
+  subtitle?: string | null;
+  href: string;
+}
+
+export interface BulkActionPayload {
+  action: string;
+  ids: string[];
+  status?: string;
+  assignedToId?: string;
+}
+
+export interface ReportSankeyNode {
+  id: string;
+  label: string;
+}
+
+export interface ReportSankeyLink {
+  source: string;
+  target: string;
+  value: number;
+}
+
+export interface ReportHeatmapCell {
+  day: string;
+  hour: string;
+  value: number;
+}
+
+export interface ReportFunnelItem {
+  id: string;
+  label: string;
+  value: number;
+  totalValue: number;
+}
+
+export interface ReportCohortRow {
+  cohort: string;
+  values: Array<{
+    month: string;
+    retained: number;
+  }>;
+}

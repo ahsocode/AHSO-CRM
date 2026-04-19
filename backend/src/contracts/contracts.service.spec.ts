@@ -1,5 +1,8 @@
 import { BadRequestException } from "@nestjs/common";
+import { EmailService } from "../email/email.service";
 import { PrismaService } from "../common/prisma.service";
+import { UploadService } from "../upload/upload.service";
+import { WebhooksEmitter } from "../webhooks/webhooks.emitter";
 import { ContractsService } from "./contracts.service";
 
 describe("ContractsService", () => {
@@ -7,12 +10,16 @@ describe("ContractsService", () => {
     sub: "user-1",
     email: "admin@ahso.vn",
     name: "Admin",
-    role: "ADMIN" as const
+    role: "ADMIN" as const,
+    permissions: []
   };
 
   let service: ContractsService;
   let prisma: {
     $transaction: jest.Mock;
+    contract: {
+      findUnique: jest.Mock;
+    };
   };
   let tx: {
     project: {
@@ -24,6 +31,16 @@ describe("ContractsService", () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+  };
+  let uploadService: {
+    deleteFile: jest.Mock;
+    isLocalUploadPath: jest.Mock;
+  };
+  let emailService: {
+    sendEmail: jest.Mock;
+  };
+  let webhooksEmitter: {
+    emit: jest.Mock;
   };
 
   beforeEach(() => {
@@ -40,10 +57,28 @@ describe("ContractsService", () => {
     };
 
     prisma = {
+      contract: {
+        findUnique: jest.fn()
+      },
       $transaction: jest.fn(async (callback: (client: typeof tx) => unknown) => callback(tx))
     };
+    uploadService = {
+      deleteFile: jest.fn().mockResolvedValue(true),
+      isLocalUploadPath: jest.fn().mockReturnValue(false)
+    };
+    emailService = {
+      sendEmail: jest.fn().mockResolvedValue({ success: true })
+    };
+    webhooksEmitter = {
+      emit: jest.fn()
+    };
 
-    service = new ContractsService(prisma as unknown as PrismaService);
+    service = new ContractsService(
+      prisma as unknown as PrismaService,
+      uploadService as unknown as UploadService,
+      emailService as unknown as EmailService,
+      webhooksEmitter as unknown as WebhooksEmitter
+    );
   });
 
   it("creates a contract from an accepted quote and moves the project into delivering", async () => {
@@ -65,6 +100,25 @@ describe("ContractsService", () => {
       id: "contract-1",
       contractNo: `HD-${currentYear}-005`,
       status: "ACTIVE"
+    });
+    prisma.contract.findUnique.mockResolvedValue({
+      id: "contract-1",
+      contractNo: `HD-${currentYear}-005`,
+      projectId: "project-1",
+      status: "ACTIVE",
+      value: 5_000_000,
+      project: {
+        name: "Dự án A",
+        customer: {
+          id: "customer-1",
+          name: "Công ty A",
+          assignedTo: {
+            email: "manager@ahso.vn",
+            name: "Manager"
+          },
+          contacts: []
+        }
+      }
     });
 
     await expect(
@@ -157,6 +211,25 @@ describe("ContractsService", () => {
       id: "contract-1",
       contractNo: "HD-2026-005",
       status: "COMPLETED"
+    });
+    prisma.contract.findUnique.mockResolvedValue({
+      id: "contract-1",
+      contractNo: "HD-2026-005",
+      projectId: "project-1",
+      status: "COMPLETED",
+      value: 5_000_000,
+      project: {
+        name: "Dự án A",
+        customer: {
+          id: "customer-1",
+          name: "Công ty A",
+          assignedTo: {
+            email: "manager@ahso.vn",
+            name: "Manager"
+          },
+          contacts: []
+        }
+      }
     });
 
     await expect(

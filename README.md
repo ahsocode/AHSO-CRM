@@ -2,8 +2,8 @@
 
 A comprehensive, production-ready Customer Relationship Management system for B2B sales organizations. Manage the complete sales lifecycle from leads to contracts with intuitive interfaces, powerful analytics, and automated workflows.
 
-**Status**: ✅ **95% Complete** - Production Ready  
-**Version**: 1.0  
+**Status**: ✅ **Backend services + AI integration enabled**  
+**Version**: 1.1  
 **Last Updated**: April 2026
 
 ## 📋 Table of Contents
@@ -32,6 +32,8 @@ A comprehensive, production-ready Customer Relationship Management system for B2
 - 📊 **Dashboard** - KPI metrics, revenue trends, pipeline analysis
 - 📈 **Reports** - Sales analytics, revenue forecasting, status breakdowns
 - 🛡️ **Admin Panel** - Settings, policies, RBAC, user management
+- 🤖 **AI Assistant** - Claude-powered summary, follow-up suggestion, email drafting, revenue forecast
+- 📬 **Automation** - SMTP email templates, webhook delivery, audit logs, scheduled reminders
 
 ---
 
@@ -55,6 +57,10 @@ A comprehensive, production-ready Customer Relationship Management system for B2
 - **JWT** - Authentication
 - **Zod** - Request validation
 - **Puppeteer** - PDF generation
+- **Anthropic Claude API** - AI assistant actions
+- **Nodemailer / SMTP** - Transactional email
+- **Twilio** - Manual SMS service
+- **Winston + Sentry** - Logging & error tracking
 
 ### Deployment
 - **Docker Compose** - Containerization
@@ -77,6 +83,9 @@ A comprehensive, production-ready Customer Relationship Management system for B2
 git clone https://github.com/your-org/ahso-crm.git
 cd AHSO-CRM
 
+# Root (Playwright)
+npm install
+
 # Frontend
 cd frontend && npm install && cd ..
 
@@ -90,6 +99,12 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 # Edit files with your configuration
 ```
+
+Key backend envs:
+- `ANTHROPIC_API_KEY` - Claude API
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
+- `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM`
+- `SENTRY_DSN`
 
 **3. Database Setup**
 ```bash
@@ -139,6 +154,7 @@ docker exec ahso-crm-backend npm run prisma:seed
 ### 📄 Quotes Module
 - Full CRUD with status workflow
 - **PDF Generation** - Beautiful output
+- **Send Quote** - Email báo giá + đính kèm PDF
 - **Line Items** - Quantity, pricing, totals
 - **Versioning** - Track all versions
 - **Duplication** - Create from templates
@@ -149,6 +165,7 @@ docker exec ahso-crm-backend npm run prisma:seed
 - **Payments** - Payment logging
 - **Acceptance PDF** - Signature documents
 - **Attachments** - File management
+- **Signed Contract Email** - Auto notify when contract becomes active
 
 ### 📞 Activities Module
 7 Activity Types:
@@ -179,6 +196,13 @@ docker exec ahso-crm-backend npm run prisma:seed
 - Top customers by revenue
 - Pipeline value analysis
 
+### 🤖 AI & Automation
+- Claude AI endpoints for account summary, next-step suggestion, email draft, weighted revenue forecast
+- Webhook delivery with HMAC signing + retry
+- Audit log API for POST/PATCH/DELETE + login events
+- Daily reminder cron for milestone and payment due items
+- Manual Twilio SMS service for future workflow integration
+
 ---
 
 ## 🔐 Security & Access Control
@@ -188,6 +212,7 @@ docker exec ahso-crm-backend npm run prisma:seed
 - **bcrypt** - Password hashing
 - **Refresh Rotation** - Automatic token refresh
 - **Password Reset** - Secure email flow
+- **Rate Limit** - Global + endpoint-specific throttling
 
 ### Authorization (RBAC)
 - **3 System Roles**: ADMIN, MANAGER, STAFF
@@ -200,8 +225,9 @@ docker exec ahso-crm-backend npm run prisma:seed
 - ✅ CORS policy enforcement
 - ✅ SQL injection prevention
 - ✅ XSS protection
-- ✅ CSRF tokens
-- ✅ Secure cookies
+- ✅ Helmet security headers
+- ✅ Structured audit logs
+- ✅ Sentry backend error tracking
 
 ---
 
@@ -234,14 +260,21 @@ Authorization: Bearer {accessToken}
 ```bash
 cd backend
 
-# Run tests
+# Run unit tests
 npm test
+
+# Coverage
+npm test -- --coverage
 
 # Watch mode
 npm test -- --watch
 
 # Specific module
 npm test -- customers
+
+# Root Playwright smoke tests
+cd ..
+npm run test:e2e
 ```
 
 **Test Accounts**:

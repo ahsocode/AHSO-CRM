@@ -2,13 +2,17 @@ import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/commo
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
 import { JwtUser, isStaff } from '../auth/auth.types';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { ActivityFilterDto } from './dto/activity-filter.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 
 @Injectable()
 export class ActivitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService
+  ) {}
 
   private buildWhere(filters: ActivityFilterDto, user: JwtUser): Prisma.ActivityWhereInput {
     const where: Prisma.ActivityWhereInput = {
@@ -209,6 +213,11 @@ export class ActivitiesService {
       },
     });
 
+    await this.notificationsService.createMentionNotifications(input.content, {
+      title: `Bạn được nhắc tới trong hoạt động "${activity.title}"`,
+      link: `/activities/${activity.id}`
+    });
+
     return activity;
   }
 
@@ -246,6 +255,11 @@ export class ActivitiesService {
           },
         },
       },
+    });
+
+    await this.notificationsService.createMentionNotifications(updated.content, {
+      title: `Bạn được nhắc tới trong hoạt động "${updated.title}"`,
+      link: `/activities/${updated.id}`
     });
 
     return updated;

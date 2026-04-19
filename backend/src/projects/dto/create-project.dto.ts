@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { customFieldValuesSchema } from "../../custom-fields/dto/custom-field.dto";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") {
@@ -24,7 +25,8 @@ export const createProjectSchema = z
     estimatedValue: z.coerce.number().min(0, "Giá trị dự kiến không được âm").max(999_999_999_999).optional(),
     startDate: optionalDate,
     expectedEndDate: optionalDate,
-    notes: optionalString(2000)
+    notes: optionalString(2000),
+    customFieldValues: customFieldValuesSchema
   })
   .refine(
     (value) =>

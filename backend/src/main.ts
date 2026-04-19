@@ -1,15 +1,21 @@
+import * as Sentry from "@sentry/node";
 import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import helmet from "helmet";
+import { WinstonModule } from "nest-winston";
 import { join } from "path";
 import { AppModule } from "./app.module";
+import { createWinstonLoggerOptions } from "./common/logger/winston.config";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { TransformInterceptor } from "./common/interceptors/transform.interceptor";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  initializeSentry();
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: WinstonModule.createLogger(createWinstonLoggerOptions())
+  });
   const configService = app.get(ConfigService);
 
   // Global API prefix — all routes served under /api/*
@@ -68,3 +74,33 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+function initializeSentry() {
+  const dsn = process.env.SENTRY_DSN;
+
+  if (!dsn) {
+    return;
+  }
+
+  Sentry.init({
+    dsn,
+    environment: process.env.NODE_ENV ?? "development",
+    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0.1),
+    beforeSend(event) {
+      if (event.request?.headers) {
+        delete event.request.headers.authorization;
+        delete event.request.headers.cookie;
+      }
+
+      if (event.extra) {
+        for (const key of Object.keys(event.extra)) {
+          if (/password|token|secret|authorization|cookie/i.test(key)) {
+            event.extra[key] = "[REDACTED]";
+          }
+        }
+      }
+
+      return event;
+    }
+  });
+}

@@ -6,6 +6,34 @@ All notable changes to this project are documented in this file.
 
 ---
 
+## [1.1.0] - 2026-04-19
+
+### ✨ Backend Services & Production Infrastructure
+
+#### Added
+- Claude AI module with endpoints for customer activity summary, next-step follow-up suggestion, email drafting, and weighted revenue forecast
+- SMTP email module with Handlebars templates for welcome, password reset, quote sent, contract signed, milestone reminder, and payment due
+- Quote send workflow with PDF attachment email
+- Contract status email automation when contract becomes active
+- Daily reminder cron for milestone and payment due follow-up
+- Manual Twilio SMS service module
+- Webhook system with CRUD endpoints, HMAC signing, retry backoff, and delivery logs
+- Audit log module for POST/PATCH/DELETE and login events
+- Winston structured logging with daily rotation
+- Backend Sentry bootstrap and sensitive data masking
+- Playwright e2e scaffold at repo root
+- GitHub Actions CI and deploy workflows
+
+#### Changed
+- Added Prisma migration for `Webhook`, `WebhookLog`, and `AuditLog`
+- Standardized global throttle defaults and endpoint-specific auth/AI throttling
+- Extended README and environment templates for AI, email, SMS, Sentry, and Playwright
+- Updated backend tests to cover projects, activities, dashboard, reports, AI, email, and webhooks
+
+#### Fixed
+- Removed unintended `User` schema drift for SMS fields to stay aligned with the locked scope
+- Added Jest path alias mapping for `src/*`
+
 ## [1.0.0] - 2026-04-19
 
 ### 🎉 Initial Release - Production Ready

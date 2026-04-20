@@ -12,6 +12,19 @@ describe("ReportsService", () => {
 
   let service: ReportsService;
   let prisma: {
+    $transaction: jest.Mock;
+    customer: {
+      findMany: jest.Mock;
+    };
+    project: {
+      findMany: jest.Mock;
+    };
+    quote: {
+      findMany: jest.Mock;
+    };
+    contract: {
+      findMany: jest.Mock;
+    };
     payment: {
       findMany: jest.Mock;
     };
@@ -19,6 +32,19 @@ describe("ReportsService", () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn(async (operations: Array<Promise<unknown>>) => Promise.all(operations)),
+      customer: {
+        findMany: jest.fn()
+      },
+      project: {
+        findMany: jest.fn()
+      },
+      quote: {
+        findMany: jest.fn()
+      },
+      contract: {
+        findMany: jest.fn()
+      },
       payment: {
         findMany: jest.fn()
       }
@@ -68,5 +94,34 @@ describe("ReportsService", () => {
         projectCount: 1
       }
     ]);
+  });
+
+  it("builds customer journey links from distinct customer intersections instead of raw table counts", async () => {
+    prisma.customer.findMany.mockResolvedValue([{ id: "customer-1" }, { id: "customer-2" }, { id: "customer-3" }]);
+    prisma.project.findMany.mockResolvedValue([{ customerId: "customer-1" }, { customerId: "customer-2" }]);
+    prisma.quote.findMany.mockResolvedValue([
+      { project: { customerId: "customer-1" }, status: "SENT" },
+      { project: { customerId: "customer-2" }, status: "ACCEPTED" }
+    ]);
+    prisma.contract.findMany
+      .mockResolvedValueOnce([{ project: { customerId: "customer-2" } }])
+      .mockResolvedValueOnce([{ project: { customerId: "customer-2" } }]);
+    prisma.payment.findMany.mockResolvedValue([{ contract: { project: { customerId: "customer-2" } } }]);
+
+    await expect(service.getCustomerJourney({ months: 3, topLimit: 5 }, user)).resolves.toEqual({
+      nodes: [
+        { id: "lead", label: "Lead" },
+        { id: "project", label: "Dự án" },
+        { id: "quote", label: "Báo giá" },
+        { id: "contract", label: "Hợp đồng" },
+        { id: "closed", label: "Chốt thành công" }
+      ],
+      links: [
+        { source: "lead", target: "project", value: 2 },
+        { source: "project", target: "quote", value: 2 },
+        { source: "quote", target: "contract", value: 1 },
+        { source: "contract", target: "closed", value: 1 }
+      ]
+    });
   });
 });

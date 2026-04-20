@@ -14,7 +14,8 @@ const PROTECTED_PREFIXES = [
   "/activities",
   "/calendar",
   "/reports",
-  "/users"
+  "/users",
+  "/documents"
 ] as const;
 
 export function middleware(request: NextRequest) {
@@ -62,6 +63,7 @@ export const config = {
     "/calendar/:path*",
     "/reports/:path*",
     "/users/:path*",
+    "/documents/:path*",
     "/login",
     "/forgot-password",
     "/reset-password"

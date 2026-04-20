@@ -74,7 +74,12 @@ export function TemplateVariantList({
                   <p className="font-semibold text-text-primary">{item.label}</p>
                   <p className="text-xs text-text-muted">{item.type}</p>
                 </div>
-                <Badge variant="success">Editor</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={item.runtimeStatus === "production" ? "success" : "warning"}>
+                    {item.runtimeStatus === "production" ? "Production" : "Beta"}
+                  </Badge>
+                  <Badge variant="neutral">Editor</Badge>
+                </div>
               </div>
             </button>
           ))}
@@ -91,8 +96,13 @@ export function TemplateVariantList({
                   key={item.type}
                   className="rounded-2xl border border-border/70 bg-bg-hover/40 px-4 py-3"
                 >
-                  <p className="font-medium text-text-primary">{item.label}</p>
-                  <p className="text-xs text-text-muted">{item.type}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-text-primary">{item.label}</p>
+                      <p className="text-xs text-text-muted">{item.type}</p>
+                    </div>
+                    <Badge variant="warning">Beta</Badge>
+                  </div>
                 </div>
               ))}
             </div>

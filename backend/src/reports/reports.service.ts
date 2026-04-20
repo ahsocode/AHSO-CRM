@@ -257,32 +257,68 @@ export class ReportsService {
   }
 
   async getCustomerJourney(filters: ReportFilterDto, user: JwtUser) {
-    const { start } = this.resolveMonthsRange(filters.months);
-    const [customers, projects, quotes, contracts] = await this.prisma.$transaction([
-      this.prisma.customer.findMany({
-        where: this.buildCustomerWhere(user, {
-          createdAt: {
-            gte: start
-          }
-        }),
-        select: {
-          id: true,
-          status: true
+    const { start, nextMonthStart } = this.resolveMonthsRange(filters.months);
+    const customers = await this.prisma.customer.findMany({
+      where: this.buildCustomerWhere(user, {
+        createdAt: {
+          gte: start,
+          lt: nextMonthStart
         }
       }),
+      select: {
+        id: true
+      }
+    });
+
+    const scopedCustomerIds = customers.map((customer) => customer.id);
+    if (scopedCustomerIds.length === 0) {
+      return {
+        nodes: [
+          { id: "lead", label: "Lead" },
+          { id: "project", label: "Dự án" },
+          { id: "quote", label: "Báo giá" },
+          { id: "contract", label: "Hợp đồng" },
+          { id: "closed", label: "Chốt thành công" }
+        ],
+        links: [
+          { source: "lead", target: "project", value: 0 },
+          { source: "project", target: "quote", value: 0 },
+          { source: "quote", target: "contract", value: 0 },
+          { source: "contract", target: "closed", value: 0 }
+        ]
+      };
+    }
+
+    const [projects, quotes, contracts, completedContracts, payments] = await this.prisma.$transaction([
       this.prisma.project.findMany({
         where: this.buildProjectWhere(user, {
           createdAt: {
-            gte: start
+            gte: start,
+            lt: nextMonthStart
+          },
+          customerId: {
+            in: scopedCustomerIds
           }
         }),
         select: {
-          customerId: true,
-          status: true
+          customerId: true
         }
       }),
       this.prisma.quote.findMany({
-        where: this.buildQuoteWhere(user, start),
+        where: {
+          status: {
+            in: ["SENT", "ACCEPTED"]
+          },
+          createdAt: {
+            gte: start,
+            lt: nextMonthStart
+          },
+          project: this.buildProjectWhere(user, {
+            customerId: {
+              in: scopedCustomerIds
+            }
+          })
+        },
         select: {
           project: {
             select: {
@@ -293,16 +329,88 @@ export class ReportsService {
         }
       }),
       this.prisma.contract.findMany({
-        where: this.buildContractWhere(user),
+        where: {
+          status: {
+            in: ["ACTIVE", "COMPLETED"]
+          },
+          createdAt: {
+            gte: start,
+            lt: nextMonthStart
+          },
+          project: this.buildProjectWhere(user, {
+            customerId: {
+              in: scopedCustomerIds
+            }
+          })
+        },
         select: {
           project: {
             select: {
               customerId: true
             }
+          }
+        }
+      }),
+      this.prisma.contract.findMany({
+        where: {
+          status: "COMPLETED",
+          createdAt: {
+            gte: start,
+            lt: nextMonthStart
           },
-          status: true
+          project: this.buildProjectWhere(user, {
+            customerId: {
+              in: scopedCustomerIds
+            }
+          })
+        },
+        select: {
+          project: {
+            select: {
+              customerId: true
+            }
+          }
+        }
+      }),
+      this.prisma.payment.findMany({
+        where: {
+          paidAt: {
+            gte: start,
+            lt: nextMonthStart
+          },
+          contract: {
+            project: this.buildProjectWhere(user, {
+              customerId: {
+                in: scopedCustomerIds
+              }
+            })
+          }
+        },
+        select: {
+          contract: {
+            select: {
+              project: {
+                select: {
+                  customerId: true
+                }
+              }
+            }
+          }
         }
       })
+    ]);
+
+    const leadCustomers = new Set(scopedCustomerIds);
+    const projectCustomers = this.createCustomerSet(projects.map((project) => project.customerId));
+    const quoteCustomers = this.createCustomerSet(
+      quotes.map((quote) => quote.project.customerId)
+    );
+    const contractCustomers = this.createCustomerSet(
+      contracts.map((contract) => contract.project.customerId)
+    );
+    const closedCustomers = this.createCustomerSet([
+      ...completedContracts.map((contract) => contract.project.customerId),
+      ...payments.map((payment) => payment.contract.project.customerId)
     ]);
 
     return {
@@ -314,21 +422,25 @@ export class ReportsService {
         { id: "closed", label: "Chốt thành công" }
       ],
       links: [
-        { source: "lead", target: "project", value: projects.length || customers.length },
+        {
+          source: "lead",
+          target: "project",
+          value: this.countSetIntersection(leadCustomers, projectCustomers)
+        },
         {
           source: "project",
           target: "quote",
-          value: quotes.filter((item) => item.status === "SENT" || item.status === "ACCEPTED").length
+          value: this.countSetIntersection(projectCustomers, quoteCustomers)
         },
         {
           source: "quote",
           target: "contract",
-          value: quotes.filter((item) => item.status === "ACCEPTED").length
+          value: this.countSetIntersection(quoteCustomers, contractCustomers)
         },
         {
           source: "contract",
           target: "closed",
-          value: contracts.filter((item) => item.status === "ACTIVE" || item.status === "COMPLETED").length
+          value: this.countSetIntersection(contractCustomers, closedCustomers)
         }
       ]
     };
@@ -655,6 +767,23 @@ export class ReportsService {
       nextMonthStart,
       months
     };
+  }
+
+  private createCustomerSet(customerIds: Array<string | null | undefined>) {
+    return new Set(customerIds.filter((customerId): customerId is string => Boolean(customerId)));
+  }
+
+  private countSetIntersection(left: Set<string>, right: Set<string>) {
+    const [smaller, larger] = left.size <= right.size ? [left, right] : [right, left];
+    let count = 0;
+
+    for (const customerId of smaller) {
+      if (larger.has(customerId)) {
+        count += 1;
+      }
+    }
+
+    return count;
   }
 
   private async loadDatasetRows(dataset: CustomReportQueryDto["dataset"], user: JwtUser) {

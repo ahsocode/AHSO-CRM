@@ -1128,6 +1128,8 @@ export interface DocumentTemplateRegistryItem {
   style: DocumentTemplateStyle;
   entityType: DocumentTemplateEntityType;
   phase: number;
+  runtimeStatus: "production" | "beta";
+  endUserEnabled: boolean;
   editorEnabled: boolean;
   usesVariantRuntime: boolean;
 }

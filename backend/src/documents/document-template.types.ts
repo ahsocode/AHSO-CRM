@@ -1,4 +1,5 @@
 import { DocumentTemplateStatus, DocumentType } from "@prisma/client";
+import type { TemplateRuntimeStatus } from "./template-registry";
 
 export const TEMPLATE_EDITOR_TYPES: DocumentType[] = ["QUOTATION", "CONTRACT"];
 
@@ -208,6 +209,8 @@ export interface TemplateRegistrySummary {
   style: "modern" | "classic";
   entityType: string;
   phase: number;
+  runtimeStatus: TemplateRuntimeStatus;
+  endUserEnabled: boolean;
   editorEnabled: boolean;
   usesVariantRuntime: boolean;
 }

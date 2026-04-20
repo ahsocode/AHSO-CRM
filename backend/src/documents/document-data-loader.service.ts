@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, NotImplementedException } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { SettingsService } from "../settings/settings.service";
@@ -19,9 +19,10 @@ export interface BaseDocumentContext {
 }
 
 /**
- * Per-template data loaders. Phase 0 ships the shared `loadBaseContext`
- * and explicit stubs for every template — later phases replace each stub
- * with a real implementation that fetches the relevant entity.
+ * Per-template data loaders. `QUOTATION` and `CONTRACT` are wired to live
+ * business data for production runtime. The remaining beta templates still
+ * use partial or sample sections where the domain model has not been mapped
+ * end-to-end yet.
  */
 @Injectable()
 export class DocumentDataLoaderService {
@@ -59,11 +60,6 @@ export class DocumentDataLoaderService {
     }
     return this.uploadService.readFileAsDataUrl(logoUrl);
   }
-
-  // -------------------------------------------------------------------------
-  // Per-template stubs — all throw NotImplementedException in Phase 0.
-  // Phases 1-16 replace these with real loaders.
-  // -------------------------------------------------------------------------
 
   async loadForQuotation(entityId: string): Promise<Record<string, unknown>> {
     const quote = await this.prisma.quote.findUnique({

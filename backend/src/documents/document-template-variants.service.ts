@@ -64,6 +64,8 @@ export class DocumentTemplateVariantsService {
         style: entry.style,
         entityType: entry.entityType,
         phase: entry.phase,
+        runtimeStatus: entry.runtimeStatus,
+        endUserEnabled: entry.endUserEnabled,
         editorEnabled: isTemplateEditorEnabled(entry.type),
         usesVariantRuntime: isTemplateEditorEnabled(entry.type)
       }));
@@ -232,24 +234,31 @@ export class DocumentTemplateVariantsService {
       throw new BadRequestException("Chỉ variant đã publish mới có thể đặt active.");
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.documentTemplateVariant.updateMany({
-        where: {
-          type: variant.type,
-          isActive: true
-        },
-        data: {
-          isActive: false
-        }
-      });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.documentTemplateVariant.updateMany({
+          where: {
+            type: variant.type,
+            isActive: true
+          },
+          data: {
+            isActive: false
+          }
+        });
 
-      await tx.documentTemplateVariant.update({
-        where: { id },
-        data: {
-          isActive: true
-        }
+        await tx.documentTemplateVariant.update({
+          where: { id },
+          data: {
+            isActive: true
+          }
+        });
       });
-    });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new BadRequestException("Loại tài liệu này đã có một variant active khác.");
+      }
+      throw error;
+    }
 
     return this.getVariant(id);
   }

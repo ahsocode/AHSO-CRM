@@ -14,3 +14,16 @@ test("mở projects và thao tác drag-drop kanban nếu có card", async ({ pag
 
   await expect(page).toHaveURL(/\/projects/);
 });
+
+test("bulk export dự án hoạt động ở list view", async ({ page }) => {
+  await login(page);
+  await page.goto("/projects?view=list");
+
+  const firstRowCheckbox = page.locator("table tbody tr").first().locator('[role="checkbox"]').first();
+  await firstRowCheckbox.click();
+  await expect(page.getByText(/bản ghi đang được chọn/i)).toBeVisible();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: /Export CSV \+ Excel/i }).click();
+  await downloadPromise;
+});

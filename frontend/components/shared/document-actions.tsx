@@ -10,7 +10,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppIcon } from "@/components/shared/app-icon";
 import { cn } from "@/lib/utils";
-import { useDocumentTemplateRegistry, useDownloadDocument } from "@/hooks/use-documents";
+import {
+  useDocumentTemplateRegistry,
+  useDownloadDocument,
+  useRenderDocument
+} from "@/hooks/use-documents";
 import { useToast } from "@/hooks/use-toast";
 
 export interface DocumentActionOption {
@@ -27,18 +31,9 @@ interface DocumentActionsProps {
 
 const DEFAULT_OPTIONS: Record<string, DocumentActionOption[]> = {
   quote: [{ type: "QUOTATION", label: "Báo giá" }],
-  contract: [
-    { type: "CONTRACT", label: "Hợp đồng kinh tế" },
-    { type: "CONTRACT_ADDENDUM", label: "Phụ lục hợp đồng" },
-  ],
-  project: [
-    { type: "PROPOSAL", label: "Đề xuất dự án" },
-    { type: "SURVEY_REPORT", label: "Báo cáo khảo sát" },
-  ],
-  customer: [
-    { type: "NDA", label: "Thỏa thuận bảo mật (NDA)" },
-    { type: "AR_RECONCILIATION", label: "Đối chiếu công nợ" },
-  ],
+  contract: [{ type: "CONTRACT", label: "Hợp đồng kinh tế" }],
+  project: [],
+  customer: [],
 };
 
 export function DocumentActions({
@@ -54,23 +49,25 @@ export function DocumentActions({
   );
 
   const { promise: toastPromise } = useToast();
+  const renderMutation = useRenderDocument();
   const downloadMutation = useDownloadDocument();
   const templateRegistryQuery = useDocumentTemplateRegistry();
+  const isWorking = renderMutation.isPending || downloadMutation.isPending;
 
   const availableOptions = useMemo(() => {
     const dynamicOptions = (templateRegistryQuery.data ?? [])
-      .filter((template) => template.entityType === entityType)
+      .filter((template) => template.entityType === entityType && template.endUserEnabled)
       .map((template) => ({
         type: template.type,
         label: template.label
       }));
 
-    if (dynamicOptions.length > 0) {
+    if (templateRegistryQuery.isSuccess) {
       return dynamicOptions;
     }
 
     return options || DEFAULT_OPTIONS[entityType] || [];
-  }, [entityType, options, templateRegistryQuery.data]);
+  }, [entityType, options, templateRegistryQuery.data, templateRegistryQuery.isSuccess]);
 
   const handleActionClick = (option: DocumentActionOption) => {
     setSelectedType(option);
@@ -79,21 +76,33 @@ export function DocumentActions({
 
   const handlePreview = () => {
     if (!selectedType) return;
-    window.open(
-      `/api/documents/${selectedType.type}/${entityId}/preview?lang=${language}`,
-      "_blank"
-    );
+    const params = new URLSearchParams({
+      type: selectedType.type,
+      entityId,
+      lang: language
+    });
+    window.open(`/documents/preview?${params.toString()}`, "_blank", "noopener,noreferrer");
   };
 
   const handleDownload = async () => {
-    if (!selectedType || downloadMutation.isPending) return;
+    if (!selectedType || isWorking) return;
 
-    const downloadTask = downloadMutation.mutateAsync({
-      type: selectedType.type,
-      entityId,
-      lang: language,
-      filename: `${selectedType.label}_${entityId}`,
-    });
+    const downloadTask = (async () => {
+      const rendered = await renderMutation.mutateAsync({
+        type: selectedType.type,
+        entityId,
+        payload: {
+          language
+        }
+      });
+
+      await downloadMutation.mutateAsync({
+        downloadUrl: rendered.downloadUrl,
+        filename: rendered.number
+      });
+
+      return rendered;
+    })();
 
     try {
       await toastPromise(downloadTask, {
@@ -106,6 +115,10 @@ export function DocumentActions({
       // Error toast is handled by Sonner promise lifecycle above.
     }
   };
+
+  if (availableOptions.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -189,14 +202,14 @@ export function DocumentActions({
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t border-border/60 bg-bg-hover/30 px-6 py-4">
-              <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={downloadMutation.isPending}>
+              <Button variant="ghost" onClick={() => setIsOpen(false)} disabled={isWorking}>
                 Hủy
               </Button>
-              <Button variant="outline" onClick={handlePreview} disabled={downloadMutation.isPending}>
+              <Button variant="outline" onClick={handlePreview} disabled={isWorking}>
                 Xem trước (HTML)
               </Button>
-              <Button onClick={handleDownload} disabled={downloadMutation.isPending}>
-                {downloadMutation.isPending ? "Đang tạo..." : "Tải xuống PDF"}
+              <Button onClick={handleDownload} disabled={isWorking}>
+                {isWorking ? "Đang tạo..." : "Tải xuống PDF"}
               </Button>
             </div>
           </div>

@@ -179,11 +179,22 @@ export class DocumentsController {
       user
     );
     return {
-      id: result.id,
+      documentId: result.documentId,
       number: result.number,
-      pdfUrl: result.pdfUrl,
+      downloadUrl: result.downloadUrl,
       renderedAt: result.renderedAt
     };
+  }
+
+  @Get(":documentId/download")
+  async downloadById(
+    @Param("documentId") documentId: string,
+    @Res() response: Response
+  ) {
+    const { buffer, filename, mimeType } = await this.documentsService.downloadDocument(documentId);
+    response.setHeader("Content-Type", mimeType);
+    response.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    response.send(buffer);
   }
 
   @Get(":type/:entityId/download")
@@ -191,16 +202,14 @@ export class DocumentsController {
     @Param("type") type: DocumentType,
     @Param("entityId") entityId: string,
     @Query(new ZodValidationPipe(previewQuerySchema, "query")) query: PreviewQueryDto,
-    @CurrentUser() user: JwtUser,
     @Res() response: Response
   ) {
-    const { buffer, filename } = await this.documentsService.renderDownload(
+    const { buffer, filename, mimeType } = await this.documentsService.downloadLatest(
       type,
       entityId,
-      query.lang,
-      user
+      query.lang
     );
-    response.setHeader("Content-Type", "application/pdf");
+    response.setHeader("Content-Type", mimeType);
     response.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     response.send(buffer);
   }

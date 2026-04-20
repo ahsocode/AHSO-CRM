@@ -1,8 +1,8 @@
 # AHSO CRM - B2B Sales Management System
 
-A comprehensive, production-ready Customer Relationship Management system for B2B sales organizations. Manage the complete sales lifecycle from leads to contracts with intuitive interfaces, powerful analytics, and automated workflows.
+A comprehensive Customer Relationship Management system for B2B sales organizations. The current branch is strongest in the core CRM workflow and selected document flows, while a few enterprise/document/reporting areas are still intentionally marked beta or deferred.
 
-**Status**: ✅ **Backend services + AI integration enabled**  
+**Status**: ✅ Core CRM, auth, admin RBAC, quote/contract workflows and selected document runtime are operational  
 **Version**: 1.1  
 **Last Updated**: April 2026
 
@@ -21,6 +21,27 @@ A comprehensive, production-ready Customer Relationship Management system for B2
 ---
 
 ## 🎯 Features
+
+### Current Release Readiness
+
+**Production-ready in this branch**
+- Core CRM modules: customers, projects, quotes, contracts, activities, calendar, dashboard
+- Auth + refresh token flow, RBAC, admin settings/roles/permissions
+- Local uploads for logo/files
+- Quote PDF and contract acceptance/contract document runtime for end-user flows
+- Document template editor runtime for `QUOTATION` and `CONTRACT`
+- Email, webhooks, audit logs, realtime notifications foundation
+
+**Beta / internal**
+- Document templates other than `QUOTATION` and `CONTRACT`
+- Advanced analytics such as customer journey Sankey and report builder outputs still need business validation
+- Push notifications and manual Twilio SMS service need environment-level verification before rollout
+
+**Deferred**
+- Google / Microsoft OAuth
+- Multi-tenant support
+- Offline mutation queue / background sync
+- Gesture-heavy mobile workflows
 
 **Complete Sales Lifecycle Management**:
 - 📊 **Customers** - Lead tracking, contact management, company hierarchy
@@ -167,6 +188,12 @@ docker exec ahso-crm-backend npm run prisma:seed
 - **Attachments** - File management
 - **Signed Contract Email** - Auto notify when contract becomes active
 
+### 🧾 Documents Module
+- `POST /api/documents/:type/:entityId/render` creates a new document version, renders PDF once and stores the PDF under local uploads
+- `GET /api/documents/:documentId/download` downloads an existing rendered artifact without creating a new version
+- End-user document actions are intentionally limited to `QUOTATION` and `CONTRACT` in this branch
+- `/admin/document-templates` shows all template types, but only `QUOTATION` and `CONTRACT` are production runtime targets today
+
 ### 📞 Activities Module
 7 Activity Types:
 - 📞 CALL - Phone conversations
@@ -201,7 +228,7 @@ docker exec ahso-crm-backend npm run prisma:seed
 - Webhook delivery with HMAC signing + retry
 - Audit log API for POST/PATCH/DELETE + login events
 - Daily reminder cron for milestone and payment due items
-- Manual Twilio SMS service for future workflow integration
+- Manual Twilio SMS service for future workflow integration only
 
 ---
 

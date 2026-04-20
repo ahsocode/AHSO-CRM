@@ -48,6 +48,21 @@ export interface RenderDocumentPayload {
   extra?: Record<string, unknown>;
 }
 
+export interface RenderDocumentResult {
+  documentId: string;
+  number: string;
+  downloadUrl: string;
+  renderedAt: string;
+}
+
+function normalizeApiPath(url: string) {
+  if (url.startsWith("/api/")) {
+    return url.replace(/^\/api/, "");
+  }
+
+  return url;
+}
+
 function variantListKey(type?: DocumentTemplateType) {
   return type ? ["documents", "template-variants", type] : ["documents", "template-variants"];
 }
@@ -100,7 +115,7 @@ export function useRenderDocument() {
       entityId: string;
       payload: RenderDocumentPayload;
     }) => {
-      const response = await apiClient.post<ApiResponse<{ id: string; number: string; pdfUrl: string }>>(
+      const response = await apiClient.post<ApiResponse<RenderDocumentResult>>(
         `/documents/${type}/${entityId}/render`,
         payload
       );
@@ -115,18 +130,13 @@ export function useRenderDocument() {
 export function useDownloadDocument() {
   return useMutation({
     mutationFn: async ({
-      type,
-      entityId,
-      lang,
+      downloadUrl,
       filename
     }: {
-      type: string;
-      entityId: string;
-      lang: string;
+      downloadUrl: string;
       filename: string;
     }) => {
-      const response = await apiClient.get(`/documents/${type}/${entityId}/download`, {
-        params: { lang },
+      const response = await apiClient.get(normalizeApiPath(downloadUrl), {
         responseType: "blob"
       });
 

@@ -41,6 +41,32 @@ const ACTIVITY_TYPES = [
   { value: 'FOLLOWUP', label: 'Theo dõi' },
 ];
 
+function formatDateTimeLocal(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  const hours = String(value.getHours()).padStart(2, '0');
+  const minutes = String(value.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function parseDateTimeLocal(value: string) {
+  const [datePart, timePart] = value.split('T');
+  if (!datePart || !timePart) {
+    return undefined;
+  }
+
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+
+  if ([year, month, day, hours, minutes].some((part) => Number.isNaN(part))) {
+    return undefined;
+  }
+
+  return new Date(year, month - 1, day, hours, minutes);
+}
+
 interface ActivityFormScreenProps {
   id?: string;
 }
@@ -322,10 +348,10 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                         type="datetime-local"
                         className="border-[#D5D8DC] focus-visible:ring-[#2E86C1]"
                         {...field}
-                        value={field.value instanceof Date ? field.value.toISOString().slice(0, 16) : ''}
+                        value={field.value instanceof Date ? formatDateTimeLocal(field.value) : ''}
                         onChange={(e) => {
                           if (e.target.value) {
-                            field.onChange(new Date(e.target.value));
+                            field.onChange(parseDateTimeLocal(e.target.value));
                           } else {
                             field.onChange(undefined);
                           }

@@ -4,6 +4,7 @@ import { DOCUMENT_PREFIX } from "./document-number.service";
 import type { DocumentEntityType } from "./dto/document-type.enum";
 
 export type TemplateStyle = "modern" | "classic";
+export type TemplateRuntimeStatus = "production" | "beta";
 
 /**
  * One template loader method name per document type. The actual loader lives
@@ -24,6 +25,8 @@ export interface TemplateRegistryEntry {
   loaderMethod: string;
   /** Phase number the concrete template ships in. */
   phase: number;
+  runtimeStatus: TemplateRuntimeStatus;
+  endUserEnabled: boolean;
 }
 
 export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
@@ -35,7 +38,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "modern",
     entityType: "quote",
     loaderMethod: "loadForQuotation",
-    phase: 1
+    phase: 1,
+    runtimeStatus: "production",
+    endUserEnabled: true
   },
   PROPOSAL: {
     type: "PROPOSAL",
@@ -45,7 +50,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "modern",
     entityType: "project",
     loaderMethod: "loadForProposal",
-    phase: 2
+    phase: 2,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   SURVEY_REPORT: {
     type: "SURVEY_REPORT",
@@ -55,7 +62,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "modern",
     entityType: "project",
     loaderMethod: "loadForSurveyReport",
-    phase: 3
+    phase: 3,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   CONTRACT: {
     type: "CONTRACT",
@@ -65,7 +74,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForContract",
-    phase: 4
+    phase: 4,
+    runtimeStatus: "production",
+    endUserEnabled: true
   },
   CONTRACT_ADDENDUM: {
     type: "CONTRACT_ADDENDUM",
@@ -75,7 +86,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForContractAddendum",
-    phase: 5
+    phase: 5,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   NDA: {
     type: "NDA",
@@ -85,7 +98,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "customer",
     loaderMethod: "loadForNda",
-    phase: 6
+    phase: 6,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   DELIVERY_NOTE: {
     type: "DELIVERY_NOTE",
@@ -95,7 +110,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForDeliveryNote",
-    phase: 7
+    phase: 7,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   DOC_HANDOVER: {
     type: "DOC_HANDOVER",
@@ -105,7 +122,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForDocHandover",
-    phase: 8
+    phase: 8,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   INSTALLATION_REPORT: {
     type: "INSTALLATION_REPORT",
@@ -115,7 +134,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForInstallationReport",
-    phase: 9
+    phase: 9,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   ACCEPTANCE_REPORT: {
     type: "ACCEPTANCE_REPORT",
@@ -125,7 +146,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForAcceptanceReport",
-    phase: 10
+    phase: 10,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   PARTIAL_ACCEPTANCE: {
     type: "PARTIAL_ACCEPTANCE",
@@ -135,7 +158,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForPartialAcceptance",
-    phase: 11
+    phase: 11,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   WARRANTY_CERT: {
     type: "WARRANTY_CERT",
@@ -145,7 +170,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForWarrantyCert",
-    phase: 12
+    phase: 12,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   MAINTENANCE_RECORD: {
     type: "MAINTENANCE_RECORD",
@@ -155,7 +182,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForMaintenanceRecord",
-    phase: 13
+    phase: 13,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   PAYMENT_REQUEST: {
     type: "PAYMENT_REQUEST",
@@ -165,7 +194,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForPaymentRequest",
-    phase: 14
+    phase: 14,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   PAYMENT_RECEIPT: {
     type: "PAYMENT_RECEIPT",
@@ -175,7 +206,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "contract",
     loaderMethod: "loadForPaymentReceipt",
-    phase: 15
+    phase: 15,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   },
   AR_RECONCILIATION: {
     type: "AR_RECONCILIATION",
@@ -185,7 +218,9 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
     style: "classic",
     entityType: "customer",
     loaderMethod: "loadForArReconciliation",
-    phase: 16
+    phase: 16,
+    runtimeStatus: "beta",
+    endUserEnabled: false
   }
 };
 

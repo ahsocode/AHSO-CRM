@@ -21,6 +21,7 @@ import { registerHelpers } from "./helpers";
 import { I18nService } from "./i18n.service";
 import { PdfRendererService } from "./pdf-renderer.service";
 import { TEMPLATE_REGISTRY, TemplateRegistryEntry, getTemplateEntry } from "./template-registry";
+import { UploadService } from "../upload/upload.service";
 
 const TEMPLATES_ROOT = join(__dirname, "templates");
 const STYLES_DIR = join(TEMPLATES_ROOT, "styles");
@@ -51,7 +52,8 @@ export class DocumentsService implements OnModuleInit {
     private readonly pdfRenderer: PdfRendererService,
     private readonly i18n: I18nService,
     private readonly templateVariants: DocumentTemplateVariantsService,
-    private readonly layoutRenderer: DocumentLayoutRendererService
+    private readonly layoutRenderer: DocumentLayoutRendererService,
+    private readonly uploadService: UploadService
   ) {}
 
   async onModuleInit() {
@@ -172,11 +174,12 @@ ${extraCss}
     const customerCode = this.extractCustomerCode(context);
     const customerId = this.extractCustomerId(context);
 
-    let capturedBuffer: Buffer | null = null;
+    let createdDocumentNumber: string | null = null;
     let createdDocumentId: string | null = null;
+    let createdPdfPath: string | null = null;
     let renderedAt: Date | null = null;
 
-    const createdNumber = await this.documentNumbers.reserveWithRetry(
+    await this.documentNumbers.reserveWithRetry(
       type,
       customerCode,
       1,
@@ -184,50 +187,112 @@ ${extraCss}
         const html = await this.renderHtml(type, language, { ...context, docNumber: number }, title);
         const pdfBuffer = await this.pdfRenderer.render(html);
 
+        const createdAt = new Date();
         const document = await this.prisma.document.create({
           data: {
             type,
             number,
+            version: 1,
             language,
             entityType: entry.entityType,
             entityId,
             customerId: customerId ?? undefined,
             createdById: user.sub,
             pdfPath: null,
-            renderedAt: new Date()
+            renderedAt: createdAt
           }
         });
 
-        capturedBuffer = pdfBuffer;
-        createdDocumentId = document.id;
-        renderedAt = document.renderedAt ?? new Date();
+        try {
+          const storedPdf = await this.uploadService.saveBuffer(pdfBuffer, {
+            originalName: `${number}.pdf`,
+            mimeType: "application/pdf",
+            subfolder: "documents"
+          });
+
+          await this.prisma.document.update({
+            where: { id: document.id },
+            data: {
+              pdfPath: storedPdf.url
+            }
+          });
+
+          createdDocumentNumber = number;
+          createdDocumentId = document.id;
+          createdPdfPath = storedPdf.url;
+          renderedAt = createdAt;
+        } catch (error) {
+          await this.prisma.document.delete({
+            where: { id: document.id }
+          }).catch(() => undefined);
+          throw error;
+        }
       }
     );
 
-    if (!capturedBuffer || !createdDocumentId || !renderedAt) {
-      throw new InternalServerErrorException("Không tạo được buffer PDF.");
+    if (!createdDocumentNumber || !createdDocumentId || !createdPdfPath || !renderedAt) {
+      throw new InternalServerErrorException("Không tạo được tài liệu PDF.");
     }
 
     const finalRenderedAt: Date = renderedAt ?? new Date();
 
     return {
-      id: createdDocumentId,
-      number: createdNumber,
-      pdfUrl: `/api/documents/${type}/${entityId}/download?lang=${language}`,
-      renderedAt: finalRenderedAt.toISOString(),
-      buffer: capturedBuffer,
-      filename: `${createdNumber}.pdf`
+      documentId: createdDocumentId,
+      number: createdDocumentNumber,
+      pdfPath: createdPdfPath,
+      downloadUrl: `/api/documents/${createdDocumentId}/download`,
+      renderedAt: finalRenderedAt.toISOString()
     };
   }
 
-  async renderDownload(
+  async downloadDocument(documentId: string) {
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      select: {
+        id: true,
+        number: true,
+        pdfPath: true
+      }
+    });
+
+    if (!document) {
+      throw new NotFoundException("Không tìm thấy tài liệu đã render.");
+    }
+
+    return this.readStoredDocument(document.number, document.pdfPath);
+  }
+
+  async downloadLatest(
     type: DocumentType,
     entityId: string,
-    languageInput: string | undefined,
-    user: JwtUser
+    languageInput: string | undefined
   ) {
-    const result = await this.renderPdf(type, entityId, languageInput, undefined, user);
-    return { buffer: result.buffer, filename: result.filename };
+    const language = this.resolveLanguage(languageInput);
+    const entry = getTemplateEntry(type);
+
+    const document = await this.prisma.document.findFirst({
+      where: {
+        type,
+        entityType: entry.entityType,
+        entityId,
+        language
+      },
+      orderBy: [
+        { renderedAt: "desc" },
+        { createdAt: "desc" }
+      ],
+      select: {
+        id: true,
+        number: true,
+        pdfPath: true
+      }
+    });
+
+    if (!document) {
+      throw new NotFoundException("Chưa render tài liệu cho đối tượng này.");
+    }
+
+    return this.readStoredDocument(document.number, document.pdfPath);
   }
 
   async list(filters: DocumentListFilterDto, _user: JwtUser) {
@@ -336,6 +401,23 @@ ${extraCss}
     const template = await this.getTemplate(entry, language);
     const body = template(context);
     return this.wrapHtml(body, title);
+  }
+
+  private async readStoredDocument(number: string, pdfPath?: string | null) {
+    if (!pdfPath) {
+      throw new NotFoundException("Tài liệu này chưa có file PDF đã lưu.");
+    }
+
+    const storedPdf = await this.uploadService.readStoredFile(pdfPath);
+    if (!storedPdf) {
+      throw new NotFoundException("Không tìm thấy file PDF đã render.");
+    }
+
+    return {
+      buffer: storedPdf.buffer,
+      filename: `${number}.pdf`,
+      mimeType: storedPdf.mimeType
+    };
   }
 
   private isKnownType(type: string): boolean {

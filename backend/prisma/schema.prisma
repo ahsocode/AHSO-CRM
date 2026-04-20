@@ -26,6 +26,8 @@ model User {
   pushSubscriptions PushSubscription[]
   reportTemplates   ReportTemplate[]
   documents         Document[]
+  documentTemplateVariantsCreated  DocumentTemplateVariant[] @relation("DocumentTemplateCreatedBy")
+  documentTemplateVariantsApproved DocumentTemplateVariant[] @relation("DocumentTemplateApprovedBy")
 }
 
 model UserRole {
@@ -398,6 +400,37 @@ model ReportTemplate {
 
   @@index([createdById, createdAt])
   @@index([resource, isShared])
+}
+
+model DocumentTemplateVariant {
+  id              String                 @id @default(cuid())
+  type            DocumentType
+  name            String
+  status          DocumentTemplateStatus @default(DRAFT)
+  isActive        Boolean                @default(false)
+  layoutJson      Json
+  version         Int                    @default(1)
+  createdById     String
+  approvedById    String?
+  approvedAt      DateTime?
+  basedOnVariantId String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  createdBy       User                   @relation("DocumentTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  approvedBy      User?                  @relation("DocumentTemplateApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  basedOnVariant  DocumentTemplateVariant? @relation("DocumentTemplateVariantFork", fields: [basedOnVariantId], references: [id], onDelete: SetNull)
+  derivedVariants DocumentTemplateVariant[] @relation("DocumentTemplateVariantFork")
+
+  @@index([type, status, createdAt])
+  @@index([type, isActive])
+  @@index([createdById, createdAt])
+}
+
+enum DocumentTemplateStatus {
+  DRAFT
+  PENDING_APPROVAL
+  PUBLISHED
+  ARCHIVED
 }
 
 enum ActivityType {

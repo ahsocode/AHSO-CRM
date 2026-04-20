@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppIcon } from "@/components/shared/app-icon";
 import { cn } from "@/lib/utils";
-import { useDownloadDocument } from "@/hooks/use-documents";
+import { useDocumentTemplateRegistry, useDownloadDocument } from "@/hooks/use-documents";
 import { useToast } from "@/hooks/use-toast";
 
 export interface DocumentActionOption {
@@ -55,8 +55,22 @@ export function DocumentActions({
 
   const { promise: toastPromise } = useToast();
   const downloadMutation = useDownloadDocument();
+  const templateRegistryQuery = useDocumentTemplateRegistry();
 
-  const availableOptions = options || DEFAULT_OPTIONS[entityType] || [];
+  const availableOptions = useMemo(() => {
+    const dynamicOptions = (templateRegistryQuery.data ?? [])
+      .filter((template) => template.entityType === entityType)
+      .map((template) => ({
+        type: template.type,
+        label: template.label
+      }));
+
+    if (dynamicOptions.length > 0) {
+      return dynamicOptions;
+    }
+
+    return options || DEFAULT_OPTIONS[entityType] || [];
+  }, [entityType, options, templateRegistryQuery.data]);
 
   const handleActionClick = (option: DocumentActionOption) => {
     setSelectedType(option);

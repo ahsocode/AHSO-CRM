@@ -949,6 +949,236 @@ export interface ReportTopCustomer {
   projectCount: number;
 }
 
+export type DocumentTemplateType =
+  | "QUOTATION"
+  | "PROPOSAL"
+  | "SURVEY_REPORT"
+  | "CONTRACT"
+  | "CONTRACT_ADDENDUM"
+  | "NDA"
+  | "DELIVERY_NOTE"
+  | "DOC_HANDOVER"
+  | "INSTALLATION_REPORT"
+  | "ACCEPTANCE_REPORT"
+  | "PARTIAL_ACCEPTANCE"
+  | "WARRANTY_CERT"
+  | "MAINTENANCE_RECORD"
+  | "PAYMENT_REQUEST"
+  | "PAYMENT_RECEIPT"
+  | "AR_RECONCILIATION";
+
+export type DocumentTemplateStyle = "modern" | "classic";
+export type DocumentTemplateEntityType = "quote" | "project" | "contract" | "customer";
+export type DocumentTemplateStatus = "DRAFT" | "PENDING_APPROVAL" | "PUBLISHED" | "ARCHIVED";
+export type TemplateBoxType =
+  | "text"
+  | "image"
+  | "key_value_table"
+  | "line_items_table"
+  | "signature_block";
+
+export interface TemplateLocalizedText {
+  vi: string;
+  viEn?: string;
+}
+
+export interface TemplateBoxStyle {
+  fontSize?: number;
+  fontWeight?: 400 | 500 | 600 | 700;
+  lineHeight?: number;
+  textAlign?: "left" | "center" | "right" | "justify";
+  verticalAlign?: "top" | "center" | "bottom";
+  color?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  borderRadius?: number;
+  padding?: number;
+}
+
+export interface TemplateBoxBase {
+  id: string;
+  type: TemplateBoxType;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  visible?: boolean;
+  style?: TemplateBoxStyle;
+}
+
+export interface TemplateTextBox extends TemplateBoxBase {
+  type: "text";
+  content: {
+    text: TemplateLocalizedText;
+  };
+}
+
+export interface TemplateImageBox extends TemplateBoxBase {
+  type: "image";
+  content: {
+    src: string;
+    alt?: string;
+    fit?: "contain" | "cover";
+  };
+}
+
+export interface TemplateKeyValueRow {
+  id: string;
+  label: TemplateLocalizedText;
+  value: string;
+}
+
+export interface TemplateKeyValueTableBox extends TemplateBoxBase {
+  type: "key_value_table";
+  content: {
+    rows: TemplateKeyValueRow[];
+    labelWidth?: number;
+  };
+}
+
+export interface TemplateLineItemsColumn {
+  id: string;
+  label: TemplateLocalizedText;
+  value: string;
+  width?: number;
+  align?: "left" | "center" | "right";
+}
+
+export interface TemplateLineItemsTableBox extends TemplateBoxBase {
+  type: "line_items_table";
+  content: {
+    source: string;
+    columns: TemplateLineItemsColumn[];
+    emptyText?: TemplateLocalizedText;
+  };
+}
+
+export interface TemplateSignatureBlockBox extends TemplateBoxBase {
+  type: "signature_block";
+  content: {
+    leftTitle: TemplateLocalizedText;
+    rightTitle: TemplateLocalizedText;
+    leftCaption?: TemplateLocalizedText;
+    rightCaption?: TemplateLocalizedText;
+  };
+}
+
+export type TemplateBox =
+  | TemplateTextBox
+  | TemplateImageBox
+  | TemplateKeyValueTableBox
+  | TemplateLineItemsTableBox
+  | TemplateSignatureBlockBox;
+
+export interface DocumentTemplatePage {
+  id: string;
+  boxes: TemplateBox[];
+}
+
+export interface DocumentTemplateLayout {
+  version: 1;
+  page: {
+    widthMm: number;
+    heightMm: number;
+    gridMm: number;
+    marginMm: {
+      top: number;
+      right: number;
+      bottom: number;
+      left: number;
+    };
+  };
+  pages: DocumentTemplatePage[];
+}
+
+export interface TemplateValidationIssue {
+  boxId?: string;
+  code: "out_of_bounds" | "overlap" | "overflow" | "invalid";
+  severity: "error" | "warning";
+  message: string;
+}
+
+export interface TemplateToken {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface TemplateTokenGroup {
+  id: string;
+  label: string;
+  tokens: TemplateToken[];
+}
+
+export interface TemplateBoxLibraryItem {
+  type: TemplateBoxType;
+  label: string;
+  description: string;
+  defaultBox: TemplateBox;
+}
+
+export interface DocumentTemplateRegistryItem {
+  type: DocumentTemplateType;
+  label: string;
+  templateDir: string;
+  prefix: string;
+  style: DocumentTemplateStyle;
+  entityType: DocumentTemplateEntityType;
+  phase: number;
+  editorEnabled: boolean;
+  usesVariantRuntime: boolean;
+}
+
+export interface DocumentTemplateVariant {
+  id: string;
+  type: DocumentTemplateType;
+  name: string;
+  status: DocumentTemplateStatus;
+  isActive: boolean;
+  version: number;
+  createdById: string;
+  approvedById: string | null;
+  approvedAt: string | null;
+  basedOnVariantId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  layoutJson: DocumentTemplateLayout;
+  validationIssues?: TemplateValidationIssue[];
+  createdBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  approvedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+}
+
+export interface TemplateCatalog {
+  type: DocumentTemplateType;
+  label: string;
+  defaultLayout: DocumentTemplateLayout;
+  boxLibrary: TemplateBoxLibraryItem[];
+  tokenGroups: TemplateTokenGroup[];
+  sampleData: Record<string, unknown>;
+}
+
+export interface DocumentTemplateCreateInput {
+  type: DocumentTemplateType;
+  name: string;
+  basedOnVariantId?: string;
+}
+
+export interface DocumentTemplateVariantUpdateInput {
+  name?: string;
+  layoutJson?: DocumentTemplateLayout;
+}
+
 export interface RealtimeEvent<TPayload = Record<string, unknown>> {
   id: string;
   event:

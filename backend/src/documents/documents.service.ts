@@ -1,9 +1,9 @@
 import {
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
-  OnModuleInit,
-  InternalServerErrorException
+  OnModuleInit
 } from "@nestjs/common";
 import { DocumentType, Prisma } from "@prisma/client";
 import { readFile } from "fs/promises";
@@ -12,7 +12,9 @@ import { join } from "path";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { DocumentDataLoaderService } from "./document-data-loader.service";
+import { DocumentLayoutRendererService } from "./document-layout-renderer.service";
 import { DocumentNumberService } from "./document-number.service";
+import { DocumentTemplateVariantsService } from "./document-template-variants.service";
 import type { DocumentLanguage } from "./dto/document-type.enum";
 import type { DocumentListFilterDto } from "./dto/render-document.dto";
 import { registerHelpers } from "./helpers";
@@ -47,21 +49,17 @@ export class DocumentsService implements OnModuleInit {
     private readonly dataLoader: DocumentDataLoaderService,
     private readonly documentNumbers: DocumentNumberService,
     private readonly pdfRenderer: PdfRendererService,
-    private readonly i18n: I18nService
+    private readonly i18n: I18nService,
+    private readonly templateVariants: DocumentTemplateVariantsService,
+    private readonly layoutRenderer: DocumentLayoutRendererService
   ) {}
 
   async onModuleInit() {
-    // Ensure bundles are loaded first (I18nService also runs its own
-    // onModuleInit, but ordering is not guaranteed across modules).
     await this.i18n.loadBundles();
     await this.registerPartials();
-    this.registerGlobalHelpers();
+    registerHelpers(this.handlebars, this.i18n.getBundles());
     await this.loadCssBundle();
     this.initialized = true;
-  }
-
-  private registerGlobalHelpers() {
-    registerHelpers(this.handlebars, this.i18n.getBundles());
   }
 
   private async registerPartials() {
@@ -69,8 +67,8 @@ export class DocumentsService implements OnModuleInit {
       PARTIAL_NAMES.map(async (name) => {
         const path = join(PARTIALS_DIR, `${name}.hbs`);
         try {
-          const src = await readFile(path, "utf-8");
-          this.handlebars.registerPartial(name, src);
+          const source = await readFile(path, "utf-8");
+          this.handlebars.registerPartial(name, source);
         } catch (error) {
           this.logger.warn(`Missing partial ${name} at ${path}: ${(error as Error).message}`);
         }
@@ -91,11 +89,47 @@ export class DocumentsService implements OnModuleInit {
     this.cssBundle = parts.join("\n\n");
   }
 
-  /**
-   * Look up (or compile) a template. Throws a clear Not-Implemented error if
-   * the `.hbs` file for the requested type/language is missing — this is the
-   * expected signal until Phases 1-16 ship their template files.
-   */
+  private resolveLanguage(input: string | undefined): DocumentLanguage {
+    return input === "vi-en" ? "vi-en" : "vi";
+  }
+
+  private resolveEditorLanguage(input: DocumentLanguage) {
+    return input === "vi-en" ? "viEn" : "vi";
+  }
+
+  private wrapHtml(body: string, title: string, extraCss = ""): string {
+    return `<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>${title}</title>
+    <style>
+${this.cssBundle}
+${extraCss}
+    </style>
+  </head>
+  <body>
+    ${body}
+  </body>
+</html>`;
+  }
+
+  private async readDefaultTemplateSource(
+    entry: TemplateRegistryEntry,
+    language: DocumentLanguage
+  ) {
+    const fileName = language === "vi-en" ? "vi-en.hbs" : "vi.hbs";
+    const filePath = join(TEMPLATES_ROOT, entry.templateDir, fileName);
+
+    try {
+      return await readFile(filePath, "utf-8");
+    } catch {
+      throw new NotFoundException(
+        `Template ${entry.type} (${language}) sẽ được triển khai ở Phase ${entry.phase}. File cần có: ${filePath}`
+      );
+    }
+  }
+
   private async getTemplate(
     entry: TemplateRegistryEntry,
     language: DocumentLanguage
@@ -105,46 +139,12 @@ export class DocumentsService implements OnModuleInit {
       return this.templateCache.get(cacheKey)!;
     }
 
-    const fileName = language === "vi-en" ? "vi-en.hbs" : "vi.hbs";
-    const filePath = join(TEMPLATES_ROOT, entry.templateDir, fileName);
-    let source: string;
-    try {
-      source = await readFile(filePath, "utf-8");
-    } catch {
-      throw new NotFoundException(
-        `Template ${entry.type} (${language}) sẽ được triển khai ở Phase ${entry.phase}. File cần có: ${filePath}`
-      );
-    }
-
+    const source = await this.readDefaultTemplateSource(entry, language);
     const compiled = this.handlebars.compile(source, { noEscape: false });
     this.templateCache.set(cacheKey, compiled);
     return compiled;
   }
 
-  private resolveLanguage(input: string | undefined): DocumentLanguage {
-    return input === "vi-en" ? "vi-en" : "vi";
-  }
-
-  private wrapHtml(body: string, title: string): string {
-    return `<!doctype html>
-<html lang="vi">
-  <head>
-    <meta charset="utf-8" />
-    <title>${title}</title>
-    <style>
-${this.cssBundle}
-    </style>
-  </head>
-  <body>
-    ${body}
-  </body>
-</html>`;
-  }
-
-  /**
-   * Render an HTML preview of a document. Returns HTML text ready to stream
-   * as `Content-Type: text/html`.
-   */
   async renderPreview(
     type: DocumentType,
     entityId: string,
@@ -152,35 +152,10 @@ ${this.cssBundle}
     user: JwtUser
   ): Promise<{ html: string }> {
     await this.ensureInitialized();
-    const entry = getTemplateEntry(type);
     const language = this.resolveLanguage(languageInput);
-    const base = await this.dataLoader.loadBaseContext(user, language);
-    const loader = (this.dataLoader as unknown as Record<string, (id: string) => Promise<Record<string, unknown>>>)[
-      entry.loaderMethod
-    ];
+    const { context, title } = await this.buildRenderContext(type, entityId, language, user);
+    const html = await this.renderHtml(type, language, context, title);
 
-    if (typeof loader !== "function") {
-      throw new NotFoundException(
-        `Không tìm thấy data loader cho ${type} (phương thức ${entry.loaderMethod}).`
-      );
-    }
-
-    // For Phase 0 preview we still try the loader — if it throws
-    // NotImplementedException (501), the controller will surface it to the
-    // caller. Phase 0 only intends for the infrastructure to be wired.
-    const entityData = await loader.call(this.dataLoader, entityId);
-
-    const template = await this.getTemplate(entry, language);
-    const context = {
-      ...base,
-      ...entityData,
-      type,
-      language,
-      entityId
-    };
-
-    const body = template(context);
-    const html = this.wrapHtml(body, String(entityData.title ?? type));
     return { html };
   }
 
@@ -192,46 +167,24 @@ ${this.cssBundle}
     user: JwtUser
   ) {
     await this.ensureInitialized();
-    const entry = getTemplateEntry(type);
     const language = this.resolveLanguage(languageInput);
+    const { context, title, entry } = await this.buildRenderContext(type, entityId, language, user, extra);
+    const customerCode = this.extractCustomerCode(context);
+    const customerId = this.extractCustomerId(context);
 
-    const base = await this.dataLoader.loadBaseContext(user, language);
-    const loader = (this.dataLoader as unknown as Record<string, (id: string) => Promise<Record<string, unknown>>>)[
-      entry.loaderMethod
-    ];
-    if (typeof loader !== "function") {
-      throw new NotFoundException(
-        `Không tìm thấy data loader cho ${type} (phương thức ${entry.loaderMethod}).`
-      );
-    }
-
-    const entityData = await loader.call(this.dataLoader, entityId);
-    const customerCode = this.extractCustomerCode(entityData);
-    const customerId = this.extractCustomerId(entityData);
-
-    const template = await this.getTemplate(entry, language);
-
-    // Reserve a unique number using retry logic, inserting the Document row
-    // on first success. Capture the rendered buffer in the closure.
     let capturedBuffer: Buffer | null = null;
+    let createdDocumentId: string | null = null;
+    let renderedAt: Date | null = null;
+
     const createdNumber = await this.documentNumbers.reserveWithRetry(
       type,
       customerCode,
       1,
       async (number) => {
-        const rendered = template({
-          ...base,
-          ...(extra ?? {}),
-          ...entityData,
-          type,
-          language,
-          entityId,
-          docNumber: number
-        });
-        const html = this.wrapHtml(rendered, String(entityData.title ?? type));
+        const html = await this.renderHtml(type, language, { ...context, docNumber: number }, title);
         const pdfBuffer = await this.pdfRenderer.render(html);
 
-        await this.prisma.document.create({
+        const document = await this.prisma.document.create({
           data: {
             type,
             number,
@@ -245,30 +198,28 @@ ${this.cssBundle}
           }
         });
 
-        // NOTE: PDF file persistence (pdfPath) is Phase 1+ — for Phase 0 we
-        // just record renderedAt. Downloads re-render on demand.
         capturedBuffer = pdfBuffer;
+        createdDocumentId = document.id;
+        renderedAt = document.renderedAt ?? new Date();
       }
     );
 
-    if (!capturedBuffer) {
+    if (!capturedBuffer || !createdDocumentId || !renderedAt) {
       throw new InternalServerErrorException("Không tạo được buffer PDF.");
     }
 
+    const finalRenderedAt: Date = renderedAt ?? new Date();
+
     return {
-      id: createdNumber,
+      id: createdDocumentId,
       number: createdNumber,
       pdfUrl: `/api/documents/${type}/${entityId}/download?lang=${language}`,
-      renderedAt: new Date().toISOString(),
-      buffer: capturedBuffer as Buffer,
+      renderedAt: finalRenderedAt.toISOString(),
+      buffer: capturedBuffer,
       filename: `${createdNumber}.pdf`
     };
   }
 
-  /**
-   * Download path: regenerates (for now) the PDF on demand. Until Phase 1+
-   * persists the artifact, this is a live render.
-   */
   async renderDownload(
     type: DocumentType,
     entityId: string,
@@ -288,9 +239,15 @@ ${this.cssBundle}
     if (filters.type && this.isKnownType(filters.type)) {
       where.type = filters.type as DocumentType;
     }
-    if (filters.entityType) where.entityType = filters.entityType;
-    if (filters.entityId) where.entityId = filters.entityId;
-    if (filters.customerId) where.customerId = filters.customerId;
+    if (filters.entityType) {
+      where.entityType = filters.entityType;
+    }
+    if (filters.entityId) {
+      where.entityId = filters.entityId;
+    }
+    if (filters.customerId) {
+      where.customerId = filters.customerId;
+    }
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.document.findMany({
@@ -321,6 +278,66 @@ ${this.cssBundle}
     };
   }
 
+  private async buildRenderContext(
+    type: DocumentType,
+    entityId: string,
+    language: DocumentLanguage,
+    user: JwtUser,
+    extra?: Record<string, unknown>
+  ) {
+    const entry = getTemplateEntry(type);
+    const base = await this.dataLoader.loadBaseContext(user, language);
+    const loader = (
+      this.dataLoader as unknown as Record<string, (id: string) => Promise<Record<string, unknown>>>
+    )[entry.loaderMethod];
+
+    if (typeof loader !== "function") {
+      throw new NotFoundException(
+        `Không tìm thấy data loader cho ${type} (phương thức ${entry.loaderMethod}).`
+      );
+    }
+
+    const entityData = await loader.call(this.dataLoader, entityId);
+    const context = {
+      ...base,
+      ...(extra ?? {}),
+      ...entityData,
+      type,
+      language,
+      entityId
+    };
+
+    return {
+      entry,
+      title: String(entityData.title ?? type),
+      context
+    };
+  }
+
+  private async renderHtml(
+    type: DocumentType,
+    language: DocumentLanguage,
+    context: Record<string, unknown>,
+    title: string
+  ) {
+    const activeVariant = await this.templateVariants.getActiveVariant(type);
+
+    if (activeVariant) {
+      const body = this.layoutRenderer.render(
+        activeVariant.layoutJson,
+        context,
+        this.resolveEditorLanguage(language)
+      );
+
+      return this.wrapHtml(body, title, this.layoutRenderer.getCss());
+    }
+
+    const entry = getTemplateEntry(type);
+    const template = await this.getTemplate(entry, language);
+    const body = template(context);
+    return this.wrapHtml(body, title);
+  }
+
   private isKnownType(type: string): boolean {
     return Object.prototype.hasOwnProperty.call(TEMPLATE_REGISTRY, type);
   }
@@ -330,8 +347,10 @@ ${this.cssBundle}
       (data.customer as Record<string, unknown> | undefined)?.code,
       data.customerCode
     ];
-    for (const c of candidates) {
-      if (typeof c === "string" && c.trim().length > 0) return c;
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        return candidate;
+      }
     }
     return null;
   }
@@ -341,8 +360,10 @@ ${this.cssBundle}
       (data.customer as Record<string, unknown> | undefined)?.id,
       data.customerId
     ];
-    for (const c of candidates) {
-      if (typeof c === "string" && c.trim().length > 0) return c;
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim().length > 0) {
+        return candidate;
+      }
     }
     return null;
   }
@@ -351,6 +372,7 @@ ${this.cssBundle}
     if (!this.initialized) {
       await this.onModuleInit();
     }
+
     if (!this.initialized) {
       throw new InternalServerErrorException("Documents module chưa khởi tạo được.");
     }

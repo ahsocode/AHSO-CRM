@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -13,8 +15,21 @@ import { DocumentType } from "@prisma/client";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { DocumentTemplateVariantsService } from "./document-template-variants.service";
+import {
+  createDocumentTemplateSchema,
+  CreateDocumentTemplateDto,
+  documentTemplateQuerySchema,
+  DocumentTemplateQueryDto,
+  duplicateDocumentTemplateVariantSchema,
+  DuplicateDocumentTemplateVariantDto,
+  updateDocumentTemplateVariantSchema,
+  UpdateDocumentTemplateVariantDto
+} from "./dto/document-template.dto";
 import {
   DocumentListFilterDto,
   documentListFilterSchema,
@@ -28,12 +43,106 @@ import { DocumentsService } from "./documents.service";
 @Controller("documents")
 @UseGuards(JwtAuthGuard)
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(
+    private readonly documentsService: DocumentsService,
+    private readonly templateVariants: DocumentTemplateVariantsService
+  ) {}
 
-  /**
-   * GET /documents
-   * Paginated list of generated Document rows with optional filters.
-   */
+  @Get("template-registry")
+  async listTemplateRegistry() {
+    return this.templateVariants.listRegistry();
+  }
+
+  @Get("template-catalog/:type")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async getTemplateCatalog(
+    @Param("type") type: DocumentType,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.templateVariants.getCatalog(type, user);
+  }
+
+  @Get("templates")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async listTemplateVariants(
+    @Query(new ZodValidationPipe(documentTemplateQuerySchema, "query"))
+    query: DocumentTemplateQueryDto
+  ) {
+    return this.templateVariants.listVariants(query.type);
+  }
+
+  @Post("templates")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async createTemplateVariant(
+    @Body(new ZodValidationPipe(createDocumentTemplateSchema))
+    body: CreateDocumentTemplateDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.templateVariants.createVariant(body, user);
+  }
+
+  @Get("templates/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async getTemplateVariant(@Param("id") id: string) {
+    return this.templateVariants.getVariant(id);
+  }
+
+  @Patch("templates/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async updateTemplateVariant(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateDocumentTemplateVariantSchema))
+    body: UpdateDocumentTemplateVariantDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.templateVariants.updateVariant(id, body, user);
+  }
+
+  @Post("templates/:id/submit-review")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async submitTemplateVariant(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.templateVariants.submitReview(id, user);
+  }
+
+  @Post("templates/:id/approve")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async approveTemplateVariant(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.templateVariants.approve(id, user);
+  }
+
+  @Post("templates/:id/set-active")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async setActiveTemplateVariant(@Param("id") id: string) {
+    return this.templateVariants.setActive(id);
+  }
+
+  @Post("templates/:id/duplicate")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async duplicateTemplateVariant(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(duplicateDocumentTemplateVariantSchema))
+    body: DuplicateDocumentTemplateVariantDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.templateVariants.duplicate(id, user, body.name);
+  }
+
+  @Delete("templates/:id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async deleteTemplateVariant(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.templateVariants.deleteVariant(id, user);
+  }
+
   @Get()
   list(
     @Query(new ZodValidationPipe(documentListFilterSchema, "query")) filters: DocumentListFilterDto,
@@ -42,10 +151,6 @@ export class DocumentsController {
     return this.documentsService.list(filters, user);
   }
 
-  /**
-   * GET /documents/:type/:entityId/preview?lang=vi|vi-en
-   * Returns rendered HTML (no PDF conversion). Used by the "Xem trước" action.
-   */
   @Get(":type/:entityId/preview")
   @Header("Content-Type", "text/html; charset=utf-8")
   async preview(
@@ -59,10 +164,6 @@ export class DocumentsController {
     response.send(html);
   }
 
-  /**
-   * POST /documents/:type/:entityId/render
-   * Generates a PDF, persists a Document row, returns metadata.
-   */
   @Post(":type/:entityId/render")
   async render(
     @Param("type") type: DocumentType,
@@ -85,10 +186,6 @@ export class DocumentsController {
     };
   }
 
-  /**
-   * GET /documents/:type/:entityId/download?lang=vi|vi-en
-   * Streams the rendered PDF as an attachment.
-   */
   @Get(":type/:entityId/download")
   async download(
     @Param("type") type: DocumentType,

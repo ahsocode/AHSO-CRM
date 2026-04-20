@@ -2,7 +2,15 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { ApiResponse } from "@/lib/types";
+import type {
+  ApiResponse,
+  DocumentTemplateCreateInput,
+  DocumentTemplateRegistryItem,
+  DocumentTemplateType,
+  DocumentTemplateVariant,
+  DocumentTemplateVariantUpdateInput,
+  TemplateCatalog
+} from "@/lib/types";
 
 export interface DocumentListItem {
   id: string;
@@ -40,52 +48,45 @@ export interface RenderDocumentPayload {
   extra?: Record<string, unknown>;
 }
 
-/**
- * List generated documents with pagination and filters.
- */
+function variantListKey(type?: DocumentTemplateType) {
+  return type ? ["documents", "template-variants", type] : ["documents", "template-variants"];
+}
+
 export function useDocuments(filters: DocumentFilters) {
   return useQuery({
     queryKey: ["documents", filters],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<DocumentListItem[]>>("/documents", {
-        params: filters,
+        params: filters
       });
 
       return {
         items: response.data.data,
-        meta: response.data.meta as DocumentListMeta,
+        meta: response.data.meta as DocumentListMeta
       };
-    },
+    }
   });
 }
 
-/**
- * Fetch HTML preview for a document type and entity.
- */
 export function usePreviewDocument() {
   return useMutation({
     mutationFn: async ({
       type,
       entityId,
-      lang,
+      lang
     }: {
       type: string;
       entityId: string;
       lang: string;
     }) => {
       const response = await apiClient.get<string>(`/documents/${type}/${entityId}/preview`, {
-        params: { lang },
-        // NestJS returns plain string for preview, but apiClient wrap might expect JSON 
-        // depending on how global interceptors are set up.
+        params: { lang }
       });
       return response.data;
-    },
+    }
   });
 }
 
-/**
- * Trigger server-side PDF generation and record creation.
- */
 export function useRenderDocument() {
   const queryClient = useQueryClient();
 
@@ -93,7 +94,7 @@ export function useRenderDocument() {
     mutationFn: async ({
       type,
       entityId,
-      payload,
+      payload
     }: {
       type: string;
       entityId: string;
@@ -107,20 +108,17 @@ export function useRenderDocument() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-    },
+    }
   });
 }
 
-/**
- * Trigger live render and browser download of a PDF.
- */
 export function useDownloadDocument() {
   return useMutation({
     mutationFn: async ({
       type,
       entityId,
       lang,
-      filename,
+      filename
     }: {
       type: string;
       entityId: string;
@@ -129,7 +127,7 @@ export function useDownloadDocument() {
     }) => {
       const response = await apiClient.get(`/documents/${type}/${entityId}/download`, {
         params: { lang },
-        responseType: "blob",
+        responseType: "blob"
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -140,6 +138,199 @@ export function useDownloadDocument() {
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
+    }
+  });
+}
+
+export function useDocumentTemplateRegistry() {
+  return useQuery({
+    queryKey: ["documents", "template-registry"],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<DocumentTemplateRegistryItem[]>>(
+        "/documents/template-registry"
+      );
+      return response.data.data;
+    }
+  });
+}
+
+export function useDocumentTemplateVariants(type?: DocumentTemplateType) {
+  return useQuery({
+    queryKey: variantListKey(type),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<DocumentTemplateVariant[]>>(
+        "/documents/templates",
+        {
+          params: type ? { type } : undefined
+        }
+      );
+      return response.data.data;
+    }
+  });
+}
+
+export function useDocumentTemplateVariant(id?: string) {
+  return useQuery({
+    queryKey: ["documents", "template-variant", id],
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<DocumentTemplateVariant>>(
+        `/documents/templates/${id}`
+      );
+      return response.data.data;
+    }
+  });
+}
+
+export function useDocumentTemplateCatalog(type?: DocumentTemplateType) {
+  return useQuery({
+    queryKey: ["documents", "template-catalog", type],
+    enabled: Boolean(type),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<TemplateCatalog>>(
+        `/documents/template-catalog/${type}`
+      );
+      return response.data.data;
+    }
+  });
+}
+
+export function useCreateDocumentTemplateVariant() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: DocumentTemplateCreateInput) => {
+      const response = await apiClient.post<ApiResponse<DocumentTemplateVariant>>(
+        "/documents/templates",
+        payload
+      );
+      return response.data.data;
     },
+    onSuccess: async (variant) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: variantListKey(variant.type) }),
+        queryClient.invalidateQueries({ queryKey: variantListKey() })
+      ]);
+    }
+  });
+}
+
+export function useUpdateDocumentTemplateVariant(id?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: DocumentTemplateVariantUpdateInput) => {
+      const response = await apiClient.patch<ApiResponse<DocumentTemplateVariant>>(
+        `/documents/templates/${id}`,
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async (variant) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", "template-variant", variant.id] }),
+        queryClient.invalidateQueries({ queryKey: variantListKey(variant.type) }),
+        queryClient.invalidateQueries({ queryKey: variantListKey() })
+      ]);
+    }
+  });
+}
+
+export function useSubmitDocumentTemplateVariant(id?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post<ApiResponse<DocumentTemplateVariant>>(
+        `/documents/templates/${id}/submit-review`
+      );
+      return response.data.data;
+    },
+    onSuccess: async (variant) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", "template-variant", variant.id] }),
+        queryClient.invalidateQueries({ queryKey: variantListKey(variant.type) }),
+        queryClient.invalidateQueries({ queryKey: variantListKey() })
+      ]);
+    }
+  });
+}
+
+export function useApproveDocumentTemplateVariant(id?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post<ApiResponse<DocumentTemplateVariant>>(
+        `/documents/templates/${id}/approve`
+      );
+      return response.data.data;
+    },
+    onSuccess: async (variant) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", "template-variant", variant.id] }),
+        queryClient.invalidateQueries({ queryKey: variantListKey(variant.type) }),
+        queryClient.invalidateQueries({ queryKey: variantListKey() })
+      ]);
+    }
+  });
+}
+
+export function useSetActiveDocumentTemplateVariant(id?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post<ApiResponse<DocumentTemplateVariant>>(
+        `/documents/templates/${id}/set-active`
+      );
+      return response.data.data;
+    },
+    onSuccess: async (variant) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["documents", "template-variant", variant.id] }),
+        queryClient.invalidateQueries({ queryKey: variantListKey(variant.type) }),
+        queryClient.invalidateQueries({ queryKey: variantListKey() })
+      ]);
+    }
+  });
+}
+
+export function useDuplicateDocumentTemplateVariant(id?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload?: { name?: string }) => {
+      const response = await apiClient.post<ApiResponse<DocumentTemplateVariant>>(
+        `/documents/templates/${id}/duplicate`,
+        payload ?? {}
+      );
+      return response.data.data;
+    },
+    onSuccess: async (variant) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: variantListKey(variant.type) }),
+        queryClient.invalidateQueries({ queryKey: variantListKey() })
+      ]);
+    }
+  });
+}
+
+export function useDeleteDocumentTemplateVariant(id?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.delete<ApiResponse<{ id: string; deleted: boolean }>>(
+        `/documents/templates/${id}`
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: variantListKey() }),
+        queryClient.invalidateQueries({ queryKey: ["documents", "template-variant"] })
+      ]);
+    }
   });
 }

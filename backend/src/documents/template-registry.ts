@@ -1,3 +1,4 @@
+import { NotFoundException } from "@nestjs/common";
 import { DocumentType } from "@prisma/client";
 import { DOCUMENT_PREFIX } from "./document-number.service";
 import type { DocumentEntityType } from "./dto/document-type.enum";
@@ -11,6 +12,8 @@ export type TemplateStyle = "modern" | "classic";
  */
 export interface TemplateRegistryEntry {
   type: DocumentType;
+  /** Human-readable label shown in frontend/admin. */
+  label: string;
   /** Folder under `templates/` holding `vi.hbs` and `vi-en.hbs`. */
   templateDir: string;
   prefix: string;
@@ -26,6 +29,7 @@ export interface TemplateRegistryEntry {
 export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   QUOTATION: {
     type: "QUOTATION",
+    label: "Báo giá",
     templateDir: "QUOTATION",
     prefix: DOCUMENT_PREFIX.QUOTATION,
     style: "modern",
@@ -35,6 +39,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   PROPOSAL: {
     type: "PROPOSAL",
+    label: "Đề xuất dự án",
     templateDir: "PROPOSAL",
     prefix: DOCUMENT_PREFIX.PROPOSAL,
     style: "modern",
@@ -44,6 +49,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   SURVEY_REPORT: {
     type: "SURVEY_REPORT",
+    label: "Báo cáo khảo sát",
     templateDir: "SURVEY_REPORT",
     prefix: DOCUMENT_PREFIX.SURVEY_REPORT,
     style: "modern",
@@ -53,6 +59,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   CONTRACT: {
     type: "CONTRACT",
+    label: "Hợp đồng kinh tế",
     templateDir: "CONTRACT",
     prefix: DOCUMENT_PREFIX.CONTRACT,
     style: "classic",
@@ -62,6 +69,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   CONTRACT_ADDENDUM: {
     type: "CONTRACT_ADDENDUM",
+    label: "Phụ lục hợp đồng",
     templateDir: "CONTRACT_ADDENDUM",
     prefix: DOCUMENT_PREFIX.CONTRACT_ADDENDUM,
     style: "classic",
@@ -71,6 +79,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   NDA: {
     type: "NDA",
+    label: "Thỏa thuận bảo mật",
     templateDir: "NDA",
     prefix: DOCUMENT_PREFIX.NDA,
     style: "classic",
@@ -80,6 +89,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   DELIVERY_NOTE: {
     type: "DELIVERY_NOTE",
+    label: "Biên bản giao hàng",
     templateDir: "DELIVERY_NOTE",
     prefix: DOCUMENT_PREFIX.DELIVERY_NOTE,
     style: "classic",
@@ -89,6 +99,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   DOC_HANDOVER: {
     type: "DOC_HANDOVER",
+    label: "Biên bản bàn giao hồ sơ",
     templateDir: "DOC_HANDOVER",
     prefix: DOCUMENT_PREFIX.DOC_HANDOVER,
     style: "classic",
@@ -98,6 +109,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   INSTALLATION_REPORT: {
     type: "INSTALLATION_REPORT",
+    label: "Biên bản lắp đặt",
     templateDir: "INSTALLATION_REPORT",
     prefix: DOCUMENT_PREFIX.INSTALLATION_REPORT,
     style: "classic",
@@ -107,6 +119,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   ACCEPTANCE_REPORT: {
     type: "ACCEPTANCE_REPORT",
+    label: "Biên bản nghiệm thu",
     templateDir: "ACCEPTANCE_REPORT",
     prefix: DOCUMENT_PREFIX.ACCEPTANCE_REPORT,
     style: "classic",
@@ -116,6 +129,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   PARTIAL_ACCEPTANCE: {
     type: "PARTIAL_ACCEPTANCE",
+    label: "Biên bản nghiệm thu giai đoạn",
     templateDir: "PARTIAL_ACCEPTANCE",
     prefix: DOCUMENT_PREFIX.PARTIAL_ACCEPTANCE,
     style: "classic",
@@ -125,6 +139,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   WARRANTY_CERT: {
     type: "WARRANTY_CERT",
+    label: "Phiếu bảo hành",
     templateDir: "WARRANTY_CERT",
     prefix: DOCUMENT_PREFIX.WARRANTY_CERT,
     style: "classic",
@@ -134,6 +149,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   MAINTENANCE_RECORD: {
     type: "MAINTENANCE_RECORD",
+    label: "Biên bản bảo trì",
     templateDir: "MAINTENANCE_RECORD",
     prefix: DOCUMENT_PREFIX.MAINTENANCE_RECORD,
     style: "classic",
@@ -143,6 +159,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   PAYMENT_REQUEST: {
     type: "PAYMENT_REQUEST",
+    label: "Đề nghị thanh toán",
     templateDir: "PAYMENT_REQUEST",
     prefix: DOCUMENT_PREFIX.PAYMENT_REQUEST,
     style: "classic",
@@ -152,6 +169,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   PAYMENT_RECEIPT: {
     type: "PAYMENT_RECEIPT",
+    label: "Phiếu thu",
     templateDir: "PAYMENT_RECEIPT",
     prefix: DOCUMENT_PREFIX.PAYMENT_RECEIPT,
     style: "classic",
@@ -161,6 +179,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
   },
   AR_RECONCILIATION: {
     type: "AR_RECONCILIATION",
+    label: "Biên bản đối chiếu công nợ",
     templateDir: "AR_RECONCILIATION",
     prefix: DOCUMENT_PREFIX.AR_RECONCILIATION,
     style: "classic",
@@ -173,7 +192,7 @@ export const TEMPLATE_REGISTRY: Record<DocumentType, TemplateRegistryEntry> = {
 export function getTemplateEntry(type: DocumentType): TemplateRegistryEntry {
   const entry = TEMPLATE_REGISTRY[type];
   if (!entry) {
-    throw new Error(`Không tìm thấy template cho loại tài liệu ${type}`);
+    throw new NotFoundException(`Không tìm thấy template cho loại tài liệu ${type}`);
   }
   return entry;
 }

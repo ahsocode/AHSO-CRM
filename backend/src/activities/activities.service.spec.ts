@@ -1,5 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../common/prisma.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import { ActivitiesService } from "./activities.service";
 
 describe("ActivitiesService", () => {
@@ -23,6 +24,9 @@ describe("ActivitiesService", () => {
       create: jest.Mock;
     };
   };
+  let notificationsService: {
+    createMentionNotifications: jest.Mock;
+  };
 
   beforeEach(() => {
     prisma = {
@@ -36,8 +40,14 @@ describe("ActivitiesService", () => {
         create: jest.fn()
       }
     };
+    notificationsService = {
+      createMentionNotifications: jest.fn().mockResolvedValue([])
+    };
 
-    service = new ActivitiesService(prisma as unknown as PrismaService);
+    service = new ActivitiesService(
+      prisma as unknown as PrismaService,
+      notificationsService as unknown as NotificationsService
+    );
   });
 
   it("blocks staff from creating activity for customer assigned to another owner", async () => {

@@ -1,8 +1,9 @@
 import { BadRequestException } from "@nestjs/common";
+import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { DomainEventsService } from "../domain-events/domain-events.service";
 import { EmailService } from "../email/email.service";
 import { PrismaService } from "../common/prisma.service";
 import { UploadService } from "../upload/upload.service";
-import { WebhooksEmitter } from "../webhooks/webhooks.emitter";
 import { ContractsService } from "./contracts.service";
 
 describe("ContractsService", () => {
@@ -36,10 +37,13 @@ describe("ContractsService", () => {
     deleteFile: jest.Mock;
     isLocalUploadPath: jest.Mock;
   };
+  let customFieldsService: {
+    saveValues: jest.Mock;
+  };
   let emailService: {
     sendEmail: jest.Mock;
   };
-  let webhooksEmitter: {
+  let domainEvents: {
     emit: jest.Mock;
   };
 
@@ -66,18 +70,22 @@ describe("ContractsService", () => {
       deleteFile: jest.fn().mockResolvedValue(true),
       isLocalUploadPath: jest.fn().mockReturnValue(false)
     };
+    customFieldsService = {
+      saveValues: jest.fn().mockResolvedValue(undefined)
+    };
     emailService = {
       sendEmail: jest.fn().mockResolvedValue({ success: true })
     };
-    webhooksEmitter = {
+    domainEvents = {
       emit: jest.fn()
     };
 
     service = new ContractsService(
       prisma as unknown as PrismaService,
+      customFieldsService as unknown as CustomFieldsService,
       uploadService as unknown as UploadService,
       emailService as unknown as EmailService,
-      webhooksEmitter as unknown as WebhooksEmitter
+      domainEvents as unknown as DomainEventsService
     );
   });
 
@@ -128,7 +136,8 @@ describe("ContractsService", () => {
           sourceQuoteId: "quote-accepted",
           value: 5_000_000,
           status: "ACTIVE",
-          notes: "Kích hoạt ngay sau khi khách xác nhận"
+          notes: "Kích hoạt ngay sau khi khách xác nhận",
+          customFieldValues: {}
         },
         user
       )
@@ -186,7 +195,8 @@ describe("ContractsService", () => {
           projectId: "project-1",
           sourceQuoteId: "quote-accepted",
           value: 5_000_000,
-          status: "ACTIVE"
+          status: "ACTIVE",
+          customFieldValues: {}
         },
         user
       )
@@ -237,7 +247,8 @@ describe("ContractsService", () => {
         "contract-1",
         {
           status: "COMPLETED",
-          notes: "Nghiệm thu xong"
+          notes: "Nghiệm thu xong",
+          customFieldValues: {}
         },
         user
       )

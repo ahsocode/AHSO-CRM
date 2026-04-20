@@ -2,7 +2,7 @@ import { BadRequestException } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import { EmailService } from "../email/email.service";
 import { PrismaService } from "../common/prisma.service";
-import { WebhooksEmitter } from "../webhooks/webhooks.emitter";
+import { DomainEventsService } from "../domain-events/domain-events.service";
 import { QuotesService } from "./quotes.service";
 
 describe("QuotesService", () => {
@@ -36,7 +36,7 @@ describe("QuotesService", () => {
   let emailService: {
     sendEmail: jest.Mock;
   };
-  let webhooksEmitter: {
+  let domainEvents: {
     emit: jest.Mock;
   };
 
@@ -63,7 +63,7 @@ describe("QuotesService", () => {
     emailService = {
       sendEmail: jest.fn().mockResolvedValue({ success: true })
     };
-    webhooksEmitter = {
+    domainEvents = {
       emit: jest.fn()
     };
 
@@ -71,7 +71,7 @@ describe("QuotesService", () => {
       prisma as unknown as PrismaService,
       moduleRef as unknown as ModuleRef,
       emailService as unknown as EmailService,
-      webhooksEmitter as unknown as WebhooksEmitter
+      domainEvents as unknown as DomainEventsService
     );
   });
 

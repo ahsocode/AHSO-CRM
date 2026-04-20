@@ -1,5 +1,6 @@
 import { PrismaService } from "../common/prisma.service";
-import { WebhooksEmitter } from "../webhooks/webhooks.emitter";
+import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { DomainEventsService } from "../domain-events/domain-events.service";
 import { ProjectsService } from "./projects.service";
 
 describe("ProjectsService", () => {
@@ -23,7 +24,10 @@ describe("ProjectsService", () => {
       update: jest.Mock;
     };
   };
-  let webhooksEmitter: {
+  let customFieldsService: {
+    saveValues: jest.Mock;
+  };
+  let domainEvents: {
     emit: jest.Mock;
   };
 
@@ -39,13 +43,17 @@ describe("ProjectsService", () => {
         update: jest.fn()
       }
     };
-    webhooksEmitter = {
+    customFieldsService = {
+      saveValues: jest.fn().mockResolvedValue(undefined)
+    };
+    domainEvents = {
       emit: jest.fn()
     };
 
     service = new ProjectsService(
       prisma as unknown as PrismaService,
-      webhooksEmitter as unknown as WebhooksEmitter
+      customFieldsService as unknown as CustomFieldsService,
+      domainEvents as unknown as DomainEventsService
     );
   });
 
@@ -65,7 +73,8 @@ describe("ProjectsService", () => {
           customerId: "customer-1",
           name: "Dự án dây chuyền đóng gói",
           status: "SURVEY",
-          priority: "NORMAL"
+          priority: "NORMAL",
+          customFieldValues: {}
         },
         user
       )
@@ -74,7 +83,7 @@ describe("ProjectsService", () => {
       code: "AHSO-307"
     });
 
-    expect(webhooksEmitter.emit).toHaveBeenCalledWith("project.created", {
+    expect(domainEvents.emit).toHaveBeenCalledWith("project.created", {
       projectId: "project-1",
       code: "AHSO-307",
       customerId: "customer-1",
@@ -110,7 +119,7 @@ describe("ProjectsService", () => {
       status: "NEGOTIATING"
     });
 
-    expect(webhooksEmitter.emit).toHaveBeenCalledWith("project.status_changed", {
+    expect(domainEvents.emit).toHaveBeenCalledWith("project.status_changed", {
       projectId: "project-1",
       previousStatus: "QUOTING",
       status: "NEGOTIATING"

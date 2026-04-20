@@ -175,7 +175,7 @@ function CohortCard({
   data,
   isLoading
 }: {
-  data?: Array<{ cohort: string; values: Array<{ month: string; retained: number }> }>;
+  data?: Array<{ cohort: string; cohortSize: number; values: Array<{ month: string; retainedCount: number; retainedRate: number }> }>;
   isLoading: boolean;
 }) {
   const months = Array.from(new Set((data ?? []).flatMap((item) => item.values.map((value) => value.month))));
@@ -203,22 +203,33 @@ function CohortCard({
                 ))}
               </div>
               {data.map((row) => (
-                <div key={row.cohort} className="grid grid-cols-[160px_repeat(auto-fit,minmax(88px,1fr))] gap-2">
+                <div key={`${row.cohort}-${row.cohortSize}`} className="grid grid-cols-[160px_repeat(auto-fit,minmax(88px,1fr))] gap-2">
                   <div className="rounded-xl border border-border/60 bg-white px-3 py-3 text-sm font-semibold text-text-primary">
-                    {row.cohort}
+                    <div>{row.cohort}</div>
+                    <div className="text-xs font-medium text-text-secondary">{row.cohortSize} khách hàng</div>
                   </div>
                   {months.map((month) => {
                     const cell = row.values.find((value) => value.month === month);
-                    const retained = cell?.retained ?? 0;
+                    const retainedCount = cell?.retainedCount ?? 0;
+                    const retainedRate = cell?.retainedRate ?? 0;
                     return (
                       <div
                         key={`${row.cohort}-${month}`}
                         className={cn(
                           "rounded-xl px-3 py-3 text-center text-sm font-semibold",
-                          retained ? "bg-primary/12 text-primary" : "bg-slate-100 text-text-muted"
+                          retainedCount ? "bg-primary/12 text-primary" : "bg-slate-100 text-text-muted"
                         )}
                       >
-                        {retained ? "Giữ" : "—"}
+                        {retainedCount ? (
+                          <div className="space-y-1">
+                            <div>{Math.round(retainedRate * 100)}%</div>
+                            <div className="text-xs font-medium text-text-secondary">
+                              {retainedCount}/{row.cohortSize}
+                            </div>
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </div>
                     );
                   })}

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppIcon } from "@/components/shared/app-icon";
 import { cn } from "@/lib/utils";
-import { useRenderDocument, useDownloadDocument } from "@/hooks/use-documents";
+import { useDownloadDocument } from "@/hooks/use-documents";
 import { useToast } from "@/hooks/use-toast";
 
 export interface DocumentActionOption {
@@ -53,8 +53,7 @@ export function DocumentActions({
     customerLanguage === "vi-en" ? "vi-en" : "vi"
   );
 
-  const { success, error, info } = useToast();
-  const renderMutation = useRenderDocument();
+  const { success, error, loading } = useToast();
   const downloadMutation = useDownloadDocument();
 
   const availableOptions = options || DEFAULT_OPTIONS[entityType] || [];
@@ -74,7 +73,7 @@ export function DocumentActions({
 
   const handleDownload = async () => {
     if (!selectedType) return;
-    info(`Đang tạo ${selectedType.label}...`);
+    loading(`Đang tạo ${selectedType.label}...`);
     try {
       await downloadMutation.mutateAsync({
         type: selectedType.type,

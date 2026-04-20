@@ -1,7 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable, forwardRef } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
-import { PrismaService } from "../common/prisma.service";
 import { JwtUser } from "../auth/auth.types";
+import { PrismaService } from "../common/prisma.service";
+import { DomainEventsService } from "../domain-events/domain-events.service";
 import { DomainEventEnvelope, DomainEventName } from "../domain-events/domain-events.types";
 import { NotificationFilterDto } from "./dto/notification-filter.dto";
 
@@ -15,7 +16,11 @@ interface CreateNotificationInput {
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => DomainEventsService))
+    private readonly domainEvents: DomainEventsService
+  ) {}
 
   async list(filters: NotificationFilterDto, user: JwtUser) {
     const page = filters.page ?? 1;
@@ -124,7 +129,8 @@ export class NotificationsService {
 
   async handleDomainEvent(envelope: DomainEventEnvelope) {
     const notifications = await this.mapDomainEventToNotifications(envelope.event, envelope.payload);
-    return this.createMany(notifications);
+    const dedupedNotifications = await this.dedupeNotifications(envelope.event, notifications);
+    return this.createMany(dedupedNotifications);
   }
 
   async createMentionNotifications(content: string | null | undefined, context: { link?: string | null; title: string }) {
@@ -157,14 +163,15 @@ export class NotificationsService {
       }
     });
 
-    return this.createMany(
-      users.map((user) => ({
-        userId: user.id,
-        title: "Bạn được nhắc tới",
-        message: context.title,
-        type: "info",
-        link: context.link ?? null
-      }))
+    return Promise.all(
+      users.map((user) =>
+        this.domainEvents.emit("mention.created", {
+          userId: user.id,
+          email: user.email,
+          title: context.title,
+          link: context.link ?? null
+        })
+      )
     );
   }
 
@@ -191,8 +198,11 @@ export class NotificationsService {
           project: {
             select: {
               id: true,
+              name: true,
               customer: {
                 select: {
+                  id: true,
+                  name: true,
                   assignedToId: true
                 }
               }
@@ -216,11 +226,15 @@ export class NotificationsService {
           id: true,
           name: true,
           dueDate: true,
+          paymentAmount: true,
           project: {
             select: {
               id: true,
+              name: true,
               customer: {
                 select: {
+                  id: true,
+                  name: true,
                   assignedToId: true
                 }
               }
@@ -230,22 +244,99 @@ export class NotificationsService {
       })
     ]);
 
-    await this.createMany([
-      ...dueMilestones.map((milestone) => ({
+    for (const milestone of dueMilestones) {
+      const notification = {
         userId: milestone.project.customer.assignedToId,
         title: "Milestone sắp đến hạn",
         message: `${milestone.name} cần theo dõi trước ${milestone.dueDate?.toLocaleDateString("vi-VN") ?? "hạn chưa xác định"}.`,
         type: "warning",
         link: `/projects/${milestone.project.id}`
-      })),
-      ...overduePayments.map((milestone) => ({
+      };
+
+      if (await this.hasMatchingNotificationToday(notification)) {
+        continue;
+      }
+
+      await this.domainEvents.emit("milestone.due_soon", {
+        userId: milestone.project.customer.assignedToId,
+        milestoneId: milestone.id,
+        milestoneName: milestone.name,
+        dueDate: milestone.dueDate?.toISOString() ?? null,
+        projectId: milestone.project.id,
+        projectName: milestone.project.name,
+        customerId: milestone.project.customer.id,
+        customerName: milestone.project.customer.name
+      });
+    }
+
+    for (const milestone of overduePayments) {
+      const notification = {
         userId: milestone.project.customer.assignedToId,
         title: "Khoản thanh toán đang quá hạn",
         message: `${milestone.name} đã quá hạn thanh toán từ ${milestone.dueDate?.toLocaleDateString("vi-VN") ?? "trước đó"}.`,
         type: "error",
         link: `/projects/${milestone.project.id}`
-      }))
-    ]);
+      };
+
+      if (await this.hasMatchingNotificationToday(notification)) {
+        continue;
+      }
+
+      await this.domainEvents.emit("payment.overdue", {
+        userId: milestone.project.customer.assignedToId,
+        milestoneId: milestone.id,
+        milestoneName: milestone.name,
+        dueDate: milestone.dueDate?.toISOString() ?? null,
+        paymentAmount: milestone.paymentAmount ? Number(milestone.paymentAmount) : null,
+        projectId: milestone.project.id,
+        projectName: milestone.project.name,
+        customerId: milestone.project.customer.id,
+        customerName: milestone.project.customer.name
+      });
+    }
+  }
+
+  private async dedupeNotifications(event: DomainEventName, inputs: CreateNotificationInput[]) {
+    if (!["milestone.due_soon", "payment.overdue"].includes(event) || inputs.length === 0) {
+      return inputs;
+    }
+
+    const deduped: CreateNotificationInput[] = [];
+
+    for (const input of inputs) {
+      if (!(await this.hasMatchingNotificationToday(input))) {
+        deduped.push(input);
+      }
+    }
+
+    return deduped;
+  }
+
+  private async hasMatchingNotificationToday(input: CreateNotificationInput) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existing = await this.prisma.notification.findFirst({
+      where: {
+        userId: input.userId,
+        title: input.title,
+        message: input.message,
+        type: input.type,
+        link: input.link ?? null,
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+
+    return Boolean(existing);
   }
 
   private async mapDomainEventToNotifications(event: DomainEventName, payload: Record<string, unknown>) {
@@ -311,6 +402,54 @@ export class NotificationsService {
                 message: `Khoản thanh toán mới đã được ghi nhận cho hợp đồng ${payload.contractNo ?? ""}.`,
                 type: "success",
                 link: payload.contractId ? `/contracts/${payload.contractId}` : "/contracts"
+              }
+            ]
+          : [];
+      case "milestone.due_soon":
+        return payload.userId
+          ? [
+              {
+                userId: String(payload.userId),
+                title: "Milestone sắp đến hạn",
+                message: `${payload.milestoneName ?? "Một milestone"} cần theo dõi trước ${payload.dueDate ? new Date(String(payload.dueDate)).toLocaleDateString("vi-VN") : "hạn chưa xác định"}.`,
+                type: "warning",
+                link: payload.projectId ? `/projects/${payload.projectId}` : "/projects"
+              }
+            ]
+          : [];
+      case "payment.overdue":
+        return payload.userId
+          ? [
+              {
+                userId: String(payload.userId),
+                title: "Khoản thanh toán đang quá hạn",
+                message: `${payload.milestoneName ?? "Một khoản thanh toán"} đã quá hạn từ ${payload.dueDate ? new Date(String(payload.dueDate)).toLocaleDateString("vi-VN") : "trước đó"}.`,
+                type: "error",
+                link: payload.projectId ? `/projects/${payload.projectId}` : "/projects"
+              }
+            ]
+          : [];
+      case "activity.assigned":
+        return payload.userId
+          ? [
+              {
+                userId: String(payload.userId),
+                title: "Bạn có hoạt động mới",
+                message: `Hoạt động ${payload.activityTitle ?? "mới"} vừa được giao cho bạn.`,
+                type: "info",
+                link: payload.activityId ? `/activities/${payload.activityId}` : "/activities"
+              }
+            ]
+          : [];
+      case "mention.created":
+        return payload.userId
+          ? [
+              {
+                userId: String(payload.userId),
+                title: "Bạn được nhắc tới",
+                message: String(payload.title ?? "Bạn vừa được nhắc tới trong hệ thống."),
+                type: "info",
+                link: payload.link ? String(payload.link) : "/activities"
               }
             ]
           : [];

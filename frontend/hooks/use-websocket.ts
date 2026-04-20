@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";
 import { getAccessToken } from "@/lib/auth";
@@ -50,6 +50,10 @@ function getToastMessage(event: RealtimeEvent) {
       return event.payload.contractNo ? `Hợp đồng ${String(event.payload.contractNo)} vừa hoàn tất.` : "Có hợp đồng vừa hoàn tất.";
     case "payment.received":
       return "Hệ thống vừa ghi nhận một khoản thanh toán mới.";
+    case "payment.overdue":
+      return "Có một khoản thanh toán đang quá hạn cần theo dõi.";
+    case "milestone.due_soon":
+      return "Có milestone sắp tới hạn cần xử lý.";
     case "mention.created":
       return "Bạn vừa được nhắc tới trong một ghi chú.";
     case "activity.assigned":
@@ -64,6 +68,7 @@ export function useWebsocket(enabled = true) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<RealtimeEvent | null>(null);
   const [lastEventAt, setLastEventAt] = useState<number | null>(null);
+  const processedEventsRef = useRef<Map<string, number>>(new Map());
 
   const socketUrl = useMemo(() => `${BACKEND_URL}/events`, []);
 
@@ -97,8 +102,22 @@ export function useWebsocket(enabled = true) {
     });
 
     socket.on("domain-event", (event: RealtimeEvent) => {
+      const processedEvents = processedEventsRef.current;
+      const now = Date.now();
+
+      for (const [eventId, timestamp] of processedEvents.entries()) {
+        if (now - timestamp > 15000) {
+          processedEvents.delete(eventId);
+        }
+      }
+
+      if (processedEvents.has(event.id)) {
+        return;
+      }
+
+      processedEvents.set(event.id, now);
       setLastEvent(event);
-      setLastEventAt(Date.now());
+      setLastEventAt(now);
 
       const invalidateKeys = getInvalidateKeys(event.event);
       invalidateKeys.forEach((key) => {

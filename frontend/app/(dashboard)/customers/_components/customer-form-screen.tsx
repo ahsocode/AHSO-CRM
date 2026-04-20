@@ -103,7 +103,7 @@ export function CustomerFormScreen({
         source: customerQuery.data.source ?? "",
         notes: customerQuery.data.notes ?? "",
         status: customerQuery.data.status,
-        language: customerQuery.data.language ?? "vi",
+        language: customerQuery.data.language === "vi-en" ? "vi-en" : "vi",
         isVip: customerQuery.data.isVip,
         assignedToId: customerQuery.data.assignedTo.id
       });

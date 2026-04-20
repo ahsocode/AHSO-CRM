@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
@@ -424,7 +424,16 @@ export class ReportsService {
       }
     });
 
-    return customers.map((customer) => {
+    const cohorts = new Map<
+      string,
+      {
+        cohort: string;
+        cohortSize: number;
+        monthlyRetained: Map<string, number>;
+      }
+    >();
+
+    for (const customer of customers) {
       const cohortMonth = `${customer.createdAt.getFullYear()}-${customer.createdAt.getMonth() + 1}`;
       const activeMonths = new Set(
         customer.projects.flatMap((project) =>
@@ -432,18 +441,42 @@ export class ReportsService {
         )
       );
 
-      return {
+      const bucket = cohorts.get(cohortMonth) ?? {
         cohort: cohortMonth,
+        cohortSize: 0,
+        monthlyRetained: new Map<string, number>()
+      };
+
+      bucket.cohortSize += 1;
+
+      Array.from({ length: months }, (_, index) => {
+        const date = new Date(start.getFullYear(), start.getMonth() + index, 1);
+        return `${date.getFullYear()}-${date.getMonth() + 1}`;
+      }).forEach((monthKey) => {
+        if (activeMonths.has(monthKey)) {
+          bucket.monthlyRetained.set(monthKey, (bucket.monthlyRetained.get(monthKey) ?? 0) + 1);
+        }
+      });
+
+      cohorts.set(cohortMonth, bucket);
+    }
+
+    return Array.from(cohorts.values())
+      .sort((left, right) => left.cohort.localeCompare(right.cohort))
+      .map((cohort) => ({
+        cohort: cohort.cohort,
+        cohortSize: cohort.cohortSize,
         values: Array.from({ length: months }, (_, index) => {
           const date = new Date(start.getFullYear(), start.getMonth() + index, 1);
-          const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+          const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+          const retainedCount = cohort.monthlyRetained.get(monthKey) ?? 0;
           return {
-            month: key,
-            retained: activeMonths.has(key) ? 1 : 0
+            month: monthKey,
+            retainedCount,
+            retainedRate: cohort.cohortSize > 0 ? Number((retainedCount / cohort.cohortSize).toFixed(4)) : 0
           };
         })
-      };
-    });
+      }));
   }
 
   async runCustomQuery(dto: CustomReportQueryDto, user: JwtUser) {
@@ -484,10 +517,23 @@ export class ReportsService {
   }
 
   async updateTemplate(id: string, dto: UpdateReportTemplateDto, user: JwtUser) {
-    return this.prisma.reportTemplate.updateMany({
+    const existing = await this.prisma.reportTemplate.findFirst({
       where: {
         id,
         createdById: user.sub
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Không tìm thấy template báo cáo.");
+    }
+
+    return this.prisma.reportTemplate.update({
+      where: {
+        id: existing.id
       },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
@@ -500,15 +546,28 @@ export class ReportsService {
   }
 
   async removeTemplate(id: string, user: JwtUser) {
-    const deleted = await this.prisma.reportTemplate.deleteMany({
+    const existing = await this.prisma.reportTemplate.findFirst({
       where: {
         id,
         createdById: user.sub
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!existing) {
+      throw new NotFoundException("Không tìm thấy template báo cáo.");
+    }
+
+    await this.prisma.reportTemplate.delete({
+      where: {
+        id: existing.id
       }
     });
 
     return {
-      success: deleted.count > 0
+      success: true
     };
   }
 

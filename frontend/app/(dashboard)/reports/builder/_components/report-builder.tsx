@@ -307,13 +307,14 @@ export function ReportBuilder() {
 
     try {
       if (activeTemplate) {
-        await updateTemplateMutation.mutateAsync({
+        const updated = await updateTemplateMutation.mutateAsync({
           name: templateName,
           description: templateDescription || undefined,
           resource: config.dataset,
           isShared,
           config
         });
+        setActiveTemplate(updated);
         success("Đã cập nhật template báo cáo.");
       } else {
         const created = await createTemplateMutation.mutateAsync({

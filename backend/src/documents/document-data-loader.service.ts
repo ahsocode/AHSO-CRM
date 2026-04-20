@@ -1,4 +1,4 @@
-import { Injectable, NotImplementedException } from "@nestjs/common";
+import { Injectable, NotFoundException, NotImplementedException } from "@nestjs/common";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { SettingsService } from "../settings/settings.service";
@@ -547,13 +547,19 @@ export class DocumentDataLoaderService {
     // We will pick the first incomplete or recently completed milestone as a demo,
     // or just list the accepted parts.
     const acceptedParts = contract.milestones
-      .filter(m => m.status === "COMPLETED" || m.status === "IN_PROGRESS")
-      .map(m => ({
-        name: m.name,
-        ratio: m.paymentRatio ? `${m.paymentRatio}%` : "Theo khối lượng",
-        value: m.paymentAmount ? Number(m.paymentAmount) : 0,
-        note: m.status === "COMPLETED" ? "Đã hoàn thành" : "Đang thực hiện"
-      }));
+      .filter((milestone) => ["DONE", "ACCEPTED", "IN_PROGRESS"].includes(milestone.status))
+      .map((milestone) => {
+        const value = milestone.paymentAmount ? Number(milestone.paymentAmount) : 0;
+        const ratio =
+          Number(contract.value) > 0 && value > 0 ? `${Math.round((value / Number(contract.value)) * 100)}%` : "Theo giá trị";
+
+        return {
+          name: milestone.name,
+          ratio,
+          value,
+          note: ["DONE", "ACCEPTED"].includes(milestone.status) ? "Đã hoàn thành" : "Đang thực hiện"
+        };
+      });
 
     if (acceptedParts.length === 0) {
       acceptedParts.push({ name: "Giai đoạn 1: Triển khai thiết kế", ratio: "30%", value: Number(contract.value) * 0.3, note: "" });
@@ -594,7 +600,7 @@ export class DocumentDataLoaderService {
     }
 
     // Default to 12 months if warranty is not specified
-    const warrantyMonths = contract.project?.customer?.customerType === "ENTERPRISE" ? 24 : 12;
+    const warrantyMonths = 12;
     const warrantyEndDate = new Date();
     warrantyEndDate.setMonth(warrantyEndDate.getMonth() + warrantyMonths);
 
@@ -636,7 +642,7 @@ export class DocumentDataLoaderService {
       throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
     }
 
-    const warrantyMonths = contract.project?.customer?.customerType === "ENTERPRISE" ? 24 : 12;
+    const warrantyMonths = 12;
     const warrantyEndDate = new Date();
     warrantyEndDate.setMonth(warrantyEndDate.getMonth() + warrantyMonths);
 
@@ -788,9 +794,7 @@ export class DocumentDataLoaderService {
         contacts: { where: { isPrimary: true }, take: 1 },
         projects: {
           include: {
-            contracts: {
-              include: { milestones: true }
-            }
+            contract: true
           }
         }
       }
@@ -816,27 +820,30 @@ export class DocumentDataLoaderService {
     let totalPaid = 0;
 
     for (const project of customer.projects) {
-      for (const contract of project.contracts) {
-        const contractValue = contract.value ? Number(contract.value) : 0;
-        // For demo: invoiced = 70% of contract value, paid = 30%
-        const invoiced = contractValue * 0.7;
-        const paid = contractValue * 0.3;
-        const outstanding = invoiced - paid;
+      const contract = project.contract;
 
-        lineItems.push({
-          contractNo: contract.contractNo,
-          projectName: project.name,
-          contractValue,
-          invoiced,
-          paid,
-          outstanding,
-          dueDate: contract.expectedEndDate
-        });
-
-        totalContractValue += contractValue;
-        totalInvoiced += invoiced;
-        totalPaid += paid;
+      if (!contract) {
+        continue;
       }
+
+      const contractValue = Number(contract.value ?? 0);
+      const invoiced = contractValue * 0.7;
+      const paid = contractValue * 0.3;
+      const outstanding = invoiced - paid;
+
+      lineItems.push({
+        contractNo: contract.contractNo,
+        projectName: project.name,
+        contractValue,
+        invoiced,
+        paid,
+        outstanding,
+        dueDate: contract.endDate
+      });
+
+      totalContractValue += contractValue;
+      totalInvoiced += invoiced;
+      totalPaid += paid;
     }
 
     const totalOutstanding = totalInvoiced - totalPaid;

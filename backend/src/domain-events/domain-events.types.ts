@@ -20,6 +20,7 @@ export const DOMAIN_EVENT_NAMES = [
 export type DomainEventName = (typeof DOMAIN_EVENT_NAMES)[number];
 
 export interface DomainEventEnvelope<TPayload = Record<string, unknown>> {
+  id: string;
   event: DomainEventName;
   payload: TPayload;
   occurredAt: string;

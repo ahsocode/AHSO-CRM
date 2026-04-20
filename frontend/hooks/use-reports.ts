@@ -181,7 +181,7 @@ export function useUpdateReportTemplate(templateId: string) {
       isShared?: boolean;
       config: ReportBuilderConfig;
     }>) => {
-      const response = await apiClient.patch<ApiResponse<{ count: number }>>(`/reports/templates/${templateId}`, payload);
+      const response = await apiClient.patch<ApiResponse<ReportTemplate>>(`/reports/templates/${templateId}`, payload);
       return response.data.data;
     },
     onSuccess: async () => {

@@ -91,7 +91,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
             <DocumentActions 
               entityType="contract" 
               entityId={contract.id} 
-              customerLanguage={contract.project.customer.language} 
+              customerLanguage={contract.project.customer.language ?? "vi"}
             />
           </div>
         }

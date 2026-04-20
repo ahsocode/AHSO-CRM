@@ -950,6 +950,7 @@ export interface ReportTopCustomer {
 }
 
 export interface RealtimeEvent<TPayload = Record<string, unknown>> {
+  id: string;
   event:
     | "customer.created"
     | "customer.updated"
@@ -1108,8 +1109,10 @@ export interface ReportFunnelItem {
 
 export interface ReportCohortRow {
   cohort: string;
+  cohortSize: number;
   values: Array<{
     month: string;
-    retained: number;
+    retainedCount: number;
+    retainedRate: number;
   }>;
 }

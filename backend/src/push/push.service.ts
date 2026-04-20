@@ -124,6 +124,14 @@ export class PushService {
         return "Hợp đồng hoàn tất";
       case "payment.received":
         return "Đã ghi nhận thanh toán";
+      case "payment.overdue":
+        return "Thanh toán đang quá hạn";
+      case "milestone.due_soon":
+        return "Milestone sắp đến hạn";
+      case "activity.assigned":
+        return "Bạn có hoạt động mới";
+      case "mention.created":
+        return "Bạn được nhắc tới";
       default:
         return "AHSO CRM cập nhật mới";
     }
@@ -143,6 +151,14 @@ export class PushService {
         return `Hợp đồng ${envelope.payload.contractNo ?? ""} đã hoàn tất.`;
       case "payment.received":
         return `Một khoản thanh toán mới đã được ghi nhận.`;
+      case "payment.overdue":
+        return `${envelope.payload.milestoneName ?? "Một khoản thanh toán"} đang quá hạn cần xử lý.`;
+      case "milestone.due_soon":
+        return `${envelope.payload.milestoneName ?? "Một milestone"} sắp tới hạn.`;
+      case "activity.assigned":
+        return `Hoạt động ${envelope.payload.activityTitle ?? ""} vừa được giao cho bạn.`;
+      case "mention.created":
+        return String(envelope.payload.title ?? "Bạn vừa được nhắc tới trong hệ thống.");
       default:
         return "Có cập nhật mới trong hệ thống.";
     }

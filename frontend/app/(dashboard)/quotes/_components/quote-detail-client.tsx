@@ -129,7 +129,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             <DocumentActions 
               entityType="quote" 
               entityId={quote.id} 
-              customerLanguage={quote.project.customer.language} 
+              customerLanguage={quote.project.customer.language ?? "vi"}
             />
           </div>
         }

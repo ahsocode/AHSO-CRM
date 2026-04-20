@@ -1,10 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "src/common/prisma.service";
+import { UploadService } from "src/upload/upload.service";
 import { CompanySettingInput, PolicySettingInput } from "./dto/update-setting.dto";
 
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly uploadService: UploadService
+  ) {}
 
   /**
    * Get all settings as key-value pairs
@@ -150,7 +154,18 @@ export class SettingsService {
       return null;
     }
 
-    return JSON.parse(logo.value);
+    const storedValue = JSON.parse(logo.value) as string;
+
+    if (typeof storedValue !== "string" || !storedValue) {
+      return null;
+    }
+
+    if (!storedValue.startsWith("/uploads/")) {
+      return storedValue;
+    }
+
+    const dataUrl = await this.uploadService.readFileAsDataUrl(storedValue);
+    return dataUrl ?? storedValue;
   }
 
   /**

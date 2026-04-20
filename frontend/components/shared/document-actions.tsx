@@ -53,7 +53,7 @@ export function DocumentActions({
     customerLanguage === "vi-en" ? "vi-en" : "vi"
   );
 
-  const { success, error, loading } = useToast();
+  const { promise: toastPromise } = useToast();
   const downloadMutation = useDownloadDocument();
 
   const availableOptions = options || DEFAULT_OPTIONS[entityType] || [];
@@ -72,19 +72,24 @@ export function DocumentActions({
   };
 
   const handleDownload = async () => {
-    if (!selectedType) return;
-    loading(`Đang tạo ${selectedType.label}...`);
+    if (!selectedType || downloadMutation.isPending) return;
+
+    const downloadTask = downloadMutation.mutateAsync({
+      type: selectedType.type,
+      entityId,
+      lang: language,
+      filename: `${selectedType.label}_${entityId}`,
+    });
+
     try {
-      await downloadMutation.mutateAsync({
-        type: selectedType.type,
-        entityId,
-        lang: language,
-        filename: `${selectedType.label}_${entityId}`,
+      await toastPromise(downloadTask, {
+        loading: `Đang tạo ${selectedType.label}...`,
+        success: `Đã tải xuống ${selectedType.label}`,
+        error: `Không thể tạo ${selectedType.label}`,
       });
-      success(`Đã tải xuống ${selectedType.label}`);
       setIsOpen(false);
-    } catch (err) {
-      error(`Không thể tạo tài liệu: ${(err as Error).message}`);
+    } catch {
+      // Error toast is handled by Sonner promise lifecycle above.
     }
   };
 

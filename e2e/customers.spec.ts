@@ -6,7 +6,7 @@ test("mở danh sách khách hàng và dùng tìm kiếm cơ bản", async ({ pa
   await page.goto("/customers");
   await expect(page.getByText("Khách hàng", { exact: false }).first()).toBeVisible();
 
-  const searchInput = page.locator('input[placeholder*="Tìm"]').first();
+  const searchInput = page.locator('input[placeholder*="Tìm"]:not([readonly])').first();
   if (await searchInput.count()) {
     await searchInput.fill("AHSO");
   }

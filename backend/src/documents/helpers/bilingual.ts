@@ -1,5 +1,6 @@
 import type { I18nBundles } from "../i18n.service";
 import type { DocumentLanguage } from "../dto/document-type.enum";
+import * as Handlebars from "handlebars";
 
 export interface BilingualOptions {
   bundles: I18nBundles;
@@ -13,7 +14,7 @@ export interface BilingualOptions {
  * it emits the Vietnamese string only. Falls back to the key when missing.
  */
 export function buildBilingualHelper({ bundles }: BilingualOptions) {
-  return function tHelper(key: unknown, options: unknown): string {
+  return function tHelper(key: unknown, options: unknown): string | Handlebars.SafeString {
     if (typeof key !== "string") return "";
 
     const ctxLanguage = resolveLanguage(options);
@@ -21,9 +22,11 @@ export function buildBilingualHelper({ bundles }: BilingualOptions) {
     const en = bundles.en?.[key];
 
     if (ctxLanguage === "vi-en") {
-      const viPart = vi ?? key;
-      const enPart = en ?? key;
-      return `<span class="lang-vi">${viPart}</span><span class="lang-en">${enPart}</span>`;
+      const viPart = Handlebars.escapeExpression(vi ?? key);
+      const enPart = Handlebars.escapeExpression(en ?? key);
+      return new Handlebars.SafeString(
+        `<span class="lang-vi">${viPart}</span><span class="lang-en">${enPart}</span>`
+      );
     }
 
     return vi ?? en ?? key;

@@ -8,7 +8,7 @@ test("mở projects và thao tác drag-drop kanban nếu có card", async ({ pag
 
   const draggableCard = page.locator('article[draggable="true"]').first();
   if ((await draggableCard.count()) > 0) {
-    const targetColumn = page.getByText("Đàm phán", { exact: true }).locator("..").locator("..");
+    const targetColumn = page.getByRole("heading", { name: "Đàm phán", exact: true });
     await draggableCard.dragTo(targetColumn);
   }
 

@@ -21,14 +21,26 @@ async function bootstrap() {
   // Global API prefix — all routes served under /api/*
   app.setGlobalPrefix("api");
 
-  // Security headers
-  app.use(helmet());
+  // Security headers. Frontend runs on a different origin/port in dev and CI,
+  // so uploaded logos/files must be embeddable across origins.
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: {
+        policy: "cross-origin"
+      }
+    })
+  );
 
-  // CORS origin(s) from env, comma-separated
-  const corsOrigins = (configService.get<string>("CORS_ORIGIN") ?? "http://localhost:3000")
+  // CORS origin(s) from env, comma-separated. Keep both localhost and 127.0.0.1
+  // in development/CI because Playwright and browsers may hit either host.
+  const configuredCorsOrigins = (
+    configService.get<string>("CORS_ORIGIN") ?? "http://localhost:3000,http://127.0.0.1:3000"
+  )
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const frontendUrl = configService.get<string>("FRONTEND_URL")?.trim();
+  const corsOrigins = Array.from(new Set([...configuredCorsOrigins, ...(frontendUrl ? [frontendUrl] : [])]));
 
   app.enableCors({
     origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,

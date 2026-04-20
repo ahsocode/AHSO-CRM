@@ -21,7 +21,6 @@ import {
   calculateDaysDiff,
   validateDateRange,
   getAllowedViewModes,
-  getMonthViewScale,
   getAutoSwitchedView,
   CALENDAR_LIMITS,
 } from "./calendar-utils";
@@ -45,9 +44,16 @@ function getDefaultWeekRange() {
   return { dateFrom: toDateStr(start), dateTo: toDateStr(end) };
 }
 
-function getMonthRange(year: number, month: number) {
-  const days = getMonthGridDays(year, month);
-  return { dateFrom: days[0], dateTo: days[days.length - 1] };
+function getMonthSelectionRange(year: number, month: number, spanMonths = 1) {
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + spanMonths, 0);
+  return { dateFrom: toDateStr(start), dateTo: toDateStr(end) };
+}
+
+function getMonthSpanCount(dateFrom: string, dateTo: string) {
+  const from = new Date(`${dateFrom}T00:00:00`);
+  const to = new Date(`${dateTo}T00:00:00`);
+  return Math.max(1, (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1);
 }
 
 export function CalendarClient() {
@@ -58,14 +64,9 @@ export function CalendarClient() {
   const [defaultWeekRange] = useState(() => getDefaultWeekRange());
   const warningShownRef = useRef(false);
 
-  // Week view state
-  const [weekDateFrom, setWeekDateFrom] = useState(defaultWeekRange.dateFrom);
-  const [weekDateTo, setWeekDateTo] = useState(defaultWeekRange.dateTo);
-
-  // Month view state — always the full grid range of the target month
-  const todayRef = new Date();
-  const [monthYear, setMonthYear] = useState(todayRef.getFullYear());
-  const [monthMonth, setMonthMonth] = useState(todayRef.getMonth());
+  // Shared selected date range across both week/month views.
+  const [rangeDateFrom, setRangeDateFrom] = useState(defaultWeekRange.dateFrom);
+  const [rangeDateTo, setRangeDateTo] = useState(defaultWeekRange.dateTo);
 
   // Shared filter state
   const [search, setSearch] = useState("");
@@ -77,33 +78,23 @@ export function CalendarClient() {
   // Debounce search to avoid rapid API calls on every keystroke
   const debouncedSearch = useDebounce(search.trim(), 500);
 
-  // Compute active date range based on view mode
-  const dateFrom = viewMode === "week" ? weekDateFrom : getMonthRange(monthYear, monthMonth).dateFrom;
-  const dateTo   = viewMode === "week" ? weekDateTo   : getMonthRange(monthYear, monthMonth).dateTo;
-
-  // Calculate days and validate date range
-  const dayCount = calculateDaysDiff(dateFrom, dateTo);
+  // Calculate days and validate selected date range
+  const dayCount = calculateDaysDiff(rangeDateFrom, rangeDateTo);
   const allowedModes = getAllowedViewModes(dayCount);
-  const monthScale = getMonthViewScale(dayCount);
 
   // Validate and clamp date range if needed
   const { dateTo: clampedDateTo, clamped } = validateDateRange(
-    dateFrom,
-    dateTo,
+    rangeDateFrom,
+    rangeDateTo,
     CALENDAR_LIMITS.MONTH_MAX_DAYS
   );
 
   // If clamped, update state
   useEffect(() => {
-    if (clamped && dateTo !== clampedDateTo) {
-      if (viewMode === "week") {
-        setWeekDateTo(clampedDateTo);
-      } else {
-        const d = new Date(`${clampedDateTo}T00:00:00`);
-        setMonthMonth(d.getMonth());
-      }
+    if (clamped && rangeDateTo !== clampedDateTo) {
+      setRangeDateTo(clampedDateTo);
     }
-  }, [clamped, dateTo, clampedDateTo, viewMode]);
+  }, [clamped, rangeDateTo, clampedDateTo]);
 
   // Auto-switch view if current mode becomes invalid
   const effectiveViewMode = getAutoSwitchedView(viewMode, allowedModes);
@@ -123,45 +114,30 @@ export function CalendarClient() {
     }
   }, [dayCount]);
 
-  useEffect(() => { setPage(1); }, [assigneeId, completion, dateFrom, dateTo, debouncedSearch, type]);
+  useEffect(() => { setPage(1); }, [assigneeId, completion, rangeDateFrom, rangeDateTo, debouncedSearch, type]);
 
-  // When user manually changes date range via filter inputs while in week mode
-  const handleWeekDateRangeChange = (from: string, to: string) => {
-    setWeekDateFrom(from);
-    setWeekDateTo(to);
+  const handleDateRangeChange = (from: string, to: string) => {
+    setRangeDateFrom(from);
+    setRangeDateTo(to);
   };
 
-  // When month view changes month
   const handleMonthChange = (year: number, month: number) => {
-    setMonthYear(year);
-    setMonthMonth(month);
+    const monthSpanCount = getMonthSpanCount(rangeDateFrom, rangeDateTo);
+    const nextRange = getMonthSelectionRange(year, month, monthSpanCount);
+    setRangeDateFrom(nextRange.dateFrom);
+    setRangeDateTo(nextRange.dateTo);
   };
 
-  // Toggle view and auto-sync dateFrom/dateTo
   const handleViewModeChange = (mode: ViewMode) => {
     if (mode === viewMode) return;
     setViewMode(mode);
-    if (mode === "week") {
-      // Jump week view to the week that contains month view's first visible day
-      const { dateFrom: mFrom } = getMonthRange(monthYear, monthMonth);
-      const d = new Date(`${mFrom}T00:00:00`);
-      const dayIndex = (d.getDay() + 6) % 7;
-      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dayIndex);
-      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-      setWeekDateFrom(toDateStr(start));
-      setWeekDateTo(toDateStr(end));
-    } else {
-      // Jump month view to the month containing the week start
-      const d = new Date(`${weekDateFrom}T00:00:00`);
-      setMonthYear(d.getFullYear());
-      setMonthMonth(d.getMonth());
-    }
   };
 
   const defaultRange = defaultWeekRange;
   const canReset =
     search.length > 0 ||
-    (viewMode === "week" && (weekDateFrom !== defaultRange.dateFrom || weekDateTo !== defaultRange.dateTo)) ||
+    rangeDateFrom !== defaultRange.dateFrom ||
+    rangeDateTo !== defaultRange.dateTo ||
     type.length > 0 ||
     completion !== "all" ||
     assigneeId.length > 0;
@@ -171,8 +147,8 @@ export function CalendarClient() {
     page,
     limit: PAGE_SIZE,
     search: debouncedSearch || undefined,
-    dateFrom,
-    dateTo,
+    dateFrom: rangeDateFrom,
+    dateTo: rangeDateTo,
     type: type || undefined,
     isCompleted: completion === "all" ? undefined : completion === "completed",
     assigneeId: canManageUsers ? assigneeId || undefined : undefined
@@ -184,30 +160,30 @@ export function CalendarClient() {
     setCompletion("all");
     setAssigneeId("");
     setPage(1);
-    if (viewMode === "week") {
-      setWeekDateFrom(defaultRange.dateFrom);
-      setWeekDateTo(defaultRange.dateTo);
-    } else {
+    if (viewMode === "month") {
       const now = new Date();
-      setMonthYear(now.getFullYear());
-      setMonthMonth(now.getMonth());
+      const currentMonth = getMonthSelectionRange(now.getFullYear(), now.getMonth(), 1);
+      setRangeDateFrom(currentMonth.dateFrom);
+      setRangeDateTo(currentMonth.dateTo);
+    } else {
+      setRangeDateFrom(defaultRange.dateFrom);
+      setRangeDateTo(defaultRange.dateTo);
     }
   };
 
-  // Jump to a specific date
   const handleJumpToDate = (dateStr: string) => {
     const d = new Date(`${dateStr}T00:00:00`);
     if (viewMode === "week") {
-      // Jump week to the week containing this date
       const dayIndex = (d.getDay() + 6) % 7;
       const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dayIndex);
       const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
-      setWeekDateFrom(toDateStr(start));
-      setWeekDateTo(toDateStr(end));
+      setRangeDateFrom(toDateStr(start));
+      setRangeDateTo(toDateStr(end));
     } else {
-      // Jump month to the month containing this date
-      setMonthYear(d.getFullYear());
-      setMonthMonth(d.getMonth());
+      const monthSpanCount = getMonthSpanCount(rangeDateFrom, rangeDateTo);
+      const nextRange = getMonthSelectionRange(d.getFullYear(), d.getMonth(), monthSpanCount);
+      setRangeDateFrom(nextRange.dateFrom);
+      setRangeDateTo(nextRange.dateTo);
     }
   };
 
@@ -273,18 +249,23 @@ export function CalendarClient() {
         canFilterAssignee={canManageUsers}
         canReset={canReset}
         completion={completion}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
+        dateFrom={rangeDateFrom}
+        dateTo={rangeDateTo}
         onAssigneeIdChange={setAssigneeId}
         onCompletionChange={setCompletion}
         onDateFromChange={(v) => {
-          setWeekDateFrom(v);
-          const d = new Date(`${v}T00:00:00`);
-          setMonthYear(d.getFullYear());
-          setMonthMonth(d.getMonth());
+          if (!v) return;
+          setRangeDateFrom(v);
+          if (v > rangeDateTo) {
+            setRangeDateTo(v);
+          }
         }}
         onDateToChange={(v) => {
-          setWeekDateTo(v);
+          if (!v) return;
+          setRangeDateTo(v);
+          if (v < rangeDateFrom) {
+            setRangeDateFrom(v);
+          }
         }}
         onReset={handleReset}
         onSearchChange={setSearch}
@@ -301,9 +282,9 @@ export function CalendarClient() {
           isLoading={calendarQuery.isLoading}
           items={calendarQuery.data?.items ?? []}
           meta={calendarQuery.data?.meta}
-          dateFrom={weekDateFrom}
-          dateTo={weekDateTo}
-          onDateRangeChange={handleWeekDateRangeChange}
+          dateFrom={rangeDateFrom}
+          dateTo={rangeDateTo}
+          onDateRangeChange={handleDateRangeChange}
         />
       ) : (
         <CalendarMonthView
@@ -312,9 +293,9 @@ export function CalendarClient() {
           isLoading={calendarQuery.isLoading}
           items={calendarQuery.data?.items ?? []}
           meta={calendarQuery.data?.meta}
-          dateFrom={dateFrom}
+          dateFrom={rangeDateFrom}
+          dateTo={rangeDateTo}
           onMonthChange={handleMonthChange}
-          scale={monthScale}
         />
       )}
     </div>

@@ -7,11 +7,13 @@ frontend/node_modules
 frontend/.next
 backend/node_modules
 backend/dist
+backend/dist-bad-*
 backend/uploads/*
 !backend/uploads/.gitkeep
 logs
 playwright-report
 test-results
+e2e/.auth/
 .DS_Store
 npm-debug.log*
 *.tsbuildinfo

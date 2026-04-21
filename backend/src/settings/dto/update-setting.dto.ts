@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeWebsiteUrlInput } from "../../common/utils/url";
 
 // Company settings schema
 export const CompanySettingSchema = z.object({
@@ -8,7 +9,7 @@ export const CompanySettingSchema = z.object({
   address: z.string().max(500).optional(),
   phone: z.string().max(20).optional(),
   email: z.string().email().optional(),
-  website: z.string().url().optional(),
+  website: z.preprocess(normalizeWebsiteUrlInput, z.string().url("Website không hợp lệ").optional()),
   // Representative — used as default signatory on generated documents.
   representative: z.string().max(255).optional(),
   representativeTitle: z.string().max(100).optional(),

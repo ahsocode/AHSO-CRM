@@ -93,6 +93,15 @@ export interface UserRole {
   }>;
 }
 
+export interface RelatedUserRole {
+  id: string;
+  name: string;
+  description?: string | null;
+  isSystem?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface RoleUpsertInput {
   name: string;
   description?: string;
@@ -197,7 +206,8 @@ export interface UserListItem {
   id: string;
   email: string;
   name: string;
-  role: Role;
+  role: string;
+  roleId: string;
   avatarUrl?: string | null;
   isActive: boolean;
   createdAt: string;
@@ -207,7 +217,16 @@ export interface UserListItem {
 export interface UserUpdateInput {
   name?: string;
   avatarUrl?: string | null;
-  role?: Role;
+  roleId?: string;
+  isActive?: boolean;
+}
+
+export interface UserCreateInput {
+  email: string;
+  name: string;
+  password: string;
+  roleId: string;
+  avatarUrl?: string | null;
   isActive?: boolean;
 }
 
@@ -228,7 +247,9 @@ export interface CustomerListItem {
   address?: string | null;
   status: CustomerStatus;
   isVip: boolean;
-  assignedTo: Pick<UserListItem, "id" | "name" | "role">;
+  assignedTo: Omit<Pick<UserListItem, "id" | "name">, never> & {
+    role: string | RelatedUserRole;
+  };
   primaryContact: CustomerPrimaryContact | null;
   projectCount: number;
   language?: string | null;
@@ -354,7 +375,9 @@ export interface CustomerDetail {
   isVip: boolean;
   createdAt: string;
   updatedAt: string;
-  assignedTo: Pick<UserListItem, "id" | "name" | "role">;
+  assignedTo: Omit<Pick<UserListItem, "id" | "name">, never> & {
+    role: string | RelatedUserRole;
+  };
   stats: CustomerDetailStats;
   contacts: CustomerContact[];
   projects: CustomerProject[];
@@ -538,6 +561,247 @@ export interface ProjectDetail {
   milestones: ProjectDetailMilestone[];
   activities: ProjectDetailActivity[];
   customFieldValues?: CustomFieldValues;
+}
+
+export type SurveyMediaKind = "IMAGE" | "VIDEO" | "FILE";
+export type SurveyNoteType =
+  | "GENERAL"
+  | "TECHNICAL_REQUIREMENT"
+  | "COMMERCIAL_REQUIREMENT"
+  | "SITE_CONSTRAINT"
+  | "RISK"
+  | "DECISION"
+  | "OPEN_QUESTION";
+
+export interface SurveyMedia {
+  id: string;
+  surveyId: string;
+  kind: SurveyMediaKind;
+  url: string;
+  filename?: string;
+  mimeType?: string;
+  size?: number;
+  caption?: string | null;
+  area?: string | null;
+  isImportant: boolean;
+  createdAt: string;
+}
+
+export interface SurveyNote {
+  id: string;
+  surveyId: string;
+  type: SurveyNoteType;
+  content: string;
+  isImportant: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy?: Pick<UserListItem, "id" | "name">;
+}
+
+export interface Survey {
+  id: string;
+  title: string;
+  surveyedAt?: string | null;
+  location?: string | null;
+  customerParticipants?: string | null;
+  objectives?: string | null;
+  summary?: string | null;
+  nextStep?: string | null;
+  customerId: string;
+  projectId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customer?: Pick<CustomerListItem, "id" | "name" | "shortName">;
+  project?: Pick<ProjectListItem, "id" | "code" | "name"> | null;
+  createdBy?: Pick<UserListItem, "id" | "name">;
+  media: SurveyMedia[];
+  notes: SurveyNote[];
+  counts?: {
+    media: number;
+    notes: number;
+  };
+}
+
+export interface SurveyCreateInput {
+  title: string;
+  surveyedAt?: string;
+  location?: string;
+  customerParticipants?: string;
+  objectives?: string;
+  summary?: string;
+  nextStep?: string;
+  customerId: string;
+  projectId?: string;
+}
+
+export interface SurveyNoteInput {
+  type: SurveyNoteType;
+  content: string;
+  isImportant: boolean;
+}
+
+export type BusinessDocumentType =
+  | "RFQ"
+  | "CUSTOMER_PO"
+  | "QUOTATION"
+  | "SIGNED_QUOTATION"
+  | "PROPOSAL"
+  | "CONTRACT"
+  | "SIGNED_CONTRACT"
+  | "CONTRACT_ADDENDUM"
+  | "NDA"
+  | "DELIVERY_NOTE"
+  | "DOC_HANDOVER"
+  | "INSTALLATION_REPORT"
+  | "ACCEPTANCE_REPORT"
+  | "PARTIAL_ACCEPTANCE"
+  | "WARRANTY_CERT"
+  | "MAINTENANCE_RECORD"
+  | "PAYMENT_REQUEST"
+  | "PAYMENT_RECEIPT"
+  | "INVOICE"
+  | "AR_RECONCILIATION"
+  | "OTHER";
+
+export type BusinessDocumentSource = "GENERATED" | "UPLOADED" | "RECEIVED" | "SIGNED_UPLOAD";
+export type BusinessDocumentStatus =
+  | "DRAFT"
+  | "ISSUED"
+  | "RECEIVED"
+  | "SIGNED"
+  | "ACCEPTED"
+  | "REJECTED"
+  | "SUPERSEDED"
+  | "CANCELLED"
+  | "ARCHIVED";
+
+export interface BusinessDocument {
+  id: string;
+  type: BusinessDocumentType;
+  source: BusinessDocumentSource;
+  status: BusinessDocumentStatus;
+  title: string;
+  documentNo?: string | null;
+  documentDate?: string | null;
+  fileUrl?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  size?: number | null;
+  notes?: string | null;
+  customerId?: string | null;
+  projectId?: string | null;
+  quoteId?: string | null;
+  contractId?: string | null;
+  paymentId?: string | null;
+  generatedDocumentId?: string | null;
+  parentId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: Pick<UserListItem, "id" | "name">;
+  customer?: Pick<CustomerListItem, "id" | "name" | "shortName"> | null;
+  project?: Pick<ProjectListItem, "id" | "code" | "name"> | null;
+  quote?: Pick<ProjectDetailQuote, "id" | "quoteNo" | "version"> | null;
+  contract?: Pick<ProjectDetailContract, "id" | "contractNo"> | null;
+  payment?: Pick<ProjectDetailPayment, "id" | "amount" | "paidAt"> | null;
+}
+
+export interface BusinessDocumentCreateInput {
+  type: BusinessDocumentType;
+  source: BusinessDocumentSource;
+  status: BusinessDocumentStatus;
+  title: string;
+  documentNo?: string;
+  documentDate?: string;
+  notes?: string;
+  customerId?: string;
+  projectId?: string;
+  quoteId?: string;
+  contractId?: string;
+  paymentId?: string;
+  parentId?: string;
+}
+
+export interface GeneratedProjectDocument {
+  id: string;
+  type: DocumentTemplateType;
+  number: string;
+  version: number;
+  language: string;
+  entityType: string;
+  entityId: string;
+  customerId?: string | null;
+  pdfPath?: string | null;
+  renderedAt?: string | null;
+  createdAt: string;
+  createdBy?: Pick<UserListItem, "id" | "name">;
+}
+
+export interface ProjectDocuments360 {
+  businessDocuments: BusinessDocument[];
+  generatedDocuments: GeneratedProjectDocument[];
+}
+
+export interface ProjectHandover {
+  id: string;
+  projectId: string;
+  summary?: string | null;
+  customerRequirements?: string | null;
+  risks?: string | null;
+  decisions?: string | null;
+  openTasks?: string | null;
+  importantDocumentIds: string[];
+  fromUserId?: string | null;
+  toUserId?: string | null;
+  createdById: string;
+  createdAt: string;
+  fromUser?: Pick<UserListItem, "id" | "name"> | null;
+  toUser?: Pick<UserListItem, "id" | "name"> | null;
+  createdBy?: Pick<UserListItem, "id" | "name">;
+}
+
+export interface ProjectHandoverInput {
+  summary?: string;
+  customerRequirements?: string;
+  risks?: string;
+  decisions?: string;
+  openTasks?: string;
+  importantDocumentIds?: string[];
+  fromUserId?: string;
+  toUserId?: string;
+}
+
+export interface ProjectOverview360 {
+  project: ProjectDetail;
+  nextActivity: Pick<ProjectDetailActivity, "id" | "title" | "type" | "scheduledAt" | "user"> | null;
+  latestSurvey: (Pick<Survey, "id" | "title" | "surveyedAt" | "location" | "summary" | "nextStep"> & {
+    media: Array<Pick<SurveyMedia, "id" | "kind" | "url" | "caption" | "area" | "isImportant">>;
+    notes: Array<Pick<SurveyNote, "id" | "type" | "content" | "isImportant" | "createdAt">>;
+  }) | null;
+  importantDocuments: Array<
+    Pick<
+      BusinessDocument,
+      "id" | "type" | "source" | "status" | "title" | "documentNo" | "documentDate" | "fileUrl" | "createdAt" | "createdBy"
+    >
+  >;
+  openMilestones: Array<Pick<ProjectDetailMilestone, "id" | "name" | "status" | "dueDate" | "paymentAmount">>;
+  paymentSnapshot: {
+    contractValue: number;
+    paidAmount: number;
+    outstandingAmount: number;
+    paymentCount: number;
+  } | null;
+  handovers: ProjectHandover[];
+}
+
+export interface ProjectTimelineItem {
+  id: string;
+  type: "activity" | "survey" | "quote" | "contract" | "document" | "milestone" | "payment" | "handover";
+  title: string;
+  description?: string | null;
+  happenedAt: string;
+  actorName?: string | null;
+  link?: string | null;
+  meta?: Record<string, unknown>;
 }
 
 export interface QuoteListProject {

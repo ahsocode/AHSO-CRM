@@ -108,7 +108,11 @@ export function NotificationDropdown() {
         <Button type="button" variant="ghost" onClick={() => router.push("/notifications")}>
           Xem tất cả
         </Button>
-        {pushNotifications.isSupported ? (
+        {pushNotifications.unavailableReason ? (
+          <div className="max-w-[190px] text-right text-xs leading-5 text-text-muted">
+            {pushNotifications.unavailableReason}
+          </div>
+        ) : pushNotifications.isSupported ? (
           pushNotifications.isSubscribed ? (
             <Button type="button" variant="outline" disabled={pushNotifications.isBusy} onClick={() => void pushNotifications.unsubscribe()}>
               Tắt push

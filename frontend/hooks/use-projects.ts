@@ -7,11 +7,16 @@ import {
   ApiResponse,
   ProjectDetail,
   ProjectFilters,
+  ProjectHandover,
+  ProjectHandoverInput,
   ProjectKanbanColumn,
   ProjectListItem,
   ProjectListMeta,
+  ProjectDocuments360,
+  ProjectOverview360,
   ProjectStatus,
   ProjectStatusUpdateInput,
+  ProjectTimelineItem,
   ProjectUpsertInput
 } from "@/lib/types";
 import { PROJECT_STATUS_LABELS } from "@/lib/constants";
@@ -65,6 +70,62 @@ export function useProject(projectId: string) {
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<ProjectDetail>>(`/projects/${projectId}`);
       return response.data.data;
+    }
+  });
+}
+
+export function useProjectOverview360(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "overview-360"],
+    enabled: Boolean(projectId),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<ProjectOverview360>>(`/projects/${projectId}/overview-360`);
+      return response.data.data;
+    }
+  });
+}
+
+export function useProjectTimeline(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "timeline"],
+    enabled: Boolean(projectId),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<ProjectTimelineItem[]>>(`/projects/${projectId}/timeline`);
+      return response.data.data;
+    }
+  });
+}
+
+export function useProjectDocuments(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "documents"],
+    enabled: Boolean(projectId),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<ProjectDocuments360>>(`/projects/${projectId}/documents`);
+      return response.data.data;
+    }
+  });
+}
+
+export function useCreateProjectHandover(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ProjectHandoverInput) => {
+      const response = await apiClient.post<ApiResponse<ProjectHandover>>(`/projects/${projectId}/handovers`, payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "overview-360"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "timeline"] });
+      toast("Đã lưu ghi chú bàn giao dự án.");
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể lưu ghi chú bàn giao.",
+        variant: "destructive"
+      });
     }
   });
 }
@@ -230,10 +291,13 @@ export function useBulkProjects() {
 
   return useMutation({
     mutationFn: async (payload: { action: "status" | "delete" | "export"; ids: string[]; status?: ProjectStatus }) => {
-      const response = await apiClient.post<ApiResponse<{ action: string; processedCount?: number; items?: Record<string, unknown>[] }>>(
-        "/projects/bulk",
-        payload
-      );
+      const response = await apiClient.post<ApiResponse<{
+        action: string;
+        processedCount?: number;
+        failedCount?: number;
+        errors?: Array<{ id?: string; name?: string; message: string }>;
+        items?: Record<string, unknown>[];
+      }>>("/projects/bulk", payload);
       return response.data.data;
     },
     onSuccess: async (data) => {

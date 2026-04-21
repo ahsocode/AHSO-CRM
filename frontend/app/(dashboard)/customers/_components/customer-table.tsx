@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ROLE_LABELS } from "@/lib/constants";
+import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { CustomerListItem, CustomerListMeta } from "@/lib/types";
 
@@ -147,7 +147,7 @@ export function CustomerTable({
                   <AvatarInitials name={customer.assignedTo.name} className="h-10 w-10 rounded-full text-xs" />
                   <div>
                     <p className="font-semibold text-text-primary">{customer.assignedTo.name}</p>
-                    <p>{ROLE_LABELS[customer.assignedTo.role]}</p>
+                    <p>{getRoleLabelByName(customer.assignedTo.role)}</p>
                   </div>
                 </div>
                 <div>
@@ -223,7 +223,7 @@ export function CustomerTable({
                       <AvatarInitials name={customer.assignedTo.name} className="h-10 w-10 rounded-full text-xs" />
                       <div className="text-sm">
                         <p className="font-semibold text-text-primary">{customer.assignedTo.name}</p>
-                        <p className="text-text-secondary">{ROLE_LABELS[customer.assignedTo.role]}</p>
+                        <p className="text-text-secondary">{getRoleLabelByName(customer.assignedTo.role)}</p>
                       </div>
                     </div>
                   </td>

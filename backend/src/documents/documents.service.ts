@@ -9,7 +9,7 @@ import { DocumentType, Prisma } from "@prisma/client";
 import { readFile } from "fs/promises";
 import Handlebars from "handlebars";
 import { join } from "path";
-import { JwtUser } from "../auth/auth.types";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { DocumentDataLoaderService } from "./document-data-loader.service";
 import { DocumentLayoutRendererService } from "./document-layout-renderer.service";
@@ -245,9 +245,12 @@ ${extraCss}
     };
   }
 
-  async downloadDocument(documentId: string) {
-    const document = await this.prisma.document.findUnique({
-      where: { id: documentId },
+  async downloadDocument(documentId: string, user: JwtUser) {
+    const document = await this.prisma.document.findFirst({
+      where: {
+        id: documentId,
+        ...this.buildDocumentAccessWhere(user)
+      },
       select: {
         id: true,
         number: true,
@@ -265,7 +268,8 @@ ${extraCss}
   async downloadLatest(
     type: DocumentType,
     entityId: string,
-    languageInput: string | undefined
+    languageInput: string | undefined,
+    user: JwtUser
   ) {
     const language = this.resolveLanguage(languageInput);
     const entry = getTemplateEntry(type);
@@ -275,7 +279,8 @@ ${extraCss}
         type,
         entityType: entry.entityType,
         entityId,
-        language
+        language,
+        ...this.buildDocumentAccessWhere(user)
       },
       orderBy: [
         { renderedAt: "desc" },
@@ -295,24 +300,25 @@ ${extraCss}
     return this.readStoredDocument(document.number, document.pdfPath);
   }
 
-  async list(filters: DocumentListFilterDto, _user: JwtUser) {
+  async list(filters: DocumentListFilterDto, user: JwtUser) {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const where: Prisma.DocumentWhereInput = {};
+    const filterWhere: Prisma.DocumentWhereInput = {};
     if (filters.type && this.isKnownType(filters.type)) {
-      where.type = filters.type as DocumentType;
+      filterWhere.type = filters.type as DocumentType;
     }
     if (filters.entityType) {
-      where.entityType = filters.entityType;
+      filterWhere.entityType = filters.entityType;
     }
     if (filters.entityId) {
-      where.entityId = filters.entityId;
+      filterWhere.entityId = filters.entityId;
     }
     if (filters.customerId) {
-      where.customerId = filters.customerId;
+      filterWhere.customerId = filters.customerId;
     }
+    const where = this.mergeWhere(filterWhere, this.buildDocumentAccessWhere(user));
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.document.findMany({
@@ -371,6 +377,7 @@ ${extraCss}
       language,
       entityId
     };
+    await this.assertContextAccess(context, user);
 
     return {
       entry,
@@ -422,6 +429,59 @@ ${extraCss}
 
   private isKnownType(type: string): boolean {
     return Object.prototype.hasOwnProperty.call(TEMPLATE_REGISTRY, type);
+  }
+
+  private buildDocumentAccessWhere(user: JwtUser): Prisma.DocumentWhereInput {
+    if (!isStaff(user)) {
+      return {};
+    }
+
+    return {
+      customer: {
+        deletedAt: null,
+        assignedToId: user.sub
+      }
+    };
+  }
+
+  private mergeWhere(...parts: Prisma.DocumentWhereInput[]) {
+    const activeParts = parts.filter((part) => Object.keys(part).length > 0);
+
+    if (activeParts.length === 0) {
+      return {};
+    }
+
+    if (activeParts.length === 1) {
+      return activeParts[0];
+    }
+
+    return {
+      AND: activeParts
+    } satisfies Prisma.DocumentWhereInput;
+  }
+
+  private async assertContextAccess(context: Record<string, unknown>, user: JwtUser) {
+    if (!isStaff(user)) {
+      return;
+    }
+
+    const customerId = this.extractCustomerId(context);
+    if (!customerId) {
+      throw new NotFoundException("Không tìm thấy dữ liệu tài liệu trong phạm vi phụ trách.");
+    }
+
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        id: customerId,
+        deletedAt: null,
+        assignedToId: user.sub
+      },
+      select: { id: true }
+    });
+
+    if (!customer) {
+      throw new NotFoundException("Không tìm thấy dữ liệu tài liệu trong phạm vi phụ trách.");
+    }
   }
 
   private extractCustomerCode(data: Record<string, unknown>): string | null {

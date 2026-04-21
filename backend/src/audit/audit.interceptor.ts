@@ -1,4 +1,4 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
+import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } from "@nestjs/common";
 import { Observable, from } from "rxjs";
 import { mergeMap, tap } from "rxjs/operators";
 import { JwtUser } from "../auth/auth.types";
@@ -8,6 +8,8 @@ const TRACKED_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name);
+
   constructor(private readonly auditService: AuditService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -42,19 +44,27 @@ export class AuditInterceptor implements NestInterceptor {
             const after = this.extractResponseData(responseValue);
             const action = this.resolveAction(method, request.originalUrl ?? request.path ?? "");
 
-            void this.auditService.record({
-              userId,
-              action,
-              resource,
-              resourceId,
-              changes: {
-                before,
-                after: this.auditService.sanitize(after),
-                input: this.auditService.sanitize(request.body)
-              },
-              ip: request.ip ?? null,
-              userAgent: this.resolveUserAgent(request.headers?.["user-agent"])
-            });
+            void this.auditService
+              .record({
+                userId,
+                action,
+                resource,
+                resourceId,
+                changes: {
+                  before,
+                  after: this.auditService.sanitize(after),
+                  input: this.auditService.sanitize(request.body)
+                },
+                ip: request.ip ?? null,
+                userAgent: this.resolveUserAgent(request.headers?.["user-agent"])
+              })
+              .catch((error: unknown) => {
+                this.logger.warn(
+                  `Không thể ghi audit log cho ${resource}/${resourceId ?? "n/a"}: ${
+                    error instanceof Error ? error.message : "Lỗi không xác định"
+                  }`
+                );
+              });
           })
         )
       )
@@ -141,4 +151,3 @@ export class AuditInterceptor implements NestInterceptor {
     return Array.isArray(header) ? header[0] ?? null : header;
   }
 }
-

@@ -80,7 +80,13 @@ apiClient.interceptors.response.use(
 
 export function getApiErrorMessage(error: unknown, fallback = "Đã xảy ra lỗi, vui lòng thử lại.") {
   if (axios.isAxiosError<ApiErrorPayload>(error)) {
-    return error.response?.data?.message ?? fallback;
+    const payload = error.response?.data;
+
+    if (payload?.errors?.length) {
+      return payload.errors.join("; ");
+    }
+
+    return payload?.message ?? fallback;
   }
 
   if (error instanceof Error) {

@@ -134,18 +134,19 @@ export function removeBoxFromLayout(layout: DocumentTemplateLayout, boxId: strin
 
 export function addBoxToLayout(
   layout: DocumentTemplateLayout,
-  box: TemplateBox
+  box: TemplateBox,
+  pageIndex = 0
 ): DocumentTemplateLayout {
-  const firstPage = layout.pages[0];
   return {
     ...layout,
-    pages: [
-      {
-        ...firstPage,
-        boxes: [...firstPage.boxes, box]
-      },
-      ...layout.pages.slice(1)
-    ]
+    pages: layout.pages.map((page, index) =>
+      index === pageIndex
+        ? {
+            ...page,
+            boxes: [...page.boxes, box]
+          }
+        : page
+    )
   };
 }
 

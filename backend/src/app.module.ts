@@ -31,6 +31,8 @@ import { DomainEventsModule } from "./domain-events/domain-events.module";
 import { CustomFieldsModule } from "./custom-fields/custom-fields.module";
 import { SearchModule } from "./search/search.module";
 import { DocumentsModule } from "./documents/documents.module";
+import { SurveysModule } from "./surveys/surveys.module";
+import { BusinessDocumentsModule } from "./business-documents/business-documents.module";
 
 @Module({
   imports: [
@@ -75,7 +77,9 @@ import { DocumentsModule } from "./documents/documents.module";
     DomainEventsModule,
     CustomFieldsModule,
     SearchModule,
-    DocumentsModule
+    DocumentsModule,
+    SurveysModule,
+    BusinessDocumentsModule
   ],
   providers: [
     {

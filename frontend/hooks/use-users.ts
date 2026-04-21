@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { ApiResponse, UserListItem, UserUpdateInput } from "@/lib/types";
+import { ApiResponse, UserCreateInput, UserListItem, UserUpdateInput } from "@/lib/types";
 
 export function useUsers(enabled = true) {
   return useQuery({
@@ -32,6 +32,20 @@ export function useUpdateUser() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries();
+    }
+  });
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: UserCreateInput) => {
+      const response = await apiClient.post<ApiResponse<UserListItem>>("/users", payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
     }
   });
 }

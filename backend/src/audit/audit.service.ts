@@ -143,19 +143,49 @@ export class AuditService {
   }
 
   sanitize(value: unknown): unknown {
+    if (value === undefined || typeof value === "function" || typeof value === "symbol") {
+      return undefined;
+    }
+
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value.toISOString();
+    }
+
+    if (typeof value === "bigint") {
+      return value.toString();
+    }
+
     if (Array.isArray(value)) {
-      return value.map((entry) => this.sanitize(entry));
+      return value
+        .map((entry) => this.sanitize(entry))
+        .filter((entry) => entry !== undefined);
     }
 
     if (!value || typeof value !== "object") {
       return value;
     }
 
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
-        key,
-        SENSITIVE_KEYS.has(key) ? "[REDACTED]" : this.sanitize(entry)
-      ])
-    );
+    const serializable = value as {
+      toJSON?: () => unknown;
+      constructor?: {
+        name?: string;
+      };
+    };
+
+    if (typeof serializable.toJSON === "function" && serializable.constructor?.name !== "Object") {
+      return this.sanitize(serializable.toJSON());
+    }
+
+    const sanitized: Record<string, unknown> = {};
+
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      const nextValue = SENSITIVE_KEYS.has(key) ? "[REDACTED]" : this.sanitize(entry);
+
+      if (nextValue !== undefined) {
+        sanitized[key] = nextValue;
+      }
+    }
+
+    return sanitized;
   }
 }

@@ -11,6 +11,18 @@ function monthOffset(months: number, day = 10) {
 }
 
 async function main() {
+  await prisma.auditLog.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.pushSubscription.deleteMany();
+  await prisma.reportTemplate.deleteMany();
+  await prisma.businessDocument.deleteMany();
+  await prisma.document.deleteMany();
+  await prisma.surveyNote.deleteMany();
+  await prisma.surveyMedia.deleteMany();
+  await prisma.survey.deleteMany();
+  await prisma.projectHandover.deleteMany();
+  await prisma.documentTemplateVariant.deleteMany();
+  await prisma.customFieldValue.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.milestone.deleteMany();
   await prisma.contract.deleteMany();

@@ -40,6 +40,22 @@ function createBaseLayout(boxes: TemplateBox[]): DocumentTemplateLayout {
   };
 }
 
+function createPagedLayout(pages: TemplateBox[][]): DocumentTemplateLayout {
+  return {
+    version: 1,
+    page: {
+      widthMm: A4_PAGE_WIDTH_MM,
+      heightMm: A4_PAGE_HEIGHT_MM,
+      gridMm: DEFAULT_GRID_MM,
+      marginMm: { ...DEFAULT_PAGE_MARGIN_MM }
+    },
+    pages: pages.map((boxes, index) => ({
+      id: `page-${index + 1}`,
+      boxes
+    }))
+  };
+}
+
 function cloneLayout(layout: DocumentTemplateLayout): DocumentTemplateLayout {
   return JSON.parse(JSON.stringify(layout)) as DocumentTemplateLayout;
 }
@@ -275,7 +291,15 @@ const CONTRACT_TOKENS: TemplateTokenGroup[] = [
   {
     id: "company",
     label: "Công ty",
-    tokens: QUOTATION_TOKENS[0].tokens
+    tokens: [
+      ...QUOTATION_TOKENS[0].tokens,
+      { key: "company.representative", label: "Người đại diện", description: "Người đại diện pháp lý hoặc được ủy quyền." },
+      { key: "company.representativeTitle", label: "Chức vụ đại diện", description: "Chức danh của người đại diện." },
+      { key: "company.bankName", label: "Ngân hàng", description: "Tên ngân hàng nhận thanh toán." },
+      { key: "company.bankAccount", label: "Số tài khoản", description: "Số tài khoản công ty." },
+      { key: "company.bankAccountName", label: "Tên tài khoản", description: "Tên chủ tài khoản." },
+      { key: "company.bankBranch", label: "Chi nhánh", description: "Chi nhánh ngân hàng." }
+    ]
   },
   {
     id: "contract",
@@ -295,8 +319,14 @@ const CONTRACT_TOKENS: TemplateTokenGroup[] = [
     tokens: [
       { key: "project.name", label: "Tên dự án", description: "Tên dự án liên quan." },
       { key: "customer.name", label: "Tên khách hàng", description: "Tên khách hàng." },
+      { key: "customer.taxCode", label: "Mã số thuế khách hàng", description: "MST của khách hàng." },
       { key: "customer.address", label: "Địa chỉ khách hàng", description: "Địa chỉ khách hàng." },
+      { key: "customer.phone", label: "Điện thoại khách hàng", description: "Điện thoại khách hàng." },
+      { key: "customer.email", label: "Email khách hàng", description: "Email khách hàng." },
       { key: "primaryContact.name", label: "Người liên hệ", description: "Người liên hệ chính." },
+      { key: "primaryContact.title", label: "Chức danh liên hệ", description: "Chức danh người liên hệ." },
+      { key: "primaryContact.phone", label: "Điện thoại liên hệ", description: "Số điện thoại người liên hệ." },
+      { key: "primaryContact.email", label: "Email liên hệ", description: "Email người liên hệ." },
       { key: "linkedQuote.items", label: "Hạng mục từ báo giá", description: "Nguồn bảng hạng mục nếu hợp đồng đi từ báo giá." }
     ]
   },
@@ -305,8 +335,13 @@ const CONTRACT_TOKENS: TemplateTokenGroup[] = [
     label: "Mốc nghiệm thu",
     tokens: [
       { key: "milestones", label: "Danh sách milestone", description: "Toàn bộ milestone của hợp đồng." },
+      { key: "milestones[].name", label: "Tên milestone", description: "Tên từng giai đoạn triển khai." },
+      { key: "milestones[].dueDate", label: "Hạn milestone", description: "Ngày đến hạn từng milestone." },
+      { key: "milestones[].status", label: "Trạng thái milestone", description: "Trạng thái milestone." },
+      { key: "milestones[].paymentAmount", label: "Giá trị thanh toán milestone", description: "Giá trị gắn với milestone." },
       { key: "policies.paymentTerms", label: "Chính sách thanh toán", description: "Điều khoản mặc định từ settings." },
-      { key: "policies.warranty", label: "Bảo hành", description: "Chính sách bảo hành." }
+      { key: "policies.warranty", label: "Bảo hành", description: "Chính sách bảo hành." },
+      { key: "policies.service", label: "Dịch vụ triển khai", description: "Cam kết triển khai và hỗ trợ." }
     ]
   }
 ];
@@ -551,7 +586,7 @@ function createQuotationLayout(): DocumentTemplateLayout {
   ]);
 }
 
-function createContractLayout(): DocumentTemplateLayout {
+function createCompactContractLayout(): DocumentTemplateLayout {
   return createBaseLayout([
     {
       id: "contract-logo",
@@ -790,23 +825,855 @@ function createContractLayout(): DocumentTemplateLayout {
   ]);
 }
 
+function createContractLayout(): DocumentTemplateLayout {
+  return createPagedLayout([
+    [
+      {
+        id: "contract-logo",
+        type: "image",
+        page: 0,
+        x: 12,
+        y: 12,
+        width: 32,
+        height: 16,
+        zIndex: 10,
+        visible: true,
+        content: {
+          src: "{{logo}}",
+          alt: "Logo",
+          fit: "contain"
+        }
+      },
+      {
+        id: "contract-title",
+        type: "text",
+        page: 0,
+        x: 46,
+        y: 12,
+        width: 118,
+        height: 16,
+        zIndex: 20,
+        visible: true,
+        style: {
+          fontSize: 15.2,
+          fontWeight: 700,
+          textAlign: "center",
+          lineHeight: 1.15,
+          color: "#0f172a"
+        },
+        content: {
+          text: localize("HỢP ĐỒNG CUNG CẤP THIẾT BỊ, PHẦN MỀM VÀ DỊCH VỤ TRIỂN KHAI")
+        }
+      },
+      {
+        id: "contract-subtitle",
+        type: "text",
+        page: 0,
+        x: 46,
+        y: 27,
+        width: 118,
+        height: 12,
+        zIndex: 20,
+        visible: true,
+        style: {
+          fontSize: 8.8,
+          textAlign: "center",
+          lineHeight: 1.25,
+          color: "#475569"
+        },
+        content: {
+          text: localize("Số: {{contract.contractNo}}  •  Dự án: {{project.name}}  •  Ký ngày {{contract.signDate|date}}")
+        }
+      },
+      {
+        id: "contract-header-note",
+        type: "text",
+        page: 0,
+        x: 164,
+        y: 14,
+        width: 34,
+        height: 20,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.8,
+          textAlign: "right",
+          lineHeight: 1.35,
+          color: "#64748b"
+        },
+        content: {
+          text: localize("Mẫu chuẩn AHSO")
+        }
+      },
+      {
+        id: "contract-recital",
+        type: "text",
+        page: 0,
+        x: 12,
+        y: 42,
+        width: 186,
+        height: 20,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.8,
+          textAlign: "justify",
+          lineHeight: 1.32,
+          padding: 1.5,
+          borderWidth: 0.5,
+          borderColor: "#cbd5e1",
+          borderRadius: 4,
+          backgroundColor: "#f8fafc"
+        },
+        content: {
+          text: localize(
+            "Căn cứ nhu cầu triển khai dự án {{project.name}}, Bên A và Bên B thống nhất ký kết Hợp đồng này để điều chỉnh phạm vi cung cấp, giá trị thương mại, tiến độ thực hiện, điều kiện nghiệm thu, trách nhiệm phối hợp và nghĩa vụ bảo hành trong suốt vòng đời dự án."
+          )
+        }
+      },
+      {
+        id: "contract-party-a",
+        type: "key_value_table",
+        page: 0,
+        x: 12,
+        y: 66,
+        width: 90,
+        height: 56,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 9.3,
+          lineHeight: 1.3,
+          padding: 2
+        },
+        content: {
+          labelWidth: 31,
+          rows: [
+            { id: "party-a-title", label: localize("Bên A"), value: "{{customer.name}}" },
+            { id: "party-a-tax", label: localize("MST"), value: "{{customer.taxCode}}" },
+            { id: "party-a-address", label: localize("Địa chỉ"), value: "{{customer.address}}" },
+            { id: "party-a-contact", label: localize("Đại diện"), value: "{{primaryContact.name}}" },
+            { id: "party-a-phone", label: localize("Điện thoại"), value: "{{primaryContact.phone}}" },
+            { id: "party-a-email", label: localize("Email"), value: "{{primaryContact.email}}" }
+          ]
+        }
+      },
+      {
+        id: "contract-party-b",
+        type: "key_value_table",
+        page: 0,
+        x: 108,
+        y: 66,
+        width: 90,
+        height: 56,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 9.3,
+          lineHeight: 1.3,
+          padding: 2
+        },
+        content: {
+          labelWidth: 31,
+          rows: [
+            { id: "party-b-title", label: localize("Bên B"), value: "{{company.name}}" },
+            { id: "party-b-tax", label: localize("MST"), value: "{{company.taxId}}" },
+            { id: "party-b-address", label: localize("Địa chỉ"), value: "{{company.address}}" },
+            { id: "party-b-contact", label: localize("Đại diện"), value: "{{company.representative}}" },
+            { id: "party-b-role", label: localize("Chức vụ"), value: "{{company.representativeTitle}}" },
+            { id: "party-b-bank", label: localize("Ngân hàng"), value: "{{company.bankName}}" }
+          ]
+        }
+      },
+      {
+        id: "contract-scope-heading",
+        type: "text",
+        page: 0,
+        x: 12,
+        y: 126,
+        width: 186,
+        height: 10,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 9.8,
+          fontWeight: 700,
+          lineHeight: 1.2,
+          color: "#0f172a"
+        },
+        content: {
+          text: localize("ĐIỀU 1 & 2. ĐỐI TƯỢNG, PHẠM VI VÀ HẠNG MỤC CUNG CẤP")
+        }
+      },
+      {
+        id: "contract-items",
+        type: "line_items_table",
+        page: 0,
+        x: 12,
+        y: 136,
+        width: 186,
+        height: 64,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.9,
+          lineHeight: 1.34,
+          padding: 2
+        },
+        content: {
+          source: "linkedQuote.items",
+          columns: [
+            { id: "stt", label: localize("STT"), value: "{{index}}", width: 12, align: "center" },
+            { id: "name", label: localize("Thiết bị / dịch vụ / phần mềm"), value: "{{name}}", width: 88, align: "left" },
+            { id: "qty", label: localize("SL"), value: "{{quantity}}", width: 16, align: "center" },
+            { id: "unit", label: localize("Đơn giá"), value: "{{unitPrice|currency}}", width: 32, align: "right" },
+            { id: "total", label: localize("Thành tiền"), value: "{{total|currency}}", width: 38, align: "right" }
+          ],
+          emptyText: localize("Chưa có hạng mục liên kết từ báo giá")
+        }
+      },
+      {
+        id: "contract-commercial-summary",
+        type: "key_value_table",
+        page: 0,
+        x: 12,
+        y: 205,
+        width: 90,
+        height: 34,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 9.3,
+          lineHeight: 1.36,
+          padding: 2
+        },
+        content: {
+          labelWidth: 36,
+          rows: [
+            { id: "contract-value", label: localize("Giá trị HĐ"), value: "{{contract.value|currency}}" },
+            { id: "contract-sign", label: localize("Ngày ký"), value: "{{contract.signDate|date}}" },
+            { id: "contract-start", label: localize("Hiệu lực từ"), value: "{{contract.startDate|date}}" }
+          ]
+        }
+      },
+      {
+        id: "contract-payment-warranty-summary",
+        type: "text",
+        page: 0,
+        x: 108,
+        y: 205,
+        width: 90,
+        height: 34,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.5,
+          lineHeight: 1.28,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize("Thanh toán: {{policies.paymentTerms}}\nBảo hành / hỗ trợ: {{policies.warranty}}")
+        }
+      },
+      {
+        id: "contract-opening-terms",
+        type: "text",
+        page: 0,
+        x: 12,
+        y: 244,
+        width: 186,
+        height: 32,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          textAlign: "justify",
+          lineHeight: 1.3,
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4,
+          backgroundColor: "#f8fafc"
+        },
+        content: {
+          text: localize(
+            "Điều 3. Hồ sơ ưu tiên gồm Hợp đồng này, các phụ lục, báo giá/đề xuất kỹ thuật được chấp thuận và biên bản thay đổi hợp lệ; khi có mâu thuẫn, Hợp đồng này được ưu tiên áp dụng.\n\nĐiều 4. Tổng giá trị Hợp đồng là {{contract.value|currency}} và là cơ sở thanh toán cho toàn bộ phạm vi đã thống nhất."
+          )
+        }
+      },
+      {
+        id: "contract-page-1-note",
+        type: "text",
+        page: 0,
+        x: 12,
+        y: 281,
+        width: 186,
+        height: 4,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.2,
+          textAlign: "center",
+          lineHeight: 1.2,
+          color: "#64748b"
+        },
+        content: {
+          text: localize("Trang 1/4 • Thông tin các bên, phạm vi và cơ sở thương mại")
+        }
+      }
+    ],
+    [
+      {
+        id: "contract-terms-title",
+        type: "text",
+        page: 1,
+        x: 12,
+        y: 14,
+        width: 186,
+        height: 10,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 13.8,
+          fontWeight: 700,
+          textAlign: "center",
+          lineHeight: 1.2,
+          color: "#0f172a"
+        },
+        content: {
+          text: localize("NỘI DUNG CỐT LÕI CỦA HỢP ĐỒNG")
+        }
+      },
+      {
+        id: "contract-core-articles-1",
+        type: "text",
+        page: 1,
+        x: 12,
+        y: 30,
+        width: 186,
+        height: 42,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 1. GIẢI THÍCH TỪ NGỮ\nCác thuật ngữ Thiết bị, Phần mềm, Dịch vụ, Sản phẩm bàn giao và Tiêu chí nghiệm thu được hiểu theo phạm vi dự án {{project.name}}.\n\nĐIỀU 2. ĐỐI TƯỢNG VÀ PHẠM VI HỢP ĐỒNG\nBên B cung cấp thiết bị, phần mềm, dịch vụ triển khai, đào tạo và bảo hành theo danh mục đã được chấp thuận."
+          )
+        }
+      },
+      {
+        id: "contract-core-articles-2",
+        type: "text",
+        page: 1,
+        x: 12,
+        y: 76,
+        width: 186,
+        height: 40,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 3. THÀNH PHẦN HỒ SƠ VÀ THỨ TỰ ƯU TIÊN\nHợp đồng, phụ lục, báo giá/đề xuất kỹ thuật đã được chấp thuận và biên bản thay đổi hợp lệ là bộ hồ sơ điều chỉnh dự án.\n\nĐIỀU 4. GIÁ TRỊ HỢP ĐỒNG\nTổng giá trị Hợp đồng là {{contract.value|currency}}."
+          )
+        }
+      },
+      {
+        id: "contract-core-articles-3",
+        type: "text",
+        page: 1,
+        x: 12,
+        y: 120,
+        width: 186,
+        height: 44,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 5. PHƯƠNG THỨC VÀ TIẾN ĐỘ THANH TOÁN\n{{policies.paymentTerms}}\n\nĐIỀU 6. TIẾN ĐỘ THỰC HIỆN, GIAO HÀNG, LẮP ĐẶT VÀ CHẠY THỬ\nHợp đồng có hiệu lực từ {{contract.startDate|date}} đến {{contract.endDate|date}}; các Bên phối hợp theo timeline và mốc nghiệm thu đã thống nhất."
+          )
+        }
+      },
+      {
+        id: "contract-core-articles-4",
+        type: "text",
+        page: 1,
+        x: 12,
+        y: 168,
+        width: 186,
+        height: 44,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 7. QUẢN LÝ THAY ĐỔI VÀ PHÁT SINH\nMọi thay đổi về phạm vi, thông số, số lượng, tiến độ hoặc tiêu chí nghiệm thu phải được xác nhận bằng văn bản.\n\nĐIỀU 8. NGHIỆM THU, BÀN GIAO VÀ ACCEPTANCE TEST\nBên B thông báo hoàn thành để Bên A kiểm tra, chạy thử và nghiệm thu; nếu chưa đạt, Bên B phải khắc phục trong thời hạn hợp lý."
+          )
+        }
+      },
+      {
+        id: "contract-core-articles-5",
+        type: "text",
+        page: 1,
+        x: 12,
+        y: 216,
+        width: 186,
+        height: 18,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.28,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 9 & 10. HỒ SƠ BÀN GIAO, BẢO HÀNH VÀ HỖ TRỢ\nBên B phải bàn giao đầy đủ hồ sơ kỹ thuật, tài liệu vận hành, cấu hình và hồ sơ nghiệm thu theo phạm vi dự án. Chính sách bảo hành và hỗ trợ áp dụng theo {{policies.warranty}}."
+          )
+        }
+      },
+      {
+        id: "contract-page-2-note",
+        type: "text",
+        page: 1,
+        x: 12,
+        y: 281,
+        width: 186,
+        height: 4,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.2,
+          textAlign: "center",
+          lineHeight: 1.2,
+          color: "#64748b"
+        },
+        content: {
+          text: localize("Trang 2/4 • Điều 1 đến Điều 10")
+        }
+      }
+    ],
+    [
+      {
+        id: "contract-compliance-title",
+        type: "text",
+        page: 2,
+        x: 12,
+        y: 14,
+        width: 186,
+        height: 10,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 13.8,
+          fontWeight: 700,
+          textAlign: "center",
+          lineHeight: 1.2,
+          color: "#0f172a"
+        },
+        content: {
+          text: localize("TRÁCH NHIỆM, TUÂN THỦ VÀ QUẢN TRỊ RỦI RO")
+        }
+      },
+      {
+        id: "contract-compliance-1",
+        type: "text",
+        page: 2,
+        x: 12,
+        y: 30,
+        width: 186,
+        height: 42,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 11. QUYỀN VÀ NGHĨA VỤ CỦA BÊN A\nBên A cung cấp dữ liệu đầu vào, điều kiện hiện trường và đầu mối phối hợp đúng hạn.\n\nĐIỀU 12. QUYỀN VÀ NGHĨA VỤ CỦA BÊN B\nBên B thực hiện đúng phạm vi, chất lượng, tiến độ và bố trí nhân sự đủ năng lực."
+          )
+        }
+      },
+      {
+        id: "contract-compliance-2",
+        type: "text",
+        page: 2,
+        x: 12,
+        y: 76,
+        width: 186,
+        height: 40,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4,
+          backgroundColor: "#f8fafc"
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 13. AN TOÀN, NỘI QUY CÔNG TRƯỜNG VÀ TUÂN THỦ\nBên B và nhân sự của mình phải tuân thủ yêu cầu an toàn lao động, PCCC, an ninh, môi trường và quy định vào hiện trường.\n\nBên B chịu trách nhiệm đối với thiệt hại phát sinh do lỗi của mình hoặc nhà thầu phụ do mình quản lý."
+          )
+        }
+      },
+      {
+        id: "contract-compliance-3",
+        type: "text",
+        page: 2,
+        x: 12,
+        y: 122,
+        width: 186,
+        height: 42,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4,
+          backgroundColor: "#f8fafc"
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 14. BẢO MẬT THÔNG TIN\nCác Bên bảo mật thông tin kỹ thuật, thương mại, tài chính và dữ liệu tiếp cận trong quá trình thực hiện Hợp đồng.\n\nĐIỀU 15. QUYỀN SỞ HỮU TRÍ TUỆ\nQuyền sử dụng và quyền sở hữu đối với sản phẩm bàn giao được áp dụng theo Hợp đồng và Phụ lục."
+          )
+        }
+      },
+      {
+        id: "contract-compliance-4",
+        type: "text",
+        page: 2,
+        x: 12,
+        y: 170,
+        width: 186,
+        height: 46,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 16. BẢO VỆ DỮ LIỆU CÁ NHÂN\nCác Bên tuân thủ quy định pháp luật hiện hành về bảo vệ dữ liệu cá nhân.\n\nĐIỀU 17. CHỐNG THAM NHŨNG, HỐI LỘ VÀ XUNG ĐỘT LỢI ÍCH\nBên B cam kết không đưa hoặc hứa hẹn lợi ích không chính đáng nhằm tác động đến quyết định thương mại, kỹ thuật hoặc triển khai dự án."
+          )
+        }
+      },
+      {
+        id: "contract-page-3-note",
+        type: "text",
+        page: 2,
+        x: 12,
+        y: 281,
+        width: 186,
+        height: 4,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.2,
+          textAlign: "center",
+          lineHeight: 1.2,
+          color: "#64748b"
+        },
+        content: {
+          text: localize("Trang 3/4 • Điều 11 đến Điều 17")
+        }
+      }
+    ],
+    [
+      {
+        id: "contract-execution-title",
+        type: "text",
+        page: 3,
+        x: 12,
+        y: 14,
+        width: 186,
+        height: 10,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 13.8,
+          fontWeight: 700,
+          textAlign: "center",
+          lineHeight: 1.2,
+          color: "#0f172a"
+        },
+        content: {
+          text: localize("KÝ KẾT, PHỤ LỤC THỰC HIỆN VÀ THÔNG TIN THANH TOÁN")
+        }
+      },
+      {
+        id: "contract-final-articles",
+        type: "text",
+        page: 3,
+        x: 12,
+        y: 30,
+        width: 186,
+        height: 40,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 18. PHẠT VI PHẠM VÀ BỒI THƯỜNG THIỆT HẠI\nBên vi phạm phải khắc phục vi phạm và bồi thường thiệt hại thực tế, trực tiếp và hợp lý.\n\nĐIỀU 19. BẢO HIỂM\nNếu dự án yêu cầu, Bên B duy trì các loại bảo hiểm phù hợp đối với nhân sự, hàng hóa và trách nhiệm dân sự.\n\nĐIỀU 20. BẤT KHẢ KHÁNG\nBên bị ảnh hưởng phải thông báo kịp thời và các Bên cùng thống nhất biện pháp xử lý."
+          )
+        }
+      },
+      {
+        id: "contract-milestones",
+        type: "line_items_table",
+        page: 3,
+        x: 12,
+        y: 76,
+        width: 186,
+        height: 52,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.8,
+          lineHeight: 1.34,
+          padding: 2
+        },
+        content: {
+          source: "milestones",
+          columns: [
+            { id: "ms-index", label: localize("STT"), value: "{{index}}", width: 12, align: "center" },
+            { id: "ms-name", label: localize("Mốc triển khai"), value: "{{name}}", width: 78, align: "left" },
+            { id: "ms-date", label: localize("Hạn"), value: "{{dueDate|date}}", width: 28, align: "center" },
+            { id: "ms-status", label: localize("Trạng thái"), value: "{{status}}", width: 28, align: "center" },
+            { id: "ms-payment", label: localize("Giá trị"), value: "{{paymentAmount|currency}}", width: 40, align: "right" }
+          ],
+          emptyText: localize("Chưa cấu hình milestone cho hợp đồng")
+        }
+      },
+      {
+        id: "contract-appendix-payment",
+        type: "text",
+        page: 3,
+        x: 12,
+        y: 134,
+        width: 186,
+        height: 18,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.7,
+          lineHeight: 1.3,
+          textAlign: "justify",
+          padding: 1.5,
+          borderWidth: 0.4,
+          borderColor: "#e2e8f0",
+          borderRadius: 4,
+          backgroundColor: "#f8fafc"
+        },
+        content: {
+          text: localize(
+            "ĐIỀU 21, 22 VÀ 23. CHẤM DỨT, GIẢI QUYẾT TRANH CHẤP VÀ ĐIỀU KHOẢN CHUNG\nHợp đồng có thể chấm dứt theo thỏa thuận hoặc do vi phạm nghiêm trọng; tranh chấp được ưu tiên giải quyết bằng thương lượng trước khi áp dụng pháp luật Việt Nam."
+          )
+        }
+      },
+      {
+        id: "contract-contact-summary",
+        type: "key_value_table",
+        page: 3,
+        x: 12,
+        y: 158,
+        width: 90,
+        height: 32,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 9.1,
+          lineHeight: 1.34,
+          padding: 2
+        },
+        content: {
+          labelWidth: 34,
+          rows: [
+            { id: "contact-name", label: localize("Đầu mối"), value: "{{primaryContact.name}}" },
+            { id: "contact-title", label: localize("Chức danh"), value: "{{primaryContact.title}}" },
+            { id: "contact-phone", label: localize("Điện thoại"), value: "{{primaryContact.phone}}" },
+            { id: "contact-email", label: localize("Email"), value: "{{primaryContact.email}}" }
+          ]
+        }
+      },
+      {
+        id: "contract-bank-summary",
+        type: "key_value_table",
+        page: 3,
+        x: 108,
+        y: 158,
+        width: 90,
+        height: 32,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 9.1,
+          lineHeight: 1.34,
+          padding: 2
+        },
+        content: {
+          labelWidth: 34,
+          rows: [
+            { id: "bank-name", label: localize("Ngân hàng"), value: "{{company.bankName}}" },
+            { id: "bank-account", label: localize("Số TK"), value: "{{company.bankAccount}}" },
+            { id: "bank-owner", label: localize("Chủ TK"), value: "{{company.bankAccountName}}" },
+            { id: "bank-branch", label: localize("Chi nhánh"), value: "{{company.bankBranch}}" }
+          ]
+        }
+      },
+      {
+        id: "contract-final-note",
+        type: "text",
+        page: 3,
+        x: 12,
+        y: 196,
+        width: 186,
+        height: 14,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.6,
+          lineHeight: 1.26,
+          textAlign: "justify",
+          padding: 1.5
+        },
+        content: {
+          text: localize(
+            "Hợp đồng này được lập thành 04 bản gốc có giá trị pháp lý như nhau; mỗi Bên giữ 02 bản để theo dõi thực hiện, nghiệm thu, thanh toán và hoàn tất hồ sơ pháp lý của dự án."
+          )
+        }
+      },
+      {
+        id: "contract-signature",
+        type: "signature_block",
+        page: 3,
+        x: 12,
+        y: 222,
+        width: 186,
+        height: 44,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 10,
+          lineHeight: 1.34,
+          padding: 2
+        },
+        content: {
+          leftTitle: localize("ĐẠI DIỆN BÊN A"),
+          rightTitle: localize("ĐẠI DIỆN BÊN B"),
+          leftCaption: localize("Ký, ghi rõ họ tên và đóng dấu"),
+          rightCaption: localize("Ký, ghi rõ họ tên và đóng dấu")
+        }
+      },
+      {
+        id: "contract-page-4-note",
+        type: "text",
+        page: 3,
+        x: 12,
+        y: 281,
+        width: 186,
+        height: 4,
+        zIndex: 10,
+        visible: true,
+        style: {
+          fontSize: 8.2,
+          textAlign: "center",
+          lineHeight: 1.2,
+          color: "#64748b"
+        },
+        content: {
+          text: localize("Trang 4/4 • Điều 18 đến Điều 23, phụ lục thực hiện và ký kết")
+        }
+      }
+    ]
+  ]);
+}
+
 const DEFAULT_LAYOUTS: Record<DocumentType, DocumentTemplateLayout> = {
   QUOTATION: createQuotationLayout(),
   CONTRACT: createContractLayout(),
   PROPOSAL: createQuotationLayout(),
   SURVEY_REPORT: createQuotationLayout(),
-  CONTRACT_ADDENDUM: createContractLayout(),
-  NDA: createContractLayout(),
-  DELIVERY_NOTE: createContractLayout(),
-  DOC_HANDOVER: createContractLayout(),
-  INSTALLATION_REPORT: createContractLayout(),
-  ACCEPTANCE_REPORT: createContractLayout(),
-  PARTIAL_ACCEPTANCE: createContractLayout(),
-  WARRANTY_CERT: createContractLayout(),
-  MAINTENANCE_RECORD: createContractLayout(),
-  PAYMENT_REQUEST: createContractLayout(),
-  PAYMENT_RECEIPT: createContractLayout(),
-  AR_RECONCILIATION: createContractLayout()
+  CONTRACT_ADDENDUM: createCompactContractLayout(),
+  NDA: createCompactContractLayout(),
+  DELIVERY_NOTE: createCompactContractLayout(),
+  DOC_HANDOVER: createCompactContractLayout(),
+  INSTALLATION_REPORT: createCompactContractLayout(),
+  ACCEPTANCE_REPORT: createCompactContractLayout(),
+  PARTIAL_ACCEPTANCE: createCompactContractLayout(),
+  WARRANTY_CERT: createCompactContractLayout(),
+  MAINTENANCE_RECORD: createCompactContractLayout(),
+  PAYMENT_REQUEST: createCompactContractLayout(),
+  PAYMENT_RECEIPT: createCompactContractLayout(),
+  AR_RECONCILIATION: createCompactContractLayout()
 };
 
 const DEFAULT_SAMPLE_DATA: Record<DocumentType, Record<string, unknown>> = {
@@ -877,17 +1744,27 @@ const DEFAULT_SAMPLE_DATA: Record<DocumentType, Record<string, unknown>> = {
       address: "39/15 Đường Cao Bá Quát, TP.HCM",
       phone: "0901 951 351",
       email: "ahso@ahso.vn",
-      website: "https://ahso.vn"
+      website: "https://ahso.vn",
+      representative: "Ngô Văn Hùng",
+      representativeTitle: "Giám đốc",
+      bankName: "Vietcombank",
+      bankAccount: "0071001988666",
+      bankAccountName: "CONG TY TNHH AHSO",
+      bankBranch: "Chi nhánh TP.HCM"
     },
     logo: null,
     customer: {
       name: "DNP Water",
+      taxCode: "0100100101",
       address: "Hà Nội",
       phone: "02432001111",
       email: "projects@dnpwater.vn"
     },
     primaryContact: {
-      name: "Trần Thu Hà"
+      name: "Trần Thu Hà",
+      title: "Giám đốc dự án",
+      phone: "0909123123",
+      email: "ha.tran@dnpwater.vn"
     },
     project: {
       name: "Dự án điều khiển tự động hóa nhà máy"
@@ -936,7 +1813,8 @@ const DEFAULT_SAMPLE_DATA: Record<DocumentType, Record<string, unknown>> = {
     ],
     policies: {
       paymentTerms: "40% ký hợp đồng, 40% bàn giao, 20% sau nghiệm thu.",
-      warranty: "Bảo hành 12 tháng, phản hồi sự cố trong 4 giờ làm việc."
+      warranty: "Bảo hành 12 tháng, phản hồi sự cố trong 4 giờ làm việc.",
+      service: "Bao gồm khảo sát chi tiết, lắp đặt, chạy thử, đào tạo vận hành và hỗ trợ từ xa sau bàn giao."
     }
   },
   PROPOSAL: {},

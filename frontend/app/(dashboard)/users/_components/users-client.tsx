@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -17,25 +16,43 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useUpdateUser, useUsers } from "@/hooks/use-users";
+import { useCreateUser, useUpdateUser, useUsers } from "@/hooks/use-users";
+import { useRoles } from "@/hooks/use-roles";
 import { isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { ROLE_LABELS } from "@/lib/constants";
+import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { Role, UserListItem } from "@/lib/types";
+import { UserListItem, UserRole } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { UserOverviewCards } from "./user-overview-cards";
 import { UserTable } from "./user-table";
 
 const userEditorSchema = z.object({
   name: z.string().trim().min(2, "Tên phải có ít nhất 2 ký tự").max(100, "Tên quá dài"),
-  role: z.enum(["ADMIN", "MANAGER", "STAFF"]),
+  roleId: z.string().trim().min(1, "Vai trò không được để trống"),
   status: z.enum(["active", "inactive"]),
   avatarUrl: z.string().trim().url("Avatar URL không hợp lệ").or(z.literal(""))
 });
 
+const userCreateSchema = z
+  .object({
+    name: z.string().trim().min(2, "Tên phải có ít nhất 2 ký tự").max(100, "Tên quá dài"),
+    email: z.string().trim().email("Email không hợp lệ"),
+    roleId: z.string().trim().min(1, "Vai trò không được để trống"),
+    password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự").max(100, "Mật khẩu quá dài"),
+    confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
+    status: z.enum(["active", "inactive"]),
+    avatarUrl: z.string().trim().url("Avatar URL không hợp lệ").or(z.literal(""))
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Mật khẩu xác nhận không khớp"
+  });
+
 type UserEditorValues = z.infer<typeof userEditorSchema>;
+type UserCreateValues = z.infer<typeof userCreateSchema>;
 type ActivityFilterValue = "all" | "active" | "inactive";
+type PanelMode = "edit" | "create";
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
@@ -45,6 +62,20 @@ function getErrorMessage(error: unknown) {
   return "Đã xảy ra lỗi khi tải danh sách người dùng.";
 }
 
+function getRoleOptions(roles: UserRole[]) {
+  return [...roles].sort((left, right) => {
+    if (left.isSystem !== right.isSystem) {
+      return left.isSystem ? -1 : 1;
+    }
+
+    return getRoleLabelByName(left.name).localeCompare(getRoleLabelByName(right.name), "vi");
+  });
+}
+
+function getPreferredRoleId(roles: UserRole[]) {
+  return roles.find((role) => role.name === "STAFF")?.id ?? roles[0]?.id ?? "";
+}
+
 function matchesSearch(user: UserListItem, search: string) {
   if (!search) {
     return true;
@@ -52,18 +83,18 @@ function matchesSearch(user: UserListItem, search: string) {
 
   const normalized = search.toLowerCase();
 
-  return [user.name, user.email, ROLE_LABELS[user.role], user.role]
+  return [user.name, user.email, getRoleLabelByName(user.role), user.role]
     .filter(Boolean)
     .some((value) => value.toLowerCase().includes(normalized));
 }
 
-function filterUsers(users: UserListItem[], search: string, role: Role | "", activity: ActivityFilterValue) {
+function filterUsers(users: UserListItem[], search: string, roleId: string, activity: ActivityFilterValue) {
   return users.filter((user) => {
     if (!matchesSearch(user, search)) {
       return false;
     }
 
-    if (role && user.role !== role) {
+    if (roleId && user.roleId !== roleId) {
       return false;
     }
 
@@ -79,12 +110,24 @@ function filterUsers(users: UserListItem[], search: string, role: Role | "", act
   });
 }
 
-function getDefaultValues(user?: UserListItem | null): UserEditorValues {
+function getEditorDefaultValues(user?: UserListItem | null): UserEditorValues {
   return {
     name: user?.name ?? "",
-    role: user?.role ?? "STAFF",
+    roleId: user?.roleId ?? "",
     status: user?.isActive ? "active" : "inactive",
     avatarUrl: user?.avatarUrl ?? ""
+  };
+}
+
+function getCreateDefaultValues(roleId: string): UserCreateValues {
+  return {
+    name: "",
+    email: "",
+    roleId,
+    password: "",
+    confirmPassword: "",
+    status: "active",
+    avatarUrl: ""
   };
 }
 
@@ -94,57 +137,91 @@ export function UsersClient() {
   const logout = useAuthStore((state) => state.logout);
   const canManageUsers = isLeadershipRole(user?.role);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<Role | "">("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [activityFilter, setActivityFilter] = useState<ActivityFilterValue>("all");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [panelMode, setPanelMode] = useState<PanelMode>("edit");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search.trim());
   const usersQuery = useUsers(canManageUsers);
+  const rolesQuery = useRoles();
+  const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
 
   const users = usersQuery.data ?? [];
+  const roleOptions = getRoleOptions(rolesQuery.data ?? []);
   const filteredUsers = filterUsers(users, deferredSearch, roleFilter, activityFilter);
-  const selectedUser = filteredUsers.find((candidate) => candidate.id === selectedUserId) ?? null;
-  const form = useForm<UserEditorValues>({
+  const selectedUser = users.find((candidate) => candidate.id === selectedUserId) ?? null;
+  const selectedVisibleUser = filteredUsers.find((candidate) => candidate.id === selectedUserId) ?? null;
+
+  const editForm = useForm<UserEditorValues>({
     resolver: zodResolver(userEditorSchema),
-    defaultValues: getDefaultValues(selectedUser)
+    defaultValues: getEditorDefaultValues(selectedUser)
+  });
+  const createForm = useForm<UserCreateValues>({
+    resolver: zodResolver(userCreateSchema),
+    defaultValues: getCreateDefaultValues(getPreferredRoleId(roleOptions))
   });
 
   useEffect(() => {
-    if (!selectedUserId && filteredUsers[0]) {
-      setSelectedUserId(filteredUsers[0].id);
+    if (!selectedUserId && users[0]) {
+      setSelectedUserId(users[0].id);
       return;
     }
 
-    if (selectedUserId && !filteredUsers.some((candidate) => candidate.id === selectedUserId)) {
-      setSelectedUserId(filteredUsers[0]?.id ?? null);
+    if (selectedUserId && !users.some((candidate) => candidate.id === selectedUserId)) {
+      setSelectedUserId(users[0]?.id ?? null);
     }
-  }, [filteredUsers, selectedUserId]);
+  }, [selectedUserId, users]);
 
   useEffect(() => {
-    form.reset(getDefaultValues(selectedUser));
-    setSuccessMessage(null);
-  }, [form, selectedUser]);
+    if (panelMode === "edit") {
+      editForm.reset(getEditorDefaultValues(selectedUser));
+    }
+  }, [editForm, panelMode, selectedUser]);
+
+  useEffect(() => {
+    if (panelMode === "create" && !createForm.getValues("roleId") && roleOptions.length > 0) {
+      createForm.reset(getCreateDefaultValues(getPreferredRoleId(roleOptions)));
+    }
+  }, [createForm, panelMode, roleOptions]);
 
   const hasActiveFilters = deferredSearch.length > 0 || roleFilter.length > 0 || activityFilter !== "all";
+  const createErrorMessage = createUserMutation.isError
+    ? getApiErrorMessage(createUserMutation.error, "Không thể tạo người dùng lúc này.")
+    : null;
+  const updateErrorMessage = updateUserMutation.isError
+    ? getApiErrorMessage(updateUserMutation.error, "Không thể cập nhật người dùng lúc này.")
+    : null;
 
-  const saveMutation = useMutation({
-    mutationFn: async (values: UserEditorValues) => {
-      if (!selectedUser) {
-        throw new Error("Chưa chọn người dùng để cập nhật");
-      }
+  const openCreatePanel = () => {
+    setPanelMode("create");
+    setSuccessMessage(null);
+    createForm.reset(getCreateDefaultValues(getPreferredRoleId(roleOptions)));
+  };
 
-      return updateUserMutation.mutateAsync({
+  const closeCreatePanel = () => {
+    setPanelMode("edit");
+    setSuccessMessage(null);
+    createForm.reset(getCreateDefaultValues(getPreferredRoleId(roleOptions)));
+  };
+
+  const handleUpdateSubmit = async (values: UserEditorValues) => {
+    if (!selectedUser) {
+      return;
+    }
+
+    try {
+      const updatedUser = await updateUserMutation.mutateAsync({
         userId: selectedUser.id,
         payload: {
           name: values.name.trim(),
-          role: values.role,
+          roleId: values.roleId,
           isActive: values.status === "active",
           avatarUrl: values.avatarUrl.trim() ? values.avatarUrl.trim() : null
         }
       });
-    },
-    onSuccess: async (updatedUser) => {
+
       setSuccessMessage(`Đã cập nhật hồ sơ cho ${updatedUser.name}.`);
       setSelectedUserId(updatedUser.id);
 
@@ -165,8 +242,37 @@ export function UsersClient() {
           router.replace("/dashboard");
         }
       }
+    } catch {
+      // Error surfaced by mutation state.
     }
-  });
+  };
+
+  const handleCreateSubmit = async (values: UserCreateValues) => {
+    try {
+      const createdUser = await createUserMutation.mutateAsync({
+        name: values.name.trim(),
+        email: values.email.trim(),
+        password: values.password,
+        roleId: values.roleId,
+        avatarUrl: values.avatarUrl.trim() ? values.avatarUrl.trim() : undefined,
+        isActive: values.status === "active"
+      });
+
+      await usersQuery.refetch();
+      setSearch("");
+      setRoleFilter("");
+      setActivityFilter("all");
+      setSelectedUserId(createdUser.id);
+      setPanelMode("edit");
+      setSuccessMessage(
+        hasActiveFilters
+          ? `Đã tạo tài khoản cho ${createdUser.name}. Bộ lọc đã được đặt lại để hiển thị người dùng mới.`
+          : `Đã tạo tài khoản cho ${createdUser.name}.`
+      );
+    } catch {
+      // Error surfaced by mutation state.
+    }
+  };
 
   if (!canManageUsers) {
     return (
@@ -206,6 +312,10 @@ export function UsersClient() {
         description="Điều phối vai trò, trạng thái hoạt động và hồ sơ nội bộ của các tài khoản đang dùng AHSO CRM."
         action={
           <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={openCreatePanel} disabled={rolesQuery.isLoading || roleOptions.length === 0}>
+              <AppIcon name="plus" className="h-4 w-4" />
+              Thêm người dùng
+            </Button>
             <Button variant="outline" onClick={() => void usersQuery.refetch()}>
               Làm mới danh sách
             </Button>
@@ -232,11 +342,13 @@ export function UsersClient() {
             onChange={(event) => setSearch(event.target.value)}
           />
 
-          <Select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as Role | "")}>
+          <Select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
             <option value="">Tất cả vai trò</option>
-            <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
-            <option value="MANAGER">{ROLE_LABELS.MANAGER}</option>
-            <option value="STAFF">{ROLE_LABELS.STAFF}</option>
+            {roleOptions.map((role) => (
+              <option key={role.id} value={role.id}>
+                {getRoleLabelByName(role.name)}
+              </option>
+            ))}
           </Select>
 
           <Select value={activityFilter} onChange={(event) => setActivityFilter(event.target.value as ActivityFilterValue)}>
@@ -262,22 +374,171 @@ export function UsersClient() {
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
         <UserTable
           items={filteredUsers}
-          selectedUserId={selectedUserId}
+          selectedUserId={panelMode === "edit" ? selectedVisibleUser?.id ?? null : null}
           isLoading={usersQuery.isLoading}
           isError={usersQuery.isError}
           errorMessage={getErrorMessage(usersQuery.error)}
-          onSelectUser={setSelectedUserId}
+          onSelectUser={(userId) => {
+            setSelectedUserId(userId);
+            setPanelMode("edit");
+            setSuccessMessage(null);
+          }}
         />
 
         <Card className="bg-white/92">
           <CardHeader>
-            <CardTitle>Biên tập hồ sơ</CardTitle>
+            <CardTitle>{panelMode === "create" ? "Thêm người dùng" : "Biên tập hồ sơ"}</CardTitle>
             <CardDescription>
-              Cập nhật thông tin hiển thị, vai trò và trạng thái hoạt động của từng tài khoản.
+              {panelMode === "create"
+                ? "Tạo tài khoản nội bộ mới với mật khẩu tạm và vai trò phù hợp cho từng thành viên."
+                : "Cập nhật thông tin hiển thị, vai trò và trạng thái hoạt động của từng tài khoản."}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!selectedUser ? (
+            {panelMode === "create" ? (
+              <div className="space-y-5">
+                <div className="flex items-start gap-4 rounded-2xl bg-slate-50/90 p-4 ring-1 ring-border/50">
+                  <AvatarInitials name="Tài khoản mới" className="h-14 w-14 rounded-2xl text-base" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-bold text-text-primary">Tài khoản mới</h3>
+                      <Badge variant="info">Chưa tạo</Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-text-secondary">
+                      Tài khoản sẽ được thêm vào danh sách ngay sau khi lưu thành công.
+                    </p>
+                    <div className="mt-3 grid gap-2 text-xs text-text-secondary sm:grid-cols-2">
+                      <p>Quyền tạo mới: ADMIN và MANAGER</p>
+                      <p>Email chào mừng sẽ được gửi tự động nếu SMTP đang sẵn sàng.</p>
+                    </div>
+                  </div>
+                </div>
+
+                {rolesQuery.isError ? (
+                  <div className="rounded-xl bg-danger-bg px-4 py-3 text-sm text-danger">
+                    {getApiErrorMessage(rolesQuery.error, "Không thể tải danh sách vai trò để tạo người dùng.")}
+                  </div>
+                ) : null}
+
+                <form className="space-y-4" onSubmit={createForm.handleSubmit(handleCreateSubmit)}>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-name">
+                      Họ tên hiển thị
+                    </label>
+                    <Input id="create-user-name" {...createForm.register("name")} />
+                    {createForm.formState.errors.name ? (
+                      <p className="text-sm text-danger">{createForm.formState.errors.name.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-email">
+                      Email đăng nhập
+                    </label>
+                    <Input id="create-user-email" type="email" placeholder="ten@ahso.vn" {...createForm.register("email")} />
+                    {createForm.formState.errors.email ? (
+                      <p className="text-sm text-danger">{createForm.formState.errors.email.message}</p>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-role">
+                        Vai trò
+                      </label>
+                      <Select id="create-user-role" {...createForm.register("roleId")} disabled={rolesQuery.isLoading}>
+                        <option value="">Chọn vai trò</option>
+                        {roleOptions.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {getRoleLabelByName(role.name)}
+                          </option>
+                        ))}
+                      </Select>
+                      {createForm.formState.errors.roleId ? (
+                        <p className="text-sm text-danger">{createForm.formState.errors.roleId.message}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-status">
+                        Trạng thái hoạt động
+                      </label>
+                      <Select id="create-user-status" {...createForm.register("status")}>
+                        <option value="active">Đang hoạt động</option>
+                        <option value="inactive">Tạm khóa</option>
+                      </Select>
+                      {createForm.formState.errors.status ? (
+                        <p className="text-sm text-danger">{createForm.formState.errors.status.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-password">
+                        Mật khẩu tạm
+                      </label>
+                      <Input id="create-user-password" type="password" {...createForm.register("password")} />
+                      {createForm.formState.errors.password ? (
+                        <p className="text-sm text-danger">{createForm.formState.errors.password.message}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-confirm-password">
+                        Xác nhận mật khẩu
+                      </label>
+                      <Input
+                        id="create-user-confirm-password"
+                        type="password"
+                        {...createForm.register("confirmPassword")}
+                      />
+                      {createForm.formState.errors.confirmPassword ? (
+                        <p className="text-sm text-danger">{createForm.formState.errors.confirmPassword.message}</p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-avatar">
+                      Avatar URL
+                    </label>
+                    <Input
+                      id="create-user-avatar"
+                      placeholder="https://cdn.ahso.vn/avatar/user.png"
+                      {...createForm.register("avatarUrl")}
+                    />
+                    <p className="text-xs text-text-secondary">
+                      Có thể để trống để hệ thống dùng avatar chữ cái mặc định.
+                    </p>
+                    {createForm.formState.errors.avatarUrl ? (
+                      <p className="text-sm text-danger">{createForm.formState.errors.avatarUrl.message}</p>
+                    ) : null}
+                  </div>
+
+                  {createErrorMessage ? (
+                    <div className="rounded-xl bg-danger-bg px-4 py-3 text-sm text-danger">{createErrorMessage}</div>
+                  ) : null}
+
+                  {successMessage ? (
+                    <div className="rounded-xl bg-success-bg/70 px-4 py-3 text-sm text-success">{successMessage}</div>
+                  ) : null}
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      type="submit"
+                      disabled={createUserMutation.isPending || rolesQuery.isLoading || roleOptions.length === 0}
+                    >
+                      <AppIcon name="plus" className="h-4 w-4" />
+                      {createUserMutation.isPending ? "Đang tạo..." : "Tạo người dùng"}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={closeCreatePanel}>
+                      Hủy tạo mới
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            ) : !selectedUser ? (
               <EmptyState
                 title="Chưa chọn người dùng"
                 description="Chọn một dòng ở bảng bên trái để xem chi tiết và cập nhật hồ sơ."
@@ -295,7 +556,7 @@ export function UsersClient() {
                     </div>
                     <p className="mt-1 text-sm text-text-secondary">{selectedUser.email}</p>
                     <div className="mt-3 grid gap-2 text-xs text-text-secondary sm:grid-cols-2">
-                      <p>Vai trò hiện tại: {ROLE_LABELS[selectedUser.role]}</p>
+                      <p>Vai trò hiện tại: {getRoleLabelByName(selectedUser.role)}</p>
                       <p>Tạo lúc: {formatDate(selectedUser.createdAt)}</p>
                       <p>Cập nhật cuối: {selectedUser.updatedAt ? formatDateTime(selectedUser.updatedAt) : "Chưa có"}</p>
                       <p>Avatar URL: {selectedUser.avatarUrl ? "Đã cấu hình" : "Chưa có"}</p>
@@ -303,19 +564,14 @@ export function UsersClient() {
                   </div>
                 </div>
 
-                <form
-                  className="space-y-4"
-                  onSubmit={form.handleSubmit((values) => {
-                    saveMutation.mutate(values);
-                  })}
-                >
+                <form className="space-y-4" onSubmit={editForm.handleSubmit(handleUpdateSubmit)}>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-text-primary" htmlFor="user-name">
                       Họ tên hiển thị
                     </label>
-                    <Input id="user-name" {...form.register("name")} />
-                    {form.formState.errors.name ? (
-                      <p className="text-sm text-danger">{form.formState.errors.name.message}</p>
+                    <Input id="user-name" {...editForm.register("name")} />
+                    {editForm.formState.errors.name ? (
+                      <p className="text-sm text-danger">{editForm.formState.errors.name.message}</p>
                     ) : null}
                   </div>
 
@@ -324,13 +580,16 @@ export function UsersClient() {
                       <label className="text-sm font-semibold text-text-primary" htmlFor="user-role">
                         Vai trò
                       </label>
-                      <Select id="user-role" {...form.register("role")}>
-                        <option value="ADMIN">{ROLE_LABELS.ADMIN}</option>
-                        <option value="MANAGER">{ROLE_LABELS.MANAGER}</option>
-                        <option value="STAFF">{ROLE_LABELS.STAFF}</option>
+                      <Select id="user-role" {...editForm.register("roleId")} disabled={rolesQuery.isLoading}>
+                        <option value="">Chọn vai trò</option>
+                        {roleOptions.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {getRoleLabelByName(role.name)}
+                          </option>
+                        ))}
                       </Select>
-                      {form.formState.errors.role ? (
-                        <p className="text-sm text-danger">{form.formState.errors.role.message}</p>
+                      {editForm.formState.errors.roleId ? (
+                        <p className="text-sm text-danger">{editForm.formState.errors.roleId.message}</p>
                       ) : null}
                     </div>
 
@@ -338,12 +597,12 @@ export function UsersClient() {
                       <label className="text-sm font-semibold text-text-primary" htmlFor="user-status">
                         Trạng thái hoạt động
                       </label>
-                      <Select id="user-status" {...form.register("status")}>
+                      <Select id="user-status" {...editForm.register("status")}>
                         <option value="active">Đang hoạt động</option>
                         <option value="inactive">Tạm khóa</option>
                       </Select>
-                      {form.formState.errors.status ? (
-                        <p className="text-sm text-danger">{form.formState.errors.status.message}</p>
+                      {editForm.formState.errors.status ? (
+                        <p className="text-sm text-danger">{editForm.formState.errors.status.message}</p>
                       ) : null}
                     </div>
                   </div>
@@ -355,38 +614,34 @@ export function UsersClient() {
                     <Input
                       id="user-avatar"
                       placeholder="https://cdn.ahso.vn/avatar/user.png"
-                      {...form.register("avatarUrl")}
+                      {...editForm.register("avatarUrl")}
                     />
                     <p className="text-xs text-text-secondary">
                       Để trống nếu muốn dùng avatar chữ cái mặc định của hệ thống.
                     </p>
-                    {form.formState.errors.avatarUrl ? (
-                      <p className="text-sm text-danger">{form.formState.errors.avatarUrl.message}</p>
+                    {editForm.formState.errors.avatarUrl ? (
+                      <p className="text-sm text-danger">{editForm.formState.errors.avatarUrl.message}</p>
                     ) : null}
                   </div>
 
-                  {saveMutation.isError ? (
-                    <div className="rounded-xl bg-danger-bg px-4 py-3 text-sm text-danger">
-                      {getApiErrorMessage(saveMutation.error, "Không thể cập nhật người dùng lúc này.")}
-                    </div>
+                  {updateErrorMessage ? (
+                    <div className="rounded-xl bg-danger-bg px-4 py-3 text-sm text-danger">{updateErrorMessage}</div>
                   ) : null}
 
                   {successMessage ? (
-                    <div className="rounded-xl bg-success-bg/70 px-4 py-3 text-sm text-success">
-                      {successMessage}
-                    </div>
+                    <div className="rounded-xl bg-success-bg/70 px-4 py-3 text-sm text-success">{successMessage}</div>
                   ) : null}
 
                   <div className="flex flex-wrap items-center gap-3">
-                    <Button type="submit" disabled={saveMutation.isPending}>
+                    <Button type="submit" disabled={updateUserMutation.isPending}>
                       <AppIcon name="arrow-right" className="h-4 w-4" />
-                      {saveMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+                      {updateUserMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
                     </Button>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        form.reset(getDefaultValues(selectedUser));
+                        editForm.reset(getEditorDefaultValues(selectedUser));
                         setSuccessMessage(null);
                       }}
                     >

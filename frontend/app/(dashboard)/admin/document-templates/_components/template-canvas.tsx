@@ -312,8 +312,6 @@ export function TemplateCanvas({
     };
   }, [layout, onLayoutChange]);
 
-  const page = layout.pages[0];
-
   return (
     <div
       className={cn(
@@ -323,114 +321,125 @@ export function TemplateCanvas({
           : "rounded-[28px] border border-white/70 bg-slate-100/70 p-5"
       )}
     >
-      <div
-        ref={rootRef}
-        className={cn(
-          "relative mx-auto overflow-hidden bg-white",
-          presentationMode
-            ? "rounded-[18px] shadow-[0_18px_45px_rgba(15,23,42,0.16)]"
-            : "rounded-[24px] shadow-[0_30px_70px_rgba(15,23,42,0.18)]"
-        )}
-        style={{
-          width: `${layout.page.widthMm * PX_PER_MM}px`,
-          minHeight: `${layout.page.heightMm * PX_PER_MM}px`,
-          backgroundImage: presentationMode
-            ? "none"
-            : `
-                linear-gradient(to right, rgba(148,163,184,0.12) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(148,163,184,0.12) 1px, transparent 1px)
-              `,
-          backgroundSize: presentationMode
-            ? undefined
-            : `${layout.page.gridMm * PX_PER_MM}px ${layout.page.gridMm * PX_PER_MM}px`
-        }}
-      >
-        {!presentationMode ? (
+      <div ref={rootRef} className="mx-auto flex w-fit flex-col gap-6">
+        {layout.pages.map((page, pageIndex) => (
           <div
-            className="absolute border border-dashed border-primary/30"
-            style={{
-              left: `${layout.page.marginMm.left * PX_PER_MM}px`,
-              top: `${layout.page.marginMm.top * PX_PER_MM}px`,
-              width: `${(layout.page.widthMm - layout.page.marginMm.left - layout.page.marginMm.right) * PX_PER_MM}px`,
-              height: `${(layout.page.heightMm - layout.page.marginMm.top - layout.page.marginMm.bottom) * PX_PER_MM}px`
-            }}
-          />
-        ) : null}
-
-        {page.boxes
-          .filter((box) => box.visible !== false)
-          .sort((left, right) => left.zIndex - right.zIndex)
-          .map((box) => {
-            const isSelected = selectedBoxId === box.id;
-            const commonClassName = cn(
-              "absolute flex overflow-hidden rounded-lg bg-white/90 shadow-sm transition",
+            key={page.id}
+            className={cn(
+              "relative mx-auto overflow-hidden bg-white",
               presentationMode
-                ? "border border-transparent"
-                : isSelected
-                  ? "border border-primary ring-2 ring-primary/25"
-                  : "border border-slate-300 hover:border-primary/40",
-              editable && !presentationMode ? "cursor-move" : "cursor-default"
-            );
-            const content = (
+                ? "rounded-[18px] shadow-[0_18px_45px_rgba(15,23,42,0.16)]"
+                : "rounded-[24px] shadow-[0_30px_70px_rgba(15,23,42,0.18)]"
+            )}
+            style={{
+              width: `${layout.page.widthMm * PX_PER_MM}px`,
+              minHeight: `${layout.page.heightMm * PX_PER_MM}px`,
+              backgroundImage: presentationMode
+                ? "none"
+                : `
+                    linear-gradient(to right, rgba(148,163,184,0.12) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(148,163,184,0.12) 1px, transparent 1px)
+                  `,
+              backgroundSize: presentationMode
+                ? undefined
+                : `${layout.page.gridMm * PX_PER_MM}px ${layout.page.gridMm * PX_PER_MM}px`
+            }}
+          >
+            {!presentationMode ? (
               <>
-                {!presentationMode ? (
-                  <span className="pointer-events-none absolute left-2 top-1 rounded bg-slate-900/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
-                    {box.type}
-                  </span>
-                ) : null}
                 <div
-                  className={cn("h-full w-full overflow-hidden", presentationMode ? "pt-0" : "pt-5")}
-                  style={
-                    box.type === "text"
-                      ? {
-                          display: "flex",
-                          flexDirection: "column",
-                          justifyContent: toVerticalJustify(box.style?.verticalAlign)
-                        }
-                      : undefined
-                  }
+                  className="pointer-events-none absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted shadow-sm"
                 >
-                  {renderBoxContent(box, previewLanguage, sampleData)}
+                  Trang {pageIndex + 1}
                 </div>
+                <div
+                  className="absolute border border-dashed border-primary/30"
+                  style={{
+                    left: `${layout.page.marginMm.left * PX_PER_MM}px`,
+                    top: `${layout.page.marginMm.top * PX_PER_MM}px`,
+                    width: `${(layout.page.widthMm - layout.page.marginMm.left - layout.page.marginMm.right) * PX_PER_MM}px`,
+                    height: `${(layout.page.heightMm - layout.page.marginMm.top - layout.page.marginMm.bottom) * PX_PER_MM}px`
+                  }}
+                />
               </>
-            );
+            ) : null}
 
-            if (presentationMode) {
-              return (
-                <div key={box.id} data-box-id={box.id} className={commonClassName} style={boxStyle(box)}>
-                  {content}
-                </div>
-              );
-            }
+            {page.boxes
+              .filter((box) => box.visible !== false)
+              .sort((left, right) => left.zIndex - right.zIndex)
+              .map((box) => {
+                const isSelected = selectedBoxId === box.id;
+                const commonClassName = cn(
+                  "absolute flex overflow-hidden rounded-lg bg-white/90 shadow-sm transition",
+                  presentationMode
+                    ? "border border-transparent"
+                    : isSelected
+                      ? "border border-primary ring-2 ring-primary/25"
+                      : "border border-slate-300 hover:border-primary/40",
+                  editable && !presentationMode ? "cursor-move" : "cursor-default"
+                );
+                const content = (
+                  <>
+                    {!presentationMode ? (
+                      <span className="pointer-events-none absolute left-2 top-1 rounded bg-slate-900/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
+                        {box.type}
+                      </span>
+                    ) : null}
+                    <div
+                      className={cn("h-full w-full overflow-hidden", presentationMode ? "pt-0" : "pt-5")}
+                      style={
+                        box.type === "text"
+                          ? {
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: toVerticalJustify(box.style?.verticalAlign)
+                            }
+                          : undefined
+                      }
+                    >
+                      {renderBoxContent(box, previewLanguage, sampleData)}
+                    </div>
+                  </>
+                );
 
-            return (
-              <button
-                key={box.id}
-                type="button"
-                data-box-id={box.id}
-                className={commonClassName}
-                style={boxStyle(box)}
-                onClick={() => onSelectBox(box.id)}
-                onPointerDown={(event) => {
-                  if (!editable) {
-                    return;
-                  }
+                if (presentationMode) {
+                  return (
+                    <div key={box.id} data-box-id={box.id} className={commonClassName} style={boxStyle(box)}>
+                      {content}
+                    </div>
+                  );
+                }
 
-                  event.preventDefault();
-                  onSelectBox(box.id);
-                  dragRef.current = {
-                    boxId: box.id,
-                    startClientX: event.clientX,
-                    startClientY: event.clientY,
-                    startX: box.x,
-                    startY: box.y
-                  };
-                }}
-              >
-                {content}
-              </button>
-            );
-          })}
+                return (
+                  <button
+                    key={box.id}
+                    type="button"
+                    data-box-id={box.id}
+                    className={commonClassName}
+                    style={boxStyle(box)}
+                    onClick={() => onSelectBox(box.id)}
+                    onPointerDown={(event) => {
+                      if (!editable) {
+                        return;
+                      }
+
+                      event.preventDefault();
+                      onSelectBox(box.id);
+                      dragRef.current = {
+                        boxId: box.id,
+                        startClientX: event.clientX,
+                        startClientY: event.clientY,
+                        startX: box.x,
+                        startY: box.y
+                      };
+                    }}
+                  >
+                    {content}
+                  </button>
+                );
+              })}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -29,6 +29,14 @@ const PAGE_SIZE = 8;
 const PROJECT_STATUS_VALUES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "LOST", "DELIVERING", "COMPLETED"] as const;
 const PROJECT_PRIORITY_VALUES = ["LOW", "NORMAL", "HIGH"] as const;
 
+const getProjectViewFromUrl = (): ProjectViewMode => {
+  if (typeof window === "undefined") {
+    return "kanban";
+  }
+
+  return new URLSearchParams(window.location.search).get("view") === "list" ? "list" : "kanban";
+};
+
 const parseNumberVND = (value: string): number | undefined => {
   const cleaned = value.replace(/[.,\s]/g, "").replace(/[đ₫vnđ]/gi, "");
   if (!cleaned) return undefined;
@@ -54,7 +62,7 @@ export function ProjectsClient() {
   const [priority, setPriority] = useState<Priority | "">("");
   const [assignedToId, setAssignedToId] = useState("");
   const [page, setPage] = useState(1);
-  const [view, setView] = useState<ProjectViewMode>("kanban");
+  const [view, setView] = useState<ProjectViewMode>(getProjectViewFromUrl);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"status" | "delete">("status");
@@ -67,6 +75,22 @@ export function ProjectsClient() {
   const { error: showError, success } = useToast();
   const importCustomersQuery = useCustomers({ page: 1, limit: 200 });
   const customerLookup = importCustomersQuery.data?.items ?? [];
+
+  useEffect(() => {
+    const syncViewFromUrl = () => setView(getProjectViewFromUrl());
+    syncViewFromUrl();
+    window.addEventListener("popstate", syncViewFromUrl);
+
+    return () => window.removeEventListener("popstate", syncViewFromUrl);
+  }, []);
+
+  const handleViewChange = (nextView: ProjectViewMode) => {
+    setView(nextView);
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("view", nextView);
+    window.history.replaceState(null, "", `${nextUrl.pathname}?${nextUrl.searchParams.toString()}`);
+  };
 
   useEffect(() => {
     setPage(1);
@@ -224,7 +248,7 @@ export function ProjectsClient() {
                       ? "bg-primary text-white"
                       : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
                   )}
-                  onClick={() => setView(mode)}
+                  onClick={() => handleViewChange(mode)}
                   type="button"
                 >
                   {mode === "kanban" ? "Kanban" : "Danh sách"}
@@ -316,11 +340,19 @@ export function ProjectsClient() {
                   ids: selectedIds,
                   status: bulkAction === "status" ? bulkStatus : undefined
                 },
-                {
-                  onSuccess: () => {
-                    setSelectedIds([]);
-                    success(`Đã xử lý ${selectedIds.length} dự án.`);
-                  },
+	                {
+	                  onSuccess: (data) => {
+	                    const processedCount = data.processedCount ?? 0;
+	                    const failedCount = data.failedCount ?? 0;
+	                    setSelectedIds([]);
+	                    if (failedCount > 0) {
+	                      showError(
+	                        `Đã xử lý ${processedCount} dự án, ${failedCount} dự án lỗi. ${data.errors?.[0]?.message ?? ""}`.trim()
+	                      );
+	                      return;
+	                    }
+	                    success(`Đã xử lý ${processedCount || selectedIds.length} dự án.`);
+	                  },
                   onError: (error) => {
                     showError(error instanceof Error ? error.message : "Không thể thực hiện bulk action.");
                   }

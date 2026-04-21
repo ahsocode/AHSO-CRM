@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { CompanyInfo } from "@/lib/types";
+import { normalizeWebsiteInput } from "@/lib/url";
 
 const companyFormSchema = z.object({
   name: z.string().trim().min(1, "Tên công ty không được để trống").max(255, "Tên công ty quá dài"),
@@ -17,7 +18,7 @@ const companyFormSchema = z.object({
   address: z.string().trim().max(500, "Địa chỉ quá dài").optional().or(z.literal("")),
   phone: z.string().trim().max(20, "Số điện thoại quá dài").optional().or(z.literal("")),
   email: z.string().trim().email("Email không hợp lệ").optional().or(z.literal("")),
-  website: z.string().trim().url("Website không hợp lệ").optional().or(z.literal("")),
+  website: z.preprocess(normalizeWebsiteInput, z.string().trim().url("Website không hợp lệ").optional().or(z.literal(""))),
   bankName: z.string().trim().max(255, "Tên ngân hàng quá dài").optional().or(z.literal("")),
   bankAccount: z.string().trim().max(50, "Số tài khoản quá dài").optional().or(z.literal("")),
   bankAccountName: z.string().trim().max(255, "Tên chủ tài khoản quá dài").optional().or(z.literal("")),
@@ -71,6 +72,7 @@ export function CompanyForm({
     resolver: zodResolver(companyFormSchema),
     defaultValues: normalizeValues(initialValues ?? { name: "" })
   });
+  const websiteField = form.register("website");
 
   useEffect(() => {
     if (initialValues) {
@@ -101,7 +103,7 @@ export function CompanyForm({
               address: toOptionalString(values.address),
               phone: toOptionalString(values.phone),
               email: toOptionalString(values.email),
-              website: toOptionalString(values.website),
+              website: toOptionalString(normalizeWebsiteInput(values.website) as string | undefined),
               bankName: toOptionalString(values.bankName),
               bankAccount: toOptionalString(values.bankAccount),
               bankAccountName: toOptionalString(values.bankAccountName),
@@ -162,7 +164,23 @@ export function CompanyForm({
             <label className="text-sm font-semibold text-text-primary" htmlFor="company-website">
               Website
             </label>
-            <Input id="company-website" placeholder="https://example.com" {...form.register("website")} />
+            <Input
+              id="company-website"
+              placeholder="ahso.vn"
+              {...websiteField}
+              onBlur={(event) => {
+                void websiteField.onBlur(event);
+                const normalized = normalizeWebsiteInput(event.target.value);
+
+                if (typeof normalized === "string") {
+                  form.setValue("website", normalized, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
+                }
+              }}
+            />
+            <p className="text-xs text-text-secondary">Chỉ cần nhập domain. Hệ thống sẽ tự thêm https:// và www khi phù hợp.</p>
             <FieldError message={form.formState.errors.website?.message} />
           </div>
 

@@ -3,6 +3,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { JwtUser } from "../auth/auth.types";
+import { CreateProjectHandoverDto, createProjectHandoverSchema } from "./dto/create-project-handover.dto";
 import { CreateProjectDto, createProjectSchema } from "./dto/create-project.dto";
 import { BulkProjectDto, bulkProjectSchema } from "./dto/bulk-project.dto";
 import { ProjectFilterDto, projectFilterSchema } from "./dto/project-filter.dto";
@@ -42,6 +43,35 @@ export class ProjectsController {
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.findOne(id, user);
+  }
+
+  @Get(":id/overview-360")
+  getOverview360(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.getOverview360(id, user);
+  }
+
+  @Get(":id/timeline")
+  getTimeline(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.getTimeline(id, user);
+  }
+
+  @Get(":id/documents")
+  getDocuments(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.getDocuments(id, user);
+  }
+
+  @Get(":id/surveys")
+  getSurveys(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.getSurveys(id, user);
+  }
+
+  @Post(":id/handovers")
+  createHandover(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(createProjectHandoverSchema)) dto: CreateProjectHandoverDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.createHandover(id, dto, user);
   }
 
   @Patch(":id")

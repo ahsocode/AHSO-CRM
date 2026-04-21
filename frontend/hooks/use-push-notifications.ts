@@ -25,9 +25,11 @@ export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window === "undefined" || typeof Notification === "undefined" ? "default" : Notification.permission
   );
+  const [hasCheckedSupport, setHasCheckedSupport] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const isConfigured = Boolean(VAPID_PUBLIC_KEY);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -36,6 +38,7 @@ export function usePushNotifications() {
 
     setIsSupported("serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
     setPermission(Notification.permission);
+    setHasCheckedSupport(true);
   }, []);
 
   useEffect(() => {
@@ -51,15 +54,29 @@ export function usePushNotifications() {
       });
   }, [isSupported]);
 
-  const canPrompt = useMemo(() => isSupported && permission !== "denied", [isSupported, permission]);
+  const canPrompt = useMemo(() => isSupported && isConfigured && permission !== "denied", [isConfigured, isSupported, permission]);
+  const unavailableReason = useMemo(() => {
+    if (!hasCheckedSupport) {
+      return null;
+    }
+
+    if (!isSupported) {
+      return "Trình duyệt hiện tại không hỗ trợ push notification.";
+    }
+
+    if (!isConfigured) {
+      return "Push notification chưa được cấu hình VAPID trên môi trường này.";
+    }
+
+    if (permission === "denied") {
+      return "Trình duyệt đang chặn quyền thông báo. Cần bật lại trong cài đặt trình duyệt.";
+    }
+
+    return null;
+  }, [hasCheckedSupport, isConfigured, isSupported, permission]);
 
   const subscribe = async () => {
-    if (!isSupported || !VAPID_PUBLIC_KEY) {
-      toast({
-        title: "Không khả dụng",
-        description: "Push notification chưa được cấu hình trên môi trường này.",
-        variant: "destructive"
-      });
+    if (!canPrompt) {
       return;
     }
 
@@ -139,11 +156,14 @@ export function usePushNotifications() {
 
   return {
     canPrompt,
+    isConfigured,
+    hasCheckedSupport,
     isBusy,
     isSubscribed,
     isSupported,
     permission,
     subscribe,
-    unsubscribe
+    unsubscribe,
+    unavailableReason
   };
 }

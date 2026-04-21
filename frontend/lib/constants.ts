@@ -13,6 +13,29 @@ export const ROLE_LABELS = {
   STAFF: "Nhân viên phụ trách"
 } as const;
 
+type RoleLike =
+  | string
+  | {
+      name?: string | null;
+    }
+  | null
+  | undefined;
+
+export function getRoleLabelByName(roleLike: RoleLike) {
+  const roleName =
+    typeof roleLike === "string"
+      ? roleLike
+      : typeof roleLike === "object" && roleLike
+        ? roleLike.name
+        : undefined;
+
+  if (!roleName) {
+    return "Chưa gán vai trò";
+  }
+
+  return ROLE_LABELS[roleName as keyof typeof ROLE_LABELS] ?? roleName;
+}
+
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
   { href: "/customers", label: "Khách hàng", icon: "groups" },

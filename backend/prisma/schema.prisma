@@ -26,6 +26,13 @@ model User {
   pushSubscriptions PushSubscription[]
   reportTemplates   ReportTemplate[]
   documents         Document[]
+  businessDocuments BusinessDocument[] @relation("BusinessDocumentCreatedBy")
+  surveysCreated    Survey[]           @relation("SurveyCreatedBy")
+  surveyMedia        SurveyMedia[]      @relation("SurveyMediaUploadedBy")
+  surveyNotes        SurveyNote[]       @relation("SurveyNoteCreatedBy")
+  projectHandoversCreated ProjectHandover[] @relation("ProjectHandoverCreatedBy")
+  projectHandoversFrom    ProjectHandover[] @relation("ProjectHandoverFromUser")
+  projectHandoversTo      ProjectHandover[] @relation("ProjectHandoverToUser")
   documentTemplateVariantsCreated  DocumentTemplateVariant[] @relation("DocumentTemplateCreatedBy")
   documentTemplateVariantsApproved DocumentTemplateVariant[] @relation("DocumentTemplateApprovedBy")
 }
@@ -95,6 +102,8 @@ model Customer {
   projects     Project[]
   activities   Activity[]
   documents    Document[]
+  businessDocuments BusinessDocument[]
+  surveys      Survey[]
 }
 
 enum CustomerStatus {
@@ -138,6 +147,9 @@ model Project {
   contract        Contract?
   activities      Activity[]
   milestones      Milestone[]
+  businessDocuments BusinessDocument[]
+  surveys         Survey[]
+  handovers       ProjectHandover[]
 }
 
 enum ProjectStatus {
@@ -178,6 +190,7 @@ model Quote {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   items         QuoteItem[]
+  businessDocuments BusinessDocument[]
 }
 
 model QuoteItem {
@@ -219,6 +232,7 @@ model Contract {
   updatedAt  DateTime       @updatedAt
   milestones Milestone[]
   payments   Payment[]
+  businessDocuments BusinessDocument[]
 }
 
 enum ContractStatus {
@@ -260,6 +274,7 @@ model Payment {
   notes      String?
   contract   Contract @relation(fields: [contractId], references: [id])
   contractId String
+  businessDocuments BusinessDocument[]
   createdAt  DateTime @default(now())
 }
 
@@ -281,6 +296,190 @@ model Activity {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   deletedAt     DateTime?    // soft delete
+}
+
+model Survey {
+  id                   String        @id @default(cuid())
+  title                String
+  surveyedAt           DateTime?
+  location             String?
+  customerParticipants String?
+  objectives           String?
+  summary              String?
+  nextStep             String?
+  customer             Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId           String
+  project              Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId            String?
+  createdBy            User          @relation("SurveyCreatedBy", fields: [createdById], references: [id])
+  createdById          String
+  media                SurveyMedia[]
+  notes                SurveyNote[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([projectId, surveyedAt])
+  @@index([customerId, surveyedAt])
+  @@index([createdById, createdAt])
+}
+
+model SurveyMedia {
+  id           String          @id @default(cuid())
+  survey       Survey          @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  surveyId     String
+  kind         SurveyMediaKind
+  url          String
+  filename     String
+  mimeType     String
+  size         Int
+  caption      String?
+  area         String?
+  isImportant  Boolean         @default(false)
+  uploadedBy   User            @relation("SurveyMediaUploadedBy", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime        @default(now())
+
+  @@index([surveyId, createdAt])
+  @@index([uploadedById, createdAt])
+}
+
+model SurveyNote {
+  id          String         @id @default(cuid())
+  survey      Survey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  surveyId    String
+  type        SurveyNoteType @default(GENERAL)
+  content     String
+  isImportant Boolean        @default(false)
+  createdBy   User           @relation("SurveyNoteCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([surveyId, createdAt])
+  @@index([createdById, createdAt])
+}
+
+enum SurveyMediaKind {
+  IMAGE
+  VIDEO
+  FILE
+}
+
+enum SurveyNoteType {
+  GENERAL
+  TECHNICAL_REQUIREMENT
+  COMMERCIAL_REQUIREMENT
+  SITE_CONSTRAINT
+  RISK
+  DECISION
+  OPEN_QUESTION
+}
+
+model BusinessDocument {
+  id                  String                 @id @default(cuid())
+  type                BusinessDocumentType
+  source              BusinessDocumentSource
+  status              BusinessDocumentStatus @default(RECEIVED)
+  title               String
+  documentNo          String?
+  documentDate        DateTime?
+  fileUrl             String?
+  filename            String?
+  mimeType            String?
+  size                Int?
+  notes               String?
+  customer            Customer?              @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerId          String?
+  project             Project?               @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId           String?
+  quote               Quote?                 @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  quoteId             String?
+  contract            Contract?              @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  contractId          String?
+  payment             Payment?               @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  paymentId           String?
+  generatedDocument   Document?              @relation(fields: [generatedDocumentId], references: [id], onDelete: SetNull)
+  generatedDocumentId String?
+  parent              BusinessDocument?      @relation("BusinessDocumentLineage", fields: [parentId], references: [id], onDelete: SetNull)
+  parentId            String?
+  children            BusinessDocument[]     @relation("BusinessDocumentLineage")
+  createdBy           User                   @relation("BusinessDocumentCreatedBy", fields: [createdById], references: [id])
+  createdById         String
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([projectId, type, createdAt])
+  @@index([customerId, createdAt])
+  @@index([quoteId])
+  @@index([contractId])
+  @@index([paymentId])
+  @@index([parentId])
+  @@index([createdById, createdAt])
+}
+
+enum BusinessDocumentType {
+  RFQ
+  CUSTOMER_PO
+  QUOTATION
+  SIGNED_QUOTATION
+  PROPOSAL
+  CONTRACT
+  SIGNED_CONTRACT
+  CONTRACT_ADDENDUM
+  NDA
+  DELIVERY_NOTE
+  DOC_HANDOVER
+  INSTALLATION_REPORT
+  ACCEPTANCE_REPORT
+  PARTIAL_ACCEPTANCE
+  WARRANTY_CERT
+  MAINTENANCE_RECORD
+  PAYMENT_REQUEST
+  PAYMENT_RECEIPT
+  INVOICE
+  AR_RECONCILIATION
+  OTHER
+}
+
+enum BusinessDocumentSource {
+  GENERATED
+  UPLOADED
+  RECEIVED
+  SIGNED_UPLOAD
+}
+
+enum BusinessDocumentStatus {
+  DRAFT
+  ISSUED
+  RECEIVED
+  SIGNED
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+  CANCELLED
+  ARCHIVED
+}
+
+model ProjectHandover {
+  id                   String   @id @default(cuid())
+  project              Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId            String
+  summary              String?
+  customerRequirements String?
+  risks                String?
+  decisions            String?
+  openTasks            String?
+  importantDocumentIds String[]
+  fromUser             User?    @relation("ProjectHandoverFromUser", fields: [fromUserId], references: [id], onDelete: SetNull)
+  fromUserId           String?
+  toUser               User?    @relation("ProjectHandoverToUser", fields: [toUserId], references: [id], onDelete: SetNull)
+  toUserId             String?
+  createdBy            User     @relation("ProjectHandoverCreatedBy", fields: [createdById], references: [id])
+  createdById          String
+  createdAt            DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([createdById, createdAt])
 }
 
 model Webhook {
@@ -458,6 +657,7 @@ model Document {
   createdById String
   createdBy   User         @relation(fields: [createdById], references: [id])
   customer    Customer?    @relation(fields: [customerId], references: [id])
+  businessDocuments BusinessDocument[]
 
   @@index([entityType, entityId])
   @@index([customerId])

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeWebsiteInput } from "@/lib/url";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") {
@@ -13,7 +14,7 @@ const optionalString = (maxLength: number) =>
   z.preprocess(emptyToUndefined, z.string().trim().max(maxLength).optional());
 
 const optionalUrl = z.preprocess(
-  emptyToUndefined,
+  (value) => emptyToUndefined(normalizeWebsiteInput(value)),
   z.string().trim().url("Website không hợp lệ").optional()
 );
 

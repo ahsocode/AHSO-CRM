@@ -24,7 +24,6 @@ describe("DocumentsService", () => {
       create: jest.Mock;
       update: jest.Mock;
       delete: jest.Mock;
-      findUnique: jest.Mock;
       findFirst: jest.Mock;
     };
   };
@@ -45,7 +44,6 @@ describe("DocumentsService", () => {
         create: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
-        findUnique: jest.fn(),
         findFirst: jest.fn()
       }
     };
@@ -143,13 +141,13 @@ describe("DocumentsService", () => {
   });
 
   it("downloads an existing document by id without creating a new record", async () => {
-    prisma.document.findUnique.mockResolvedValue({
+    prisma.document.findFirst.mockResolvedValue({
       id: "document-1",
       number: "BG-2026-AHSO-001-v1",
       pdfPath: "/uploads/documents/generated.pdf"
     });
 
-    await expect(service.downloadDocument("document-1")).resolves.toEqual({
+    await expect(service.downloadDocument("document-1", user)).resolves.toEqual({
       buffer: Buffer.from("stored-pdf"),
       filename: "BG-2026-AHSO-001-v1.pdf",
       mimeType: "application/pdf"
@@ -162,7 +160,7 @@ describe("DocumentsService", () => {
   it("fails legacy download when the entity has never been rendered", async () => {
     prisma.document.findFirst.mockResolvedValue(null);
 
-    await expect(service.downloadLatest("QUOTATION", "quote-404", "vi")).rejects.toThrow(
+    await expect(service.downloadLatest("QUOTATION", "quote-404", "vi", user)).rejects.toThrow(
       new NotFoundException("Chưa render tài liệu cho đối tượng này.")
     );
 

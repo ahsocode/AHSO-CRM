@@ -15,7 +15,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useCustomer } from "@/hooks/use-customers";
-import { ROLE_LABELS } from "@/lib/constants";
+import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatMonthYear, formatRelativeTime } from "@/lib/format";
 import { ActivityType, ContractStatus, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -179,7 +179,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
               <AvatarInitials name={customer.assignedTo.name} className="h-14 w-14 rounded-full text-base" />
               <div>
                 <p className="font-heading text-xl font-bold text-text-primary">{customer.assignedTo.name}</p>
-                <p className="text-sm text-text-secondary">{ROLE_LABELS[customer.assignedTo.role]}</p>
+                <p className="text-sm text-text-secondary">{getRoleLabelByName(customer.assignedTo.role)}</p>
               </div>
             </div>
 

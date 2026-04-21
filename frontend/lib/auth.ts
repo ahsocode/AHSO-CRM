@@ -1,4 +1,4 @@
-import { API_URL, ACCESS_TOKEN_KEY, AUTH_USER_KEY, REFRESH_TOKEN_KEY, ROLE_LABELS } from "./constants";
+import { API_URL, ACCESS_TOKEN_KEY, AUTH_USER_KEY, REFRESH_TOKEN_KEY, getRoleLabelByName } from "./constants";
 import { AuthRoleInfo, AuthSession, AuthUser, Role } from "./types";
 
 type NormalizedAuthUser = Omit<AuthUser, "role"> & { role: AuthRoleInfo };
@@ -90,7 +90,7 @@ export function getAuthPermissions(user: AuthUser | null | undefined) {
 
 export function getRoleLabel(role: AuthUser["role"] | null | undefined) {
   const roleName = getAuthRoleName(role);
-  return roleName ? ROLE_LABELS[roleName] : "Phiên làm việc";
+  return roleName ? getRoleLabelByName(roleName) : "Phiên làm việc";
 }
 
 export function isLeadershipRole(role: AuthUser["role"] | null | undefined) {

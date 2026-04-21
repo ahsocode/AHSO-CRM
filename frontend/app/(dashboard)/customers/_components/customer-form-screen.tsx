@@ -21,7 +21,8 @@ import { useUsers } from "@/hooks/use-users";
 import { getRoleLabel, isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
-import { CustomerStatus, CustomFieldValues, Role, UserListItem } from "@/lib/types";
+import { CustomerStatus, CustomFieldValues, RelatedUserRole, UserListItem } from "@/lib/types";
+import { normalizeWebsiteInput } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import {
   customerFormSchema,
@@ -36,7 +37,10 @@ const STATUS_OPTIONS: Array<{ label: string; value: CustomerStatus }> = [
   { label: "Không hoạt động", value: "INACTIVE" }
 ];
 
-function getUserOptions(users: UserListItem[], fallbackUser?: { id: string; name: string; role: Role }) {
+function getUserOptions(
+  users: UserListItem[],
+  fallbackUser?: { id: string; name: string; role: string | RelatedUserRole }
+) {
   const options = [...users];
 
   if (fallbackUser && !options.some((user) => user.id === fallbackUser.id)) {
@@ -44,7 +48,8 @@ function getUserOptions(users: UserListItem[], fallbackUser?: { id: string; name
       id: fallbackUser.id,
       email: "",
       name: fallbackUser.name,
-      role: fallbackUser.role as UserListItem["role"],
+      role: typeof fallbackUser.role === "string" ? fallbackUser.role : (fallbackUser.role.name ?? ""),
+      roleId: "",
       isActive: true,
       createdAt: new Date(0).toISOString()
     });
@@ -120,6 +125,7 @@ export function CustomerFormScreen({
     : null;
   const userOptions = getUserOptions(usersQuery.data ?? [], customerQuery.data?.assignedTo);
   const isSubmitting = activeMutation.isPending || deleteCustomerMutation.isPending;
+  const websiteField = form.register("website");
 
   if (mode === "edit" && customerQuery.isLoading) {
     return (
@@ -304,7 +310,23 @@ export function CustomerFormScreen({
 
               <Field>
                 <Label htmlFor="website">Website</Label>
-                <Input id="website" placeholder="https://company.vn" {...form.register("website")} />
+                <Input
+                  id="website"
+                  placeholder="company.vn"
+                  {...websiteField}
+                  onBlur={(event) => {
+                    void websiteField.onBlur(event);
+                    const normalized = normalizeWebsiteInput(event.target.value);
+
+                    if (typeof normalized === "string") {
+                      form.setValue("website", normalized, {
+                        shouldDirty: true,
+                        shouldValidate: true
+                      });
+                    }
+                  }}
+                />
+                <p className="text-xs text-text-secondary">Chỉ cần nhập domain. Hệ thống sẽ tự thêm https:// và www khi phù hợp.</p>
                 <ErrorText message={form.formState.errors.website?.message} />
               </Field>
 

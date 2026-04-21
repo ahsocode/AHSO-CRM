@@ -65,9 +65,10 @@ function findBox(layout: DocumentTemplateLayout | null, boxId?: string) {
 
 function createBoxFromLibrary(
   item: TemplateBoxLibraryItem,
-  layout: DocumentTemplateLayout
+  layout: DocumentTemplateLayout,
+  targetPage = 0
 ): TemplateBox {
-  const page = layout.pages[0];
+  const page = layout.pages[targetPage] ?? layout.pages[0];
   const offset = page.boxes.length * 6;
   const cloned = cloneLayout({
     version: 1,
@@ -78,6 +79,7 @@ function createBoxFromLibrary(
   return clampBoxToPage(layout, {
     ...cloned,
     id: createNewBoxId(item.type),
+    page: targetPage,
     x: cloned.x + offset,
     y: cloned.y + offset
   });
@@ -141,7 +143,7 @@ export default function DocumentTemplatesPage() {
 
     setDraftName(activeVariant.name);
     setDraftLayout(cloneLayout(activeVariant.layoutJson));
-    setSelectedBoxId(activeVariant.layoutJson.pages[0]?.boxes[0]?.id);
+    setSelectedBoxId(activeVariant.layoutJson.pages.flatMap((page) => page.boxes)[0]?.id);
   }, [activeVariant?.id]);
 
   const selectedBox = useMemo(() => findBox(draftLayout, selectedBoxId), [draftLayout, selectedBoxId]);
@@ -299,7 +301,11 @@ export default function DocumentTemplatesPage() {
     }
 
     setDraftLayout(removeBoxFromLayout(draftLayout, selectedBoxId));
-    setSelectedBoxId(draftLayout.pages[0]?.boxes.find((box) => box.id !== selectedBoxId)?.id);
+    setSelectedBoxId(
+      draftLayout.pages
+        .flatMap((page) => page.boxes)
+        .find((box) => box.id !== selectedBoxId)?.id
+    );
   };
 
   const handleAddBox = (item: TemplateBoxLibraryItem) => {
@@ -307,8 +313,9 @@ export default function DocumentTemplatesPage() {
       return;
     }
 
-    const nextBox = createBoxFromLibrary(item, draftLayout);
-    setDraftLayout(addBoxToLayout(draftLayout, nextBox));
+    const targetPage = selectedBox?.page ?? 0;
+    const nextBox = createBoxFromLibrary(item, draftLayout, targetPage);
+    setDraftLayout(addBoxToLayout(draftLayout, nextBox, targetPage));
     setSelectedBoxId(nextBox.id);
   };
 
@@ -637,7 +644,10 @@ export default function DocumentTemplatesPage() {
                       Grid: {draftLayout.page.gridMm}mm
                     </span>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-text-secondary">
-                      Box: {draftLayout.pages[0]?.boxes.length ?? 0}
+                      Trang: {draftLayout.pages.length}
+                    </span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-text-secondary">
+                      Box: {draftLayout.pages.reduce((total, page) => total + page.boxes.length, 0)}
                     </span>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-text-secondary">
                       Ngôn ngữ: {previewLanguage === "vi" ? "VI" : "VI-EN"}

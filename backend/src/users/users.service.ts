@@ -30,7 +30,8 @@ export class UsersService {
       roleId: user.roleId,
       avatarUrl: user.avatarUrl,
       isActive: user.isActive,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
     }));
   }
 
@@ -92,7 +93,8 @@ export class UsersService {
       roleId: user.roleId,
       avatarUrl: user.avatarUrl,
       isActive: user.isActive,
-      createdAt: user.createdAt
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
     };
   }
 
@@ -105,6 +107,21 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException("Không tìm thấy người dùng");
+    }
+
+    if (dto.roleId) {
+      const role = await this.prisma.userRole.findUnique({
+        where: {
+          id: dto.roleId
+        },
+        select: {
+          id: true
+        }
+      });
+
+      if (!role) {
+        throw new NotFoundException("Không tìm thấy vai trò được chọn");
+      }
     }
 
     const updatedUser = await this.prisma.user.update({

@@ -189,9 +189,10 @@ export class DocumentsController {
   @Get(":documentId/download")
   async downloadById(
     @Param("documentId") documentId: string,
+    @CurrentUser() user: JwtUser,
     @Res() response: Response
   ) {
-    const { buffer, filename, mimeType } = await this.documentsService.downloadDocument(documentId);
+    const { buffer, filename, mimeType } = await this.documentsService.downloadDocument(documentId, user);
     response.setHeader("Content-Type", mimeType);
     response.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     response.send(buffer);
@@ -202,12 +203,14 @@ export class DocumentsController {
     @Param("type") type: DocumentType,
     @Param("entityId") entityId: string,
     @Query(new ZodValidationPipe(previewQuerySchema, "query")) query: PreviewQueryDto,
+    @CurrentUser() user: JwtUser,
     @Res() response: Response
   ) {
     const { buffer, filename, mimeType } = await this.documentsService.downloadLatest(
       type,
       entityId,
-      query.lang
+      query.lang,
+      user
     );
     response.setHeader("Content-Type", mimeType);
     response.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

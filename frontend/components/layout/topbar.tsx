@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { AppIcon } from "@/components/shared/app-icon";
@@ -22,7 +20,6 @@ export function Topbar({
   isRealtimeConnected: boolean;
   lastRealtimeEvent: RealtimeEvent | null;
 }) {
-  const router = useRouter();
   const companyQuery = useCompanyInfo();
   const logoQuery = useLogo();
   const brandName = companyQuery.data?.shortName || companyQuery.data?.name || "AHSO";
@@ -74,11 +71,6 @@ export function Topbar({
 
         <div className="flex items-center justify-between gap-3 lg:justify-end">
           <NotificationBell />
-
-          <Button className="shadow-[0_12px_22px_rgba(26,82,118,0.18)]" variant="primary" onClick={() => router.push("/customers")}>
-            <AppIcon name="plus" className="h-4 w-4" />
-            Thêm mới
-          </Button>
 
           <button
             className="flex items-center gap-3 rounded-full border border-slate-200/80 bg-white/92 px-2 py-1.5 shadow-sm transition hover:border-primary/25 hover:bg-white"

@@ -3,6 +3,7 @@ import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import type { Request, Response } from "express";
 import helmet from "helmet";
 import { WinstonModule } from "nest-winston";
 import { join } from "path";
@@ -45,6 +46,9 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
     credentials: true
+  });
+  app.use(["/uploads/documents", "/uploads/business-documents", "/uploads/surveys"], (_request: Request, response: Response) => {
+    response.status(404).send("Không tìm thấy tài liệu.");
   });
   app.useStaticAssets(join(__dirname, "..", "uploads"), {
     prefix: "/uploads/"

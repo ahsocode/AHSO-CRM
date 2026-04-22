@@ -123,6 +123,15 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 Tạo hợp đồng
               </Link>
             ) : null}
+            <Link
+              href={`/quotes/${quote.id}/preview`}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              <AppIcon name="preview" className="h-4 w-4" />
+              Xem trước báo giá
+            </Link>
             <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
               Chỉnh sửa
             </Link>
@@ -337,6 +346,16 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               </div>
 
               <div className="grid gap-3">
+                <Link
+                  href={`/quotes/${quote.id}/preview`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(buttonVariants({ variant: "primary", size: "lg" }))}
+                >
+                  <AppIcon name="preview" className="h-4 w-4" />
+                  Xem trước báo giá trước khi tạo tài liệu
+                </Link>
+
                 {canEdit ? (
                   <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
                     <AppIcon name="description" className="h-4 w-4" />

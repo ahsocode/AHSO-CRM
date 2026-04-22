@@ -10,6 +10,7 @@ type IconName =
   | "analytics"
   | "settings"
   | "search"
+  | "preview"
   | "bell"
   | "plus"
   | "arrow-right"
@@ -32,6 +33,7 @@ const ICONS: Record<IconName, React.ReactNode> = {
   analytics: <path d="M5 9h3v10H5zM10.5 5h3v14h-3zM16 12h3v7h-3z" />,
   settings: <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5 3.5 3.5 0 1 0 12 8.5zm8.94 4.5a7.9 7.9 0 0 0 .06-1l2-1.56-2-3.46-2.42.49a8.31 8.31 0 0 0-.87-.5L15.5 2h-4l-.21 2.97c-.3.13-.59.29-.87.48L7.99 4.96 6 8.42 8 10a7.9 7.9 0 0 0 0 2l-2 1.58 1.99 3.46 2.43-.49c.27.19.56.35.86.49L11.5 22h4l.21-2.97c.3-.13.59-.29.87-.48l2.42.49L21 15.58 18.99 14c-.02-.33-.04-.66-.05-1Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />,
   search: <path d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  preview: <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   bell: <path d="M6 8a6 6 0 1 1 12 0v5l2 3H4l2-3zm4 11a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   plus: <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   "arrow-right": <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
@@ -63,4 +65,3 @@ export function AppIcon({
     </svg>
   );
 }
-

@@ -7,6 +7,7 @@ export default function DocumentPreviewPage({
     type?: string;
     entityId?: string;
     lang?: string;
+    templateVariantId?: string;
   };
 }) {
   return (
@@ -14,6 +15,7 @@ export default function DocumentPreviewPage({
       type={searchParams.type}
       entityId={searchParams.entityId}
       lang={searchParams.lang}
+      templateVariantId={searchParams.templateVariantId}
     />
   );
 }

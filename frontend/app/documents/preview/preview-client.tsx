@@ -12,20 +12,22 @@ export function DocumentPreviewClient({
   type,
   entityId,
   lang,
+  templateVariantId,
 }: {
   type?: string;
   entityId?: string;
   lang?: string;
+  templateVariantId?: string;
 }) {
   const isReady = Boolean(type && entityId);
   const language = lang ?? "vi";
 
   const previewQuery = useQuery({
-    queryKey: ["documents", "preview-page", type, entityId, language],
+    queryKey: ["documents", "preview-page", type, entityId, language, templateVariantId],
     enabled: isReady,
     queryFn: async () => {
       const response = await apiClient.get<string>(`/documents/${type}/${entityId}/preview`, {
-        params: { lang: language },
+        params: { lang: language, templateVariantId },
         responseType: "text",
       });
       return response.data;

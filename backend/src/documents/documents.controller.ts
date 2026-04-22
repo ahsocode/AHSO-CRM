@@ -27,6 +27,8 @@ import {
   DocumentTemplateQueryDto,
   duplicateDocumentTemplateVariantSchema,
   DuplicateDocumentTemplateVariantDto,
+  runtimeDocumentTemplateQuerySchema,
+  RuntimeDocumentTemplateQueryDto,
   updateDocumentTemplateVariantSchema,
   UpdateDocumentTemplateVariantDto
 } from "./dto/document-template.dto";
@@ -71,6 +73,14 @@ export class DocumentsController {
     query: DocumentTemplateQueryDto
   ) {
     return this.templateVariants.listVariants(query.type);
+  }
+
+  @Get("templates/available")
+  async listRuntimeTemplateVariants(
+    @Query(new ZodValidationPipe(runtimeDocumentTemplateQuerySchema, "query"))
+    query: RuntimeDocumentTemplateQueryDto
+  ) {
+    return this.templateVariants.listRuntimeVariants(query.type);
   }
 
   @Post("templates")
@@ -160,7 +170,13 @@ export class DocumentsController {
     @CurrentUser() user: JwtUser,
     @Res() response: Response
   ) {
-    const { html } = await this.documentsService.renderPreview(type, entityId, query.lang, user);
+    const { html } = await this.documentsService.renderPreview(
+      type,
+      entityId,
+      query.lang,
+      user,
+      query.templateVariantId
+    );
     response.send(html);
   }
 
@@ -175,6 +191,7 @@ export class DocumentsController {
       type,
       entityId,
       body.language,
+      body.templateVariantId,
       body.extra,
       user
     );

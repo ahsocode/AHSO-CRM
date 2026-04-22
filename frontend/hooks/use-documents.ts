@@ -45,6 +45,7 @@ export interface DocumentFilters {
 
 export interface RenderDocumentPayload {
   language: "vi" | "vi-en";
+  templateVariantId?: string;
   extra?: Record<string, unknown>;
 }
 
@@ -88,14 +89,16 @@ export function usePreviewDocument() {
     mutationFn: async ({
       type,
       entityId,
-      lang
+      lang,
+      templateVariantId
     }: {
       type: string;
       entityId: string;
       lang: string;
+      templateVariantId?: string;
     }) => {
       const response = await apiClient.get<string>(`/documents/${type}/${entityId}/preview`, {
-        params: { lang }
+        params: { lang, templateVariantId }
       });
       return response.data;
     }
@@ -172,6 +175,22 @@ export function useDocumentTemplateVariants(type?: DocumentTemplateType) {
         "/documents/templates",
         {
           params: type ? { type } : undefined
+        }
+      );
+      return response.data.data;
+    }
+  });
+}
+
+export function useRuntimeDocumentTemplateVariants(type?: string, enabled = true) {
+  return useQuery({
+    queryKey: ["documents", "runtime-template-variants", type],
+    enabled: Boolean(type) && enabled,
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<DocumentTemplateVariant[]>>(
+        "/documents/templates/available",
+        {
+          params: { type }
         }
       );
       return response.data.data;

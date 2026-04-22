@@ -118,7 +118,7 @@ describe("DocumentsService", () => {
     });
 
     await expect(
-      service.renderPdf("QUOTATION", "quote-1", "vi", undefined, user)
+      service.renderPdf("QUOTATION", "quote-1", "vi", undefined, undefined, user)
     ).resolves.toMatchObject({
       documentId: "document-1",
       number: "BG-2026-AHSO-001-v1",

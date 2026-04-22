@@ -151,12 +151,13 @@ ${extraCss}
     type: DocumentType,
     entityId: string,
     languageInput: string | undefined,
-    user: JwtUser
+    user: JwtUser,
+    templateVariantId?: string
   ): Promise<{ html: string }> {
     await this.ensureInitialized();
     const language = this.resolveLanguage(languageInput);
     const { context, title } = await this.buildRenderContext(type, entityId, language, user);
-    const html = await this.renderHtml(type, language, context, title);
+    const html = await this.renderHtml(type, language, context, title, templateVariantId);
 
     return { html };
   }
@@ -165,6 +166,7 @@ ${extraCss}
     type: DocumentType,
     entityId: string,
     languageInput: string | undefined,
+    templateVariantId: string | undefined,
     extra: Record<string, unknown> | undefined,
     user: JwtUser
   ) {
@@ -184,7 +186,13 @@ ${extraCss}
       customerCode,
       1,
       async (number) => {
-        const html = await this.renderHtml(type, language, { ...context, docNumber: number }, title);
+        const html = await this.renderHtml(
+          type,
+          language,
+          { ...context, docNumber: number },
+          title,
+          templateVariantId
+        );
         const pdfBuffer = await this.pdfRenderer.render(html);
 
         const createdAt = new Date();
@@ -390,9 +398,12 @@ ${extraCss}
     type: DocumentType,
     language: DocumentLanguage,
     context: Record<string, unknown>,
-    title: string
+    title: string,
+    templateVariantId?: string
   ) {
-    const activeVariant = await this.templateVariants.getActiveVariant(type);
+    const activeVariant = templateVariantId
+      ? await this.templateVariants.getPublishedRuntimeVariant(templateVariantId, type)
+      : await this.templateVariants.getActiveVariant(type);
 
     if (activeVariant) {
       const body = this.layoutRenderer.render(

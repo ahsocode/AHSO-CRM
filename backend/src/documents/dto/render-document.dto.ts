@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const renderDocumentSchema = z.object({
   language: z.enum(["vi", "vi-en"]).optional(),
+  templateVariantId: z.string().trim().min(1).optional(),
   extra: z.record(z.unknown()).optional()
 });
 
@@ -19,7 +20,8 @@ export const documentListFilterSchema = z.object({
 export type DocumentListFilterDto = z.infer<typeof documentListFilterSchema>;
 
 export const previewQuerySchema = z.object({
-  lang: z.enum(["vi", "vi-en"]).optional()
+  lang: z.enum(["vi", "vi-en"]).optional(),
+  templateVariantId: z.string().trim().min(1).optional()
 });
 
 export type PreviewQueryDto = z.infer<typeof previewQuerySchema>;

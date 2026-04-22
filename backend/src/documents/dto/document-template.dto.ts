@@ -122,6 +122,10 @@ export const documentTemplateQuerySchema = z.object({
   type: z.nativeEnum(DocumentType).optional()
 });
 
+export const runtimeDocumentTemplateQuerySchema = z.object({
+  type: z.nativeEnum(DocumentType)
+});
+
 export const createDocumentTemplateSchema = z.object({
   type: z.nativeEnum(DocumentType),
   name: z.string().trim().min(1, "Tên variant là bắt buộc").max(120),
@@ -138,6 +142,7 @@ export const duplicateDocumentTemplateVariantSchema = z.object({
 });
 
 export type DocumentTemplateQueryDto = z.infer<typeof documentTemplateQuerySchema>;
+export type RuntimeDocumentTemplateQueryDto = z.infer<typeof runtimeDocumentTemplateQuerySchema>;
 export type CreateDocumentTemplateDto = z.infer<typeof createDocumentTemplateSchema>;
 export type UpdateDocumentTemplateVariantDto = z.infer<typeof updateDocumentTemplateVariantSchema>;
 export type DuplicateDocumentTemplateVariantDto = z.infer<typeof duplicateDocumentTemplateVariantSchema>;

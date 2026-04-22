@@ -86,6 +86,23 @@ export class DocumentTemplateVariantsService {
     return this.serializeVariant(variant);
   }
 
+  async listRuntimeVariants(type: DocumentType) {
+    if (!isTemplateEditorEnabled(type)) {
+      return [];
+    }
+
+    const variants = await this.prisma.documentTemplateVariant.findMany({
+      where: {
+        type,
+        status: "PUBLISHED"
+      },
+      include: variantInclude,
+      orderBy: [{ isActive: "desc" }, { updatedAt: "desc" }]
+    });
+
+    return variants.map((variant) => this.serializeVariant(variant));
+  }
+
   async getCatalog(type: DocumentType, user: JwtUser): Promise<TemplateCatalog> {
     this.assertEditorEnabled(type);
 
@@ -325,6 +342,27 @@ export class DocumentTemplateVariantsService {
 
     if (!variant) {
       return null;
+    }
+
+    return this.serializeVariant(variant);
+  }
+
+  async getPublishedRuntimeVariant(id: string, type: DocumentType) {
+    if (!isTemplateEditorEnabled(type)) {
+      throw new BadRequestException(`Loại tài liệu ${type} chưa hỗ trợ chọn template runtime.`);
+    }
+
+    const variant = await this.prisma.documentTemplateVariant.findFirst({
+      where: {
+        id,
+        type,
+        status: "PUBLISHED"
+      },
+      include: variantInclude
+    });
+
+    if (!variant) {
+      throw new NotFoundException("Không tìm thấy template đã publish cho loại tài liệu này.");
     }
 
     return this.serializeVariant(variant);

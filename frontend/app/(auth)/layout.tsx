@@ -1,6 +1,5 @@
 "use client";
 
-import { AppIcon } from "@/components/shared/app-icon";
 import { useCompanyInfo, useLogo } from "@/hooks/use-settings";
 import { resolveAssetUrl } from "@/lib/auth";
 
@@ -21,9 +20,12 @@ export default function AuthLayout({
         <div className="absolute bottom-[-14rem] right-[-12rem] h-[28rem] w-[28rem] rounded-full bg-accent/20 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-7xl overflow-hidden rounded-[34px] bg-white/10 shadow-[0_30px_90px_rgba(3,18,30,0.35)] ring-1 ring-white/15 backdrop-blur-md lg:grid-cols-[1.08fr_0.92fr]">
-        <section className="relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex xl:p-12">
-          <div className="absolute inset-0 bg-[linear-gradient(140deg,rgba(255,255,255,0.16),rgba(255,255,255,0)_42%),radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.16),transparent_28%)]" />
+      <div className="relative mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-7xl overflow-hidden rounded-[34px] bg-white/10 shadow-[0_30px_90px_rgba(3,18,30,0.35)] ring-1 ring-white/15 backdrop-blur-md lg:grid-cols-[1.02fr_0.98fr]">
+        <section className="auth-motion-field relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex xl:p-12">
+          <div className="auth-orb left-16 top-32 h-48 w-48 bg-white/12" />
+          <div className="auth-orb auth-orb-delayed bottom-20 right-20 h-60 w-60 bg-accent/20" />
+          <div className="absolute inset-x-12 bottom-24 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+
           <div className="relative">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-3">
@@ -35,7 +37,7 @@ export default function AuthLayout({
                   )}
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">Secure workspace</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">AHSO Workspace</p>
                   <p className="mt-1 font-heading text-lg font-extrabold text-white">{brandName}</p>
                 </div>
               </div>
@@ -44,42 +46,30 @@ export default function AuthLayout({
               </div>
             </div>
 
-            <div className="mt-16 max-w-2xl">
-              <p className="industrial-chip bg-white/12 text-white/80">Project 360 command center</p>
+            <div className="mt-20 max-w-2xl">
+              <p className="industrial-chip bg-white/12 text-white/78">Project 360</p>
               <h1 className="mt-6 text-balance font-heading text-5xl font-extrabold leading-tight tracking-tight xl:text-6xl">
-                Một nơi kiểm soát toàn bộ hành trình khách hàng kỹ thuật.
+                CRM cho đội bán hàng kỹ thuật.
               </h1>
-              <p className="mt-6 max-w-xl text-base leading-8 text-white/72">
-                Tập trung khách hàng, khảo sát, báo giá, hợp đồng, tài liệu và bàn giao dự án để đội vận hành ra quyết định trên cùng một nguồn dữ liệu.
+              <p className="mt-5 max-w-lg text-base leading-8 text-white/70">
+                Khách hàng, dự án, báo giá và tài liệu nằm trên cùng một luồng.
               </p>
             </div>
 
-            <div className="mt-10 grid max-w-2xl gap-3">
-              {[
-                { icon: "groups" as const, title: "Khách hàng", text: "Lịch sử tương tác và người phụ trách rõ ràng." },
-                { icon: "factory" as const, title: "Dự án", text: "Theo dõi từ khảo sát đến triển khai, nghiệm thu." },
-                { icon: "description" as const, title: "Tài liệu", text: "Báo giá, hợp đồng, PO và hồ sơ ký được quản lý xuyên suốt." }
-              ].map((item) => (
-                <div key={item.title} className="flex items-start gap-4 rounded-2xl border border-white/12 bg-white/10 p-4 text-sm text-white/78 shadow-[0_14px_35px_rgba(0,0,0,0.12)] backdrop-blur">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/14 text-white">
-                    <AppIcon name={item.icon} className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-white">{item.title}</p>
-                    <p className="mt-1 leading-6">{item.text}</p>
-                  </div>
+            <div className="mt-12 grid max-w-xl grid-cols-3 gap-3 text-sm">
+              {["Lead", "Quote", "Contract"].map((item) => (
+                <div key={item} className="auth-float-card rounded-2xl border border-white/14 bg-white/10 px-4 py-5 text-center shadow-[0_14px_35px_rgba(0,0,0,0.12)] backdrop-blur">
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-accent" />
+                  <p className="font-semibold text-white">{item}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="relative grid gap-4 text-sm text-white/76 md:grid-cols-3">
-            {["JWT bảo mật", "RBAC theo vai trò", "Realtime cập nhật"].map((label) => (
-              <div key={label} className="rounded-2xl border border-white/12 bg-white/10 px-4 py-3">
-                <div className="mb-3 h-1 w-10 rounded-full bg-accent" />
-                <p className="font-semibold text-white">{label}</p>
-              </div>
-            ))}
+          <div className="relative flex items-center justify-between gap-4 rounded-3xl border border-white/12 bg-white/10 px-5 py-4 text-sm text-white/72 backdrop-blur">
+            <span>Realtime</span>
+            <span>RBAC</span>
+            <span>Document Hub</span>
           </div>
         </section>
 

@@ -265,8 +265,8 @@ export function TemplateCanvas({
           nextIssues.push({
             boxId,
             code: "overflow",
-            severity: "error",
-            message: `Box "${boxId}" đang tràn nội dung trên canvas preview.`
+            severity: "warning",
+            message: `Box "${boxId}" có thể tràn nội dung trên canvas preview.`
           });
         }
       });

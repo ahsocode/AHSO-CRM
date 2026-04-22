@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
@@ -12,12 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentActions } from "@/components/shared/document-actions";
-import { useDuplicateQuote, useDownloadQuotePdf, useQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
-import { useToast } from "@/hooks/use-toast";
+import { useRuntimeDocumentTemplateVariants } from "@/hooks/use-documents";
+import { useDuplicateQuote, useQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
-import { QuoteStatus } from "@/lib/types";
-import { cn, downloadBlob } from "@/lib/utils";
+import type { DocumentTemplateVariant, QuoteStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
 
@@ -46,11 +47,11 @@ const STATUS_ACTIONS: Partial<
 
 export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const router = useRouter();
+  const [selectedTemplateVariantId, setSelectedTemplateVariantId] = useState("");
   const quoteQuery = useQuote(quoteId);
+  const templateVariantsQuery = useRuntimeDocumentTemplateVariants("QUOTATION");
   const duplicateQuoteMutation = useDuplicateQuote();
-  const downloadQuotePdfMutation = useDownloadQuotePdf();
   const updateQuoteStatusMutation = useUpdateQuoteStatus();
-  const { error: showError } = useToast();
 
   if (quoteQuery.isLoading) {
     return (
@@ -104,6 +105,22 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
     ? getApiErrorMessage(updateQuoteStatusMutation.error, "Không thể cập nhật trạng thái báo giá.")
     : null;
   const isMutating = duplicateQuoteMutation.isPending || updateQuoteStatusMutation.isPending;
+  const selectedTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.id === selectedTemplateVariantId);
+  const activeTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.isActive);
+  const documentPreviewHref = {
+    pathname: "/documents/preview",
+    query: {
+      type: "QUOTATION",
+      entityId: quote.id,
+      lang: quote.project.customer.language === "vi-en" ? "vi-en" : "vi",
+      ...(selectedTemplateVariantId ? { templateVariantId: selectedTemplateVariantId } : {})
+    }
+  };
+  const selectedTemplateLabel = selectedTemplateVariant
+    ? `${selectedTemplateVariant.name} · v${selectedTemplateVariant.version}`
+    : activeTemplateVariant
+      ? `${activeTemplateVariant.name} · v${activeTemplateVariant.version} · active`
+      : "Mẫu mặc định / fallback hệ thống";
 
   return (
     <div className="space-y-8">
@@ -124,7 +141,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               </Link>
             ) : null}
             <Link
-              href={`/quotes/${quote.id}/preview`}
+              href={documentPreviewHref}
               target="_blank"
               rel="noreferrer"
               className={cn(buttonVariants({ variant: "outline" }))}
@@ -139,6 +156,9 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               entityType="quote" 
               entityId={quote.id} 
               customerLanguage={quote.project.customer.language ?? "vi"}
+              templateVariantId={selectedTemplateVariantId}
+              templateVariantLabel={selectedTemplateLabel}
+              showTemplateSelector={false}
             />
           </div>
         }
@@ -347,14 +367,22 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
               <div className="grid gap-3">
                 <Link
-                  href={`/quotes/${quote.id}/preview`}
+                  href={documentPreviewHref}
                   target="_blank"
                   rel="noreferrer"
                   className={cn(buttonVariants({ variant: "primary", size: "lg" }))}
                 >
                   <AppIcon name="preview" className="h-4 w-4" />
-                  Xem trước báo giá trước khi tạo tài liệu
+                  Xem trước theo template đã chọn
                 </Link>
+
+                <QuoteTemplateSelector
+                  activeTemplateName={activeTemplateVariant?.name}
+                  isLoading={templateVariantsQuery.isLoading}
+                  selectedTemplateVariantId={selectedTemplateVariantId}
+                  templateVariants={templateVariantsQuery.data ?? []}
+                  onChange={setSelectedTemplateVariantId}
+                />
 
                 {canEdit ? (
                   <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
@@ -505,6 +533,68 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               )}
             </CardContent>
           </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuoteTemplateSelector({
+  activeTemplateName,
+  isLoading,
+  selectedTemplateVariantId,
+  templateVariants,
+  onChange
+}: {
+  activeTemplateName?: string;
+  isLoading: boolean;
+  selectedTemplateVariantId: string;
+  templateVariants: DocumentTemplateVariant[];
+  onChange: (variantId: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+          <AppIcon name="description" className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Template báo giá</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              Chọn mẫu trước khi xem trước hoặc tạo PDF gửi khách.
+            </p>
+          </div>
+
+          {isLoading ? (
+            <div className="rounded-xl border border-border bg-white/70 px-4 py-3 text-sm text-text-secondary">
+              Đang tải danh sách template...
+            </div>
+          ) : (
+            <>
+              <select
+                aria-label="Chọn template báo giá"
+                className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                value={selectedTemplateVariantId}
+                onChange={(event) => onChange(event.target.value)}
+              >
+                <option value="">
+                  {activeTemplateName ? `Mẫu active hiện tại: ${activeTemplateName}` : "Mẫu mặc định / fallback hệ thống"}
+                </option>
+                {templateVariants.map((variant) => (
+                  <option key={variant.id} value={variant.id}>
+                    {variant.name} · v{variant.version}
+                    {variant.isActive ? " · active" : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-text-secondary">
+                {templateVariants.length > 0
+                  ? "Danh sách chỉ gồm các template đã publish. Nếu không chọn, hệ thống dùng mẫu active."
+                  : "Chưa có template báo giá đã publish; hệ thống sẽ dùng fallback hiện tại."}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

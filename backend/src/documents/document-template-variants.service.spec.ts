@@ -1,6 +1,8 @@
 import { BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../common/prisma.service";
 import { DocumentDataLoaderService } from "./document-data-loader.service";
+import { createDefaultLayoutForType } from "./document-template-catalog";
+import type { DocumentTemplateLayout } from "./document-template.types";
 import { DocumentTemplateVariantsService } from "./document-template-variants.service";
 
 const layoutJson = {
@@ -130,5 +132,72 @@ describe("DocumentTemplateVariantsService", () => {
         isActive: true
       }
     });
+  });
+
+  it("does not falsely flag the default quotation intro as overflowing", () => {
+    const issues = service.validateLayout(createDefaultLayoutForType("QUOTATION"), {
+      customer: {
+        name: "CÔNG TY TNHH AHSO INDUSTRIAL SOLUTIONS"
+      },
+      project: {
+        name: "Nâng cấp hệ thống PLC trạm bơm và tích hợp giám sát vận hành"
+      },
+      quote: {
+        quoteNo: "BG-2026-002",
+        version: 1,
+        validUntil: "2026-05-20T00:00:00.000Z"
+      },
+      items: []
+    });
+
+    expect(issues.find((issue) => issue.boxId === "quote-intro")).toBeUndefined();
+  });
+
+  it("reports text overflow as a warning instead of blocking publish", () => {
+    const overflowLayout: DocumentTemplateLayout = {
+      version: 1,
+      page: layoutJson.page,
+      pages: [
+        {
+          id: "page-1",
+          boxes: [
+            {
+              id: "custom-text",
+              type: "text",
+              page: 0,
+              x: 12,
+              y: 12,
+              width: 30,
+              height: 10,
+              zIndex: 10,
+              visible: true,
+              style: {
+                fontSize: 10,
+                lineHeight: 1.4,
+                padding: 2
+              },
+              content: {
+                text: {
+                  vi: "Đây là đoạn nội dung rất dài dùng để kiểm tra cảnh báo overflow cho box text tùy chỉnh."
+                }
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    const issues = service.validateLayout(
+      overflowLayout,
+      {}
+    );
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        boxId: "custom-text",
+        code: "overflow",
+        severity: "warning"
+      })
+    );
   });
 });

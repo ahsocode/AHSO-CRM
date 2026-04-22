@@ -431,8 +431,12 @@ export class DocumentTemplateVariantsService {
     const padding = box.style?.padding ?? 2;
     const usableWidth = Math.max(10, box.width - padding * 2);
     const usableHeight = Math.max(8, box.height - padding * 2);
-    const charsPerLine = Math.max(12, Math.floor((usableWidth * 2.2) / fontSize));
-    const maxLines = Math.max(1, Math.floor((usableHeight * 2.6) / (fontSize * (box.style?.lineHeight ?? 1.4))));
+    const usableWidthPt = usableWidth * 2.83465;
+    const usableHeightPt = usableHeight * 2.83465;
+    const lineHeight = box.style?.lineHeight ?? 1.4;
+    const averageCharacterWidthPt = fontSize * 0.52;
+    const charsPerLine = Math.max(12, Math.floor(usableWidthPt / averageCharacterWidthPt));
+    const maxLines = Math.max(1, Math.floor(usableHeightPt / (fontSize * lineHeight)));
 
     if (box.type === "text") {
       const rawText = box.content.text.vi;
@@ -448,8 +452,8 @@ export class DocumentTemplateVariantsService {
         return {
           boxId: box.id,
           code: "overflow",
-          severity: "error",
-          message: `Box "${box.id}" có nguy cơ tràn nội dung. Hãy tăng chiều cao hoặc rút gọn text.`
+          severity: "warning",
+          message: `Box "${box.id}" có nguy cơ tràn nội dung. Nên tăng chiều cao hoặc rút gọn text trước khi dùng chính thức.`
         };
       }
     }

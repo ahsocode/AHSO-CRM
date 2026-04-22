@@ -159,6 +159,13 @@ export default function DocumentTemplatesPage() {
   const warningIssues = allIssues.filter((issue) => issue.severity === "warning");
 
   const isEditable = Boolean(activeVariant && activeVariant.status === "DRAFT" && !activeVariant.isActive);
+  const existingDraftFork = activeVariant
+    ? variantsQuery.data?.find(
+        (variant) =>
+          variant.basedOnVariantId === activeVariant.id &&
+          variant.status === "DRAFT"
+      )
+    : undefined;
   const isDirty = useMemo(() => {
     if (!activeVariant || !draftLayout) {
       return false;
@@ -224,7 +231,7 @@ export default function DocumentTemplatesPage() {
 
   const handleApprove = async () => {
     if (blockingIssues.length > 0) {
-      error("Template vẫn còn lỗi layout hoặc overflow. Hãy sửa trước khi publish.");
+      error("Template vẫn còn lỗi layout chặn publish. Hãy sửa lỗi vượt vùng in hoặc chồng lấn trước.");
       return;
     }
 
@@ -242,6 +249,28 @@ export default function DocumentTemplatesPage() {
       success("Đã đặt variant làm active");
     } catch (mutationError) {
       error(getApiErrorMessage(mutationError, "Không thể đặt variant làm active."));
+    }
+  };
+
+  const handleEditPublishedVariant = async () => {
+    if (!activeVariant || activeVariant.status !== "PUBLISHED") {
+      return;
+    }
+
+    if (existingDraftFork) {
+      setSelectedVariantId(existingDraftFork.id);
+      success("Đã mở bản nháp chỉnh sửa hiện có");
+      return;
+    }
+
+    try {
+      const duplicated = await duplicateMutation.mutateAsync({
+        name: `${activeVariant.name} - bản chỉnh sửa`
+      });
+      setSelectedVariantId(duplicated.id);
+      success("Đã tạo bản nháp chỉnh sửa từ template đã publish");
+    } catch (mutationError) {
+      error(getApiErrorMessage(mutationError, "Không thể tạo bản nháp chỉnh sửa."));
     }
   };
 
@@ -477,12 +506,18 @@ export default function DocumentTemplatesPage() {
                             Trạng thái chỉnh sửa
                           </p>
                           <p className="mt-1 text-sm font-semibold text-text-primary">
-                            {isEditable ? "Draft có thể chỉnh sửa" : "Variant đang khóa chỉnh sửa"}
+                            {isEditable
+                              ? "Draft có thể chỉnh sửa"
+                              : activeVariant.status === "PUBLISHED"
+                                ? "Bản đã publish đang khóa"
+                                : "Variant đang khóa chỉnh sửa"}
                           </p>
                           <p className="mt-1 text-xs text-text-secondary">
                             {isEditable
                               ? "Lưu draft trước khi gửi duyệt hoặc publish."
-                              : "Chỉ draft chưa active mới có thể chỉnh trực tiếp."}
+                              : activeVariant.status === "PUBLISHED"
+                                ? "Tạo bản nháp chỉnh sửa, sau đó gửi duyệt và publish lại."
+                                : "Chỉ draft chưa active mới có thể chỉnh trực tiếp."}
                           </p>
                         </div>
                       </div>
@@ -494,6 +529,16 @@ export default function DocumentTemplatesPage() {
                           Công cụ bản nháp
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
+                          {activeVariant.status === "PUBLISHED" ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleEditPublishedVariant}
+                              disabled={duplicateMutation.isPending}
+                            >
+                              {existingDraftFork ? "Mở draft chỉnh sửa" : "Sửa bản đã publish"}
+                            </Button>
+                          ) : null}
                           <Button
                             type="button"
                             size="sm"
@@ -595,7 +640,9 @@ export default function DocumentTemplatesPage() {
                         )}
                       >
                         {allIssues.length > 0
-                          ? `Validation issues (${allIssues.length})`
+                          ? blockingIssues.length > 0
+                            ? `${blockingIssues.length} lỗi chặn publish`
+                            : `${warningIssues.length} cảnh báo cần kiểm tra`
                           : "Canvas hiện không có lỗi layout"}
                       </p>
                       <p
@@ -605,7 +652,9 @@ export default function DocumentTemplatesPage() {
                         )}
                       >
                         {allIssues.length > 0
-                          ? "Sửa các lỗi chồng lấn, tràn nội dung hoặc vượt vùng in trước khi publish."
+                          ? blockingIssues.length > 0
+                            ? "Sửa lỗi chồng lấn hoặc vượt vùng in trước khi publish."
+                            : "Có cảnh báo tràn nội dung; bạn vẫn có thể publish nhưng nên xem trước PDF."
                           : "Bạn có thể tiếp tục căn chỉnh, lưu draft hoặc đưa variant sang bước duyệt."}
                       </p>
                     </div>

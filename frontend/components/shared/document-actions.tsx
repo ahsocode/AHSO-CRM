@@ -28,6 +28,10 @@ interface DocumentActionsProps {
   entityId: string;
   customerLanguage?: string;
   options?: DocumentActionOption[];
+  templateVariantId?: string;
+  templateVariantLabel?: string;
+  showTemplateSelector?: boolean;
+  onTemplateVariantIdChange?: (variantId: string) => void;
 }
 
 const DEFAULT_OPTIONS: Record<string, DocumentActionOption[]> = {
@@ -42,10 +46,14 @@ export function DocumentActions({
   entityId,
   customerLanguage = "vi",
   options,
+  templateVariantId,
+  templateVariantLabel,
+  showTemplateSelector = true,
+  onTemplateVariantIdChange,
 }: DocumentActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<DocumentActionOption | null>(null);
-  const [selectedVariantId, setSelectedVariantId] = useState<string>("");
+  const [internalSelectedVariantId, setInternalSelectedVariantId] = useState<string>("");
   const [language, setLanguage] = useState<"vi" | "vi-en">(
     customerLanguage === "vi-en" ? "vi-en" : "vi"
   );
@@ -56,9 +64,10 @@ export function DocumentActions({
   const templateRegistryQuery = useDocumentTemplateRegistry();
   const runtimeVariantsQuery = useRuntimeDocumentTemplateVariants(
     selectedType?.type,
-    isOpen && Boolean(selectedType)
+    showTemplateSelector && isOpen && Boolean(selectedType)
   );
   const isWorking = renderMutation.isPending || downloadMutation.isPending;
+  const selectedVariantId = templateVariantId ?? internalSelectedVariantId;
 
   const availableOptions = useMemo(() => {
     const dynamicOptions = (templateRegistryQuery.data ?? [])
@@ -77,8 +86,19 @@ export function DocumentActions({
 
   const handleActionClick = (option: DocumentActionOption) => {
     setSelectedType(option);
-    setSelectedVariantId("");
+    if (templateVariantId === undefined) {
+      setInternalSelectedVariantId("");
+    }
     setIsOpen(true);
+  };
+
+  const handleVariantChange = (variantId: string) => {
+    if (onTemplateVariantIdChange) {
+      onTemplateVariantIdChange(variantId);
+      return;
+    }
+
+    setInternalSelectedVariantId(variantId);
   };
 
   const handlePreview = () => {
@@ -204,38 +224,45 @@ export function DocumentActions({
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-sm font-semibold text-text-primary" htmlFor="document-template-variant">
-                  Template sử dụng
-                </label>
-                {runtimeVariantsQuery.isLoading ? (
-                  <div className="rounded-xl border border-border bg-bg-hover/40 px-4 py-3 text-sm text-text-secondary">
-                    Đang tải danh sách template...
-                  </div>
-                ) : (
-                  <>
-                    <select
-                      id="document-template-variant"
-                      value={selectedVariantId}
-                      onChange={(event) => setSelectedVariantId(event.target.value)}
-                      className="w-full rounded-xl border border-border bg-bg-card px-4 py-3 text-sm font-medium text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    >
-                      <option value="">Mẫu mặc định / active hiện tại</option>
-                      {(runtimeVariantsQuery.data ?? []).map((variant) => (
-                        <option key={variant.id} value={variant.id}>
-                          {variant.name} · v{variant.version}
-                          {variant.isActive ? " · active" : ""}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-text-secondary">
-                      {runtimeVariantsQuery.data?.length
-                        ? "Chỉ các template đã publish mới có thể dùng để preview và tạo PDF cho khách."
-                        : "Chưa có template đã publish; lựa chọn mặc định sẽ dùng active template nếu có, hoặc fallback mẫu hệ thống."}
-                    </p>
-                  </>
-                )}
-              </div>
+              {showTemplateSelector ? (
+                <div className="space-y-3">
+                  <label className="text-sm font-semibold text-text-primary" htmlFor="document-template-variant">
+                    Template sử dụng
+                  </label>
+                  {runtimeVariantsQuery.isLoading ? (
+                    <div className="rounded-xl border border-border bg-bg-hover/40 px-4 py-3 text-sm text-text-secondary">
+                      Đang tải danh sách template...
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        id="document-template-variant"
+                        value={selectedVariantId}
+                        onChange={(event) => handleVariantChange(event.target.value)}
+                        className="w-full rounded-xl border border-border bg-bg-card px-4 py-3 text-sm font-medium text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="">Mẫu mặc định / active hiện tại</option>
+                        {(runtimeVariantsQuery.data ?? []).map((variant) => (
+                          <option key={variant.id} value={variant.id}>
+                            {variant.name} · v{variant.version}
+                            {variant.isActive ? " · active" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-text-secondary">
+                        {runtimeVariantsQuery.data?.length
+                          ? "Chỉ các template đã publish mới có thể dùng để preview và tạo PDF cho khách."
+                          : "Chưa có template đã publish; lựa chọn mặc định sẽ dùng active template nếu có, hoặc fallback mẫu hệ thống."}
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border bg-bg-hover/40 px-4 py-3 text-sm">
+                  <p className="font-semibold text-text-primary">Template sử dụng</p>
+                  <p className="mt-1 text-text-secondary">{templateVariantLabel || "Mẫu mặc định / active hiện tại"}</p>
+                </div>
+              )}
 
               <div className="rounded-xl bg-info-bg/50 p-4 text-sm text-info flex gap-3">
                 <AppIcon name="clock" className="h-5 w-5 shrink-0" />

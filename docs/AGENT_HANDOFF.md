@@ -93,6 +93,9 @@ Tài liệu này phản ánh trạng thái thực tế của branch `feature/bac
 Kết quả:
 - `DocumentActions` chỉ hiển thị `QUOTATION` và `CONTRACT`
 - `/admin/document-templates` vẫn hiển thị toàn bộ template với badge `Production` / `Beta`
+- `/quotes/:id` và `/contracts/:id` đều có selector template đã publish để người dùng chọn trước khi preview/render PDF
+- Smoke test chuẩn cho Documents v1:
+  - `scripts/test-documents-v1.sh`
 
 ## Entry points quan trọng
 

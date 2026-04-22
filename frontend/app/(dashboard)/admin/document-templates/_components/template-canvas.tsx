@@ -130,7 +130,7 @@ function renderBoxContent(
           </div>,
           <div
             key={`${row.id}-value`}
-            className="break-words text-text-secondary"
+            className="min-w-0 whitespace-pre-wrap break-words text-text-secondary"
             style={{ textAlign: valueAlignment }}
           >
             {interpolateTemplateString(row.value, sampleData)}

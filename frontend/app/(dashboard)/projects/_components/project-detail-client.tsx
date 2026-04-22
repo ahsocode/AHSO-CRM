@@ -1,7 +1,9 @@
 "use client";
 
 import { type ComponentProps, type FormEvent, type ReactNode, useEffect, useState } from "react";
+import type { Route } from "next";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
 import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
@@ -72,6 +74,7 @@ const TABS: Array<{ key: Project360Tab; label: string; icon: AppIconName }> = [
   { key: "payments", label: "Thanh toán", icon: "analytics" },
   { key: "handover", label: "Ghi chú / Quyết định", icon: "history" }
 ];
+const TAB_KEYS = TABS.map((tab) => tab.key);
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; variant: "neutral" | "info" | "warning" }> = {
   LOW: { label: "Ưu tiên thấp", variant: "neutral" },
@@ -177,10 +180,33 @@ const SURVEY_MEDIA_EXTENSIONS = [
 const PROJECT_STAGE_ORDER = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING", "COMPLETED"] as const;
 
 export function ProjectDetailClient({ projectId }: { projectId: string }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<Project360Tab>("overview");
   const projectQuery = useProject(projectId);
   const overviewQuery = useProjectOverview360(projectId);
   const customFieldsQuery = useCustomFields("project");
+
+  useEffect(() => {
+    const tabFromUrl = resolveProject360Tab(searchParams.get("tab"));
+    setActiveTab(tabFromUrl);
+  }, [searchParams]);
+
+  const handleTabChange = (tab: Project360Tab) => {
+    setActiveTab(tab);
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (tab === "overview") {
+      nextParams.delete("tab");
+    } else {
+      nextParams.set("tab", tab);
+    }
+
+    const queryString = nextParams.toString();
+    const nextHref = queryString ? `${pathname}?${queryString}` : pathname;
+    router.replace(nextHref as Route, { scroll: false });
+  };
 
   if (projectQuery.isLoading) {
     return (
@@ -318,7 +344,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
         <MetricCard label="Tiến độ" value={`${project.stats.progressPercent}%`} />
       </div>
 
-      <Project360Brief project={project} overview={overview} />
+      <Project360Brief project={project} overview={overview} onNavigate={handleTabChange} />
 
       <div className="sticky top-3 z-20 rounded-[28px] border border-white/70 bg-white/90 p-2 shadow-sm backdrop-blur-xl">
         <div className="flex gap-2 overflow-x-auto">
@@ -326,7 +352,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition",
                 activeTab === tab.key
@@ -488,10 +514,12 @@ function OverviewPanel({
 
 function Project360Brief({
   project,
-  overview
+  overview,
+  onNavigate
 }: {
   project: NonNullable<ReturnType<typeof useProject>["data"]>;
   overview?: NonNullable<ReturnType<typeof useProjectOverview360>["data"]>;
+  onNavigate: (tab: Project360Tab) => void;
 }) {
   const openMilestoneCount = overview?.openMilestones?.length ?? 0;
   const importantDocumentCount = overview?.importantDocuments?.length ?? 0;
@@ -508,18 +536,21 @@ function Project360Brief({
             ? formatDateTime(overview.nextActivity.scheduledAt)
             : "Tạo activity để đội nhận bàn giao biết bước kế tiếp."
         }
+        onClick={() => onNavigate("timeline")}
       />
       <ActionSignal
         icon="calendar"
         label="Khảo sát"
         title={overview?.latestSurvey?.title ?? "Chưa có khảo sát"}
         description={overview?.latestSurvey?.summary ?? "Lưu ảnh, video và trao đổi hiện trường vào tab Khảo sát."}
+        onClick={() => onNavigate("surveys")}
       />
       <ActionSignal
         icon="description"
         label="Tài liệu quan trọng"
         title={`${importantDocumentCount} tài liệu`}
         description="PO, bản ký, biên bản và hóa đơn được gom trong tab Tài liệu."
+        onClick={() => onNavigate("documents")}
       />
       <ActionSignal
         icon="history"
@@ -532,6 +563,7 @@ function Project360Brief({
               ? "Không có milestone mở trong snapshot hiện tại."
               : "Chưa có hợp đồng để sinh milestone triển khai."
         }
+        onClick={() => onNavigate("handover")}
       />
     </section>
   );
@@ -541,15 +573,17 @@ function ActionSignal({
   icon,
   label,
   title,
-  description
+  description,
+  onClick
 }: {
   icon: AppIconName;
   label: string;
   title: ReactNode;
   description: ReactNode;
+  onClick?: () => void;
 }) {
-  return (
-    <div className="rounded-3xl border border-white/70 bg-white/80 p-4 shadow-sm">
+  const content = (
+    <>
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <AppIcon name={icon} className="h-5 w-5" />
@@ -560,8 +594,35 @@ function ActionSignal({
           <p className="mt-1 line-clamp-2 text-sm text-text-secondary">{description}</p>
         </div>
       </div>
+      {onClick ? (
+        <span className="mt-3 inline-flex text-xs font-semibold uppercase tracking-[0.12em] text-primary">
+          Mở tab
+        </span>
+      ) : null}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="rounded-3xl border border-white/70 bg-white/80 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-white/70 bg-white/80 p-4 shadow-sm">
+      {content}
     </div>
   );
+}
+
+function resolveProject360Tab(value: string | null): Project360Tab {
+  return TAB_KEYS.includes(value as Project360Tab) ? (value as Project360Tab) : "overview";
 }
 
 function ProjectStageStepper({ currentStatus }: { currentStatus: ProjectStatus }) {
@@ -633,17 +694,31 @@ function TimelinePanel({ projectId }: { projectId: string }) {
                   <Badge variant="neutral">{item.type}</Badge>
                 </div>
                 {item.description ? <p className="mt-3 text-sm text-text-secondary">{item.description}</p> : null}
-                {item.link ? (
-                  <a href={item.link} className="mt-3 inline-flex text-sm font-semibold text-primary hover:text-primary-hover">
-                    Mở liên kết
-                  </a>
-                ) : null}
+                {item.link ? <TimelineItemLink href={item.link} /> : null}
               </div>
             </article>
           ))
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function TimelineItemLink({ href }: { href: string }) {
+  const className = "mt-3 inline-flex text-sm font-semibold text-primary hover:text-primary-hover";
+
+  if (href.startsWith("/")) {
+    return (
+      <Link href={href as Route} className={className}>
+        Mở liên kết
+      </Link>
+    );
+  }
+
+  return (
+    <a href={href} className={className} target="_blank" rel="noreferrer">
+      Mở liên kết
+    </a>
   );
 }
 

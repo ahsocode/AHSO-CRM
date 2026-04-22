@@ -165,10 +165,17 @@ export class DocumentLayoutRendererService {
 
 .schema-document__kv-label {
   font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .schema-document__kv-value {
   display: block;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .schema-document__signature {

@@ -193,6 +193,8 @@ docker exec ahso-crm-backend npm run prisma:seed
 - `GET /api/documents/:documentId/download` downloads an existing rendered artifact without creating a new version
 - End-user document actions are intentionally limited to `QUOTATION` and `CONTRACT` in this branch
 - `/admin/document-templates` shows all template types, but only `QUOTATION` and `CONTRACT` are production runtime targets today
+- Quote and contract detail screens allow users to pick a published template variant before previewing or rendering PDF
+- Smoke test: `scripts/test-documents-v1.sh` verifies registry readiness, preview, render, and artifact download for quotation + contract
 
 ### 📞 Activities Module
 7 Activity Types:

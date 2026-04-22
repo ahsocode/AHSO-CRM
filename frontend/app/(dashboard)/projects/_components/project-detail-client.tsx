@@ -347,11 +347,13 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       <Project360Brief project={project} overview={overview} onNavigate={handleTabChange} />
 
       <div className="sticky top-3 z-20 rounded-[28px] border border-white/70 bg-white/90 p-2 shadow-sm backdrop-blur-xl">
-        <div className="flex gap-2 overflow-x-auto">
+        <div role="tablist" aria-label="Project 360 sections" className="flex gap-2 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"
+              role="tab"
+              aria-selected={activeTab === tab.key}
               onClick={() => handleTabChange(tab.key)}
               className={cn(
                 "inline-flex shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition",

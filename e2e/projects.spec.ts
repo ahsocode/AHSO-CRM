@@ -55,7 +55,7 @@ test("Project 360 hiển thị lifecycle, tài liệu và action xem/tải file"
     await expect(page.getByText("Việc tiếp theo")).toBeVisible();
     await expect(page.getByText("Tài liệu quan trọng", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: /^Tài liệu/ }).click();
+    await page.getByRole("tab", { name: /^Tài liệu/ }).click();
     await expect(page.getByText("Document Registry")).toBeVisible();
     await expect(page.getByRole("button", { name: /Thêm tài liệu/i })).toBeVisible();
 

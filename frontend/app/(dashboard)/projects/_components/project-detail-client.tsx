@@ -16,10 +16,11 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { DocumentActions } from "@/components/shared/document-actions";
 import {
+  useArchiveBusinessDocument,
   useCreateBusinessDocument,
   useMarkBusinessDocumentSigned,
+  useUpdateBusinessDocument,
   useUploadBusinessDocumentFile
 } from "@/hooks/use-business-documents";
 import { useCustomFields } from "@/hooks/use-custom-fields";
@@ -161,6 +162,17 @@ const SURVEY_NOTE_LABELS: Record<SurveyNoteType, string> = {
   OPEN_QUESTION: "Câu hỏi mở"
 };
 
+const TIMELINE_TYPE_LABELS: Record<string, string> = {
+  activity: "Hoạt động",
+  survey: "Khảo sát",
+  quote: "Báo giá",
+  contract: "Hợp đồng",
+  document: "Tài liệu",
+  milestone: "Milestone",
+  payment: "Thanh toán",
+  handover: "Bàn giao"
+};
+
 const BUSINESS_DOCUMENT_MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SURVEY_MEDIA_MAX_FILE_SIZE = 50 * 1024 * 1024;
 const BUSINESS_DOCUMENT_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg", ".xlsx", ".docx"];
@@ -279,11 +291,6 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
                 Tạo hợp đồng
               </Link>
             )}
-            <DocumentActions
-              entityType="project"
-              entityId={projectId}
-              customerLanguage={project.customer.language ?? "vi"}
-            />
             <Link href={`/quotes/new?projectId=${projectId}`} className={cn(buttonVariants({ variant: "primary" }))}>
               Tạo báo giá
             </Link>
@@ -693,7 +700,7 @@ function TimelinePanel({ projectId }: { projectId: string }) {
                       {item.actorName ? ` · ${item.actorName}` : ""}
                     </p>
                   </div>
-                  <Badge variant="neutral">{item.type}</Badge>
+                  <Badge variant="neutral">{TIMELINE_TYPE_LABELS[item.type] ?? item.type}</Badge>
                 </div>
                 {item.description ? <p className="mt-3 text-sm text-text-secondary">{item.description}</p> : null}
                 {item.link ? <TimelineItemLink href={item.link} /> : null}
@@ -739,6 +746,9 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
     nextStep: ""
   });
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [noteTypeDrafts, setNoteTypeDrafts] = useState<Record<string, SurveyNoteType>>({});
+  const [noteImportantDrafts, setNoteImportantDrafts] = useState<Record<string, boolean>>({});
+  const [mediaDrafts, setMediaDrafts] = useState<Record<string, { caption: string; area: string; isImportant: boolean }>>({});
 
   async function handleCreateSurvey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -831,7 +841,32 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
                   ))}
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-2">
+                  <div className="space-y-3 rounded-2xl border border-border/60 bg-bg-hover/40 p-4">
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <select
+                        className="h-10 rounded-md border border-border bg-bg-input px-3 text-sm"
+                        value={noteTypeDrafts[survey.id] ?? "GENERAL"}
+                        onChange={(event) =>
+                          setNoteTypeDrafts((prev) => ({ ...prev, [survey.id]: event.target.value as SurveyNoteType }))
+                        }
+                      >
+                        {Object.entries(SURVEY_NOTE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="flex h-10 items-center gap-2 rounded-md border border-border bg-bg-input px-3 text-sm text-text-secondary">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(noteImportantDrafts[survey.id])}
+                          onChange={(event) =>
+                            setNoteImportantDrafts((prev) => ({ ...prev, [survey.id]: event.target.checked }))
+                          }
+                        />
+                        Quan trọng
+                      </label>
+                    </div>
                     <Input
                       placeholder="Thêm ghi chú nhanh"
                       value={noteDrafts[survey.id] ?? ""}
@@ -845,44 +880,103 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
                         await addNote.mutateAsync({
                           surveyId: survey.id,
                           payload: {
-                            type: "GENERAL",
+                            type: noteTypeDrafts[survey.id] ?? "GENERAL",
                             content: noteDrafts[survey.id],
-                            isImportant: false
+                            isImportant: Boolean(noteImportantDrafts[survey.id])
                           }
                         });
                         setNoteDrafts((prev) => ({ ...prev, [survey.id]: "" }));
+                        setNoteImportantDrafts((prev) => ({ ...prev, [survey.id]: false }));
                       }}
                     >
                       Thêm ghi chú
                     </Button>
                   </div>
-                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-bg-hover/60 p-4 text-center text-sm text-text-secondary hover:border-primary/40">
-                    <AppIcon name="description" className="mb-2 h-5 w-5" />
-                    Tải ảnh / video / file khảo sát
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*,video/*,.pdf,.docx,.xlsx"
-                      onChange={async (event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) {
-                          return;
-                        }
-                        const validationError = validateSurveyMediaFile(file);
-                        if (validationError) {
-                          toast({
-                            title: "File khảo sát chưa hợp lệ",
-                            description: validationError,
-                            variant: "destructive"
-                          });
-                          event.target.value = "";
-                          return;
-                        }
-                        await uploadMedia.mutateAsync({ surveyId: survey.id, file });
-                        event.target.value = "";
-                      }}
+                  <div className="space-y-3 rounded-2xl border border-dashed border-border bg-bg-hover/60 p-4 text-sm text-text-secondary">
+                    <div className="flex items-center gap-2 font-semibold text-text-primary">
+                      <AppIcon name="description" className="h-5 w-5 text-primary" />
+                      Media khảo sát
+                    </div>
+                    <Input
+                      placeholder="Mô tả file / ảnh"
+                      value={mediaDrafts[survey.id]?.caption ?? ""}
+                      onChange={(event) =>
+                        setMediaDrafts((prev) => ({
+                          ...prev,
+                          [survey.id]: {
+                            caption: event.target.value,
+                            area: prev[survey.id]?.area ?? "",
+                            isImportant: Boolean(prev[survey.id]?.isImportant)
+                          }
+                        }))
+                      }
                     />
-                  </label>
+                    <Input
+                      placeholder="Khu vực / hạng mục"
+                      value={mediaDrafts[survey.id]?.area ?? ""}
+                      onChange={(event) =>
+                        setMediaDrafts((prev) => ({
+                          ...prev,
+                          [survey.id]: {
+                            caption: prev[survey.id]?.caption ?? "",
+                            area: event.target.value,
+                            isImportant: Boolean(prev[survey.id]?.isImportant)
+                          }
+                        }))
+                      }
+                    />
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(mediaDrafts[survey.id]?.isImportant)}
+                        onChange={(event) =>
+                          setMediaDrafts((prev) => ({
+                            ...prev,
+                            [survey.id]: {
+                              caption: prev[survey.id]?.caption ?? "",
+                              area: prev[survey.id]?.area ?? "",
+                              isImportant: event.target.checked
+                            }
+                          }))
+                        }
+                      />
+                      Đánh dấu quan trọng
+                    </label>
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-border bg-white/70 p-4 text-center hover:border-primary/40">
+                      Tải ảnh / video / file khảo sát
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*,video/*,.pdf,.docx,.xlsx"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) {
+                            return;
+                          }
+                          const validationError = validateSurveyMediaFile(file);
+                          if (validationError) {
+                            toast({
+                              title: "File khảo sát chưa hợp lệ",
+                              description: validationError,
+                              variant: "destructive"
+                            });
+                            event.target.value = "";
+                            return;
+                          }
+                          const draft = mediaDrafts[survey.id];
+                          await uploadMedia.mutateAsync({
+                            surveyId: survey.id,
+                            file,
+                            caption: draft?.caption,
+                            area: draft?.area,
+                            isImportant: draft?.isImportant
+                          });
+                          setMediaDrafts((prev) => ({ ...prev, [survey.id]: { caption: "", area: "", isImportant: false } }));
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -898,9 +992,12 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
   const createDocument = useCreateBusinessDocument(projectId);
   const uploadDocument = useUploadBusinessDocumentFile(projectId);
   const markSigned = useMarkBusinessDocumentSigned(projectId);
+  const updateDocument = useUpdateBusinessDocument(projectId);
+  const archiveDocument = useArchiveBusinessDocument(projectId);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [documentForm, setDocumentForm] = useState({
     type: "CUSTOMER_PO" as BusinessDocumentType,
+    source: "RECEIVED" as BusinessDocumentSource,
     status: "RECEIVED" as BusinessDocumentStatus,
     title: "",
     documentNo: "",
@@ -908,6 +1005,16 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
     notes: ""
   });
   const [file, setFile] = useState<File | null>(null);
+  const [editingDocumentId, setEditingDocumentId] = useState<string | null>(null);
+  const [documentEditForm, setDocumentEditForm] = useState({
+    type: "CUSTOMER_PO" as BusinessDocumentType,
+    source: "RECEIVED" as BusinessDocumentSource,
+    status: "RECEIVED" as BusinessDocumentStatus,
+    title: "",
+    documentNo: "",
+    documentDate: "",
+    notes: ""
+  });
   const [documentFilters, setDocumentFilters] = useState<{
     search: string;
     type: "ALL" | BusinessDocumentType;
@@ -962,7 +1069,6 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
 
     const created = await createDocument.mutateAsync({
       ...documentForm,
-      source: "RECEIVED",
       customerId,
       projectId,
       documentDate: documentForm.documentDate ? new Date(documentForm.documentDate).toISOString() : undefined
@@ -974,6 +1080,7 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
 
     setDocumentForm({
       type: "CUSTOMER_PO",
+      source: "RECEIVED",
       status: "RECEIVED",
       title: "",
       documentNo: "",
@@ -982,6 +1089,35 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
     });
     setFile(null);
     setShowCreateForm(false);
+  }
+
+  async function handleUpdateDocument(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingDocumentId) {
+      return;
+    }
+
+    await updateDocument.mutateAsync({
+      documentId: editingDocumentId,
+      payload: {
+        ...documentEditForm,
+        documentDate: documentEditForm.documentDate ? new Date(documentEditForm.documentDate).toISOString() : undefined
+      }
+    });
+    setEditingDocumentId(null);
+  }
+
+  function startEditingDocument(document: BusinessDocument) {
+    setEditingDocumentId(document.id);
+    setDocumentEditForm({
+      type: document.type,
+      source: document.source,
+      status: document.status,
+      title: document.title,
+      documentNo: document.documentNo ?? "",
+      documentDate: document.documentDate ? document.documentDate.slice(0, 10) : "",
+      notes: document.notes ?? ""
+    });
   }
 
   return (
@@ -1034,6 +1170,17 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
               <Input required placeholder="Tên tài liệu" value={documentForm.title} onChange={(event) => setDocumentForm((prev) => ({ ...prev, title: event.target.value }))} />
               <Input placeholder="Số chứng từ" value={documentForm.documentNo} onChange={(event) => setDocumentForm((prev) => ({ ...prev, documentNo: event.target.value }))} />
               <Input type="date" value={documentForm.documentDate} onChange={(event) => setDocumentForm((prev) => ({ ...prev, documentDate: event.target.value }))} />
+              <select
+                className="h-11 w-full rounded-md border border-border bg-bg-input px-4 text-sm"
+                value={documentForm.source}
+                onChange={(event) => setDocumentForm((prev) => ({ ...prev, source: event.target.value as BusinessDocumentSource }))}
+              >
+                {Object.entries(DOCUMENT_SOURCE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
               <select
                 className="h-11 w-full rounded-md border border-border bg-bg-input px-4 text-sm"
                 value={documentForm.status}
@@ -1193,14 +1340,72 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
               filteredBusinessDocuments.map((document) => (
                 <div key={document.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
                   <DocumentRow document={document} />
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-	                    <FileActionButtons documentId={document.id} fileUrl={document.fileUrl} filename={document.filename} mimeType={document.mimeType} size={document.size} />
-                    {document.status !== "SIGNED" ? (
-                      <Button type="button" size="sm" variant="outline" onClick={() => markSigned.mutate(document.id)}>
-                        Đánh dấu đã ký
+                  {editingDocumentId === document.id ? (
+                    <form className="mt-4 grid gap-3 rounded-2xl bg-bg-hover/60 p-4 md:grid-cols-2" onSubmit={handleUpdateDocument}>
+                      <select
+                        className="h-10 rounded-md border border-border bg-bg-input px-3 text-sm"
+                        value={documentEditForm.type}
+                        onChange={(event) => setDocumentEditForm((prev) => ({ ...prev, type: event.target.value as BusinessDocumentType }))}
+                      >
+                        {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <Input required value={documentEditForm.title} onChange={(event) => setDocumentEditForm((prev) => ({ ...prev, title: event.target.value }))} />
+                      <Input placeholder="Số chứng từ" value={documentEditForm.documentNo} onChange={(event) => setDocumentEditForm((prev) => ({ ...prev, documentNo: event.target.value }))} />
+                      <Input type="date" value={documentEditForm.documentDate} onChange={(event) => setDocumentEditForm((prev) => ({ ...prev, documentDate: event.target.value }))} />
+                      <select
+                        className="h-10 rounded-md border border-border bg-bg-input px-3 text-sm"
+                        value={documentEditForm.source}
+                        onChange={(event) => setDocumentEditForm((prev) => ({ ...prev, source: event.target.value as BusinessDocumentSource }))}
+                      >
+                        {Object.entries(DOCUMENT_SOURCE_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className="h-10 rounded-md border border-border bg-bg-input px-3 text-sm"
+                        value={documentEditForm.status}
+                        onChange={(event) => setDocumentEditForm((prev) => ({ ...prev, status: event.target.value as BusinessDocumentStatus }))}
+                      >
+                        {Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <Textarea className="md:col-span-2" placeholder="Ghi chú tài liệu" value={documentEditForm.notes} onChange={(event) => setDocumentEditForm((prev) => ({ ...prev, notes: event.target.value }))} />
+                      <div className="flex flex-wrap gap-2 md:col-span-2">
+                        <Button type="submit" size="sm" disabled={updateDocument.isPending}>
+                          {updateDocument.isPending ? "Đang lưu..." : "Lưu metadata"}
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setEditingDocumentId(null)}>
+                          Hủy
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <FileActionButtons documentId={document.id} fileUrl={document.fileUrl} filename={document.filename} mimeType={document.mimeType} size={document.size} />
+                      <Button type="button" size="sm" variant="outline" onClick={() => startEditingDocument(document)}>
+                        Sửa metadata
                       </Button>
-                    ) : null}
-                  </div>
+                      {document.status !== "SIGNED" ? (
+                        <Button type="button" size="sm" variant="outline" disabled={markSigned.isPending} onClick={() => markSigned.mutate(document.id)}>
+                          Đánh dấu đã ký
+                        </Button>
+                      ) : null}
+                      {document.status !== "ARCHIVED" ? (
+                        <Button type="button" size="sm" variant="ghost" disabled={archiveDocument.isPending} onClick={() => archiveDocument.mutate(document.id)}>
+                          Lưu trữ
+                        </Button>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -1214,7 +1419,7 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
           </CardHeader>
           <CardContent className="space-y-3">
             {!documentsQuery.data?.generatedDocuments.length ? (
-              <EmptyState title="Chưa có PDF được render" description="Các tài liệu sinh từ DocumentActions sẽ hiển thị ở đây sau khi render." />
+              <EmptyState title="Chưa có PDF được render" description="PDF sinh từ báo giá hoặc hợp đồng liên quan sẽ hiển thị ở đây sau khi render." />
             ) : (
               documentsQuery.data.generatedDocuments.map((document) => (
                 <GeneratedDocumentRow key={document.id} document={document} />
@@ -1389,6 +1594,16 @@ function HandoverPanel({
 
   async function handleCreateHandover(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const hasContent = Object.values(form).some((value) => value.trim().length > 0);
+    if (!hasContent) {
+      toast({
+        title: "Chưa có nội dung bàn giao",
+        description: "Nhập ít nhất một nội dung như bối cảnh, rủi ro, quyết định hoặc việc đang mở.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     await createHandover.mutateAsync(form);
     setForm({
       summary: "",

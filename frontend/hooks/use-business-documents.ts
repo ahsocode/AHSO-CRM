@@ -74,6 +74,65 @@ export function useMarkBusinessDocumentSigned(projectId: string) {
     onSuccess: async () => {
       await invalidateProject360(queryClient, projectId);
       toast("Đã đánh dấu tài liệu đã ký.");
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể đánh dấu tài liệu đã ký.",
+        variant: "destructive"
+      });
+    }
+  });
+}
+
+export function useUpdateBusinessDocument(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      documentId,
+      payload
+    }: {
+      documentId: string;
+      payload: Partial<BusinessDocumentCreateInput>;
+    }) => {
+      const response = await apiClient.patch<ApiResponse<BusinessDocument>>(`/business-documents/${documentId}`, payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await invalidateProject360(queryClient, projectId);
+      toast("Đã cập nhật thông tin tài liệu.");
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể cập nhật tài liệu.",
+        variant: "destructive"
+      });
+    }
+  });
+}
+
+export function useArchiveBusinessDocument(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (documentId: string) => {
+      const response = await apiClient.patch<ApiResponse<BusinessDocument>>(`/business-documents/${documentId}`, {
+        status: "ARCHIVED"
+      });
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await invalidateProject360(queryClient, projectId);
+      toast("Đã lưu trữ tài liệu.");
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể lưu trữ tài liệu.",
+        variant: "destructive"
+      });
     }
   });
 }

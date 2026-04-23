@@ -22,12 +22,12 @@ export function MobileBottomNav() {
   const roleName = getAuthRoleName(user?.role);
   const items =
     roleName === "ADMIN"
-      ? [...MOBILE_ITEMS.slice(0, 4), { href: "/admin" as Route, label: "Quản trị", icon: "settings" as const }]
+      ? [...MOBILE_ITEMS, { href: "/admin" as Route, label: "Quản trị", icon: "settings" as const }]
       : MOBILE_ITEMS;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-white/96 px-2 py-2 shadow-[0_-10px_30px_rgba(21,67,96,0.12)] backdrop-blur-xl md:hidden">
-      <div className="grid grid-cols-5 gap-1">
+      <div className={cn("grid gap-1", roleName === "ADMIN" ? "grid-cols-6" : "grid-cols-5")}>
         {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 

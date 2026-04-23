@@ -23,6 +23,21 @@ const QUICK_ACTIONS: SearchResultItem[] = [
   { id: "new-quote", type: "quote", title: "Tạo báo giá mới", subtitle: "Mở form báo giá", href: "/quotes/new" }
 ];
 
+function isValidSearchResultItem(value: unknown): value is SearchResultItem {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<SearchResultItem>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.type === "string" &&
+    typeof candidate.title === "string" &&
+    typeof candidate.href === "string" &&
+    candidate.href.startsWith("/")
+  );
+}
+
 function ResultRow({
   item,
   onSelect
@@ -80,7 +95,8 @@ export function CommandPalette() {
     }
 
     try {
-      setRecent(JSON.parse(rawValue) as SearchResultItem[]);
+      const parsed = JSON.parse(rawValue);
+      setRecent(Array.isArray(parsed) ? parsed.filter(isValidSearchResultItem) : []);
     } catch {
       setRecent([]);
     }
@@ -117,9 +133,18 @@ export function CommandPalette() {
   }, [debouncedQuery, recent, searchQuery.data]);
 
   const handleSelect = (item: SearchResultItem) => {
+    if (!isValidSearchResultItem(item)) {
+      setOpen(false);
+      return;
+    }
+
     const nextRecent = [item, ...recent.filter((candidate) => candidate.href !== item.href)].slice(0, 6);
     setRecent(nextRecent);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRecent));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextRecent));
+    } catch {
+      // Navigation is more important than persisting recent searches.
+    }
     setOpen(false);
     setQuery("");
     router.push(item.href as Route);

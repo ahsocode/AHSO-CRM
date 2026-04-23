@@ -82,5 +82,9 @@ export function StatusBadge({
     config = QUOTE_STATUS_CONFIG[status as QuoteStatus];
   }
 
+  if (!config) {
+    return <Badge variant="neutral">{String(status)}</Badge>;
+  }
+
   return <Badge variant={config.variant}>{config.label}</Badge>;
 }

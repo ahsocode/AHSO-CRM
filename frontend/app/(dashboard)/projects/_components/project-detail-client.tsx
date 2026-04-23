@@ -191,6 +191,22 @@ const SURVEY_MEDIA_EXTENSIONS = [
 ];
 const PROJECT_STAGE_ORDER = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING", "COMPLETED"] as const;
 
+function getPriorityConfig(priority: Priority) {
+  return PRIORITY_CONFIG[priority] ?? { label: String(priority), variant: "neutral" as const };
+}
+
+function getMilestoneStatusConfig(status: MilestoneStatus) {
+  return MILESTONE_STATUS_CONFIG[status] ?? { label: String(status), variant: "neutral" as const };
+}
+
+function getContractStatusConfig(status: ContractStatus) {
+  return CONTRACT_STATUS_CONFIG[status] ?? { label: String(status), variant: "neutral" as const };
+}
+
+function getProjectStatusLabel(status: ProjectStatus) {
+  return PROJECT_STATUS_LABELS[status] ?? String(status);
+}
+
 export function ProjectDetailClient({ projectId }: { projectId: string }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -259,13 +275,17 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
 
   const project = projectQuery.data;
   const overview = overviewQuery.data;
+  const projectQuotes = project.quotes ?? [];
+  const projectMilestones = project.milestones ?? [];
+  const projectPayments = project.contract?.payments ?? [];
+  const priorityConfig = getPriorityConfig(project.priority);
   const tabCounts: Partial<Record<Project360Tab, number>> = {
     surveys: overview?.latestSurvey ? 1 : 0,
     documents: overview?.importantDocuments?.length ?? 0,
-    quotes: project.quotes.length,
+    quotes: projectQuotes.length,
     contracts: project.contract ? 1 : 0,
-    delivery: project.milestones.length,
-    payments: project.contract?.payments.length ?? 0,
+    delivery: projectMilestones.length,
+    payments: projectPayments.length,
     handover: overview?.handovers?.length ?? 0
   };
 
@@ -305,8 +325,8 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <h2 className="font-heading text-3xl font-extrabold text-text-primary">{project.name}</h2>
               <StatusBadge kind="project" status={project.status} />
-              <Badge variant={PRIORITY_CONFIG[project.priority].variant}>
-                {PRIORITY_CONFIG[project.priority].label}
+              <Badge variant={priorityConfig.variant}>
+                {priorityConfig.label}
               </Badge>
             </div>
             <div className="mt-4 flex flex-wrap gap-2 text-sm text-text-secondary">
@@ -506,7 +526,7 @@ function OverviewPanel({
                 <MiniInfo
                   key={milestone.id}
                   label={milestone.name}
-                  value={`${MILESTONE_STATUS_CONFIG[milestone.status].label} · ${
+                  value={`${getMilestoneStatusConfig(milestone.status).label} · ${
                     milestone.dueDate ? formatDate(milestone.dueDate) : "Chưa đặt hạn"
                   }`}
                 />
@@ -641,7 +661,7 @@ function ProjectStageStepper({ currentStatus }: { currentStatus: ProjectStatus }
     <div className="mt-6 rounded-3xl border border-white/70 bg-white/75 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Lifecycle</p>
-        <p className="text-sm font-semibold text-text-primary">{PROJECT_STATUS_LABELS[currentStatus]}</p>
+        <p className="text-sm font-semibold text-text-primary">{getProjectStatusLabel(currentStatus)}</p>
       </div>
       <div className="mt-4 grid gap-2 md:grid-cols-6">
         {PROJECT_STAGE_ORDER.map((status, index) => {
@@ -660,7 +680,7 @@ function ProjectStageStepper({ currentStatus }: { currentStatus: ProjectStatus }
                     : "border-border/70 bg-white/70 text-text-secondary"
               )}
             >
-              {PROJECT_STATUS_LABELS[status]}
+              {getProjectStatusLabel(status)}
             </div>
           );
         })}
@@ -1433,6 +1453,8 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
 }
 
 function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof useProject>["data"]> }) {
+  const quotes = project.quotes ?? [];
+
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
@@ -1440,10 +1462,10 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
         <CardTitle>Báo giá liên quan</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {project.quotes.length === 0 ? (
+        {quotes.length === 0 ? (
           <EmptyState title="Chưa có báo giá" description="Dự án này chưa có quote gắn vào." />
         ) : (
-          project.quotes.map((quote) => (
+          quotes.map((quote) => (
             <article key={quote.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
@@ -1474,6 +1496,8 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
 }
 
 function ContractsPanel({ project }: { project: NonNullable<ReturnType<typeof useProject>["data"]> }) {
+  const contractStatusConfig = project.contract ? getContractStatusConfig(project.contract.status) : null;
+
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
@@ -1487,8 +1511,8 @@ function ContractsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               <Link href={`/contracts/${project.contract.id}`} className="font-heading text-2xl font-extrabold text-text-primary hover:text-primary">
                 {project.contract.contractNo}
               </Link>
-              <Badge variant={CONTRACT_STATUS_CONFIG[project.contract.status].variant}>
-                {CONTRACT_STATUS_CONFIG[project.contract.status].label}
+              <Badge variant={contractStatusConfig?.variant ?? "neutral"}>
+                {contractStatusConfig?.label ?? project.contract.status}
               </Badge>
             </div>
             <div className="grid gap-3 text-sm text-text-secondary md:grid-cols-2 xl:grid-cols-3">
@@ -1509,6 +1533,8 @@ function ContractsPanel({ project }: { project: NonNullable<ReturnType<typeof us
 }
 
 function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof useProject>["data"]> }) {
+  const milestones = project.milestones ?? [];
+
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
@@ -1516,28 +1542,32 @@ function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof use
         <CardTitle>Các mốc triển khai</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {project.milestones.length === 0 ? (
+        {milestones.length === 0 ? (
           <EmptyState title="Chưa có milestone" description="Dự án này chưa được lập mốc triển khai." />
         ) : (
-          project.milestones.map((milestone) => (
-            <article key={milestone.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-text-primary">{milestone.name}</p>
-                    <Badge variant={MILESTONE_STATUS_CONFIG[milestone.status].variant}>
-                      {MILESTONE_STATUS_CONFIG[milestone.status].label}
-                    </Badge>
+          milestones.map((milestone) => {
+            const statusConfig = getMilestoneStatusConfig(milestone.status);
+
+            return (
+              <article key={milestone.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-text-primary">{milestone.name}</p>
+                      <Badge variant={statusConfig.variant}>
+                        {statusConfig.label}
+                      </Badge>
+                    </div>
+                    {milestone.description ? <p className="mt-2 text-sm text-text-secondary">{milestone.description}</p> : null}
                   </div>
-                  {milestone.description ? <p className="mt-2 text-sm text-text-secondary">{milestone.description}</p> : null}
+                  <div className="text-right text-sm text-text-secondary">
+                    <p>{milestone.dueDate ? `Hạn ${formatDate(milestone.dueDate)}` : "Chưa đặt hạn"}</p>
+                    <p>{milestone.completedAt ? `Xong ${formatDate(milestone.completedAt)}` : "Chưa hoàn tất"}</p>
+                  </div>
                 </div>
-                <div className="text-right text-sm text-text-secondary">
-                  <p>{milestone.dueDate ? `Hạn ${formatDate(milestone.dueDate)}` : "Chưa đặt hạn"}</p>
-                  <p>{milestone.completedAt ? `Xong ${formatDate(milestone.completedAt)}` : "Chưa hoàn tất"}</p>
-                </div>
-              </div>
-            </article>
-          ))
+              </article>
+            );
+          })
         )}
       </CardContent>
     </Card>
@@ -1545,6 +1575,8 @@ function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof use
 }
 
 function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof useProject>["data"]> }) {
+  const payments = project.contract?.payments ?? [];
+
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
@@ -1554,10 +1586,10 @@ function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof use
       <CardContent className="space-y-3">
         {!project.contract ? (
           <EmptyState title="Chưa có hợp đồng" description="Thanh toán sẽ xuất hiện khi dự án có hợp đồng." />
-        ) : project.contract.payments.length === 0 ? (
+        ) : payments.length === 0 ? (
           <EmptyState title="Chưa có thanh toán" description="Chưa ghi nhận thanh toán nào cho hợp đồng này." />
         ) : (
-          project.contract.payments.map((payment) => (
+          payments.map((payment) => (
             <div key={payment.id} className="rounded-xl bg-bg-hover/60 p-3 text-sm text-text-secondary">
               <div className="flex items-center justify-between gap-3">
                 <span className="font-semibold text-text-primary">

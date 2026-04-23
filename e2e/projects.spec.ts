@@ -30,6 +30,27 @@ test("bulk export dự án hoạt động ở list view", async ({ page }) => {
   await downloadPromise;
 });
 
+test("search mở đúng hồ sơ dự án từ command palette", async ({ page, request }) => {
+  await login(page);
+
+  const accessToken = await getAccessTokenFromPage(page);
+  const project = await getFirstProject(request, accessToken);
+  const searchTerm = project.code || project.name;
+
+  await page.goto("/dashboard");
+  await page.getByPlaceholder(/Tìm kiếm khách hàng, dự án, báo giá/i).click();
+  await page.getByPlaceholder(/Tìm khách hàng, dự án, báo giá/i).fill(searchTerm);
+
+  const projectResult = page.getByRole("button", { name: new RegExp(escapeRegExp(project.name), "i") }).first();
+  await expect(projectResult).toBeVisible();
+  await projectResult.click();
+
+  await expect(page).toHaveURL(new RegExp(`/projects/${escapeRegExp(project.id)}`));
+  await expect(page.getByRole("heading", { name: "Hồ sơ dự án 360" })).toBeVisible();
+  await expect(page.getByText(/Application error/i)).toHaveCount(0);
+  await expect(page.getByText(/Không thể mở hồ sơ dự án/i)).toHaveCount(0);
+});
+
 test("Project 360 hiển thị lifecycle, tài liệu và action xem/tải file", async ({ page, request }) => {
   await login(page);
 
@@ -98,7 +119,11 @@ async function getFirstProject(
   expect(project?.id).toBeTruthy();
   expect(project?.customer?.id).toBeTruthy();
 
-  return project as { id: string; customer: { id: string } };
+  return project as { id: string; code: string; name: string; customer: { id: string } };
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function createProjectBusinessDocument(

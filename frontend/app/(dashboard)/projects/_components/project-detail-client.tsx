@@ -275,6 +275,15 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
 
   const project = projectQuery.data;
   const overview = overviewQuery.data;
+  const customer = project.customer;
+  const projectStats = project.stats ?? {
+    quoteCount: project.quotes?.length ?? 0,
+    milestoneCount: project.milestones?.length ?? 0,
+    activityCount: project.activities?.length ?? 0,
+    paidAmount: project.contract?.paidAmount ?? 0,
+    outstandingAmount: project.contract?.outstandingAmount ?? 0,
+    progressPercent: project.progressPercent ?? 0
+  };
   const projectQuotes = project.quotes ?? [];
   const projectMilestones = project.milestones ?? [];
   const projectPayments = project.contract?.payments ?? [];
@@ -288,6 +297,29 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
     payments: projectPayments.length,
     handover: overview?.handovers?.length ?? 0
   };
+
+  if (!customer?.id) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title="Hồ sơ dự án 360"
+          description="Dự án này đang thiếu liên kết khách hàng nên chưa thể mở đầy đủ hồ sơ."
+          action={
+            <Link href="/projects" className={cn(buttonVariants({ variant: "outline" }))}>
+              Quay lại danh sách
+            </Link>
+          }
+        />
+        <Card className="border border-warning/20">
+          <CardContent className="p-6">
+            <div className="rounded-xl bg-warning-bg/70 p-4 text-sm text-warning">
+              Dữ liệu dự án không đầy đủ: thiếu customerId/customer. Hãy kiểm tra seed hoặc bản ghi dự án trước khi mở Project 360.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -331,8 +363,8 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             </div>
             <div className="mt-4 flex flex-wrap gap-2 text-sm text-text-secondary">
               <Badge variant="neutral">{project.code}</Badge>
-              <Link href={`/customers/${project.customer.id}`} className="inline-flex">
-                <Badge variant="info">{project.customer.name}</Badge>
+              <Link href={`/customers/${customer.id}`} className="inline-flex">
+                <Badge variant="info">{customer.name}</Badge>
               </Link>
             </div>
             <p className="mt-5 max-w-3xl text-sm text-text-secondary">
@@ -348,17 +380,17 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
           <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Customer Owner</p>
             <div className="mt-4 space-y-2">
-              <Link href={`/customers/${project.customer.id}`} className="font-heading text-xl font-bold text-text-primary hover:text-primary">
-                {project.customer.name}
+              <Link href={`/customers/${customer.id}`} className="font-heading text-xl font-bold text-text-primary hover:text-primary">
+                {customer.name}
               </Link>
-              <p className="text-sm text-text-secondary">{project.customer.industry ?? "Chưa phân ngành"}</p>
-              <StatusBadge status={project.customer.status} />
+              <p className="text-sm text-text-secondary">{customer.industry ?? "Chưa phân ngành"}</p>
+              <StatusBadge status={customer.status} />
             </div>
             <div className="mt-6 rounded-2xl border border-white/70 bg-white/85 p-4 text-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Liên hệ chính</p>
-              <p className="mt-2 font-semibold text-text-primary">{project.customer.primaryContact?.name ?? "Chưa thiết lập"}</p>
-              <p className="text-text-secondary">{project.customer.primaryContact?.title ?? "Chưa có chức danh"}</p>
-              {project.customer.primaryContact?.phone ? <p className="text-text-secondary">{project.customer.primaryContact.phone}</p> : null}
+              <p className="mt-2 font-semibold text-text-primary">{customer.primaryContact?.name ?? "Chưa thiết lập"}</p>
+              <p className="text-text-secondary">{customer.primaryContact?.title ?? "Chưa có chức danh"}</p>
+              {customer.primaryContact?.phone ? <p className="text-text-secondary">{customer.primaryContact.phone}</p> : null}
             </div>
           </aside>
         </div>
@@ -366,9 +398,9 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Giá trị dự kiến" value={<CurrencyDisplay amount={project.estimatedValue} short />} />
-        <MetricCard label="Đã thu" value={<CurrencyDisplay amount={project.stats.paidAmount} short />} />
-        <MetricCard label="Còn lại" value={<CurrencyDisplay amount={project.stats.outstandingAmount} short />} />
-        <MetricCard label="Tiến độ" value={`${project.stats.progressPercent}%`} />
+        <MetricCard label="Đã thu" value={<CurrencyDisplay amount={projectStats.paidAmount} short />} />
+        <MetricCard label="Còn lại" value={<CurrencyDisplay amount={projectStats.outstandingAmount} short />} />
+        <MetricCard label="Tiến độ" value={`${projectStats.progressPercent}%`} />
       </div>
 
       <Project360Brief project={project} overview={overview} onNavigate={handleTabChange} />
@@ -410,8 +442,8 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
         <OverviewPanel project={project} overview={overview} customFields={customFieldsQuery.data ?? []} />
       ) : null}
       {activeTab === "timeline" ? <TimelinePanel projectId={projectId} /> : null}
-      {activeTab === "surveys" ? <SurveysPanel projectId={projectId} customerId={project.customer.id} /> : null}
-      {activeTab === "documents" ? <DocumentsPanel projectId={projectId} customerId={project.customer.id} /> : null}
+      {activeTab === "surveys" ? <SurveysPanel projectId={projectId} customerId={customer.id} /> : null}
+      {activeTab === "documents" ? <DocumentsPanel projectId={projectId} customerId={customer.id} /> : null}
       {activeTab === "quotes" ? <QuotesPanel project={project} /> : null}
       {activeTab === "contracts" ? <ContractsPanel project={project} /> : null}
       {activeTab === "delivery" ? <DeliveryPanel project={project} /> : null}
@@ -444,7 +476,7 @@ function OverviewPanel({
                 <p className="font-semibold text-text-primary">{overview.nextActivity.title}</p>
                 <p className="mt-2 text-sm text-text-secondary">
                   {overview.nextActivity.scheduledAt ? formatDateTime(overview.nextActivity.scheduledAt) : "Chưa có lịch cụ thể"} ·{" "}
-                  {overview.nextActivity.user.name}
+                  {overview.nextActivity.user?.name ?? "Chưa gán người phụ trách"}
                 </p>
               </article>
             ) : (
@@ -469,7 +501,7 @@ function OverviewPanel({
                       {overview.latestSurvey.surveyedAt ? formatDate(overview.latestSurvey.surveyedAt) : "Chưa có ngày khảo sát"}
                     </p>
                   </div>
-                  <Badge variant="info">{overview.latestSurvey.media.length} media</Badge>
+                  <Badge variant="info">{overview.latestSurvey.media?.length ?? 0} media</Badge>
                 </div>
                 {overview.latestSurvey.summary ? <p className="mt-3 text-sm text-text-secondary">{overview.latestSurvey.summary}</p> : null}
                 {overview.latestSurvey.nextStep ? (
@@ -840,20 +872,20 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
                       {survey.location ?? "Chưa có địa điểm"} · {survey.surveyedAt ? formatDateTime(survey.surveyedAt) : "Chưa có ngày"}
                     </p>
                   </div>
-                  <Badge variant="info">{survey.media.length} media</Badge>
+                  <Badge variant="info">{survey.media?.length ?? 0} media</Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {survey.summary ? <p className="text-sm text-text-secondary">{survey.summary}</p> : null}
-	                {survey.media.length ? (
-	                  <div className="grid gap-3 md:grid-cols-3">
-	                    {survey.media.map((media) => (
-	                      <SurveyMediaCard key={media.id} media={media} />
-	                    ))}
-	                  </div>
-	                ) : null}
+                {survey.media?.length ? (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {survey.media.map((media) => (
+                      <SurveyMediaCard key={media.id} media={media} />
+                    ))}
+                  </div>
+                ) : null}
                 <div className="space-y-2">
-                  {survey.notes.map((note) => (
+                  {(survey.notes ?? []).map((note) => (
                     <div key={note.id} className="rounded-xl bg-bg-hover/60 p-3 text-sm">
                       <Badge variant={note.isImportant ? "warning" : "neutral"}>{SURVEY_NOTE_LABELS[note.type]}</Badge>
                       <p className="mt-2 text-text-secondary">{note.content}</p>
@@ -1050,6 +1082,7 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
   });
 
   const businessDocuments = documentsQuery.data?.businessDocuments ?? [];
+  const generatedDocuments = documentsQuery.data?.generatedDocuments ?? [];
   const filteredBusinessDocuments = businessDocuments.filter((document) => {
     const search = documentFilters.search.trim().toLowerCase();
     const matchesSearch =
@@ -1159,7 +1192,7 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
           <DocumentStat label="Tổng tài liệu" value={businessDocuments.length} />
           <DocumentStat label="Có file" value={businessDocuments.filter((document) => document.fileUrl).length} />
           <DocumentStat label="Đã ký / chấp nhận" value={businessDocuments.filter((document) => ["SIGNED", "ACCEPTED"].includes(document.status)).length} />
-          <DocumentStat label="PDF hệ thống" value={documentsQuery.data?.generatedDocuments.length ?? 0} />
+          <DocumentStat label="PDF hệ thống" value={generatedDocuments.length} />
         </div>
       </section>
 
@@ -1438,10 +1471,10 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
             <CardTitle>Tài liệu hệ thống sinh ra</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {!documentsQuery.data?.generatedDocuments.length ? (
+            {!generatedDocuments.length ? (
               <EmptyState title="Chưa có PDF được render" description="PDF sinh từ báo giá hoặc hợp đồng liên quan sẽ hiển thị ở đây sau khi render." />
             ) : (
-              documentsQuery.data.generatedDocuments.map((document) => (
+              generatedDocuments.map((document) => (
                 <GeneratedDocumentRow key={document.id} document={document} />
               ))
             )}
@@ -1476,7 +1509,7 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
                     <Badge variant="neutral">v{quote.version}</Badge>
                     <StatusBadge status={quote.status} />
                   </div>
-                  <p className="mt-2 text-sm text-text-secondary">Tạo bởi {quote.createdBy.name}</p>
+                  <p className="mt-2 text-sm text-text-secondary">Tạo bởi {quote.createdBy?.name ?? "Chưa rõ người tạo"}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-heading text-2xl font-extrabold text-text-primary">
@@ -1900,13 +1933,14 @@ function GeneratedDocumentRow({ document }: { document: GeneratedProjectDocument
   const [isOpening, setIsOpening] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const downloadPath = `/documents/${document.id}/download`;
-  const filename = `${document.number}.pdf`;
+  const documentNumber = document.number || document.id;
+  const filename = `${documentNumber}.pdf`;
 
   return (
     <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="font-semibold text-text-primary">{document.number}</p>
+          <p className="font-semibold text-text-primary">{documentNumber}</p>
           <p className="text-text-secondary">
             {document.type} · {document.renderedAt ? formatDateTime(document.renderedAt) : formatDateTime(document.createdAt)}
           </p>
@@ -1977,7 +2011,7 @@ function DocumentRow({
     <div className={cn("rounded-2xl border border-border/60 bg-white/80 p-4", compact && "p-3")}>
       <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
         <div>
-          <p className="font-semibold text-text-primary">{document.title}</p>
+          <p className="font-semibold text-text-primary">{document.title || "Tài liệu chưa đặt tên"}</p>
           <p className="text-sm text-text-secondary">
             {DOCUMENT_TYPE_LABELS[document.type as BusinessDocumentType] ?? document.type}
             {document.documentNo ? ` · ${document.documentNo}` : ""}

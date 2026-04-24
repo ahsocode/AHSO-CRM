@@ -10,7 +10,7 @@ export default defineConfig({
   projects: [
     {
       name: "auth-guest",
-      testMatch: /auth\.spec\.ts/,
+      testMatch: /(auth|security)\.spec\.ts/,
       use: {
         baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
         headless: true,
@@ -19,7 +19,7 @@ export default defineConfig({
     },
     {
       name: "authenticated-smoke",
-      testIgnore: /auth\.spec\.ts/,
+      testIgnore: /(auth|security)\.spec\.ts/,
       use: {
         baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
         headless: true,

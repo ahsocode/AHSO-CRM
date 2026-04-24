@@ -279,9 +279,9 @@ export class BusinessDocumentsService {
   private async resolveBusinessLink(dto: Partial<CreateBusinessDocumentDto>, user: JwtUser) {
     let projectId = dto.projectId ?? null;
     let customerId = dto.customerId ?? null;
-    let quoteId = dto.quoteId ?? null;
+    const quoteId = dto.quoteId ?? null;
     let contractId = dto.contractId ?? null;
-    let paymentId = dto.paymentId ?? null;
+    const paymentId = dto.paymentId ?? null;
 
     if (paymentId) {
       const payment = await this.prisma.payment.findFirst({

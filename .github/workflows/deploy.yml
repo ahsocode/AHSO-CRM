@@ -48,7 +48,7 @@ jobs:
             cd ${{ secrets.PROD_APP_DIR }}
             docker compose pull
             docker compose up -d
-            curl -fsS http://127.0.0.1:3001/api/settings/company >/dev/null
+            curl -fsS http://127.0.0.1:3001/api/health >/dev/null
             curl -fsS http://127.0.0.1:3000/login >/dev/null
 
       - name: Notify Slack success

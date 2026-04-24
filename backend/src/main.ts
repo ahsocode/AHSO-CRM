@@ -17,6 +17,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: WinstonModule.createLogger(createWinstonLoggerOptions())
   });
+  app.enableShutdownHooks();
   const configService = app.get(ConfigService);
 
   // Global API prefix — all routes served under /api/*

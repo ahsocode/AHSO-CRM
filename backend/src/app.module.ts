@@ -33,6 +33,7 @@ import { SearchModule } from "./search/search.module";
 import { DocumentsModule } from "./documents/documents.module";
 import { SurveysModule } from "./surveys/surveys.module";
 import { BusinessDocumentsModule } from "./business-documents/business-documents.module";
+import { HealthModule } from "./health/health.module";
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { BusinessDocumentsModule } from "./business-documents/business-documents
     DomainEventsModule,
     CustomFieldsModule,
     SearchModule,
+    HealthModule,
     DocumentsModule,
     SurveysModule,
     BusinessDocumentsModule

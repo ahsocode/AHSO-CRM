@@ -76,7 +76,7 @@ export class DocumentNumberService {
     now: Date = new Date()
   ): Promise<string> {
     const year = now.getFullYear();
-    let baseSeq = await this.nextSequence(type, year);
+    const baseSeq = await this.nextSequence(type, year);
 
     for (let i = 0; i < MAX_COLLISION_RETRIES; i++) {
       const seq = baseSeq + i;

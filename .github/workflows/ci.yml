@@ -22,6 +22,10 @@ jobs:
         run: npm ci
       - name: Prisma generate
         run: npx prisma generate
+      - name: Lint backend
+        run: npm run lint
+      - name: Typecheck backend
+        run: npm run typecheck
       - name: Run backend unit tests
         run: npm test -- --coverage
       - name: Build backend
@@ -47,6 +51,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
         run: npm ci
+      - name: Lint frontend
+        run: npm run lint
+      - name: Typecheck frontend
+        run: npm run typecheck
       - name: Build frontend
         run: npm run build
 
@@ -80,6 +88,14 @@ jobs:
           cp frontend/.env.local.example frontend/.env.local
       - name: Start application stack
         run: docker compose up -d --build postgres redis backend frontend
+      - name: Wait for backend health
+        run: |
+          for i in {1..60}; do
+            curl -sf http://127.0.0.1:3001/api/health >/dev/null && exit 0
+            sleep 5
+          done
+          echo "Backend health endpoint did not become ready in time"
+          exit 1
       - name: Seed database
         run: docker compose exec -T backend npm run prisma:seed
       - name: Wait for frontend

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
@@ -113,7 +114,14 @@ export function ContractAcceptancePreviewClient({ contractId }: { contractId: st
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
                   {logoUrl ? (
-                    <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-2" />
+                    <Image
+                      src={logoUrl}
+                      alt={brandName}
+                      width={48}
+                      height={48}
+                      unoptimized
+                      className="h-full w-full object-contain p-2"
+                    />
                   ) : (
                     <span className="font-heading text-xl font-extrabold text-primary">A</span>
                   )}

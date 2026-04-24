@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { AppIcon } from "@/components/shared/app-icon";
@@ -41,7 +42,14 @@ export function Topbar({
           <div className="hidden items-center gap-3 lg:flex">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
               {logoUrl ? (
-                <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-2" />
+                <Image
+                  src={logoUrl}
+                  alt={brandName}
+                  width={48}
+                  height={48}
+                  unoptimized
+                  className="h-full w-full object-contain p-2"
+                />
               ) : (
                 <span className="font-heading text-sm font-extrabold tracking-[0.22em] text-primary">AHSO</span>
               )}

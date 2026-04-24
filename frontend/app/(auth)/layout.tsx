@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCompanyInfo, useLogo } from "@/hooks/use-settings";
 import { resolveAssetUrl } from "@/lib/auth";
 
@@ -31,7 +32,14 @@ export default function AuthLayout({
               <div className="flex items-center gap-3">
                 <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/14 shadow-[0_18px_45px_rgba(0,0,0,0.18)]">
                   {logoUrl ? (
-                    <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-2" />
+                    <Image
+                      src={logoUrl}
+                      alt={brandName}
+                      width={56}
+                      height={56}
+                      unoptimized
+                      className="h-full w-full object-contain p-2"
+                    />
                   ) : (
                     <span className="font-heading text-base font-extrabold tracking-[0.18em] text-white">AHSO</span>
                   )}

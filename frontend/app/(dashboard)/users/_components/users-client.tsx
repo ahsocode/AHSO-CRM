@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -148,11 +148,20 @@ export function UsersClient() {
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
 
-  const users = usersQuery.data ?? [];
-  const roleOptions = getRoleOptions(rolesQuery.data ?? []);
-  const filteredUsers = filterUsers(users, deferredSearch, roleFilter, activityFilter);
-  const selectedUser = users.find((candidate) => candidate.id === selectedUserId) ?? null;
-  const selectedVisibleUser = filteredUsers.find((candidate) => candidate.id === selectedUserId) ?? null;
+  const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+  const roleOptions = useMemo(() => getRoleOptions(rolesQuery.data ?? []), [rolesQuery.data]);
+  const filteredUsers = useMemo(
+    () => filterUsers(users, deferredSearch, roleFilter, activityFilter),
+    [activityFilter, deferredSearch, roleFilter, users]
+  );
+  const selectedUser = useMemo(
+    () => users.find((candidate) => candidate.id === selectedUserId) ?? null,
+    [selectedUserId, users]
+  );
+  const selectedVisibleUser = useMemo(
+    () => filteredUsers.find((candidate) => candidate.id === selectedUserId) ?? null,
+    [filteredUsers, selectedUserId]
+  );
 
   const editForm = useForm<UserEditorValues>({
     resolver: zodResolver(userEditorSchema),

@@ -1790,6 +1790,8 @@ function SurveyMediaCard({ media }: { media: SurveyMedia }) {
           }}
         >
           {previewUrl ? (
+            // Survey previews use object URLs created from authenticated blobs; Next Image cannot optimize these safely.
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={previewUrl}
               alt={media.caption ?? media.filename ?? "Ảnh khảo sát"}

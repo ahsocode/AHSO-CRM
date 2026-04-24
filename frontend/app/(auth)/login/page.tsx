@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -66,7 +67,14 @@ export default function LoginPage() {
           <div className="flex items-center gap-3">
             <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm">
               {logoUrl ? (
-                <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-2" />
+                <Image
+                  src={logoUrl}
+                  alt={brandName}
+                  width={56}
+                  height={56}
+                  unoptimized
+                  className="h-full w-full object-contain p-2"
+                />
               ) : (
                 <span className="font-heading text-sm font-extrabold tracking-[0.18em] text-primary">AHSO</span>
               )}

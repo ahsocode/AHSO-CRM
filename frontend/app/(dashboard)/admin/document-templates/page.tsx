@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -96,6 +96,7 @@ export default function DocumentTemplatesPage() {
   const [previewLanguage, setPreviewLanguage] = useState<"vi" | "viEn">("vi");
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [overflowIssues, setOverflowIssues] = useState<TemplateValidationIssue[]>([]);
+  const loadedVariantIdRef = useRef<string | null>(null);
 
   const variantsQuery = useDocumentTemplateVariants(selectedType);
   const variantQuery = useDocumentTemplateVariant(selectedVariantId);
@@ -135,16 +136,25 @@ export default function DocumentTemplatesPage() {
 
   useEffect(() => {
     if (!activeVariant) {
+      if (loadedVariantIdRef.current === null) {
+        return;
+      }
+      loadedVariantIdRef.current = null;
       setDraftLayout(null);
       setDraftName("");
       setSelectedBoxId(undefined);
       return;
     }
 
+    if (loadedVariantIdRef.current === activeVariant.id) {
+      return;
+    }
+
+    loadedVariantIdRef.current = activeVariant.id;
     setDraftName(activeVariant.name);
     setDraftLayout(cloneLayout(activeVariant.layoutJson));
     setSelectedBoxId(activeVariant.layoutJson.pages.flatMap((page) => page.boxes)[0]?.id);
-  }, [activeVariant?.id]);
+  }, [activeVariant]);
 
   const selectedBox = useMemo(() => findBox(draftLayout, selectedBoxId), [draftLayout, selectedBoxId]);
   const geometryIssues = useMemo(

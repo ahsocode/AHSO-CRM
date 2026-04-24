@@ -14,10 +14,12 @@ describe("ProjectsService", () => {
 
   let service: ProjectsService;
   let prisma: {
+    $transaction: jest.Mock;
     customer: {
       findFirst: jest.Mock;
     };
     project: {
+      count: jest.Mock;
       findMany: jest.Mock;
       create: jest.Mock;
       findFirst: jest.Mock;
@@ -33,10 +35,12 @@ describe("ProjectsService", () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn(async (operations: Array<Promise<unknown>>) => Promise.all(operations)),
       customer: {
         findFirst: jest.fn()
       },
       project: {
+        count: jest.fn(),
         findMany: jest.fn(),
         create: jest.fn(),
         findFirst: jest.fn(),
@@ -123,6 +127,79 @@ describe("ProjectsService", () => {
       projectId: "project-1",
       previousStatus: "QUOTING",
       status: "NEGOTIATING"
+    });
+  });
+
+  it("excludes closed projects from pipeline summary value while keeping them in list results", async () => {
+    const openProject = {
+      id: "project-open",
+      code: "AHSO-001",
+      name: "Dự án mở",
+      description: null,
+      status: "WON",
+      priority: "NORMAL",
+      estimatedValue: 100_000_000,
+      startDate: null,
+      expectedEndDate: null,
+      updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+      activities: [],
+      customer: {
+        id: "customer-1",
+        name: "Khách hàng A",
+        industry: null,
+        status: "ACTIVE",
+        assignedTo: {
+          id: "user-1",
+          name: "Admin",
+          role: "ADMIN"
+        }
+      },
+      contract: null,
+      _count: {
+        quotes: 0,
+        milestones: 0,
+        activities: 0
+      }
+    };
+    const completedProject = {
+      ...openProject,
+      id: "project-completed",
+      code: "AHSO-002",
+      name: "Dự án hoàn thành",
+      status: "COMPLETED",
+      estimatedValue: 300_000_000
+    };
+    const lostProject = {
+      ...openProject,
+      id: "project-lost",
+      code: "AHSO-003",
+      name: "Dự án mất",
+      status: "LOST",
+      estimatedValue: 500_000_000
+    };
+
+    prisma.project.count.mockResolvedValue(3);
+    prisma.project.findMany
+      .mockResolvedValueOnce([
+        { id: "project-open", status: "WON", estimatedValue: 100_000_000, expectedEndDate: null },
+        { id: "project-completed", status: "COMPLETED", estimatedValue: 300_000_000, expectedEndDate: null },
+        { id: "project-lost", status: "LOST", estimatedValue: 500_000_000, expectedEndDate: null }
+      ])
+      .mockResolvedValueOnce([openProject, completedProject, lostProject]);
+
+    await expect(service.findAll({ page: 1, limit: 10, view: "list" }, user)).resolves.toMatchObject({
+      items: [
+        { id: "project-open" },
+        { id: "project-completed" },
+        { id: "project-lost" }
+      ],
+      meta: {
+        total: 3,
+        summary: {
+          pipelineValue: 100_000_000,
+          activeProjects: 1
+        }
+      }
     });
   });
 });

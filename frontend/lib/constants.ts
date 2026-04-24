@@ -1,5 +1,29 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "AHSO CRM";
-export const BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
+const DEFAULT_BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
+
+function resolveBackendUrl() {
+  if (typeof window === "undefined") {
+    return DEFAULT_BACKEND_URL;
+  }
+
+  try {
+    const configuredUrl = new URL(DEFAULT_BACKEND_URL);
+    const currentHostname = window.location.hostname;
+    const isLoopbackHost =
+      configuredUrl.hostname === "localhost" ||
+      configuredUrl.hostname === "127.0.0.1";
+
+    if (isLoopbackHost && currentHostname && currentHostname !== configuredUrl.hostname) {
+      configuredUrl.hostname = currentHostname;
+    }
+
+    return configuredUrl.toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_BACKEND_URL;
+  }
+}
+
+export const BACKEND_URL = resolveBackendUrl();
 export const API_URL = `${BACKEND_URL}/api`;
 export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 

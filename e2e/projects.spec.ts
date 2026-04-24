@@ -96,8 +96,12 @@ test("Project 360 hiển thị lifecycle, tài liệu và action xem/tải file"
 });
 
 async function getAccessTokenFromPage(page: Page) {
-  const cookies = await page.context().cookies();
-  const accessToken = cookies.find((cookie) => cookie.name === "ahso_access_token")?.value;
+  const accessToken = await page.evaluate(() => {
+    return (
+      window.sessionStorage.getItem("ahso_access_token") ??
+      window.localStorage.getItem("ahso_access_token")
+    );
+  });
 
   expect(accessToken).toBeTruthy();
   return accessToken as string;

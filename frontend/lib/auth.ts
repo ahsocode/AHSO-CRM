@@ -8,30 +8,25 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
-function setCookie(name: string, value: string, maxAgeSeconds: number) {
-  if (!isBrowser()) {
-    return;
-  }
-
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; samesite=lax`;
-}
-
-function getCookie(name: string) {
-  if (!isBrowser()) {
-    return null;
-  }
-
-  const cookies = document.cookie.split("; ").filter(Boolean);
-  const match = cookies.find((cookie) => cookie.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.split("=")[1] ?? "") : null;
-}
-
 function removeCookie(name: string) {
   if (!isBrowser()) {
     return;
   }
 
   document.cookie = `${name}=; path=/; max-age=0; samesite=lax`;
+}
+
+function getSessionStorage() {
+  if (!isBrowser()) {
+    return null;
+  }
+
+  return window.sessionStorage;
+}
+
+function clearLegacyClientCookies() {
+  removeCookie(ACCESS_TOKEN_KEY);
+  removeCookie(REFRESH_TOKEN_KEY);
 }
 
 export function normalizeAuthRole(role: AuthUser["role"] | null | undefined): AuthRoleInfo {
@@ -123,10 +118,11 @@ export function resolveAssetUrl(url: string | null | undefined) {
 export function persistSession(session: AuthSession) {
   const normalizedSession = normalizeAuthSession(session);
 
-  setCookie(ACCESS_TOKEN_KEY, normalizedSession.accessToken, 15 * 60);
-  setCookie(REFRESH_TOKEN_KEY, normalizedSession.refreshToken, 7 * 24 * 60 * 60);
+  getSessionStorage()?.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
+  clearLegacyClientCookies();
 
   if (isBrowser()) {
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
     window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(normalizedSession.user));
   }
 
@@ -134,20 +130,17 @@ export function persistSession(session: AuthSession) {
 }
 
 export function clearSession() {
-  removeCookie(ACCESS_TOKEN_KEY);
-  removeCookie(REFRESH_TOKEN_KEY);
+  getSessionStorage()?.removeItem(ACCESS_TOKEN_KEY);
+  clearLegacyClientCookies();
 
   if (isBrowser()) {
+    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     window.localStorage.removeItem(AUTH_USER_KEY);
   }
 }
 
 export function getAccessToken() {
-  return getCookie(ACCESS_TOKEN_KEY);
-}
-
-export function getRefreshToken() {
-  return getCookie(REFRESH_TOKEN_KEY);
+  return getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ?? window.localStorage.getItem(ACCESS_TOKEN_KEY) ?? null;
 }
 
 export function getStoredUser(): AuthUser | null {

@@ -13,12 +13,13 @@ import {
 } from "./dto/update-setting.dto";
 
 @Controller("settings")
+@UseGuards(JwtAuthGuard)
 export class SettingsController {
   constructor(private settingsService: SettingsService) {}
 
   /**
    * GET /settings
-   * Get all settings (public, no auth required for now)
+   * Get the authenticated admin settings bundle.
    */
   @Get()
   async getAllSettings() {
@@ -32,7 +33,7 @@ export class SettingsController {
   @Public()
   @Get("company")
   async getCompanyInfo() {
-    return this.settingsService.getCompanyInfo();
+    return this.settingsService.getPublicCompanyInfo();
   }
 
   /**
@@ -40,7 +41,7 @@ export class SettingsController {
    * Update company information (admin-only)
    */
   @Patch("company")
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
   async updateCompanyInfo(
     @Body(new ZodValidationPipe(CompanySettingSchema)) input: CompanySettingInput
@@ -62,7 +63,7 @@ export class SettingsController {
    * Update policy settings (admin-only)
    */
   @Patch("policies")
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
   async updatePolicies(
     @Body(new ZodValidationPipe(PolicySettingSchema)) input: PolicySettingInput
@@ -94,7 +95,7 @@ export class SettingsController {
    * Update a specific setting (admin-only)
    */
   @Patch(":key")
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
   async updateSetting(@Param("key") key: string, @Body("value") value: any) {
     return this.settingsService.upsertSetting(key, value);

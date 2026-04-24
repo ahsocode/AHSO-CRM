@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { getAccessToken, getRefreshToken } from "@/lib/auth";
+import { getAccessToken } from "@/lib/auth";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useWebsocket } from "@/hooks/use-websocket";
 
@@ -31,14 +31,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
     async function ensureSession() {
       const hasAccessToken = Boolean(getAccessToken());
-      const hasRefreshToken = Boolean(getRefreshToken());
 
-      if (!hasAccessToken && !hasRefreshToken) {
-        router.replace("/login");
-        return;
-      }
-
-      if (!hasAccessToken && hasRefreshToken) {
+      if (!hasAccessToken) {
         try {
           await refreshSession();
         } catch {

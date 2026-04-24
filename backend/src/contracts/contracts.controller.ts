@@ -2,7 +2,9 @@ import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { ContractsPdfService } from "./contracts-pdf.service";
 import { ContractFilterDto, contractFilterSchema } from "./dto/contract-filter.dto";
@@ -14,13 +16,14 @@ import { UpdateMilestoneDto, updateMilestoneSchema } from "./dto/update-mileston
 import { ContractsService } from "./contracts.service";
 
 @Controller("contracts")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ContractsController {
   constructor(
     private readonly contractsService: ContractsService,
     private readonly contractsPdfService: ContractsPdfService
   ) {}
 
+  @RequirePermissions("contracts.view")
   @Get()
   findAll(
     @Query(new ZodValidationPipe(contractFilterSchema, "query")) filters: ContractFilterDto,
@@ -29,6 +32,7 @@ export class ContractsController {
     return this.contractsService.findAll(filters, user);
   }
 
+  @RequirePermissions("contracts.create")
   @Post()
   create(
     @Body(new ZodValidationPipe(createContractSchema)) dto: CreateContractDto,
@@ -37,6 +41,7 @@ export class ContractsController {
     return this.contractsService.create(dto, user);
   }
 
+  @RequirePermissions("contracts.view")
   @Get(":id/acceptance-pdf")
   async downloadAcceptancePdf(
     @Param("id") id: string,
@@ -49,11 +54,13 @@ export class ContractsController {
     response.send(pdf.buffer);
   }
 
+  @RequirePermissions("contracts.view")
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.contractsService.findOne(id, user);
   }
 
+  @RequirePermissions("contracts.edit")
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -63,6 +70,7 @@ export class ContractsController {
     return this.contractsService.update(id, dto, user);
   }
 
+  @RequirePermissions("contracts.edit")
   @Post(":id/milestones")
   createMilestone(
     @Param("id") id: string,
@@ -72,6 +80,7 @@ export class ContractsController {
     return this.contractsService.createMilestone(id, dto, user);
   }
 
+  @RequirePermissions("contracts.edit")
   @Patch("milestones/:id")
   updateMilestone(
     @Param("id") id: string,
@@ -81,6 +90,7 @@ export class ContractsController {
     return this.contractsService.updateMilestone(id, dto, user);
   }
 
+  @RequirePermissions("payments.create")
   @Post(":id/payments")
   createPayment(
     @Param("id") id: string,

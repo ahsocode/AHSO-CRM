@@ -62,6 +62,21 @@ export function getPermissionList(user?: Pick<JwtUser, "permissions" | "role"> |
   return typeof user.role === "string" ? [] : user.role.permissions ?? [];
 }
 
+export function hasPermission(
+  user: Pick<JwtUser, "permissions" | "role"> | null | undefined,
+  permission: string
+) {
+  if (!user) {
+    return false;
+  }
+
+  if (isAdmin(user)) {
+    return true;
+  }
+
+  return getPermissionList(user).includes(permission);
+}
+
 export function isAdmin(user?: Pick<JwtUser, "role"> | null) {
   return getRoleName(user) === "ADMIN";
 }

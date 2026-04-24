@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtUser, getPermissionList, getRoleName, isAdmin } from "../../auth/auth.types";
 import { PrismaService } from "../prisma.service";
@@ -34,7 +34,7 @@ export class PermissionsGuard implements CanActivate {
     const user = request.user as JwtUser | undefined;
 
     if (!user?.sub) {
-      return false;
+      throw new ForbiddenException("Bạn không có quyền thực hiện thao tác này");
     }
 
     if (isAdmin(user)) {
@@ -47,7 +47,11 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    return requiredPermissions.every((permission) => permissions.includes(permission));
+    if (!requiredPermissions.every((permission) => permissions.includes(permission))) {
+      throw new ForbiddenException("Bạn không có quyền thực hiện thao tác này");
+    }
+
+    return true;
   }
 
   private async resolvePermissions(user: JwtUser) {

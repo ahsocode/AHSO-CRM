@@ -3,6 +3,16 @@ import { PrismaService } from "src/common/prisma.service";
 import { UploadService } from "src/upload/upload.service";
 import { CompanySettingInput, PolicySettingInput } from "./dto/update-setting.dto";
 
+const PUBLIC_COMPANY_FIELDS = [
+  "name",
+  "shortName",
+  "taxId",
+  "address",
+  "phone",
+  "email",
+  "website"
+] as const;
+
 @Injectable()
 export class SettingsService {
   constructor(
@@ -95,18 +105,21 @@ export class SettingsService {
    * Get company info
    */
   async getCompanyInfo() {
-    const settings = await this.getFlatSettings();
-    const companyKeys = Object.keys(settings).filter((k) =>
-      k.startsWith("company:")
-    );
+    return this.getSettingsByPrefix("company:");
+  }
 
-    const result: Record<string, any> = {};
-    for (const key of companyKeys) {
-      const fieldName = key.replace("company:", "");
-      result[fieldName] = settings[key];
+  /**
+   * Get public company profile safe for unauthenticated screens.
+   */
+  async getPublicCompanyInfo() {
+    const company = await this.getCompanyInfo();
+    const publicCompany: Record<string, any> = {};
+
+    for (const field of PUBLIC_COMPANY_FIELDS) {
+      publicCompany[field] = company[field] ?? null;
     }
 
-    return result;
+    return publicCompany;
   }
 
   /**
@@ -128,14 +141,19 @@ export class SettingsService {
    * Get policy settings
    */
   async getPolicies() {
+    return this.getSettingsByPrefix("policy:");
+  }
+
+  private async getSettingsByPrefix(prefix: string) {
     const settings = await this.getFlatSettings();
-    const policyKeys = Object.keys(settings).filter((k) =>
-      k.startsWith("policy:")
+    const scopedKeys = Object.keys(settings).filter((key) =>
+      key.startsWith(prefix)
     );
 
     const result: Record<string, any> = {};
-    for (const key of policyKeys) {
-      const fieldName = key.replace("policy:", "");
+
+    for (const key of scopedKeys) {
+      const fieldName = key.replace(prefix, "");
       result[fieldName] = settings[key];
     }
 

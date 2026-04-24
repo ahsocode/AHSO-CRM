@@ -4,6 +4,7 @@ export async function login(page: Page, email = process.env.E2E_ADMIN_EMAIL ?? "
   await page.goto("/dashboard");
 
   if (/\/dashboard(?:\/|$)/.test(page.url())) {
+    await expect(page.getByText("Tổng quan hoạt động")).toBeVisible({ timeout: 15_000 });
     return;
   }
 
@@ -15,4 +16,5 @@ export async function login(page: Page, email = process.env.E2E_ADMIN_EMAIL ?? "
   await page.getByLabel("Mật khẩu").fill(password);
   await page.getByRole("button", { name: /vào dashboard/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page.getByText("Tổng quan hoạt động")).toBeVisible({ timeout: 15_000 });
 }

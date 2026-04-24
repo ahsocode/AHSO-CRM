@@ -8,7 +8,6 @@ import { PrismaService } from "../common/prisma.service";
 import { EmailService } from "../email/email.service";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { LoginDto } from "./dto/login.dto";
-import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { AuthTokens, JwtUser, PasswordResetTokenPayload } from "./auth.types";
 
@@ -66,39 +65,8 @@ export class AuthService {
     };
   }
 
-  async refresh(dto: RefreshTokenDto) {
-    let payload: JwtUser;
-
-    try {
-      payload = await this.jwtService.verifyAsync<JwtUser>(dto.refreshToken, {
-        secret: this.configService.get<string>("JWT_SECRET")
-      });
-    } catch {
-      throw new UnauthorizedException("Refresh token không hợp lệ");
-    }
-
-    const user = await this.prisma.user.findUnique({
-      where: {
-        id: payload.sub
-      },
-      include: {
-        role: {
-          include: {
-            permissions: true
-          }
-        }
-      }
-    });
-
-    if (!user || !user.refreshToken || !user.isActive) {
-      throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
-    }
-
-    const isValidRefreshToken = await bcrypt.compare(dto.refreshToken, user.refreshToken);
-
-    if (!isValidRefreshToken) {
-      throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
-    }
+  async refresh(refreshToken: string) {
+    const { user } = await this.resolveUserFromRefreshToken(refreshToken);
 
     const nextPayload = this.buildPayload(user);
     const tokens = await this.issueTokens(nextPayload);
@@ -186,6 +154,32 @@ export class AuthService {
     };
   }
 
+  async logoutByRefreshToken(refreshToken: string) {
+    if (!refreshToken) {
+      return {
+        success: true
+      };
+    }
+
+    try {
+      const { user } = await this.resolveUserFromRefreshToken(refreshToken);
+      await this.prisma.user.update({
+        where: {
+          id: user.id
+        },
+        data: {
+          refreshToken: null
+        }
+      });
+    } catch {
+      // Ignore invalid/expired refresh tokens during logout so the cookie can still be cleared.
+    }
+
+    return {
+      success: true
+    };
+  }
+
   private buildPayload(user: any): JwtUser {
     const permissions = user.role?.permissions?.map(
       (permission: { resource: string; action: string }) => `${permission.resource}.${permission.action}`
@@ -247,6 +241,50 @@ export class AuthService {
         refreshToken: hashedRefreshToken
       }
     });
+  }
+
+  private async resolveUserFromRefreshToken(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
+    }
+
+    let payload: JwtUser;
+
+    try {
+      payload = await this.jwtService.verifyAsync<JwtUser>(refreshToken, {
+        secret: this.configService.get<string>("JWT_SECRET")
+      });
+    } catch {
+      throw new UnauthorizedException("Refresh token không hợp lệ");
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: payload.sub
+      },
+      include: {
+        role: {
+          include: {
+            permissions: true
+          }
+        }
+      }
+    });
+
+    if (!user || !user.refreshToken || !user.isActive) {
+      throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
+    }
+
+    const isValidRefreshToken = await bcrypt.compare(refreshToken, user.refreshToken);
+
+    if (!isValidRefreshToken) {
+      throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
+    }
+
+    return {
+      payload,
+      user
+    };
   }
 
   private serializeUser(user: any) {

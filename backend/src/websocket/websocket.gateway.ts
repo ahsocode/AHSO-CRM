@@ -20,9 +20,16 @@ interface SocketWithUser extends Socket {
   };
 }
 
+function resolveAllowedOrigins() {
+  const configuredOrigins = process.env.CORS_ORIGIN ?? "http://localhost:3000,http://127.0.0.1:3000";
+  const frontendUrl = process.env.FRONTEND_URL ?? "";
+
+  return Array.from(new Set([...configuredOrigins.split(","), frontendUrl].map((value) => value.trim()).filter(Boolean)));
+}
+
 @WebSocketGateway({
   cors: {
-    origin: true,
+    origin: resolveAllowedOrigins(),
     credentials: true
   },
   namespace: "/events"

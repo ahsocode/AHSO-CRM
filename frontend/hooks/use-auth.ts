@@ -4,8 +4,6 @@ import axios from "axios";
 import { create } from "zustand";
 import {
   clearSession,
-  getAccessToken,
-  getRefreshToken,
   getStoredUser,
   hasPermission as authHasPermission,
   persistSession
@@ -50,7 +48,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     });
   },
   login: async (input) => {
-    const response = await axios.post<ApiResponse<AuthSession>>(`${API_URL}/auth/login`, input);
+    const response = await axios.post<ApiResponse<AuthSession>>(`${API_URL}/auth/login`, input, {
+      withCredentials: true
+    });
     const session = persistSession(response.data.data);
 
     void Promise.allSettled([
@@ -73,37 +73,30 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     return response.data.data;
   },
   refreshSession: async () => {
-    const refreshToken = getRefreshToken();
-
-    if (!refreshToken) {
-      clearSession();
-      set({
-        user: null,
-        isHydrated: true
-      });
-      throw new Error("Không tìm thấy refresh token");
-    }
-
-    const response = await axios.post<ApiResponse<AuthSession>>(`${API_URL}/auth/refresh`, {
-      refreshToken
-    });
+    const response = await axios.post<ApiResponse<AuthSession>>(
+      `${API_URL}/auth/refresh`,
+      {},
+      {
+        withCredentials: true
+      }
+    );
 
     const session = persistSession(response.data.data);
     set({
       user: session.user,
       isHydrated: true
     });
+
     return session;
   },
   hasPermission: (permission) => authHasPermission(get().user, permission),
   logout: async () => {
     try {
-      const accessToken = getAccessToken();
       await axios.post(
         `${API_URL}/auth/logout`,
         {},
         {
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
+          withCredentials: true
         }
       );
     } catch {

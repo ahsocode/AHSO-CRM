@@ -6,7 +6,7 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PipelineStage } from "@/lib/types";
 import { formatVNDShort } from "@/lib/format";
 
-const STAGE_COLORS = ["#95A5A6", "#2E86C1", "#E67E22", "#17A589", "#1E8449"];
+const STAGE_COLORS = ["#95A5A6", "#2E86C1", "#E67E22", "#2563EB", "#17A589", "#1E8449", "#C0392B"];
 
 export function ProjectDonut({
   data,
@@ -68,4 +68,3 @@ export function ProjectDonut({
     </Card>
   );
 }
-

@@ -32,12 +32,12 @@ export function ProjectOverviewCards({
     {
       label: "Giá trị pipeline",
       value: <CurrencyDisplay amount={meta?.summary.pipelineValue ?? 0} short />,
-      helper: "Tổng estimated value trên tập dự án đang lọc"
+      helper: "Estimated value của dự án chưa đóng trong tập lọc"
     },
     {
       label: "Dự án đang hoạt động",
       value: meta?.summary.activeProjects ?? 0,
-      helper: "Bao gồm khảo sát, báo giá, đàm phán và triển khai"
+      helper: "Bao gồm khảo sát, báo giá, đàm phán, đã ký và triển khai"
     },
     {
       label: "Đang triển khai",

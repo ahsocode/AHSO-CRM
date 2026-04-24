@@ -10,6 +10,8 @@ import {
 import { ReportFilterDto } from "./dto/report-filter.dto";
 
 const OPEN_PIPELINE_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING"] as const;
+const ISSUED_QUOTE_STATUSES = ["SENT", "ACCEPTED", "REJECTED", "EXPIRED"] as const;
+const RECEIVABLE_CONTRACT_STATUSES = ["ACTIVE", "SUSPENDED", "COMPLETED"] as const;
 const PROJECT_STATUS_LABELS = {
   SURVEY: "Khảo sát",
   QUOTING: "Báo giá",
@@ -41,8 +43,12 @@ export class ReportsService {
     const { start, nextMonthStart } = this.resolveMonthsRange(filters.months);
     const paymentWhere = this.buildPaymentWhere(user, start, nextMonthStart);
     const projectWhere = this.buildProjectWhere(user);
-    const quoteWhere = this.buildQuoteWhere(user, start);
-    const contractWhere = this.buildContractWhere(user);
+    const quoteWhere = this.buildQuoteWhere(user, start, nextMonthStart);
+    const contractWhere = this.buildContractWhere(user, {
+      status: {
+        in: [...RECEIVABLE_CONTRACT_STATUSES]
+      }
+    });
 
     const [payments, pipelineProjects, quotes, contracts, activeCustomers] = await this.prisma.$transaction([
       this.prisma.payment.findMany({
@@ -101,8 +107,11 @@ export class ReportsService {
       const paidAmount = contract.payments.reduce((paid, payment) => paid + Number(payment.amount), 0);
       return sum + Math.max(0, Number(contract.value) - paidAmount);
     }, 0);
-    const acceptedQuotes = quotes.filter((quote) => quote.status === "ACCEPTED").length;
-    const quoteAcceptanceRate = quotes.length > 0 ? Number(((acceptedQuotes / quotes.length) * 100).toFixed(1)) : 0;
+    const issuedQuotes = quotes.filter((quote) =>
+      ISSUED_QUOTE_STATUSES.includes(quote.status as (typeof ISSUED_QUOTE_STATUSES)[number])
+    );
+    const acceptedQuotes = issuedQuotes.filter((quote) => quote.status === "ACCEPTED").length;
+    const quoteAcceptanceRate = issuedQuotes.length > 0 ? Number(((acceptedQuotes / issuedQuotes.length) * 100).toFixed(1)) : 0;
     const activeContracts = contracts.filter((contract) => contract.status === "ACTIVE").length;
 
     return {
@@ -724,13 +733,15 @@ export class ReportsService {
 
   private buildQuoteWhere(
     user: JwtUser,
-    createdAfter?: Date
+    createdAfter?: Date,
+    createdBefore?: Date
   ): Prisma.QuoteWhereInput {
     return {
       ...(createdAfter
         ? {
             createdAt: {
-              gte: createdAfter
+              gte: createdAfter,
+              ...(createdBefore ? { lt: createdBefore } : {})
             }
           }
         : {}),
@@ -738,9 +749,10 @@ export class ReportsService {
     };
   }
 
-  private buildContractWhere(user: JwtUser): Prisma.ContractWhereInput {
+  private buildContractWhere(user: JwtUser, extra?: Prisma.ContractWhereInput): Prisma.ContractWhereInput {
     return {
-      project: this.buildProjectWhere(user)
+      project: this.buildProjectWhere(user),
+      ...extra
     };
   }
 

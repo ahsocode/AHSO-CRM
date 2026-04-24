@@ -109,14 +109,16 @@ export class ProjectsService {
       })
     ]);
 
+    const activeProjects = matchingProjects.filter((project) =>
+      ACTIVE_PROJECT_STATUSES.includes(project.status as (typeof ACTIVE_PROJECT_STATUSES)[number])
+    );
+
     const summary = {
-      pipelineValue: matchingProjects.reduce(
+      pipelineValue: activeProjects.reduce(
         (totalValue, project) => totalValue + Number(project.estimatedValue ?? 0),
         0
       ),
-      activeProjects: matchingProjects.filter((project) =>
-        ACTIVE_PROJECT_STATUSES.includes(project.status as (typeof ACTIVE_PROJECT_STATUSES)[number])
-      ).length,
+      activeProjects: activeProjects.length,
       deliveringProjects: matchingProjects.filter((project) => project.status === "DELIVERING").length,
       dueSoonProjects: matchingProjects.filter((project) => {
         const expectedEndDate = project.expectedEndDate;

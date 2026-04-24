@@ -47,7 +47,7 @@ export function ReportsOverviewCards({
     {
       label: "Tỷ lệ chốt quote",
       value: `${data.quoteAcceptanceRate}%`,
-      helper: "Accepted / tổng quote trong kỳ"
+      helper: "Accepted / quote đã phát hành trong kỳ"
     },
     {
       label: "HĐ hiệu lực",

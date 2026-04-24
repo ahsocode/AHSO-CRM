@@ -64,6 +64,7 @@ describe("DashboardService", () => {
     ]);
     prisma.contract.findMany.mockResolvedValue([
       {
+        status: "ACTIVE",
         value: 300_000_000,
         payments: [{ amount: 100_000_000 }]
       }
@@ -86,5 +87,67 @@ describe("DashboardService", () => {
         overdueCustomers: 1
       }
     });
+    expect(prisma.contract.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: {
+            in: ["ACTIVE", "SUSPENDED", "COMPLETED"]
+          }
+        }
+      })
+    );
+  });
+
+  it("keeps dashboard pipeline stages aligned with the project status ledger", async () => {
+    prisma.project.findMany.mockResolvedValue([
+      {
+        id: "project-survey",
+        code: "AHSO-001",
+        name: "Khảo sát",
+        status: "SURVEY",
+        estimatedValue: 10_000_000,
+        priority: "NORMAL",
+        customer: {
+          name: "Khách hàng A"
+        }
+      },
+      {
+        id: "project-won",
+        code: "AHSO-002",
+        name: "Đã ký",
+        status: "WON",
+        estimatedValue: 20_000_000,
+        priority: "HIGH",
+        customer: {
+          name: "Khách hàng B"
+        }
+      },
+      {
+        id: "project-lost",
+        code: "AHSO-003",
+        name: "Không thành",
+        status: "LOST",
+        estimatedValue: 30_000_000,
+        priority: "LOW",
+        customer: {
+          name: "Khách hàng C"
+        }
+      }
+    ]);
+
+    await expect(service.getPipeline()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "WON",
+          count: 1,
+          totalValue: 20_000_000
+        }),
+        expect.objectContaining({
+          status: "LOST",
+          count: 1,
+          totalValue: 30_000_000
+        })
+      ])
+    );
   });
 });

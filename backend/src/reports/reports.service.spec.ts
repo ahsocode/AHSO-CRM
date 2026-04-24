@@ -15,6 +15,7 @@ describe("ReportsService", () => {
     $transaction: jest.Mock;
     customer: {
       findMany: jest.Mock;
+      count: jest.Mock;
     };
     project: {
       findMany: jest.Mock;
@@ -34,7 +35,8 @@ describe("ReportsService", () => {
     prisma = {
       $transaction: jest.fn(async (operations: Array<Promise<unknown>>) => Promise.all(operations)),
       customer: {
-        findMany: jest.fn()
+        findMany: jest.fn(),
+        count: jest.fn()
       },
       project: {
         findMany: jest.fn()
@@ -123,5 +125,72 @@ describe("ReportsService", () => {
         { source: "contract", target: "closed", value: 1 }
       ]
     });
+  });
+
+  it("calculates money overview from issued quotes and receivable contracts only", async () => {
+    prisma.payment.findMany.mockResolvedValue([
+      {
+        amount: 50_000_000,
+        paidAt: new Date(),
+        contract: {
+          contractNo: "HD-001",
+          project: {
+            name: "Dự án A",
+            customer: {
+              name: "Khách hàng A"
+            }
+          }
+        }
+      }
+    ]);
+    prisma.project.findMany.mockResolvedValue([{ estimatedValue: 100_000_000 }]);
+    prisma.quote.findMany.mockResolvedValue([
+      { status: "DRAFT" },
+      { status: "SENT" },
+      { status: "ACCEPTED" },
+      { status: "REJECTED" }
+    ]);
+    prisma.contract.findMany.mockResolvedValue([
+      {
+        status: "ACTIVE",
+        value: 300_000_000,
+        payments: [{ amount: 100_000_000 }]
+      },
+      {
+        status: "COMPLETED",
+        value: 120_000_000,
+        payments: [{ amount: 120_000_000 }]
+      }
+    ]);
+    prisma.customer.count.mockResolvedValue(2);
+
+    await expect(service.getOverview({ months: 6, topLimit: 5 }, user)).resolves.toMatchObject({
+      collectionsValue: 50_000_000,
+      openPipelineValue: 100_000_000,
+      outstandingDebt: 200_000_000,
+      quoteAcceptanceRate: 33.3,
+      activeContracts: 1,
+      activeCustomers: 2
+    });
+
+    expect(prisma.contract.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: {
+            in: ["ACTIVE", "SUSPENDED", "COMPLETED"]
+          }
+        })
+      })
+    );
+    expect(prisma.quote.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          createdAt: expect.objectContaining({
+            gte: expect.any(Date),
+            lt: expect.any(Date)
+          })
+        })
+      })
+    );
   });
 });

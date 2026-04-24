@@ -13,6 +13,16 @@ const PUBLIC_COMPANY_FIELDS = [
   "website"
 ] as const;
 
+const DEFAULT_PUBLIC_COMPANY_INFO = {
+  name: "AHSO CRM",
+  shortName: "AHSO",
+  taxId: null,
+  address: null,
+  phone: null,
+  email: null,
+  website: null
+} satisfies Record<(typeof PUBLIC_COMPANY_FIELDS)[number], string | null>;
+
 @Injectable()
 export class SettingsService {
   constructor(
@@ -116,7 +126,7 @@ export class SettingsService {
     const publicCompany: Record<string, any> = {};
 
     for (const field of PUBLIC_COMPANY_FIELDS) {
-      publicCompany[field] = company[field] ?? null;
+      publicCompany[field] = company[field] ?? DEFAULT_PUBLIC_COMPANY_INFO[field];
     }
 
     return publicCompany;

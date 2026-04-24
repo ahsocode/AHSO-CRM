@@ -62,6 +62,20 @@ describe("SettingsService", () => {
     expect(publicInfo).not.toHaveProperty("bankAccountName");
   });
 
+  it("returns a safe default public company profile when company settings are missing", async () => {
+    jest.spyOn(service, "getCompanyInfo").mockResolvedValue({});
+
+    await expect(service.getPublicCompanyInfo()).resolves.toEqual({
+      name: "AHSO CRM",
+      shortName: "AHSO",
+      taxId: null,
+      address: null,
+      phone: null,
+      email: null,
+      website: null
+    });
+  });
+
   it("returns data url for local logo paths when file can be read", async () => {
     prisma.setting.findUnique.mockResolvedValue({
       key: "logo:url",

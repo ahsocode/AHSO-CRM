@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../common/prisma.service";
-import { JwtUser, isStaff } from "../auth/auth.types";
+import { JwtUser, hasPermission, isStaff } from "../auth/auth.types";
 import { SearchQueryDto } from "./dto/search-query.dto";
 
 @Injectable()
@@ -10,9 +10,14 @@ export class SearchService {
   async globalSearch(query: SearchQueryDto, user: JwtUser) {
     const q = query.q;
     const limit = query.limit ?? 8;
+    const canViewCustomers = hasPermission(user, "customers.view");
+    const canViewProjects = hasPermission(user, "projects.view");
+    const canViewQuotes = hasPermission(user, "quotes.view");
+    const canViewContracts = hasPermission(user, "contracts.view");
+    const canViewActivities = hasPermission(user, "activities.view");
 
-    const [customers, projects, quotes, contracts, activities] = await this.prisma.$transaction([
-      this.prisma.customer.findMany({
+    const [customers, projects, quotes, contracts, activities] = await Promise.all([
+      canViewCustomers ? this.prisma.customer.findMany({
         where: {
           deletedAt: null,
           ...(isStaff(user) ? { assignedToId: user.sub } : {}),
@@ -27,8 +32,8 @@ export class SearchService {
           name: true,
           shortName: true
         }
-      }),
-      this.prisma.project.findMany({
+      }) : Promise.resolve([]),
+      canViewProjects ? this.prisma.project.findMany({
         where: {
           deletedAt: null,
           ...(isStaff(user) ? { customer: { assignedToId: user.sub } } : {}),
@@ -43,8 +48,8 @@ export class SearchService {
           name: true,
           code: true
         }
-      }),
-      this.prisma.quote.findMany({
+      }) : Promise.resolve([]),
+      canViewQuotes ? this.prisma.quote.findMany({
         where: {
           ...(isStaff(user) ? { project: { customer: { assignedToId: user.sub } } } : {}),
           OR: [{ quoteNo: { contains: q, mode: "insensitive" } }, { project: { name: { contains: q, mode: "insensitive" } } }]
@@ -62,8 +67,8 @@ export class SearchService {
             }
           }
         }
-      }),
-      this.prisma.contract.findMany({
+      }) : Promise.resolve([]),
+      canViewContracts ? this.prisma.contract.findMany({
         where: {
           ...(isStaff(user) ? { project: { customer: { assignedToId: user.sub } } } : {}),
           OR: [{ contractNo: { contains: q, mode: "insensitive" } }, { project: { name: { contains: q, mode: "insensitive" } } }]
@@ -81,8 +86,8 @@ export class SearchService {
             }
           }
         }
-      }),
-      this.prisma.activity.findMany({
+      }) : Promise.resolve([]),
+      canViewActivities ? this.prisma.activity.findMany({
         where: {
           deletedAt: null,
           ...(isStaff(user) ? { customer: { assignedToId: user.sub } } : {}),
@@ -96,7 +101,7 @@ export class SearchService {
           id: true,
           title: true
         }
-      })
+      }) : Promise.resolve([])
     ]);
 
     return [

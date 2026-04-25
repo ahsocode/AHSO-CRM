@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@
 import { Reflector } from "@nestjs/core";
 import { JwtUser, getPermissionList, getRoleName, isAdmin } from "../../auth/auth.types";
 import { PrismaService } from "../prisma.service";
-import { PERMISSIONS_KEY } from "../decorators/permissions.decorator";
+import { ANY_PERMISSIONS_KEY, PERMISSIONS_KEY } from "../decorators/permissions.decorator";
 
 interface CachedPermissionEntry {
   expiresAt: number;
@@ -25,8 +25,17 @@ export class PermissionsGuard implements CanActivate {
       context.getHandler(),
       context.getClass()
     ]);
+    const anyRequiredPermissions = this.reflector.getAllAndOverride<string[]>(ANY_PERMISSIONS_KEY, [
+      context.getHandler(),
+      context.getClass()
+    ]);
 
-    if (!requiredPermissions || requiredPermissions.length === 0) {
+    const allPermissions = requiredPermissions ?? [];
+    const anyPermissions = anyRequiredPermissions ?? [];
+    const needsAll = allPermissions.length > 0;
+    const needsAny = anyPermissions.length > 0;
+
+    if (!needsAll && !needsAny) {
       return true;
     }
 
@@ -47,7 +56,11 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    if (!requiredPermissions.every((permission) => permissions.includes(permission))) {
+    if (needsAll && !allPermissions.every((permission) => permissions.includes(permission))) {
+      throw new ForbiddenException("Bạn không có quyền thực hiện thao tác này");
+    }
+
+    if (needsAny && !anyPermissions.some((permission) => permissions.includes(permission))) {
       throw new ForbiddenException("Bạn không có quyền thực hiện thao tác này");
     }
 

@@ -3,7 +3,9 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { BusinessDocumentsService } from "./business-documents.service";
 import {
@@ -18,10 +20,11 @@ import {
 } from "./dto/business-document.dto";
 
 @Controller("business-documents")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class BusinessDocumentsController {
   constructor(private readonly businessDocumentsService: BusinessDocumentsService) {}
 
+  @RequirePermissions("documents.create")
   @Post()
   create(
     @Body(new ZodValidationPipe(createBusinessDocumentSchema)) dto: CreateBusinessDocumentDto,
@@ -30,6 +33,7 @@ export class BusinessDocumentsController {
     return this.businessDocumentsService.create(dto, user);
   }
 
+  @RequirePermissions("documents.edit")
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -39,6 +43,7 @@ export class BusinessDocumentsController {
     return this.businessDocumentsService.update(id, dto, user);
   }
 
+  @RequirePermissions("documents.view")
   @Get(":id/file")
   async downloadFile(
     @Param("id") id: string,
@@ -51,6 +56,7 @@ export class BusinessDocumentsController {
     response.send(buffer);
   }
 
+  @RequirePermissions("documents.create")
   @Post(":id/file")
   @UseInterceptors(FileInterceptor("file"))
   uploadFile(
@@ -62,11 +68,13 @@ export class BusinessDocumentsController {
     return this.businessDocumentsService.uploadFile(id, file, dto, user);
   }
 
+  @RequirePermissions("documents.edit")
   @Post(":id/mark-signed")
   markSigned(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.businessDocumentsService.markSigned(id, user);
   }
 
+  @RequirePermissions("documents.edit")
   @Post(":id/supersede")
   supersede(
     @Param("id") id: string,
@@ -76,6 +84,7 @@ export class BusinessDocumentsController {
     return this.businessDocumentsService.supersede(id, dto, user);
   }
 
+  @RequirePermissions("documents.delete")
   @Delete(":id")
   remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.businessDocumentsService.remove(id, user);

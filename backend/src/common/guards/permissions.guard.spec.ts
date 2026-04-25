@@ -1,5 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
+import { ANY_PERMISSIONS_KEY, PERMISSIONS_KEY } from "../decorators/permissions.decorator";
 import { PrismaService } from "../prisma.service";
 import { PermissionsGuard } from "./permissions.guard";
 
@@ -23,6 +24,20 @@ describe("PermissionsGuard", () => {
       })
     }) as any;
 
+  const mockRequiredPermissions = (all?: string[], any?: string[]) => {
+    reflector.getAllAndOverride.mockImplementation((key: string) => {
+      if (key === PERMISSIONS_KEY) {
+        return all;
+      }
+
+      if (key === ANY_PERMISSIONS_KEY) {
+        return any;
+      }
+
+      return undefined;
+    });
+  };
+
   beforeEach(() => {
     reflector = {
       getAllAndOverride: jest.fn()
@@ -38,13 +53,13 @@ describe("PermissionsGuard", () => {
   });
 
   it("allows requests when no permissions are required", async () => {
-    reflector.getAllAndOverride.mockReturnValue(undefined);
+    mockRequiredPermissions();
 
     await expect(guard.canActivate(createContext())).resolves.toBe(true);
   });
 
   it("rejects requests without an authenticated user", async () => {
-    reflector.getAllAndOverride.mockReturnValue(["settings.edit"]);
+    mockRequiredPermissions(["settings.edit"]);
 
     await expect(guard.canActivate(createContext())).rejects.toEqual(
       new ForbiddenException("Bạn không có quyền thực hiện thao tác này")
@@ -52,7 +67,7 @@ describe("PermissionsGuard", () => {
   });
 
   it("allows admin users without hitting prisma", async () => {
-    reflector.getAllAndOverride.mockReturnValue(["settings.edit"]);
+    mockRequiredPermissions(["settings.edit"]);
 
     await expect(
       guard.canActivate(
@@ -71,7 +86,7 @@ describe("PermissionsGuard", () => {
   });
 
   it("uses embedded JWT permissions when available", async () => {
-    reflector.getAllAndOverride.mockReturnValue(["customers.view"]);
+    mockRequiredPermissions(["customers.view"]);
 
     await expect(
       guard.canActivate(
@@ -90,7 +105,7 @@ describe("PermissionsGuard", () => {
   });
 
   it("falls back to prisma and caches permissions when JWT payload is empty", async () => {
-    reflector.getAllAndOverride.mockReturnValue(["quotes.edit"]);
+    mockRequiredPermissions(["quotes.edit"]);
     prisma.user.findUnique.mockResolvedValue({
       id: "user-1",
       role: {
@@ -117,7 +132,7 @@ describe("PermissionsGuard", () => {
   });
 
   it("rejects users missing at least one required permission", async () => {
-    reflector.getAllAndOverride.mockReturnValue(["customers.edit"]);
+    mockRequiredPermissions(["customers.edit"]);
 
     await expect(
       guard.canActivate(
@@ -128,6 +143,70 @@ describe("PermissionsGuard", () => {
             permissions: ["customers.view"]
           },
           permissions: ["customers.view"]
+        })
+      )
+    ).rejects.toEqual(new ForbiddenException("Bạn không có quyền thực hiện thao tác này"));
+  });
+
+  it("allows requests when at least one any-permission matches", async () => {
+    mockRequiredPermissions(undefined, ["customers.view", "projects.view"]);
+
+    await expect(
+      guard.canActivate(
+        createContext({
+          sub: "staff-1",
+          role: {
+            name: "STAFF",
+            permissions: ["projects.view"]
+          },
+          permissions: ["projects.view"]
+        })
+      )
+    ).resolves.toBe(true);
+  });
+
+  it("rejects any-permission requests when none match", async () => {
+    mockRequiredPermissions(undefined, ["customers.view", "projects.view"]);
+
+    await expect(
+      guard.canActivate(
+        createContext({
+          sub: "staff-1",
+          role: {
+            name: "STAFF",
+            permissions: ["activities.view"]
+          },
+          permissions: ["activities.view"]
+        })
+      )
+    ).rejects.toEqual(new ForbiddenException("Bạn không có quyền thực hiện thao tác này"));
+  });
+
+  it("requires both all-permission and any-permission conditions when both are configured", async () => {
+    mockRequiredPermissions(["reports.view"], ["customers.view", "projects.view"]);
+
+    await expect(
+      guard.canActivate(
+        createContext({
+          sub: "manager-1",
+          role: {
+            name: "MANAGER",
+            permissions: ["reports.view", "customers.view"]
+          },
+          permissions: ["reports.view", "customers.view"]
+        })
+      )
+    ).resolves.toBe(true);
+
+    await expect(
+      guard.canActivate(
+        createContext({
+          sub: "manager-2",
+          role: {
+            name: "MANAGER",
+            permissions: ["reports.view"]
+          },
+          permissions: ["reports.view"]
         })
       )
     ).rejects.toEqual(new ForbiddenException("Bạn không có quyền thực hiện thao tác này"));

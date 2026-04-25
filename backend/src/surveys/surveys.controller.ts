@@ -3,7 +3,9 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import {
   AddSurveyNoteDto,
@@ -18,10 +20,11 @@ import {
 import { SurveysService } from "./surveys.service";
 
 @Controller("surveys")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SurveysController {
   constructor(private readonly surveysService: SurveysService) {}
 
+  @RequirePermissions("surveys.create")
   @Post()
   create(
     @Body(new ZodValidationPipe(createSurveySchema)) dto: CreateSurveyDto,
@@ -30,6 +33,7 @@ export class SurveysController {
     return this.surveysService.create(dto, user);
   }
 
+  @RequirePermissions("surveys.edit")
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -39,6 +43,7 @@ export class SurveysController {
     return this.surveysService.update(id, dto, user);
   }
 
+  @RequirePermissions("surveys.edit")
   @Post(":id/media")
   @UseInterceptors(FileInterceptor("file"))
   addMedia(
@@ -50,6 +55,7 @@ export class SurveysController {
     return this.surveysService.addMedia(id, file, dto, user);
   }
 
+  @RequirePermissions("surveys.view")
   @Get("media/:mediaId/file")
   async downloadMedia(
     @Param("mediaId") mediaId: string,
@@ -62,6 +68,7 @@ export class SurveysController {
     response.send(buffer);
   }
 
+  @RequirePermissions("surveys.edit")
   @Post(":id/notes")
   addNote(
     @Param("id") id: string,

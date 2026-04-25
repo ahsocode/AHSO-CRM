@@ -15,8 +15,10 @@ import { DocumentType } from "@prisma/client";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { DocumentTemplateVariantsService } from "./document-template-variants.service";
@@ -43,13 +45,14 @@ import {
 import { DocumentsService } from "./documents.service";
 
 @Controller("documents")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class DocumentsController {
   constructor(
     private readonly documentsService: DocumentsService,
     private readonly templateVariants: DocumentTemplateVariantsService
   ) {}
 
+  @RequirePermissions("documents.view")
   @Get("template-registry")
   async listTemplateRegistry() {
     return this.templateVariants.listRegistry();
@@ -75,6 +78,7 @@ export class DocumentsController {
     return this.templateVariants.listVariants(query.type);
   }
 
+  @RequirePermissions("documents.view")
   @Get("templates/available")
   async listRuntimeTemplateVariants(
     @Query(new ZodValidationPipe(runtimeDocumentTemplateQuerySchema, "query"))
@@ -153,6 +157,7 @@ export class DocumentsController {
     return this.templateVariants.deleteVariant(id, user);
   }
 
+  @RequirePermissions("documents.view")
   @Get()
   list(
     @Query(new ZodValidationPipe(documentListFilterSchema, "query")) filters: DocumentListFilterDto,
@@ -161,6 +166,7 @@ export class DocumentsController {
     return this.documentsService.list(filters, user);
   }
 
+  @RequirePermissions("documents.view")
   @Get(":type/:entityId/preview")
   @Header("Content-Type", "text/html; charset=utf-8")
   async preview(
@@ -180,6 +186,7 @@ export class DocumentsController {
     response.send(html);
   }
 
+  @RequirePermissions("documents.create")
   @Post(":type/:entityId/render")
   async render(
     @Param("type") type: DocumentType,
@@ -203,6 +210,7 @@ export class DocumentsController {
     };
   }
 
+  @RequirePermissions("documents.view")
   @Get(":documentId/download")
   async downloadById(
     @Param("documentId") documentId: string,
@@ -215,6 +223,7 @@ export class DocumentsController {
     response.send(buffer);
   }
 
+  @RequirePermissions("documents.view")
   @Get(":type/:entityId/download")
   async download(
     @Param("type") type: DocumentType,

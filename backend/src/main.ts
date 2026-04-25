@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { WinstonModule } from "nest-winston";
 import { join } from "path";
 import { AppModule } from "./app.module";
+import { buildCorsOptions } from "./common/config/cors.config";
 import { createWinstonLoggerOptions } from "./common/logger/winston.config";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { TransformInterceptor } from "./common/interceptors/transform.interceptor";
@@ -33,21 +34,9 @@ async function bootstrap() {
     })
   );
 
-  // CORS origin(s) from env, comma-separated. Keep both localhost and 127.0.0.1
-  // in development/CI because Playwright and browsers may hit either host.
-  const configuredCorsOrigins = (
-    configService.get<string>("CORS_ORIGIN") ?? "http://localhost:3000,http://127.0.0.1:3000"
-  )
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  const frontendUrl = configService.get<string>("FRONTEND_URL")?.trim();
-  const corsOrigins = Array.from(new Set([...configuredCorsOrigins, ...(frontendUrl ? [frontendUrl] : [])]));
-
-  app.enableCors({
-    origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
-    credentials: true
-  });
+  // Keep HTTP and Socket.IO CORS in sync. Defaults include localhost and
+  // 127.0.0.1 because Playwright and browsers may hit either host in dev/CI.
+  app.enableCors(buildCorsOptions(configService));
   app.use(["/uploads/documents", "/uploads/business-documents", "/uploads/surveys"], (_request: Request, response: Response) => {
     response.status(404).send("Không tìm thấy tài liệu.");
   });

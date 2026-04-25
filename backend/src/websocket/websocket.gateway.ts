@@ -13,6 +13,7 @@ import { ConfigService } from "@nestjs/config";
 import type { Server, Socket } from "socket.io";
 import { DomainEventEnvelope } from "../domain-events/domain-events.types";
 import { JwtUser, getRoleName } from "../auth/auth.types";
+import { buildCorsOptions } from "../common/config/cors.config";
 
 interface SocketWithUser extends Socket {
   data: Socket["data"] & {
@@ -20,18 +21,8 @@ interface SocketWithUser extends Socket {
   };
 }
 
-function resolveAllowedOrigins() {
-  const configuredOrigins = process.env.CORS_ORIGIN ?? "http://localhost:3000,http://127.0.0.1:3000";
-  const frontendUrl = process.env.FRONTEND_URL ?? "";
-
-  return Array.from(new Set([...configuredOrigins.split(","), frontendUrl].map((value) => value.trim()).filter(Boolean)));
-}
-
 @WebSocketGateway({
-  cors: {
-    origin: resolveAllowedOrigins(),
-    credentials: true
-  },
+  cors: buildCorsOptions(),
   namespace: "/events"
 })
 export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnect {

@@ -26,6 +26,21 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+
+    if (isLocalhost) {
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+        .then(() => ("caches" in window ? caches.keys() : Promise.resolve([])))
+        .then((cacheNames) => Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName))))
+        .catch(() => {
+          // Local cleanup is best-effort; the app must still render if browser APIs reject.
+        });
+      return;
+    }
+
     void navigator.serviceWorker.register("/service-worker.js").catch(() => {
       // Ignore service worker registration errors in unsupported or restricted environments.
     });

@@ -9,6 +9,7 @@ import { WinstonModule } from "nest-winston";
 import { join } from "path";
 import { AppModule } from "./app.module";
 import { buildCorsOptions } from "./common/config/cors.config";
+import { isSwaggerEnabled } from "./common/config/swagger.config";
 import { createWinstonLoggerOptions } from "./common/logger/winston.config";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { TransformInterceptor } from "./common/interceptors/transform.interceptor";
@@ -48,8 +49,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
 
   // Swagger — chỉ bật ngoài production hoặc khi SWAGGER_ENABLED=true
-  const nodeEnv = configService.get<string>("NODE_ENV") ?? "development";
-  const swaggerEnabled = configService.get<string>("SWAGGER_ENABLED") === "true" || nodeEnv !== "production";
+  const swaggerEnabled = isSwaggerEnabled(configService);
 
   if (swaggerEnabled) {
     const swaggerConfig = new DocumentBuilder()

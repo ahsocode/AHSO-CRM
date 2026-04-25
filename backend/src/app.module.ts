@@ -34,11 +34,13 @@ import { DocumentsModule } from "./documents/documents.module";
 import { SurveysModule } from "./surveys/surveys.module";
 import { BusinessDocumentsModule } from "./business-documents/business-documents.module";
 import { HealthModule } from "./health/health.module";
+import { validateEnv } from "./common/config/env.validation";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true
+      isGlobal: true,
+      validate: validateEnv
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ContentArea } from "@/components/layout/content-area";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -13,7 +12,6 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { useWebsocket } from "@/hooks/use-websocket";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const hydrate = useAuthStore((state) => state.hydrate);
@@ -36,7 +34,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         try {
           await refreshSession();
         } catch {
-          router.replace("/login");
+          await logout();
           return;
         }
       }
@@ -53,7 +51,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return () => {
       isCancelled = true;
     };
-  }, [isHydrated, refreshSession, router]);
+  }, [isHydrated, logout, refreshSession]);
 
   if (!isHydrated || isCheckingAuth) {
     return (

@@ -44,6 +44,7 @@ describe("apiClient", () => {
         href: "http://localhost:3000/dashboard"
       }
     });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
   });
 
   it("adds bearer token from auth storage to outgoing requests", async () => {
@@ -117,6 +118,10 @@ describe("apiClient", () => {
       });
 
     await expect(apiClient.get("/customers")).rejects.toThrow("refresh failed");
+    expect(fetch).toHaveBeenCalledWith("http://localhost:3001/api/auth/logout", {
+      method: "POST",
+      credentials: "include"
+    });
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
     expect(window.location.href).toBe("/login");

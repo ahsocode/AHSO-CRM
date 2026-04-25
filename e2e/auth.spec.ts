@@ -11,3 +11,20 @@ test("login, logout và mở trang quên mật khẩu", async ({ page }) => {
   await page.goto("/login");
   await expect(page).toHaveURL(/\/dashboard/);
 });
+
+test("cookie refresh cũ không làm kẹt dashboard ở màn loading", async ({ page, context }) => {
+  await context.addCookies([
+    {
+      name: "ahso_refresh_token",
+      value: "stale-refresh-token",
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: true,
+      sameSite: "Strict"
+    }
+  ]);
+
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /vào dashboard/i })).toBeVisible();
+});

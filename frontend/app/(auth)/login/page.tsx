@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { AppIcon } from "@/components/shared/app-icon";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useCompanyInfo, useLogo } from "@/hooks/use-settings";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { resolveAssetUrl } from "@/lib/auth";
+import { getAccessToken, resolveAssetUrl } from "@/lib/auth";
 
 const loginSchema = z.object({
   email: z.string().trim().email("Email không hợp lệ"),
@@ -31,6 +32,12 @@ export default function LoginPage() {
   const logoQuery = useLogo();
   const brandName = companyQuery.data?.shortName || companyQuery.data?.name || "AHSO";
   const logoUrl = resolveAssetUrl(logoQuery.data);
+
+  useEffect(() => {
+    if (getAccessToken()) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { API_URL } from "./constants";
-import { clearSession, getAccessToken, persistSession } from "./auth";
+import { clearServerSession, clearSession, getAccessToken, persistSession } from "./auth";
 import { ApiErrorPayload, ApiResponse, AuthSession } from "./types";
 
 export const apiClient = axios.create({
@@ -48,9 +48,11 @@ apiClient.interceptors.response.use(
           return response.data.data.accessToken;
         })
         .catch((refreshError) => {
-          clearSession();
-          window.location.href = "/login";
-          return Promise.reject(refreshError);
+          return clearServerSession().then(() => {
+            clearSession();
+            window.location.href = "/login";
+            throw refreshError;
+          });
         })
         .finally(() => {
           refreshRequest = null;

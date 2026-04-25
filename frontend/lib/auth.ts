@@ -143,6 +143,21 @@ export function clearSession() {
   }
 }
 
+export async function clearServerSession() {
+  if (!isBrowser()) {
+    return;
+  }
+
+  try {
+    await fetch(`${API_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include"
+    });
+  } catch {
+    // Best-effort cleanup. Local state is cleared by the caller even if the API is unavailable.
+  }
+}
+
 export function getAccessToken() {
   return getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
 }

@@ -398,6 +398,16 @@ export class ContractsService {
 
   async createPayment(contractId: string, dto: CreatePaymentDto, user: JwtUser) {
     const contract = await this.findAccessibleContractEntity(contractId, user);
+    const paidAmount = contract.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    const contractValue = Number(contract.value);
+    const nextPaidAmount = paidAmount + dto.amount;
+
+    if (nextPaidAmount > contractValue) {
+      throw new BadRequestException(
+        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị hợp đồng (${this.formatNumber(contractValue)} VND)`
+      );
+    }
+
     const payment = await this.prisma.payment.create({
       data: {
         amount: dto.amount,
@@ -603,7 +613,13 @@ export class ContractsService {
       },
       select: {
         id: true,
-        projectId: true
+        projectId: true,
+        value: true,
+        payments: {
+          select: {
+            amount: true
+          }
+        }
       }
     });
 
@@ -612,6 +628,12 @@ export class ContractsService {
     }
 
     return contract;
+  }
+
+  private formatNumber(value: number) {
+    return new Intl.NumberFormat("vi-VN", {
+      maximumFractionDigits: 0
+    }).format(value);
   }
 
   private async findAccessibleContractForMutation(

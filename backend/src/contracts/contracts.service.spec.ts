@@ -20,6 +20,10 @@ describe("ContractsService", () => {
     $transaction: jest.Mock;
     contract: {
       findUnique: jest.Mock;
+      findFirst: jest.Mock;
+    };
+    payment: {
+      create: jest.Mock;
     };
   };
   let tx: {
@@ -62,7 +66,11 @@ describe("ContractsService", () => {
 
     prisma = {
       contract: {
-        findUnique: jest.fn()
+        findUnique: jest.fn(),
+        findFirst: jest.fn()
+      },
+      payment: {
+        create: jest.fn()
       },
       $transaction: jest.fn(async (callback: (client: typeof tx) => unknown) => callback(tx))
     };
@@ -280,5 +288,105 @@ describe("ContractsService", () => {
         status: "COMPLETED"
       }
     });
+  });
+
+  it("creates a payment when the new total does not exceed contract value", async () => {
+    prisma.contract.findFirst.mockResolvedValue({
+      id: "contract-1",
+      projectId: "project-1",
+      value: 10_000_000,
+      payments: [{ amount: 3_000_000 }]
+    });
+    prisma.payment.create.mockResolvedValue({
+      id: "payment-1",
+      amount: 2_000_000,
+      paidAt: new Date("2026-04-25T00:00:00.000Z"),
+      method: "Chuyển khoản",
+      reference: "UNC-001",
+      notes: "Thanh toán đợt 2"
+    });
+    prisma.contract.findUnique.mockResolvedValue({
+      id: "contract-1",
+      contractNo: "HD-001",
+      projectId: "project-1",
+      status: "ACTIVE",
+      value: 10_000_000,
+      project: {
+        id: "project-1",
+        name: "Dự án A",
+        customer: {
+          id: "customer-1",
+          name: "Công ty A",
+          assignedTo: {
+            id: "user-1",
+            email: "manager@ahso.vn",
+            name: "Manager"
+          },
+          contacts: []
+        }
+      }
+    });
+
+    await expect(
+      service.createPayment(
+        "contract-1",
+        {
+          amount: 2_000_000,
+          paidAt: new Date("2026-04-25T00:00:00.000Z"),
+          method: "Chuyển khoản",
+          reference: "UNC-001",
+          notes: "Thanh toán đợt 2"
+        },
+        user
+      )
+    ).resolves.toMatchObject({
+      id: "payment-1",
+      amount: 2_000_000,
+      method: "Chuyển khoản"
+    });
+
+    expect(prisma.payment.create).toHaveBeenCalledWith({
+      data: {
+        amount: 2_000_000,
+        paidAt: new Date("2026-04-25T00:00:00.000Z"),
+        method: "Chuyển khoản",
+        reference: "UNC-001",
+        notes: "Thanh toán đợt 2",
+        contractId: "contract-1"
+      }
+    });
+    expect(domainEvents.emit).toHaveBeenCalledWith(
+      "payment.received",
+      expect.objectContaining({
+        paymentId: "payment-1",
+        ownerUserId: "user-1",
+        amount: 2_000_000
+      })
+    );
+  });
+
+  it("rejects payment creation when it would overpay the contract", async () => {
+    prisma.contract.findFirst.mockResolvedValue({
+      id: "contract-1",
+      projectId: "project-1",
+      value: 10_000_000,
+      payments: [{ amount: 8_000_000 }]
+    });
+
+    await expect(
+      service.createPayment(
+        "contract-1",
+        {
+          amount: 3_000_000,
+          paidAt: new Date("2026-04-25T00:00:00.000Z")
+        },
+        user
+      )
+    ).rejects.toThrow(
+      new BadRequestException("Tổng thanh toán (11.000.000 VND) không được vượt giá trị hợp đồng (10.000.000 VND)")
+    );
+
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(domainEvents.emit).not.toHaveBeenCalledWith("payment.received", expect.anything());
   });
 });

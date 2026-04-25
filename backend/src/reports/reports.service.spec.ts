@@ -29,6 +29,9 @@ describe("ReportsService", () => {
     payment: {
       findMany: jest.Mock;
     };
+    activity: {
+      findMany: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -48,6 +51,9 @@ describe("ReportsService", () => {
         findMany: jest.fn()
       },
       payment: {
+        findMany: jest.fn()
+      },
+      activity: {
         findMany: jest.fn()
       }
     };
@@ -190,6 +196,125 @@ describe("ReportsService", () => {
             lt: expect.any(Date)
           })
         })
+      })
+    );
+  });
+
+  it("filters activity heatmap through non-deleted customer/project scopes", async () => {
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        scheduledAt: new Date("2026-04-20T03:00:00.000Z"),
+        updatedAt: new Date("2026-04-20T03:00:00.000Z")
+      }
+    ]);
+
+    await service.getActivityHeatmap({ months: 1, topLimit: 5 }, user);
+
+    expect(prisma.activity.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          deletedAt: null,
+          updatedAt: expect.objectContaining({
+            gte: expect.any(Date),
+            lt: expect.any(Date)
+          }),
+          AND: [
+            {
+              OR: [
+                {
+                  customerId: null
+                },
+                {
+                  customer: expect.objectContaining({
+                    deletedAt: null
+                  })
+                }
+              ]
+            },
+            {
+              OR: [
+                {
+                  projectId: null
+                },
+                {
+                  project: expect.objectContaining({
+                    deletedAt: null,
+                    customer: expect.objectContaining({
+                      deletedAt: null
+                    })
+                  })
+                }
+              ]
+            }
+          ]
+        })
+      })
+    );
+  });
+
+  it("scopes staff activity report rows to assigned customers/projects or their own unlinked activities", async () => {
+    prisma.activity.findMany.mockResolvedValue([
+      {
+        id: "activity-1",
+        type: "NOTE",
+        title: "Ghi chú",
+        isCompleted: false,
+        scheduledAt: null,
+        createdAt: new Date("2026-04-20T03:00:00.000Z"),
+        user: {
+          name: "Staff"
+        },
+        customer: {
+          name: "Khách hàng A"
+        }
+      }
+    ]);
+
+    await service.runCustomQuery(
+      {
+        dataset: "activities",
+        dimensions: [],
+        measures: [{ field: "id", label: "Số hoạt động", aggregator: "count" }],
+        filters: [],
+        chartType: "table"
+      },
+      {
+        sub: "staff-1",
+        email: "staff@ahso.vn",
+        name: "Staff",
+        role: "STAFF" as const,
+        permissions: []
+      }
+    );
+
+    expect(prisma.activity.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          deletedAt: null,
+          OR: [
+            {
+              customer: {
+                deletedAt: null,
+                assignedToId: "staff-1"
+              }
+            },
+            {
+              project: {
+                deletedAt: null,
+                customer: {
+                  deletedAt: null,
+                  assignedToId: "staff-1"
+                }
+              }
+            },
+            {
+              customerId: null,
+              projectId: null,
+              userId: "staff-1"
+            }
+          ]
+        },
+        include: expect.any(Object)
       })
     );
   });

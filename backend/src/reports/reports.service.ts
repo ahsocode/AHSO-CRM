@@ -458,14 +458,12 @@ export class ReportsService {
   async getActivityHeatmap(filters: ReportFilterDto, user: JwtUser) {
     const { start, nextMonthStart } = this.resolveMonthsRange(filters.months);
     const activities = await this.prisma.activity.findMany({
-      where: {
-        deletedAt: null,
+      where: this.buildActivityWhere(user, {
         updatedAt: {
           gte: start,
           lt: nextMonthStart
-        },
-        ...(isStaff(user) ? { customer: { assignedToId: user.sub } } : {})
-      },
+        }
+      }),
       select: {
         scheduledAt: true,
         updatedAt: true
@@ -768,6 +766,55 @@ export class ReportsService {
     };
   }
 
+  private buildActivityWhere(user: JwtUser, extra?: Prisma.ActivityWhereInput): Prisma.ActivityWhereInput {
+    if (isStaff(user)) {
+      return {
+        deletedAt: null,
+        ...extra,
+        OR: [
+          {
+            customer: this.buildCustomerWhere(user)
+          },
+          {
+            project: this.buildProjectWhere(user)
+          },
+          {
+            customerId: null,
+            projectId: null,
+            userId: user.sub
+          }
+        ]
+      };
+    }
+
+    return {
+      deletedAt: null,
+      ...extra,
+      AND: [
+        {
+          OR: [
+            {
+              customerId: null
+            },
+            {
+              customer: this.buildCustomerWhere(user)
+            }
+          ]
+        },
+        {
+          OR: [
+            {
+              projectId: null
+            },
+            {
+              project: this.buildProjectWhere(user)
+            }
+          ]
+        }
+      ]
+    };
+  }
+
   private resolveMonthsRange(months: number) {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -926,10 +973,7 @@ export class ReportsService {
       }
       case "activities": {
         const activities = await this.prisma.activity.findMany({
-          where: {
-            deletedAt: null,
-            ...(isStaff(user) ? { customer: { assignedToId: user.sub } } : {})
-          },
+          where: this.buildActivityWhere(user),
           include: {
             user: {
               select: {

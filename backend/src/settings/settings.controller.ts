@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Public } from "src/common/decorators/public.decorator";
 import { RequirePermissions } from "src/common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
@@ -12,7 +13,9 @@ import {
   PolicySettingSchema
 } from "./dto/update-setting.dto";
 
+@ApiTags("settings")
 @Controller("settings")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard)
 export class SettingsController {
   constructor(private settingsService: SettingsService) {}
@@ -21,6 +24,7 @@ export class SettingsController {
    * GET /settings
    * Get the authenticated admin settings bundle.
    */
+  @ApiOperation({ summary: "GET /api/settings" })
   @Get()
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.view")
@@ -33,6 +37,7 @@ export class SettingsController {
    * Get company information
    */
   @Public()
+  @ApiOperation({ summary: "GET /api/settings/company" })
   @Get("company")
   async getCompanyInfo() {
     return this.settingsService.getPublicCompanyInfo();
@@ -43,6 +48,7 @@ export class SettingsController {
    * Get the safe public settings bundle for unauthenticated screens.
    */
   @Public()
+  @ApiOperation({ summary: "GET /api/settings/public" })
   @Get("public")
   async getPublicSettings() {
     return this.settingsService.getPublicSettings();
@@ -52,6 +58,7 @@ export class SettingsController {
    * PATCH /settings/company
    * Update company information (admin-only)
    */
+  @ApiOperation({ summary: "PATCH /api/settings/company" })
   @Patch("company")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
@@ -65,6 +72,7 @@ export class SettingsController {
    * GET /settings/policies
    * Get policy settings
    */
+  @ApiOperation({ summary: "GET /api/settings/policies" })
   @Get("policies")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.view")
@@ -76,6 +84,7 @@ export class SettingsController {
    * PATCH /settings/policies
    * Update policy settings (admin-only)
    */
+  @ApiOperation({ summary: "PATCH /api/settings/policies" })
   @Patch("policies")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
@@ -90,6 +99,7 @@ export class SettingsController {
    * Get logo URL
    */
   @Public()
+  @ApiOperation({ summary: "GET /api/settings/logo" })
   @Get("logo")
   async getLogoUrl() {
     return this.settingsService.getLogoUrl();
@@ -99,6 +109,7 @@ export class SettingsController {
    * GET /settings/:key
    * Get a specific setting by key
    */
+  @ApiOperation({ summary: "GET /api/settings/:key" })
   @Get(":key")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.view")
@@ -110,6 +121,7 @@ export class SettingsController {
    * PATCH /settings/:key
    * Update a specific setting (admin-only)
    */
+  @ApiOperation({ summary: "PATCH /api/settings/:key" })
   @Patch(":key")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")

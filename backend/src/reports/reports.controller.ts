@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
@@ -16,12 +17,15 @@ import {
 import { ReportFilterDto, reportFilterSchema } from "./dto/report-filter.dto";
 import { ReportsService } from "./reports.service";
 
+@ApiTags("reports")
 @Controller("reports")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/overview" })
   @Get("overview")
   getOverview(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -31,6 +35,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/revenue-trend" })
   @Get("revenue-trend")
   getRevenueTrend(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -40,6 +45,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/status-breakdown" })
   @Get("status-breakdown")
   getStatusBreakdown(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -49,6 +55,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/top-customers" })
   @Get("top-customers")
   getTopCustomers(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -58,6 +65,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/customer-journey" })
   @Get("customer-journey")
   getCustomerJourney(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -67,6 +75,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/activity-heatmap" })
   @Get("activity-heatmap")
   getActivityHeatmap(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -76,6 +85,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/funnel" })
   @Get("funnel")
   getFunnel(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -85,6 +95,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/cohort" })
   @Get("cohort")
   getCohort(
     @Query(new ZodValidationPipe(reportFilterSchema, "query")) filters: ReportFilterDto,
@@ -94,6 +105,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "POST /api/reports/custom/query" })
   @Post("custom/query")
   runCustomQuery(
     @Body(new ZodValidationPipe(customReportQuerySchema)) dto: CustomReportQueryDto,
@@ -103,12 +115,14 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/reports/templates" })
   @Get("templates")
   getTemplates(@CurrentUser() user: JwtUser) {
     return this.reportsService.getTemplates(user);
   }
 
   @RequirePermissions("reports.create")
+  @ApiOperation({ summary: "POST /api/reports/templates" })
   @Post("templates")
   createTemplate(
     @Body(new ZodValidationPipe(reportTemplateSchema)) dto: ReportTemplateDto,
@@ -118,6 +132,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.edit")
+  @ApiOperation({ summary: "PATCH /api/reports/templates/:id" })
   @Patch("templates/:id")
   updateTemplate(
     @Param("id") id: string,
@@ -128,6 +143,7 @@ export class ReportsController {
   }
 
   @RequirePermissions("reports.delete")
+  @ApiOperation({ summary: "DELETE /api/reports/templates/:id" })
   @Delete("templates/:id")
   removeTemplate(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.reportsService.removeTemplate(id, user);

@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Req, Res } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
 import type { Request, Response } from "express";
@@ -10,6 +11,7 @@ import { ResetPasswordDto, resetPasswordSchema } from "./dto/reset-password.dto"
 
 const REFRESH_COOKIE_NAME = "ahso_refresh_token";
 
+@ApiTags("auth")
 @Controller("auth")
 export class AuthController {
   constructor(
@@ -18,6 +20,7 @@ export class AuthController {
   ) {}
 
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: "POST /api/auth/login" })
   @Post("login")
   async login(
     @Body(new ZodValidationPipe(loginSchema)) dto: LoginDto,
@@ -38,6 +41,7 @@ export class AuthController {
   }
 
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: "POST /api/auth/refresh" })
   @Post("refresh")
   async refresh(
     @Req() request: Request,
@@ -55,17 +59,20 @@ export class AuthController {
   }
 
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: "POST /api/auth/forgot-password" })
   @Post("forgot-password")
   forgotPassword(@Body(new ZodValidationPipe(forgotPasswordSchema)) dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: "POST /api/auth/reset-password" })
   @Post("reset-password")
   resetPassword(@Body(new ZodValidationPipe(resetPasswordSchema)) dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
 
+  @ApiOperation({ summary: "POST /api/auth/logout" })
   @Post("logout")
   async logout(
     @Req() request: Request,

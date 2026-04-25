@@ -22,4 +22,3 @@ export class AuditController {
     return this.auditService.findAll(filters);
   }
 }
-

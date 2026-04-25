@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
@@ -19,12 +20,15 @@ import {
   updateBusinessDocumentSchema
 } from "./dto/business-document.dto";
 
+@ApiTags("business-documents")
 @Controller("business-documents")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class BusinessDocumentsController {
   constructor(private readonly businessDocumentsService: BusinessDocumentsService) {}
 
   @RequirePermissions("documents.create")
+  @ApiOperation({ summary: "POST /api/business-documents" })
   @Post()
   create(
     @Body(new ZodValidationPipe(createBusinessDocumentSchema)) dto: CreateBusinessDocumentDto,
@@ -34,6 +38,7 @@ export class BusinessDocumentsController {
   }
 
   @RequirePermissions("documents.edit")
+  @ApiOperation({ summary: "PATCH /api/business-documents/:id" })
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -44,6 +49,7 @@ export class BusinessDocumentsController {
   }
 
   @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/business-documents/:id/file" })
   @Get(":id/file")
   async downloadFile(
     @Param("id") id: string,
@@ -57,6 +63,7 @@ export class BusinessDocumentsController {
   }
 
   @RequirePermissions("documents.create")
+  @ApiOperation({ summary: "POST /api/business-documents/:id/file" })
   @Post(":id/file")
   @UseInterceptors(FileInterceptor("file"))
   uploadFile(
@@ -69,12 +76,14 @@ export class BusinessDocumentsController {
   }
 
   @RequirePermissions("documents.edit")
+  @ApiOperation({ summary: "POST /api/business-documents/:id/mark-signed" })
   @Post(":id/mark-signed")
   markSigned(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.businessDocumentsService.markSigned(id, user);
   }
 
   @RequirePermissions("documents.edit")
+  @ApiOperation({ summary: "POST /api/business-documents/:id/supersede" })
   @Post(":id/supersede")
   supersede(
     @Param("id") id: string,
@@ -85,6 +94,7 @@ export class BusinessDocumentsController {
   }
 
   @RequirePermissions("documents.delete")
+  @ApiOperation({ summary: "DELETE /api/business-documents/:id" })
   @Delete(":id")
   remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.businessDocumentsService.remove(id, user);

@@ -7,6 +7,7 @@ import {
   UseGuards,
   UseInterceptors
 } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { JwtUser } from "../auth/auth.types";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
@@ -16,7 +17,9 @@ import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { UploadService } from "./upload.service";
 
+@ApiTags("upload")
 @Controller("upload")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard)
 export class UploadController {
   constructor(
@@ -24,6 +27,7 @@ export class UploadController {
     private readonly prisma: PrismaService
   ) {}
 
+  @ApiOperation({ summary: "POST /api/upload" })
   @Post()
   @UseInterceptors(FileInterceptor("file"))
   async upload(
@@ -36,6 +40,7 @@ export class UploadController {
     return this.uploadService.saveFile(file, "files");
   }
 
+  @ApiOperation({ summary: "POST /api/upload/file" })
   @Post("file")
   @UseInterceptors(FileInterceptor("file"))
   async uploadFile(
@@ -48,6 +53,7 @@ export class UploadController {
     return this.uploadService.saveFile(file, "files");
   }
 
+  @ApiOperation({ summary: "POST /api/upload/logo" })
   @Post("logo")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")

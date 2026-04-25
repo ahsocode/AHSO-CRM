@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { hasPermission, JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
@@ -13,12 +14,15 @@ import { UpdateProjectDto, updateProjectSchema } from "./dto/update-project.dto"
 import { UpdateProjectStatusDto, updateProjectStatusSchema } from "./dto/update-project-status.dto";
 import { ProjectsService } from "./projects.service";
 
+@ApiTags("projects")
 @Controller("projects")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects" })
   @Get()
   findAll(
     @Query(new ZodValidationPipe(projectFilterSchema, "query")) filters: ProjectFilterDto,
@@ -28,6 +32,7 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.create")
+  @ApiOperation({ summary: "POST /api/projects" })
   @Post()
   create(
     @Body(new ZodValidationPipe(createProjectSchema)) dto: CreateProjectDto,
@@ -37,6 +42,7 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "POST /api/projects/bulk" })
   @Post("bulk")
   bulk(
     @Body(new ZodValidationPipe(bulkProjectSchema)) dto: BulkProjectDto,
@@ -47,6 +53,7 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/deleted" })
   @Get("deleted")
   findDeleted(
     @Query(new ZodValidationPipe(projectFilterSchema, "query")) filters: ProjectFilterDto,
@@ -56,36 +63,42 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id" })
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.findOne(id, user);
   }
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/overview-360" })
   @Get(":id/overview-360")
   getOverview360(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.getOverview360(id, user);
   }
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/timeline" })
   @Get(":id/timeline")
   getTimeline(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.getTimeline(id, user);
   }
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/documents" })
   @Get(":id/documents")
   getDocuments(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.getDocuments(id, user);
   }
 
   @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/surveys" })
   @Get(":id/surveys")
   getSurveys(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.getSurveys(id, user);
   }
 
   @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "POST /api/projects/:id/handovers" })
   @Post(":id/handovers")
   createHandover(
     @Param("id") id: string,
@@ -96,12 +109,14 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "PATCH /api/projects/:id/restore" })
   @Patch(":id/restore")
   restore(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.restore(id, user);
   }
 
   @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "PATCH /api/projects/:id" })
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -112,6 +127,7 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "PATCH /api/projects/:id/status" })
   @Patch(":id/status")
   updateStatus(
     @Param("id") id: string,
@@ -122,6 +138,7 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.delete")
+  @ApiOperation({ summary: "DELETE /api/projects/:id" })
   @Delete(":id")
   remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.remove(id, user);

@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -15,7 +16,9 @@ import { UpdateContractDto, updateContractSchema } from "./dto/update-contract.d
 import { UpdateMilestoneDto, updateMilestoneSchema } from "./dto/update-milestone.dto";
 import { ContractsService } from "./contracts.service";
 
+@ApiTags("contracts")
 @Controller("contracts")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class ContractsController {
   constructor(
@@ -24,6 +27,7 @@ export class ContractsController {
   ) {}
 
   @RequirePermissions("contracts.view")
+  @ApiOperation({ summary: "GET /api/contracts" })
   @Get()
   findAll(
     @Query(new ZodValidationPipe(contractFilterSchema, "query")) filters: ContractFilterDto,
@@ -33,6 +37,7 @@ export class ContractsController {
   }
 
   @RequirePermissions("contracts.create")
+  @ApiOperation({ summary: "POST /api/contracts" })
   @Post()
   create(
     @Body(new ZodValidationPipe(createContractSchema)) dto: CreateContractDto,
@@ -42,6 +47,7 @@ export class ContractsController {
   }
 
   @RequirePermissions("contracts.view")
+  @ApiOperation({ summary: "GET /api/contracts/:id/acceptance-pdf" })
   @Get(":id/acceptance-pdf")
   async downloadAcceptancePdf(
     @Param("id") id: string,
@@ -55,12 +61,14 @@ export class ContractsController {
   }
 
   @RequirePermissions("contracts.view")
+  @ApiOperation({ summary: "GET /api/contracts/:id" })
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.contractsService.findOne(id, user);
   }
 
   @RequirePermissions("contracts.edit")
+  @ApiOperation({ summary: "PATCH /api/contracts/:id" })
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -71,6 +79,7 @@ export class ContractsController {
   }
 
   @RequirePermissions("contracts.edit")
+  @ApiOperation({ summary: "POST /api/contracts/:id/milestones" })
   @Post(":id/milestones")
   createMilestone(
     @Param("id") id: string,
@@ -81,6 +90,7 @@ export class ContractsController {
   }
 
   @RequirePermissions("contracts.edit")
+  @ApiOperation({ summary: "PATCH /api/contracts/milestones/:id" })
   @Patch("milestones/:id")
   updateMilestone(
     @Param("id") id: string,
@@ -91,6 +101,7 @@ export class ContractsController {
   }
 
   @RequirePermissions("payments.create")
+  @ApiOperation({ summary: "POST /api/contracts/:id/payments" })
   @Post(":id/payments")
   createPayment(
     @Param("id") id: string,

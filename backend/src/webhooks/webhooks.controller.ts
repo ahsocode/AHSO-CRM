@@ -59,4 +59,3 @@ export class WebhooksController {
     return this.webhooksService.getLogs(id, filters);
   }
 }
-

@@ -1,4 +1,5 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
@@ -8,12 +9,15 @@ import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { CalendarService } from "./calendar.service";
 import { CalendarFilterDto, calendarFilterSchema } from "./dto/calendar-filter.dto";
 
+@ApiTags("calendar")
 @Controller("calendar")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CalendarController {
   constructor(private readonly calendarService: CalendarService) {}
 
   @RequirePermissions("activities.view")
+  @ApiOperation({ summary: "GET /api/calendar/events" })
   @Get("events")
   findEvents(
     @Query(new ZodValidationPipe(calendarFilterSchema, "query")) filters: CalendarFilterDto,

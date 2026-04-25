@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { hasPermission, JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
@@ -11,12 +12,15 @@ import { CustomerFilterDto, customerFilterSchema } from "./dto/customer-filter.d
 import { UpdateCustomerDto, updateCustomerSchema } from "./dto/update-customer.dto";
 import { CustomersService } from "./customers.service";
 
+@ApiTags("customers")
 @Controller("customers")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @RequirePermissions("customers.view")
+  @ApiOperation({ summary: "GET /api/customers" })
   @Get()
   findAll(
     @Query(new ZodValidationPipe(customerFilterSchema, "query")) filters: CustomerFilterDto,
@@ -26,12 +30,14 @@ export class CustomersController {
   }
 
   @RequirePermissions("customers.create")
+  @ApiOperation({ summary: "POST /api/customers" })
   @Post()
   create(@Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto) {
     return this.customersService.create(dto);
   }
 
   @RequirePermissions("customers.view")
+  @ApiOperation({ summary: "POST /api/customers/bulk" })
   @Post("bulk")
   bulk(
     @Body(new ZodValidationPipe(bulkCustomerSchema)) dto: BulkCustomerDto,
@@ -42,12 +48,14 @@ export class CustomersController {
   }
 
   @RequirePermissions("customers.view")
+  @ApiOperation({ summary: "GET /api/customers/:id/stats" })
   @Get(":id/stats")
   getStats(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.customersService.getStats(id, user);
   }
 
   @RequirePermissions("customers.view")
+  @ApiOperation({ summary: "GET /api/customers/deleted" })
   @Get("deleted")
   findDeleted(
     @Query(new ZodValidationPipe(customerFilterSchema, "query")) filters: CustomerFilterDto,
@@ -57,18 +65,21 @@ export class CustomersController {
   }
 
   @RequirePermissions("customers.view")
+  @ApiOperation({ summary: "GET /api/customers/:id" })
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.customersService.findOne(id, user);
   }
 
   @RequirePermissions("customers.edit")
+  @ApiOperation({ summary: "PATCH /api/customers/:id/restore" })
   @Patch(":id/restore")
   restore(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.customersService.restore(id, user);
   }
 
   @RequirePermissions("customers.edit")
+  @ApiOperation({ summary: "PATCH /api/customers/:id" })
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -79,6 +90,7 @@ export class CustomersController {
   }
 
   @RequirePermissions("customers.delete")
+  @ApiOperation({ summary: "DELETE /api/customers/:id" })
   @Delete(":id")
   remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.customersService.remove(id, user);

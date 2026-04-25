@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
@@ -19,12 +20,15 @@ import {
 } from "./dto/survey.dto";
 import { SurveysService } from "./surveys.service";
 
+@ApiTags("surveys")
 @Controller("surveys")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SurveysController {
   constructor(private readonly surveysService: SurveysService) {}
 
   @RequirePermissions("surveys.create")
+  @ApiOperation({ summary: "POST /api/surveys" })
   @Post()
   create(
     @Body(new ZodValidationPipe(createSurveySchema)) dto: CreateSurveyDto,
@@ -34,6 +38,7 @@ export class SurveysController {
   }
 
   @RequirePermissions("surveys.edit")
+  @ApiOperation({ summary: "PATCH /api/surveys/:id" })
   @Patch(":id")
   update(
     @Param("id") id: string,
@@ -44,6 +49,7 @@ export class SurveysController {
   }
 
   @RequirePermissions("surveys.edit")
+  @ApiOperation({ summary: "POST /api/surveys/:id/media" })
   @Post(":id/media")
   @UseInterceptors(FileInterceptor("file"))
   addMedia(
@@ -56,6 +62,7 @@ export class SurveysController {
   }
 
   @RequirePermissions("surveys.view")
+  @ApiOperation({ summary: "GET /api/surveys/media/:mediaId/file" })
   @Get("media/:mediaId/file")
   async downloadMedia(
     @Param("mediaId") mediaId: string,
@@ -69,6 +76,7 @@ export class SurveysController {
   }
 
   @RequirePermissions("surveys.edit")
+  @ApiOperation({ summary: "POST /api/surveys/:id/notes" })
   @Post(":id/notes")
   addNote(
     @Param("id") id: string,

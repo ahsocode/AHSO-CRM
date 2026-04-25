@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -9,12 +10,15 @@ import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { PushSubscriptionDto, pushSubscriptionSchema } from "./dto/push-subscription.dto";
 import { PushService } from "./push.service";
 
+@ApiTags("push")
 @Controller("push/subscriptions")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PushController {
   constructor(private readonly pushService: PushService) {}
 
   @RequirePermissions("notifications.edit")
+  @ApiOperation({ summary: "POST /api/push/subscriptions" })
   @Post()
   saveSubscription(
     @Body(new ZodValidationPipe(pushSubscriptionSchema)) dto: PushSubscriptionDto,
@@ -25,6 +29,7 @@ export class PushController {
   }
 
   @RequirePermissions("notifications.edit")
+  @ApiOperation({ summary: "DELETE /api/push/subscriptions/:id" })
   @Delete(":id")
   removeSubscription(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.pushService.removeSubscription(id, user.sub);

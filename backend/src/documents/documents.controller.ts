@@ -11,6 +11,7 @@ import {
   Res,
   UseGuards
 } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { DocumentType } from "@prisma/client";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
@@ -44,7 +45,9 @@ import {
 } from "./dto/render-document.dto";
 import { DocumentsService } from "./documents.service";
 
+@ApiTags("documents")
 @Controller("documents")
+@ApiBearerAuth("bearer")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class DocumentsController {
   constructor(
@@ -53,11 +56,13 @@ export class DocumentsController {
   ) {}
 
   @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/documents/template-registry" })
   @Get("template-registry")
   async listTemplateRegistry() {
     return this.templateVariants.listRegistry();
   }
 
+  @ApiOperation({ summary: "GET /api/documents/template-catalog/:type" })
   @Get("template-catalog/:type")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -68,6 +73,7 @@ export class DocumentsController {
     return this.templateVariants.getCatalog(type, user);
   }
 
+  @ApiOperation({ summary: "GET /api/documents/templates" })
   @Get("templates")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -79,6 +85,7 @@ export class DocumentsController {
   }
 
   @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/documents/templates/available" })
   @Get("templates/available")
   async listRuntimeTemplateVariants(
     @Query(new ZodValidationPipe(runtimeDocumentTemplateQuerySchema, "query"))
@@ -87,6 +94,7 @@ export class DocumentsController {
     return this.templateVariants.listRuntimeVariants(query.type);
   }
 
+  @ApiOperation({ summary: "POST /api/documents/templates" })
   @Post("templates")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -98,6 +106,7 @@ export class DocumentsController {
     return this.templateVariants.createVariant(body, user);
   }
 
+  @ApiOperation({ summary: "GET /api/documents/templates/:id" })
   @Get("templates/:id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -105,6 +114,7 @@ export class DocumentsController {
     return this.templateVariants.getVariant(id);
   }
 
+  @ApiOperation({ summary: "PATCH /api/documents/templates/:id" })
   @Patch("templates/:id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -117,6 +127,7 @@ export class DocumentsController {
     return this.templateVariants.updateVariant(id, body, user);
   }
 
+  @ApiOperation({ summary: "POST /api/documents/templates/:id/submit-review" })
   @Post("templates/:id/submit-review")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -124,6 +135,7 @@ export class DocumentsController {
     return this.templateVariants.submitReview(id, user);
   }
 
+  @ApiOperation({ summary: "POST /api/documents/templates/:id/approve" })
   @Post("templates/:id/approve")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -131,6 +143,7 @@ export class DocumentsController {
     return this.templateVariants.approve(id, user);
   }
 
+  @ApiOperation({ summary: "POST /api/documents/templates/:id/set-active" })
   @Post("templates/:id/set-active")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -138,6 +151,7 @@ export class DocumentsController {
     return this.templateVariants.setActive(id);
   }
 
+  @ApiOperation({ summary: "POST /api/documents/templates/:id/duplicate" })
   @Post("templates/:id/duplicate")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -150,6 +164,7 @@ export class DocumentsController {
     return this.templateVariants.duplicate(id, user, body.name);
   }
 
+  @ApiOperation({ summary: "DELETE /api/documents/templates/:id" })
   @Delete("templates/:id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -158,6 +173,7 @@ export class DocumentsController {
   }
 
   @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/documents" })
   @Get()
   list(
     @Query(new ZodValidationPipe(documentListFilterSchema, "query")) filters: DocumentListFilterDto,
@@ -167,6 +183,7 @@ export class DocumentsController {
   }
 
   @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/documents/:type/:entityId/preview" })
   @Get(":type/:entityId/preview")
   @Header("Content-Type", "text/html; charset=utf-8")
   async preview(
@@ -187,6 +204,7 @@ export class DocumentsController {
   }
 
   @RequirePermissions("documents.create")
+  @ApiOperation({ summary: "POST /api/documents/:type/:entityId/render" })
   @Post(":type/:entityId/render")
   async render(
     @Param("type") type: DocumentType,
@@ -211,6 +229,7 @@ export class DocumentsController {
   }
 
   @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/documents/:documentId/download" })
   @Get(":documentId/download")
   async downloadById(
     @Param("documentId") documentId: string,
@@ -224,6 +243,7 @@ export class DocumentsController {
   }
 
   @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/documents/:type/:entityId/download" })
   @Get(":type/:entityId/download")
   async download(
     @Param("type") type: DocumentType,

@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { RoleValue } from "../common/constants/role.constants";
 import { PrismaService } from "../common/prisma.service";
@@ -431,6 +431,111 @@ export class CustomersService {
     };
   }
 
+  async restore(id: string, user: JwtUser) {
+    const customer = await this.findDeletedAccessibleCustomer(id, user);
+
+    if (!customer.deletedAt) {
+      throw new BadRequestException("Khách hàng chưa bị xóa");
+    }
+
+    const restored = await this.prisma.customer.update({
+      where: {
+        id
+      },
+      data: {
+        deletedAt: null
+      },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            role: true
+          }
+        }
+      }
+    });
+
+    void this.domainEvents.emit("customer.updated", {
+      customerId: restored.id,
+      name: restored.name,
+      status: restored.status
+    });
+
+    return restored;
+  }
+
+  async findDeleted(filters: CustomerFilterDto, user: JwtUser) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const where = this.buildDeletedWhere(filters, user);
+
+    const [customers, total] = await this.prisma.$transaction([
+      this.prisma.customer.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          deletedAt: "desc"
+        },
+        include: {
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              role: true
+            }
+          },
+          contacts: {
+            where: {
+              isPrimary: true
+            },
+            take: 1,
+            orderBy: {
+              createdAt: "asc"
+            }
+          }
+        }
+      }),
+      this.prisma.customer.count({ where })
+    ]);
+
+    return {
+      items: customers.map((customer) => ({
+        id: customer.id,
+        name: customer.name,
+        code: customer.code,
+        language: customer.language,
+        shortName: customer.shortName,
+        taxCode: customer.taxCode,
+        industry: customer.industry,
+        address: customer.address,
+        status: customer.status,
+        isVip: customer.isVip,
+        assignedTo: customer.assignedTo,
+        primaryContact: customer.contacts[0]
+          ? {
+              id: customer.contacts[0].id,
+              name: customer.contacts[0].name,
+              title: customer.contacts[0].title,
+              phone: customer.contacts[0].phone,
+              email: customer.contacts[0].email
+            }
+          : null,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+        deletedAt: customer.deletedAt
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
+    };
+  }
+
   async bulk(dto: BulkCustomerDto, user: JwtUser) {
     const accessibleCustomers = await this.prisma.customer.findMany({
       where: {
@@ -593,6 +698,36 @@ export class CustomersService {
     }
 
     return where;
+  }
+
+  private buildDeletedWhere(filters: Partial<CustomerFilterDto>, user: JwtUser): Prisma.CustomerWhereInput {
+    return {
+      ...this.buildWhere(filters, user),
+      deletedAt: {
+        not: null
+      }
+    };
+  }
+
+  private async findDeletedAccessibleCustomer(id: string, user: JwtUser) {
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        ...this.buildDeletedWhere({}, user),
+        id
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        deletedAt: true
+      }
+    });
+
+    if (!customer) {
+      throw new NotFoundException("Không tìm thấy khách hàng đã xóa");
+    }
+
+    return customer;
   }
 
   private async findAccessibleCustomer(id: string, user: JwtUser) {

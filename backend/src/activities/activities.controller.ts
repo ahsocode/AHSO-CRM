@@ -31,9 +31,24 @@ export class ActivitiesController {
   }
 
   @RequirePermissions("activities.view")
+  @Get("deleted")
+  findDeleted(
+    @Query(new ZodValidationPipe(activityFilterSchema, "query")) filters: ActivityFilterDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.activitiesService.findDeleted(filters, user);
+  }
+
+  @RequirePermissions("activities.view")
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.activitiesService.findOne(id, user);
+  }
+
+  @RequirePermissions("activities.edit")
+  @Patch(":id/restore")
+  restore(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.activitiesService.restore(id, user);
   }
 
   @RequirePermissions("activities.edit")

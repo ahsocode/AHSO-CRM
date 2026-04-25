@@ -1122,6 +1122,66 @@ export class ProjectsService {
     };
   }
 
+  async restore(id: string, user: JwtUser) {
+    const project = await this.findDeletedAccessibleProjectRecord(id, user);
+
+    if (!project.deletedAt) {
+      throw new BadRequestException("Dự án chưa bị xóa");
+    }
+
+    const restored = await this.prisma.project.update({
+      where: {
+        id
+      },
+      data: {
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        status: true,
+        deletedAt: true
+      }
+    });
+
+    return restored;
+  }
+
+  async findDeleted(filters: ProjectFilterDto, user: JwtUser) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const now = new Date();
+    const where = this.buildDeletedWhere(filters, user);
+
+    const [projects, total] = await this.prisma.$transaction([
+      this.prisma.project.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          deletedAt: "desc"
+        },
+        include: projectListInclude
+      }),
+      this.prisma.project.count({ where })
+    ]);
+
+    return {
+      items: projects.map((project) => ({
+        ...this.mapProjectListItem(project, now),
+        deletedAt: project.deletedAt
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
+    };
+  }
+
   async bulk(dto: BulkProjectDto, user: JwtUser) {
     const projects = await this.prisma.project.findMany({
       where: {
@@ -1396,6 +1456,15 @@ export class ProjectsService {
     return where;
   }
 
+  private buildDeletedWhere(filters: Partial<ProjectFilterDto>, user: JwtUser): Prisma.ProjectWhereInput {
+    return {
+      ...this.buildWhere(filters, user),
+      deletedAt: {
+        not: null
+      }
+    };
+  }
+
   private mapProjectListItem(project: ProjectListRecord, now: Date) {
     return {
       id: project.id,
@@ -1501,6 +1570,26 @@ export class ProjectsService {
 
     if (!project) {
       throw new NotFoundException("Không tìm thấy dự án");
+    }
+
+    return project;
+  }
+
+  private async findDeletedAccessibleProjectRecord(id: string, user: JwtUser) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        ...this.buildDeletedWhere({}, user),
+        id
+      },
+      select: {
+        id: true,
+        status: true,
+        deletedAt: true
+      }
+    });
+
+    if (!project) {
+      throw new NotFoundException("Không tìm thấy dự án đã xóa");
     }
 
     return project;

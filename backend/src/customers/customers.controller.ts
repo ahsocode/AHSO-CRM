@@ -48,9 +48,24 @@ export class CustomersController {
   }
 
   @RequirePermissions("customers.view")
+  @Get("deleted")
+  findDeleted(
+    @Query(new ZodValidationPipe(customerFilterSchema, "query")) filters: CustomerFilterDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.customersService.findDeleted(filters, user);
+  }
+
+  @RequirePermissions("customers.view")
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.customersService.findOne(id, user);
+  }
+
+  @RequirePermissions("customers.edit")
+  @Patch(":id/restore")
+  restore(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.customersService.restore(id, user);
   }
 
   @RequirePermissions("customers.edit")

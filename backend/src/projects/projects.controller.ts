@@ -47,6 +47,15 @@ export class ProjectsController {
   }
 
   @RequirePermissions("projects.view")
+  @Get("deleted")
+  findDeleted(
+    @Query(new ZodValidationPipe(projectFilterSchema, "query")) filters: ProjectFilterDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.findDeleted(filters, user);
+  }
+
+  @RequirePermissions("projects.view")
   @Get(":id")
   findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.findOne(id, user);
@@ -84,6 +93,12 @@ export class ProjectsController {
     @CurrentUser() user: JwtUser
   ) {
     return this.projectsService.createHandover(id, dto, user);
+  }
+
+  @RequirePermissions("projects.edit")
+  @Patch(":id/restore")
+  restore(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.restore(id, user);
   }
 
   @RequirePermissions("projects.edit")

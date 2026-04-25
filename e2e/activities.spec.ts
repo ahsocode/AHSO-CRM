@@ -2,21 +2,11 @@ import { expect, test } from "@playwright/test";
 import { login } from "./helpers";
 
 const apiBaseURL = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:3001/api";
-const adminEmail = process.env.E2E_ADMIN_EMAIL ?? "admin@ahso.vn";
-const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? "AHSO123!";
 
 test("form hoạt động giữ đúng giờ local khi mở lại bản ghi đã lưu", async ({ page, request }) => {
-  const authResponse = await request.post(`${apiBaseURL}/auth/login`, {
-    data: {
-      email: adminEmail,
-      password: adminPassword,
-    },
-  });
-
-  expect(authResponse.ok()).toBeTruthy();
-
-  const authPayload = await authResponse.json();
-  const accessToken = authPayload.data.accessToken as string;
+  await login(page);
+  const accessToken = await page.evaluate(() => window.sessionStorage.getItem("ahso_access_token"));
+  expect(accessToken).toBeTruthy();
 
   const createResponse = await request.post(`${apiBaseURL}/activities`, {
     headers: {
@@ -35,7 +25,6 @@ test("form hoạt động giữ đúng giờ local khi mở lại bản ghi đã
   const activityId = createdActivity.data.id as string;
 
   try {
-    await login(page);
     await page.goto(`/activities/${activityId}/edit`);
     await page.waitForLoadState("networkidle");
 

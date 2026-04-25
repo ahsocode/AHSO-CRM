@@ -18,7 +18,7 @@ export class ZodValidationPipe<T> implements PipeTransform {
       });
 
       throw new BadRequestException({
-        message: "Validation failed",
+        message: "Dữ liệu không hợp lệ",
         errors
       });
     }
@@ -26,4 +26,3 @@ export class ZodValidationPipe<T> implements PipeTransform {
     return result.data;
   }
 }
-

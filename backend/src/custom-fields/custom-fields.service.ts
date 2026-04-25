@@ -46,7 +46,7 @@ export class CustomFieldsService {
     });
 
     if (!existing) {
-      throw new NotFoundException("Custom field không tồn tại");
+      throw new NotFoundException("Trường tùy biến không tồn tại");
     }
 
     this.validateOptions(dto.type ?? existing.type, dto.options ?? (existing.options as string[] | undefined));
@@ -124,7 +124,7 @@ export class CustomFieldsService {
         const field = definitionMap.get(name) as (typeof definitions)[number] | undefined;
 
         if (!field) {
-          throw new BadRequestException(`Không tìm thấy cấu hình field ${name}`);
+          throw new BadRequestException(`Không tìm thấy cấu hình trường tùy biến ${name}`);
         }
 
         return this.prisma.customFieldValue.upsert({
@@ -149,7 +149,7 @@ export class CustomFieldsService {
 
   private validateOptions(type: string, options?: string[]) {
     if ((type === "select" || type === "multiselect") && (!options || options.length === 0)) {
-      throw new BadRequestException("Field select hoặc multiselect phải có options");
+      throw new BadRequestException("Trường chọn một hoặc chọn nhiều phải có danh sách lựa chọn");
     }
   }
 

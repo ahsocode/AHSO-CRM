@@ -41,7 +41,7 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       const token = this.extractToken(client);
 
       if (!token) {
-        throw new UnauthorizedException("Thiếu access token");
+        throw new UnauthorizedException("Thiếu token truy cập");
       }
 
       const user = await this.jwtService.verifyAsync<JwtUser>(token, {

@@ -100,7 +100,7 @@ describe("DocumentTemplateVariantsService", () => {
     );
 
     await expect(service.setActive("variant-1")).rejects.toThrow(
-      new BadRequestException("Chỉ variant đã publish mới có thể đặt active.")
+      new BadRequestException("Chỉ phiên bản template đã xuất bản mới có thể đặt làm bản đang dùng.")
     );
 
     expect(prisma.$transaction).not.toHaveBeenCalled();

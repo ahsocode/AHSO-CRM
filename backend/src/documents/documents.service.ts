@@ -527,7 +527,7 @@ ${extraCss}
     }
 
     if (!this.initialized) {
-      throw new InternalServerErrorException("Documents module chưa khởi tạo được.");
+      throw new InternalServerErrorException("Module tài liệu chưa khởi tạo được.");
     }
   }
 }

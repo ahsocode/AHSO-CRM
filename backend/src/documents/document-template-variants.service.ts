@@ -144,7 +144,7 @@ export class DocumentTemplateVariantsService {
     if (parsed.basedOnVariantId) {
       const sourceVariant = await this.findVariantOrThrow(parsed.basedOnVariantId);
       if (sourceVariant.type !== parsed.type) {
-        throw new BadRequestException("Variant gốc không cùng loại tài liệu.");
+        throw new BadRequestException("Phiên bản template gốc không cùng loại tài liệu.");
       }
       layout = this.parseLayout(sourceVariant.layoutJson);
       basedOnVariantId = sourceVariant.id;
@@ -219,7 +219,7 @@ export class DocumentTemplateVariantsService {
     const variant = await this.findVariantOrThrow(id);
 
     if (variant.status !== "PENDING_APPROVAL") {
-      throw new BadRequestException("Chỉ variant đang chờ duyệt mới được publish.");
+      throw new BadRequestException("Chỉ phiên bản template đang chờ duyệt mới được xuất bản.");
     }
 
     const catalog = await this.getCatalog(variant.type, user);
@@ -228,7 +228,7 @@ export class DocumentTemplateVariantsService {
     const blockingIssues = validationIssues.filter((issue) => issue.severity === "error");
     if (blockingIssues.length > 0) {
       throw new BadRequestException(
-        `Variant còn lỗi trước khi publish: ${blockingIssues[0].message}`
+        `Phiên bản template còn lỗi trước khi xuất bản: ${blockingIssues[0].message}`
       );
     }
 
@@ -248,7 +248,7 @@ export class DocumentTemplateVariantsService {
   async setActive(id: string) {
     const variant = await this.findVariantOrThrow(id);
     if (variant.status !== "PUBLISHED") {
-      throw new BadRequestException("Chỉ variant đã publish mới có thể đặt active.");
+      throw new BadRequestException("Chỉ phiên bản template đã xuất bản mới có thể đặt làm bản đang dùng.");
     }
 
     try {
@@ -272,7 +272,7 @@ export class DocumentTemplateVariantsService {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new BadRequestException("Loại tài liệu này đã có một variant active khác.");
+        throw new BadRequestException("Loại tài liệu này đã có một phiên bản template đang dùng khác.");
       }
       throw error;
     }
@@ -287,7 +287,7 @@ export class DocumentTemplateVariantsService {
     const duplicated = await this.prisma.documentTemplateVariant.create({
       data: {
         type: variant.type,
-        name: name?.trim() || `${variant.name} copy`,
+        name: name?.trim() || `${variant.name} bản sao`,
         status: "DRAFT",
         isActive: false,
         version,
@@ -310,10 +310,10 @@ export class DocumentTemplateVariantsService {
   async deleteVariant(id: string, _user: JwtUser) {
     const variant = await this.findVariantOrThrow(id);
     if (variant.isActive) {
-      throw new BadRequestException("Không thể xóa variant đang active.");
+      throw new BadRequestException("Không thể xóa phiên bản template đang dùng.");
     }
     if (variant.status === "PUBLISHED") {
-      throw new BadRequestException("Không thể xóa variant đã publish. Hãy archive hoặc tạo bản mới.");
+      throw new BadRequestException("Không thể xóa phiên bản template đã xuất bản. Hãy lưu trữ hoặc tạo bản mới.");
     }
     await this.prisma.documentTemplateVariant.delete({
       where: { id }
@@ -349,7 +349,7 @@ export class DocumentTemplateVariantsService {
 
   async getPublishedRuntimeVariant(id: string, type: DocumentType) {
     if (!isTemplateEditorEnabled(type)) {
-      throw new BadRequestException(`Loại tài liệu ${type} chưa hỗ trợ chọn template runtime.`);
+      throw new BadRequestException(`Loại tài liệu ${type} chưa hỗ trợ chọn template khi xuất tài liệu.`);
     }
 
     const variant = await this.prisma.documentTemplateVariant.findFirst({
@@ -362,7 +362,7 @@ export class DocumentTemplateVariantsService {
     });
 
     if (!variant) {
-      throw new NotFoundException("Không tìm thấy template đã publish cho loại tài liệu này.");
+      throw new NotFoundException("Không tìm thấy template đã xuất bản cho loại tài liệu này.");
     }
 
     return this.serializeVariant(variant);
@@ -522,17 +522,17 @@ export class DocumentTemplateVariantsService {
   private assertEditorEnabled(type: DocumentType) {
     if (!isTemplateEditorEnabled(type)) {
       throw new BadRequestException(
-        `Loại tài liệu ${type} hiện vẫn dùng fallback HBS và chưa mở editor drag-drop ở phase này.`
+        `Loại tài liệu ${type} hiện vẫn dùng mẫu HBS dự phòng và chưa mở trình chỉnh sửa kéo thả trong giai đoạn này.`
       );
     }
   }
 
   private assertVariantEditable(variant: VariantRecord) {
     if (variant.status !== "DRAFT") {
-      throw new BadRequestException("Chỉ variant ở trạng thái Draft mới được chỉnh sửa trực tiếp.");
+      throw new BadRequestException("Chỉ phiên bản template ở trạng thái nháp mới được chỉnh sửa trực tiếp.");
     }
     if (variant.isActive) {
-      throw new BadRequestException("Variant đang active không được sửa trực tiếp. Hãy duplicate để tạo draft mới.");
+      throw new BadRequestException("Phiên bản template đang dùng không được sửa trực tiếp. Hãy nhân bản để tạo nháp mới.");
     }
   }
 
@@ -550,7 +550,7 @@ export class DocumentTemplateVariantsService {
   private parseLayout(value: Prisma.JsonValue): DocumentTemplateLayout {
     const parsed = documentTemplateLayoutSchema.safeParse(value);
     if (!parsed.success) {
-      throw new BadRequestException("layoutJson hiện tại không hợp lệ.");
+      throw new BadRequestException("Bố cục template hiện tại không hợp lệ.");
     }
     return parsed.data;
   }
@@ -562,7 +562,7 @@ export class DocumentTemplateVariantsService {
     });
 
     if (!variant) {
-      throw new NotFoundException("Không tìm thấy template variant.");
+      throw new NotFoundException("Không tìm thấy phiên bản template.");
     }
 
     return variant;

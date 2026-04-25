@@ -62,7 +62,7 @@ export class RolesService {
     });
 
     if (!role) {
-      throw new NotFoundException(`Role với ID ${id} không tồn tại`);
+      throw new NotFoundException(`Vai trò với ID ${id} không tồn tại`);
     }
 
     return role;
@@ -97,7 +97,7 @@ export class RolesService {
 
     if (existing) {
       throw new ConflictException(
-        `Role "${input.name}" đã tồn tại`
+        `Vai trò "${input.name}" đã tồn tại`
       );
     }
 
@@ -134,7 +134,7 @@ export class RolesService {
 
     if (role.isSystem) {
       throw new ForbiddenException(
-        `Không thể sửa role hệ thống "${role.name}"`
+        `Không thể sửa vai trò hệ thống "${role.name}"`
       );
     }
 
@@ -146,7 +146,7 @@ export class RolesService {
       });
 
       if (existingRole && existingRole.id !== id) {
-        throw new ConflictException(`Role "${input.name}" đã tồn tại`);
+        throw new ConflictException(`Vai trò "${input.name}" đã tồn tại`);
       }
     }
 
@@ -188,7 +188,7 @@ export class RolesService {
 
     if (role.isSystem) {
       throw new ForbiddenException(
-        `Không thể xóa role hệ thống "${role.name}"`
+        `Không thể xóa vai trò hệ thống "${role.name}"`
       );
     }
 
@@ -198,13 +198,13 @@ export class RolesService {
 
     if (userCount > 0) {
       throw new ForbiddenException(
-        `Không thể xóa role đã được gán cho ${userCount} người dùng`
+        `Không thể xóa vai trò đã được gán cho ${userCount} người dùng`
       );
     }
 
     await this.prisma.userRole.delete({ where: { id } });
 
-    return { message: `Role "${role.name}" đã được xóa` };
+    return { message: `Vai trò "${role.name}" đã được xóa` };
   }
 
   /**

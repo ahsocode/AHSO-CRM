@@ -6,7 +6,6 @@ import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { AuthService } from "./auth.service";
 import { ForgotPasswordDto, forgotPasswordSchema } from "./dto/forgot-password.dto";
 import { LoginDto, loginSchema } from "./dto/login.dto";
-import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { ResetPasswordDto, resetPasswordSchema } from "./dto/reset-password.dto";
 
 const REFRESH_COOKIE_NAME = "ahso_refresh_token";
@@ -41,11 +40,10 @@ export class AuthController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post("refresh")
   async refresh(
-    @Body() body: Partial<RefreshTokenDto> | undefined,
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response
   ) {
-    const refreshToken = body?.refreshToken ?? this.getCookieValue(request, REFRESH_COOKIE_NAME);
+    const refreshToken = this.getCookieValue(request, REFRESH_COOKIE_NAME);
     const session = await this.authService.refresh(refreshToken ?? "");
 
     response.cookie(REFRESH_COOKIE_NAME, session.refreshToken, this.getRefreshCookieOptions());
@@ -119,7 +117,7 @@ export class AuthController {
 
     return {
       httpOnly: true,
-      sameSite: "lax" as const,
+      sameSite: "strict" as const,
       secure: nodeEnv === "production",
       path: "/"
     };

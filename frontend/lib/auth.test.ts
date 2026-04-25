@@ -37,11 +37,11 @@ describe("auth helpers", () => {
     });
   });
 
-  it("persists access token in session storage and fallback local storage", () => {
+  it("persists access token only in session storage and stores user profile separately", () => {
     persistSession(session);
 
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBe("access-token");
-    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBe("access-token");
+    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
     expect(getAccessToken()).toBe("access-token");
     expect(getStoredUser()).toMatchObject({
       id: "user-1",
@@ -52,10 +52,10 @@ describe("auth helpers", () => {
     });
   });
 
-  it("falls back to local storage when session storage is empty", () => {
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, "fallback-token");
+  it("ignores legacy local storage access tokens", () => {
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, "legacy-token");
 
-    expect(getAccessToken()).toBe("fallback-token");
+    expect(getAccessToken()).toBeNull();
   });
 
   it("clears current session storage and legacy persisted state", () => {

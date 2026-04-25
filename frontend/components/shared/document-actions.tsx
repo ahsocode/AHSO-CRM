@@ -111,7 +111,7 @@ export function DocumentActions({
     if (selectedVariantId) {
       params.set("templateVariantId", selectedVariantId);
     }
-    window.open(`/documents/preview?${params.toString()}`, "_blank", "noopener,noreferrer");
+    window.open(`/documents/preview?${params.toString()}`, "_blank");
   };
 
   const handleDownload = async () => {

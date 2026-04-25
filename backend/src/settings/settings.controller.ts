@@ -22,6 +22,8 @@ export class SettingsController {
    * Get the authenticated admin settings bundle.
    */
   @Get()
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions("settings.view")
   async getAllSettings() {
     return this.settingsService.getAllSettings();
   }
@@ -34,6 +36,16 @@ export class SettingsController {
   @Get("company")
   async getCompanyInfo() {
     return this.settingsService.getPublicCompanyInfo();
+  }
+
+  /**
+   * GET /settings/public
+   * Get the safe public settings bundle for unauthenticated screens.
+   */
+  @Public()
+  @Get("public")
+  async getPublicSettings() {
+    return this.settingsService.getPublicSettings();
   }
 
   /**
@@ -54,6 +66,8 @@ export class SettingsController {
    * Get policy settings
    */
   @Get("policies")
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions("settings.view")
   async getPolicies() {
     return this.settingsService.getPolicies();
   }
@@ -86,6 +100,8 @@ export class SettingsController {
    * Get a specific setting by key
    */
   @Get(":key")
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions("settings.view")
   async getSetting(@Param("key") key: string) {
     return this.settingsService.getSetting(key);
   }

@@ -76,6 +76,39 @@ describe("SettingsService", () => {
     });
   });
 
+  it("falls back when public company fields are empty strings", async () => {
+    jest.spyOn(service, "getCompanyInfo").mockResolvedValue({
+      name: "",
+      shortName: "   "
+    } as any);
+
+    await expect(service.getPublicCompanyInfo()).resolves.toMatchObject({
+      name: "AHSO CRM",
+      shortName: "AHSO"
+    });
+  });
+
+  it("returns a safe public settings bundle", async () => {
+    jest.spyOn(service, "getCompanyInfo").mockResolvedValue({
+      name: "AHSO",
+      bankAccount: "secret"
+    } as any);
+    prisma.setting.findUnique.mockResolvedValue(null);
+
+    await expect(service.getPublicSettings()).resolves.toEqual({
+      company: {
+        name: "AHSO",
+        shortName: "AHSO",
+        taxId: null,
+        address: null,
+        phone: null,
+        email: null,
+        website: null
+      },
+      logo: null
+    });
+  });
+
   it("returns data url for local logo paths when file can be read", async () => {
     prisma.setting.findUnique.mockResolvedValue({
       key: "logo:url",

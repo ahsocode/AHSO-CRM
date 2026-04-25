@@ -19,6 +19,13 @@ export default async function globalSetup(config: FullConfig) {
   await page.getByLabel("Mật khẩu").fill(process.env.E2E_ADMIN_PASSWORD ?? "AHSO123!");
   await page.getByRole("button", { name: /vào dashboard/i }).click();
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
+  await page.evaluate(() => {
+    const accessToken = window.sessionStorage.getItem("ahso_access_token");
+
+    if (accessToken) {
+      window.localStorage.setItem("ahso_e2e_access_token", accessToken);
+    }
+  });
   await page.context().storageState({ path: STORAGE_STATE_PATH });
 
   await browser.close();

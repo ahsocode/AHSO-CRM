@@ -29,6 +29,10 @@ function clearLegacyClientCookies() {
   removeCookie(REFRESH_TOKEN_KEY);
 }
 
+function clearLegacyAccessCookie() {
+  removeCookie(ACCESS_TOKEN_KEY);
+}
+
 export function normalizeAuthRole(role: AuthUser["role"] | null | undefined): AuthRoleInfo {
   if (!role) {
     return {
@@ -119,10 +123,10 @@ export function persistSession(session: AuthSession) {
   const normalizedSession = normalizeAuthSession(session);
 
   getSessionStorage()?.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
-  clearLegacyClientCookies();
+  clearLegacyAccessCookie();
 
   if (isBrowser()) {
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
+    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(normalizedSession.user));
   }
 
@@ -140,7 +144,7 @@ export function clearSession() {
 }
 
 export function getAccessToken() {
-  return getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ?? window.localStorage.getItem(ACCESS_TOKEN_KEY) ?? null;
+  return getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
 }
 
 export function getStoredUser(): AuthUser | null {

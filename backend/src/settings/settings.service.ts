@@ -126,10 +126,25 @@ export class SettingsService {
     const publicCompany: Record<string, any> = {};
 
     for (const field of PUBLIC_COMPANY_FIELDS) {
-      publicCompany[field] = company[field] ?? DEFAULT_PUBLIC_COMPANY_INFO[field];
+      publicCompany[field] = this.resolvePublicValue(company[field], DEFAULT_PUBLIC_COMPANY_INFO[field]);
     }
 
     return publicCompany;
+  }
+
+  /**
+   * Get public settings safe for unauthenticated screens.
+   */
+  async getPublicSettings() {
+    const [company, logo] = await Promise.all([
+      this.getPublicCompanyInfo(),
+      this.getLogoUrl()
+    ]);
+
+    return {
+      company,
+      logo
+    };
   }
 
   /**
@@ -168,6 +183,15 @@ export class SettingsService {
     }
 
     return result;
+  }
+
+  private resolvePublicValue(value: unknown, fallback: string | null) {
+    if (typeof value === "string") {
+      const trimmedValue = value.trim();
+      return trimmedValue.length > 0 ? value : fallback;
+    }
+
+    return value ?? fallback;
   }
 
   /**

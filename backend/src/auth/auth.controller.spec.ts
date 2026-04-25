@@ -74,7 +74,7 @@ describe("AuthController", () => {
       "refresh-token",
       expect.objectContaining({
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "strict",
         secure: false,
         path: "/",
         maxAge: 604800000
@@ -82,7 +82,7 @@ describe("AuthController", () => {
     );
   });
 
-  it("reads refresh token from cookie when request body omits it", async () => {
+  it("reads refresh token from the HttpOnly cookie only", async () => {
     const response = createResponse();
     authService.refresh.mockResolvedValue({
       accessToken: "next-access",
@@ -93,7 +93,6 @@ describe("AuthController", () => {
     });
 
     await controller.refresh(
-      {},
       {
         headers: {
           cookie: "ahso_refresh_token=cookie-refresh-token"
@@ -126,7 +125,7 @@ describe("AuthController", () => {
       "ahso_refresh_token",
       expect.objectContaining({
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "strict",
         secure: false,
         path: "/"
       })

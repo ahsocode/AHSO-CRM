@@ -8,11 +8,13 @@ on:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@v4
 
@@ -52,15 +54,15 @@ jobs:
             curl -fsS http://127.0.0.1:3000/login >/dev/null
 
       - name: Notify Slack success
-        if: success() && secrets.SLACK_WEBHOOK_URL != ''
+        if: success() && env.SLACK_WEBHOOK_URL != ''
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data '{"text":"AHSO CRM deploy thành công cho branch main."}' \
-            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            "$SLACK_WEBHOOK_URL"
 
       - name: Notify Slack failure
-        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
         run: |
           curl -X POST -H 'Content-type: application/json' \
             --data '{"text":"AHSO CRM deploy thất bại. Vui lòng kiểm tra GitHub Actions."}' \
-            "${{ secrets.SLACK_WEBHOOK_URL }}"
+            "$SLACK_WEBHOOK_URL"

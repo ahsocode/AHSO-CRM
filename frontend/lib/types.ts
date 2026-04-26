@@ -254,6 +254,7 @@ export interface CustomerListItem {
   language?: string | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
 }
 
 export interface CustomersSummary {
@@ -413,6 +414,7 @@ export interface ProjectListItem {
   quoteCount: number;
   milestoneCount: number;
   activityCount: number;
+  deletedAt?: string | null;
 }
 
 export interface ProjectsSummary {

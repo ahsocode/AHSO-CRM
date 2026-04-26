@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { getStoredAdminAccessToken, getUserIdFromAccessToken } from "./api-auth";
 
 const apiBaseUrl = process.env.E2E_API_URL ?? "http://127.0.0.1:3001/api";
 
@@ -52,7 +53,7 @@ test("permission catalog yêu cầu đăng nhập và quyền roles.view", async
   const unauthenticatedResponse = await request.get(`${apiBaseUrl}/permissions`);
   expect(unauthenticatedResponse.status()).toBe(401);
 
-  const adminToken = await loginForToken(request, "admin@ahso.vn");
+  const adminToken = getStoredAdminAccessToken();
   const adminResponse = await request.get(`${apiBaseUrl}/permissions`, {
     headers: {
       Authorization: `Bearer ${adminToken}`
@@ -91,60 +92,68 @@ test("RBAC áp dụng cho documents, dashboard, reports và notifications", asyn
 });
 
 test("soft delete recovery cho khách hàng hoạt động đúng", async ({ request }) => {
-  const session = await loginForSession(request, "admin@ahso.vn");
+  const adminToken = getStoredAdminAccessToken();
   const headers = {
-    Authorization: `Bearer ${session.accessToken}`
+    Authorization: `Bearer ${adminToken}`
   };
+  const userId = getUserIdFromAccessToken(adminToken);
   const suffix = Date.now().toString().slice(-6);
+  let customerId: string | null = null;
 
-  const createResponse = await request.post(`${apiBaseUrl}/customers`, {
-    headers,
-    data: {
-      name: `E2E Recovery ${suffix}`,
-      assignedToId: session.userId
+  try {
+    const createResponse = await request.post(`${apiBaseUrl}/customers`, {
+      headers,
+      data: {
+        name: `E2E Recovery ${suffix}`,
+        assignedToId: userId
+      }
+    });
+    expect(createResponse.ok()).toBeTruthy();
+    const createdPayload = await createResponse.json();
+    customerId = createdPayload.data.id as string;
+
+    const deleteResponse = await request.delete(`${apiBaseUrl}/customers/${customerId}`, {
+      headers
+    });
+    expect(deleteResponse.ok()).toBeTruthy();
+
+    const activeListResponse = await request.get(`${apiBaseUrl}/customers`, {
+      headers,
+      params: {
+        search: `E2E Recovery ${suffix}`
+      }
+    });
+    expect(activeListResponse.ok()).toBeTruthy();
+    const activeListPayload = await activeListResponse.json();
+    expect(activeListPayload.data.some((customer: { id: string }) => customer.id === customerId)).toBe(false);
+
+    const deletedListResponse = await request.get(`${apiBaseUrl}/customers/deleted`, {
+      headers,
+      params: {
+        search: `E2E Recovery ${suffix}`
+      }
+    });
+    expect(deletedListResponse.ok()).toBeTruthy();
+    const deletedListPayload = await deletedListResponse.json();
+    expect(deletedListPayload.data.some((customer: { id: string }) => customer.id === customerId)).toBe(true);
+
+    const restoreResponse = await request.patch(`${apiBaseUrl}/customers/${customerId}/restore`, {
+      headers
+    });
+    expect(restoreResponse.ok()).toBeTruthy();
+
+    const restoredListResponse = await request.get(`${apiBaseUrl}/customers`, {
+      headers,
+      params: {
+        search: `E2E Recovery ${suffix}`
+      }
+    });
+    expect(restoredListResponse.ok()).toBeTruthy();
+    const restoredListPayload = await restoredListResponse.json();
+    expect(restoredListPayload.data.some((customer: { id: string }) => customer.id === customerId)).toBe(true);
+  } finally {
+    if (customerId) {
+      await request.delete(`${apiBaseUrl}/customers/${customerId}`, { headers }).catch(() => undefined);
     }
-  });
-  expect(createResponse.ok()).toBeTruthy();
-  const createdPayload = await createResponse.json();
-  const customerId = createdPayload.data.id as string;
-
-  const deleteResponse = await request.delete(`${apiBaseUrl}/customers/${customerId}`, {
-    headers
-  });
-  expect(deleteResponse.ok()).toBeTruthy();
-
-  const activeListResponse = await request.get(`${apiBaseUrl}/customers`, {
-    headers,
-    params: {
-      search: `E2E Recovery ${suffix}`
-    }
-  });
-  expect(activeListResponse.ok()).toBeTruthy();
-  const activeListPayload = await activeListResponse.json();
-  expect(activeListPayload.data.some((customer: { id: string }) => customer.id === customerId)).toBe(false);
-
-  const deletedListResponse = await request.get(`${apiBaseUrl}/customers/deleted`, {
-    headers,
-    params: {
-      search: `E2E Recovery ${suffix}`
-    }
-  });
-  expect(deletedListResponse.ok()).toBeTruthy();
-  const deletedListPayload = await deletedListResponse.json();
-  expect(deletedListPayload.data.some((customer: { id: string }) => customer.id === customerId)).toBe(true);
-
-  const restoreResponse = await request.patch(`${apiBaseUrl}/customers/${customerId}/restore`, {
-    headers
-  });
-  expect(restoreResponse.ok()).toBeTruthy();
-
-  const restoredListResponse = await request.get(`${apiBaseUrl}/customers`, {
-    headers,
-    params: {
-      search: `E2E Recovery ${suffix}`
-    }
-  });
-  expect(restoredListResponse.ok()).toBeTruthy();
-  const restoredListPayload = await restoredListResponse.json();
-  expect(restoredListPayload.data.some((customer: { id: string }) => customer.id === customerId)).toBe(true);
+  }
 });

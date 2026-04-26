@@ -6,10 +6,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
+import { DeletedRecordsPanel } from "@/components/shared/deleted-records-panel";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useBulkCustomers, useCreateCustomer, useCustomers } from "@/hooks/use-customers";
+import { useBulkCustomers, useCreateCustomer, useDeletedCustomers, useRestoreCustomer, useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { useToast } from "@/hooks/use-toast";
 import { isLeadershipRole } from "@/lib/auth";
@@ -59,10 +60,13 @@ export function CustomersClient() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"assign" | "delete">("assign");
   const [bulkAssignedToId, setBulkAssignedToId] = useState("");
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedPage, setDeletedPage] = useState(1);
   const deferredSearch = useDeferredValue(search.trim());
   const normalizedIndustry = industry.trim();
   const createCustomer = useCreateCustomer();
   const bulkCustomers = useBulkCustomers();
+  const restoreCustomer = useRestoreCustomer();
   const queryClient = useQueryClient();
   const { error: showError, success } = useToast();
 
@@ -73,6 +77,10 @@ export function CustomersClient() {
   useEffect(() => {
     setSelectedIds([]);
   }, [page, deferredSearch, status, normalizedIndustry, assignedToId, vipFilter]);
+
+  useEffect(() => {
+    setDeletedPage(1);
+  }, [deferredSearch, status, normalizedIndustry, assignedToId, vipFilter]);
 
   const canManageUsers = isLeadershipRole(user?.role);
   const usersQuery = useUsers(canManageUsers);
@@ -85,6 +93,15 @@ export function CustomersClient() {
     assignedToId: assignedToId || undefined,
     isVip: vipFilter === "all" ? undefined : vipFilter === "vip"
   });
+  const deletedCustomersQuery = useDeletedCustomers({
+    page: deletedPage,
+    limit: PAGE_SIZE,
+    search: deferredSearch || undefined,
+    status: status || undefined,
+    industry: normalizedIndustry || undefined,
+    assignedToId: assignedToId || undefined,
+    isVip: vipFilter === "all" ? undefined : vipFilter === "vip"
+  }, showDeleted);
 
   const canReset =
     search.length > 0 ||
@@ -176,6 +193,9 @@ export function CustomersClient() {
             <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
               Import CSV
             </Button>
+            <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)}>
+              {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
+            </Button>
             <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
               Về dashboard
             </Link>
@@ -224,6 +244,33 @@ export function CustomersClient() {
         users={usersQuery.data ?? []}
         usersUnavailable={!canManageUsers || usersQuery.isError}
       />
+
+      {showDeleted ? (
+        <DeletedRecordsPanel
+          title="Khách hàng đã xóa mềm"
+          description="Các bản ghi này chưa mất khỏi hệ thống. Khôi phục để đưa khách hàng trở lại danh sách vận hành."
+          emptyTitle="Thùng rác khách hàng đang trống"
+          emptyDescription="Khi xóa mềm khách hàng, bản ghi sẽ xuất hiện ở đây để phục hồi khi cần."
+          items={deletedCustomersQuery.data?.items ?? []}
+          isLoading={deletedCustomersQuery.isLoading}
+          isError={deletedCustomersQuery.isError}
+          errorMessage={getErrorMessage(deletedCustomersQuery.error)}
+          isRestoring={restoreCustomer.isPending}
+          page={deletedCustomersQuery.data?.meta?.page}
+          totalPages={deletedCustomersQuery.data?.meta?.totalPages}
+          total={deletedCustomersQuery.data?.meta?.total}
+          onPageChange={setDeletedPage}
+          getTitle={(customer) => customer.name}
+          getSubtitle={(customer) => [customer.industry, customer.taxCode].filter(Boolean).join(" · ")}
+          getMeta={(customer) => `Phụ trách: ${customer.assignedTo?.name ?? "Chưa gán"}`}
+          onRestore={(id) =>
+            restoreCustomer.mutate(id, {
+              onSuccess: () => success("Đã khôi phục khách hàng."),
+              onError: (error) => showError(error instanceof Error ? error.message : "Không thể khôi phục khách hàng.")
+            })
+          }
+        />
+      ) : null}
 
       {selectedIds.length > 0 ? (
         <BulkActionsBar count={selectedIds.length} onClear={() => setSelectedIds([])}>

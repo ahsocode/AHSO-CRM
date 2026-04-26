@@ -66,6 +66,7 @@ export function CustomerFilters({
                 className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
               />
               <Input
+                aria-label="Tìm kiếm khách hàng"
                 value={search}
                 onChange={(event) => onSearchChange(event.target.value)}
                 className="pl-11"

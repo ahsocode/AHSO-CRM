@@ -41,6 +41,26 @@ export function useProjects(filters: ProjectFilters, enabled = true) {
   });
 }
 
+export function useDeletedProjects(filters: ProjectFilters, enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: ["projects", "deleted", filters],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<ProjectListItem[]>>("/projects/deleted", {
+        params: {
+          ...filters,
+          view: "list"
+        }
+      });
+
+      return {
+        items: response.data.data,
+        meta: response.data.meta as ProjectListMeta
+      };
+    }
+  });
+}
+
 export function useProjectKanban(filters: Omit<ProjectFilters, "page" | "limit">, enabled = true) {
   return useQuery({
     enabled,
@@ -282,6 +302,23 @@ export function useDeleteProject(projectId: string) {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    }
+  });
+}
+
+export function useRestoreProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (projectId: string) => {
+      const response = await apiClient.patch<ApiResponse<ProjectListItem>>(`/projects/${projectId}/restore`);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }

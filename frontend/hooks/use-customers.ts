@@ -31,6 +31,23 @@ export function useCustomers(filters: CustomerFilters) {
   });
 }
 
+export function useDeletedCustomers(filters: CustomerFilters, enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: ["customers", "deleted", filters],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<CustomerListItem[]>>("/customers/deleted", {
+        params: filters
+      });
+
+      return {
+        items: response.data.data,
+        meta: response.data.meta as CustomerListMeta
+      };
+    }
+  });
+}
+
 export function useCustomer(customerId: string) {
   return useQuery({
     queryKey: ["customers", customerId],
@@ -93,6 +110,22 @@ export function useDeleteCustomer(customerId: string) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
+    }
+  });
+}
+
+export function useRestoreCustomer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (customerId: string) => {
+      const response = await apiClient.patch<ApiResponse<CustomerListItem>>(`/customers/${customerId}/restore`);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }

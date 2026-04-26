@@ -26,6 +26,7 @@ export interface ActivityListItem {
   };
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
 }
 
 export interface ActivityDetail extends ActivityListItem {
@@ -74,6 +75,21 @@ export function useActivities(filters: ActivityFilters) {
     queryKey: ['activities', filters],
     queryFn: async () => {
       const res = await apiClient.get<{ data: ActivityListItem[]; meta: any }>('/activities', { params: filters });
+      return {
+        items: res.data.data,
+        meta: res.data.meta
+      };
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useDeletedActivities(filters: ActivityFilters, enabled = true) {
+  return useQuery({
+    enabled,
+    queryKey: ['activities', 'deleted', filters],
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: ActivityListItem[]; meta: any }>('/activities/deleted', { params: filters });
       return {
         items: res.data.data,
         meta: res.data.meta
@@ -159,6 +175,30 @@ export function useDeleteActivity() {
       toast({
         title: 'Lỗi',
         description: error.response?.data?.message || 'Không thể xoá hoạt động',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useRestoreActivity() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.patch(`/activities/${id}/restore`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast({
+        title: 'Thành công',
+        description: 'Đã khôi phục hoạt động',
+        variant: 'default',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Lỗi',
+        description: error.response?.data?.message || 'Không thể khôi phục hoạt động',
         variant: 'destructive',
       });
     },

@@ -6,9 +6,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
+import { DeletedRecordsPanel } from "@/components/shared/deleted-records-panel";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useBulkProjects, useCreateProject, useProjectKanban, useProjects, useUpdateProjectStatus } from "@/hooks/use-projects";
+import { useBulkProjects, useCreateProject, useDeletedProjects, useProjectKanban, useProjects, useRestoreProject, useUpdateProjectStatus } from "@/hooks/use-projects";
 import { useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { useToast } from "@/hooks/use-toast";
@@ -67,10 +68,13 @@ export function ProjectsClient() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"status" | "delete">("status");
   const [bulkStatus, setBulkStatus] = useState<ProjectStatus>("QUOTING");
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deletedPage, setDeletedPage] = useState(1);
   const deferredSearch = useDeferredValue(search.trim());
   const canManageUsers = isLeadershipRole(user?.role);
   const createProject = useCreateProject();
   const bulkProjects = useBulkProjects();
+  const restoreProject = useRestoreProject();
   const queryClient = useQueryClient();
   const { error: showError, success } = useToast();
   const importCustomersQuery = useCustomers({ page: 1, limit: 200 });
@@ -100,6 +104,10 @@ export function ProjectsClient() {
     setSelectedIds([]);
   }, [page, assignedToId, deferredSearch, priority, status, view]);
 
+  useEffect(() => {
+    setDeletedPage(1);
+  }, [assignedToId, deferredSearch, priority, status]);
+
   const usersQuery = useUsers(canManageUsers);
   const projectsQuery = useProjects(
     {
@@ -111,6 +119,17 @@ export function ProjectsClient() {
       assignedToId: assignedToId || undefined
     },
     view === "list"
+  );
+  const deletedProjectsQuery = useDeletedProjects(
+    {
+      page: deletedPage,
+      limit: PAGE_SIZE,
+      search: deferredSearch || undefined,
+      status: status || undefined,
+      priority: priority || undefined,
+      assignedToId: assignedToId || undefined
+    },
+    showDeleted
   );
   const kanbanQuery = useProjectKanban(
     {
@@ -261,6 +280,9 @@ export function ProjectsClient() {
             <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
               Import CSV
             </Button>
+            <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)}>
+              {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
+            </Button>
             <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
               Về dashboard
             </Link>
@@ -307,6 +329,33 @@ export function ProjectsClient() {
         users={usersQuery.data ?? []}
         usersUnavailable={!canManageUsers || usersQuery.isError}
       />
+
+      {showDeleted ? (
+        <DeletedRecordsPanel
+          title="Dự án đã xóa mềm"
+          description="Dự án bị xóa mềm được giữ lại để phục hồi hồ sơ 360, timeline và tài liệu liên quan khi cần."
+          emptyTitle="Thùng rác dự án đang trống"
+          emptyDescription="Khi xóa mềm dự án, hồ sơ sẽ xuất hiện ở đây để khôi phục."
+          items={deletedProjectsQuery.data?.items ?? []}
+          isLoading={deletedProjectsQuery.isLoading}
+          isError={deletedProjectsQuery.isError}
+          errorMessage={getApiErrorMessage(deletedProjectsQuery.error, "Không thể tải dự án đã xóa.")}
+          isRestoring={restoreProject.isPending}
+          page={deletedProjectsQuery.data?.meta?.page}
+          totalPages={deletedProjectsQuery.data?.meta?.totalPages}
+          total={deletedProjectsQuery.data?.meta?.total}
+          onPageChange={setDeletedPage}
+          getTitle={(project) => project.name}
+          getSubtitle={(project) => `${project.code} · ${project.customer.name}`}
+          getMeta={(project) => `Trạng thái trước khi xóa: ${project.status}`}
+          onRestore={(id) =>
+            restoreProject.mutate(id, {
+              onSuccess: () => success("Đã khôi phục dự án."),
+              onError: (error) => showError(error instanceof Error ? error.message : "Không thể khôi phục dự án.")
+            })
+          }
+        />
+      ) : null}
 
       {view === "list" && selectedIds.length > 0 ? (
         <BulkActionsBar count={selectedIds.length} onClear={() => setSelectedIds([])}>

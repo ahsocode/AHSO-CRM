@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type IconName =
@@ -23,7 +24,7 @@ type IconName =
   | "history"
   | "briefcase";
 
-const ICONS: Record<IconName, React.ReactNode> = {
+const ICONS: Record<IconName, ReactNode> = {
   dashboard: <path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z" />,
   groups: <path d="M16 11c1.66 0 3-1.79 3-4s-1.34-4-3-4-3 1.79-3 4 1.34 4 3 4Zm-8 0c1.66 0 3-1.79 3-4S9.66 3 8 3 5 4.79 5 7s1.34 4 3 4Zm0 2c-2.67 0-8 1.34-8 4v4h10v-4c0-1.42.77-2.67 2.08-3.64A10.78 10.78 0 0 0 8 13Zm8 0c-.29 0-.62.02-.97.05 1.18.86 1.97 2.07 1.97 3.45v4H24v-4c0-2.66-5.33-4-8-4Z" />,
   factory: <path d="M2 21h20V9l-7 4V9l-7 4V3H2zM6 18h2v-2H6zm4 0h2v-2h-2zm4 0h2v-2h-2z" />,

@@ -226,9 +226,44 @@ Documents v1 is intentionally narrow in this branch.
   - frontend typecheck
   - frontend build
   - Playwright smoke tests
-- Deploy health probe should use:
-  - `GET /api/health`
-  - `GET /login`
+
+### Production Docker Compose
+
+Production deploys should use `docker-compose.prod.yml`, not the local development compose file. The production compose file pulls immutable backend/frontend images and keeps Postgres/Redis internal to the Docker network.
+
+Prepare server-side env files:
+
+```bash
+cp .env.production.example .env.production.local
+cp backend/.env.production.example backend/.env.production.local
+cp frontend/.env.production.example frontend/.env.production.local
+```
+
+Then edit the `*.production.local` files with real secrets/domains and run:
+
+```bash
+./scripts/check-deploy-readiness.sh
+docker compose --env-file .env.production.local -f docker-compose.prod.yml pull
+docker compose --env-file .env.production.local -f docker-compose.prod.yml up -d
+```
+
+Important deploy notes:
+- `NEXT_PUBLIC_API_URL` is baked into the Next.js browser bundle at image build time.
+- GitHub Actions therefore requires `PROD_PUBLIC_API_URL` to build the frontend image correctly.
+- Deploy health probes use `GET /api/health` and `GET /login`.
+- Uploaded files and generated PDFs should be persisted through `UPLOADS_DIR`.
+
+Required deploy secrets for GitHub Actions:
+- `PROD_HOST`
+- `PROD_USER`
+- `PROD_SSH_KEY`
+- `PROD_APP_DIR`
+- `PROD_PUBLIC_API_URL`
+
+Optional deploy secrets:
+- `PROD_GHCR_USERNAME`
+- `PROD_GHCR_TOKEN`
+- `SLACK_WEBHOOK_URL`
 
 ## Recommended Reading
 

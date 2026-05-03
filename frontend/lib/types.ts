@@ -40,7 +40,17 @@ export interface AuthUser {
 
 export interface AuthSession {
   accessToken: string;
+  sessionId?: string;
   user: AuthUser;
+}
+
+export interface UserSessionInfo {
+  id: string;
+  deviceName: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  lastActiveAt: string;
+  createdAt: string;
 }
 
 export interface CompanyInfo {

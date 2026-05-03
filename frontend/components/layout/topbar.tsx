@@ -2,13 +2,36 @@
 
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { AppIcon } from "@/components/shared/app-icon";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { RealtimeIndicator } from "@/components/layout/realtime-indicator";
 import { useCompanyInfo, useLogo } from "@/hooks/use-settings";
+import { useSessions } from "@/hooks/use-sessions";
 import { getRoleLabel, resolveAssetUrl } from "@/lib/auth";
 import { AuthUser, RealtimeEvent } from "@/lib/types";
+
+function formatDate(iso: string) {
+  try {
+    return new Intl.DateTimeFormat("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
 
 export function Topbar({
   user,
@@ -23,8 +46,10 @@ export function Topbar({
 }) {
   const companyQuery = useCompanyInfo();
   const logoQuery = useLogo();
+  const sessionsQuery = useSessions();
   const brandName = companyQuery.data?.shortName || companyQuery.data?.name || "AHSO";
   const logoUrl = resolveAssetUrl(logoQuery.data);
+  const currentSession = sessionsQuery.data?.[0] ?? null;
 
   const openCommandPalette = () => {
     if (typeof window === "undefined") {
@@ -80,18 +105,64 @@ export function Topbar({
         <div className="flex items-center justify-between gap-3 lg:justify-end">
           <NotificationBell />
 
-          <button
-            className="flex items-center gap-3 rounded-full border border-slate-200/80 bg-white/92 px-2 py-1.5 shadow-sm transition hover:border-primary/25 hover:bg-white"
-            onClick={() => void onLogout()}
-            type="button"
-          >
-            <AvatarInitials className="h-10 w-10 rounded-full bg-primary/12 text-xs text-primary" name={user?.name ?? "AHSO CRM"} />
-            <div className="hidden text-left sm:block">
-              <p className="text-sm font-semibold text-text-primary">{user?.name ?? "Đang tải..."}</p>
-              <p className="text-xs text-text-secondary">{getRoleLabel(user?.role)}</p>
-            </div>
-            <AppIcon name="logout" className="h-4 w-4 text-text-secondary" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-3 rounded-full border border-slate-200/80 bg-white/92 px-2 py-1.5 shadow-sm transition hover:border-primary/25 hover:bg-white"
+                type="button"
+              >
+                <AvatarInitials className="h-10 w-10 rounded-full bg-primary/12 text-xs text-primary" name={user?.name ?? "AHSO CRM"} />
+                <div className="hidden text-left sm:block">
+                  <p className="text-sm font-semibold text-text-primary">{user?.name ?? "Đang tải..."}</p>
+                  <p className="text-xs text-text-secondary">{getRoleLabel(user?.role)}</p>
+                </div>
+                <AppIcon name="chevron-down" className="h-4 w-4 text-text-secondary" />
+              </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuLabel>
+                <p className="font-semibold">{user?.name}</p>
+                <p className="text-xs font-normal text-muted-foreground">{user?.email}</p>
+              </DropdownMenuLabel>
+
+              <DropdownMenuSeparator />
+
+              <div className="px-2 py-1.5">
+                <p className="mb-1.5 text-xs font-semibold text-muted-foreground">PHIÊN ĐĂNG NHẬP HIỆN TẠI</p>
+                {currentSession ? (
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <AppIcon name="monitor" className="h-3.5 w-3.5 shrink-0" />
+                      <span>{currentSession.deviceName ?? "Trình duyệt"}</span>
+                    </div>
+                    {currentSession.ipAddress && (
+                      <div className="flex items-center gap-1.5">
+                        <AppIcon name="map-pin" className="h-3.5 w-3.5 shrink-0" />
+                        <span>{currentSession.ipAddress}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <AppIcon name="clock" className="h-3.5 w-3.5 shrink-0" />
+                      <span>Đăng nhập lúc {formatDate(currentSession.createdAt)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Đang tải thông tin phiên...</p>
+                )}
+              </div>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onClick={() => void onLogout()}
+              >
+                <AppIcon name="logout" className="mr-2 h-4 w-4" />
+                Đăng xuất
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

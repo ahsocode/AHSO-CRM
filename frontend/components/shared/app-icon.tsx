@@ -22,7 +22,10 @@ type IconName =
   | "activity"
   | "logout"
   | "history"
-  | "briefcase";
+  | "briefcase"
+  | "chevron-down"
+  | "monitor"
+  | "map-pin";
 
 const ICONS: Record<IconName, ReactNode> = {
   dashboard: <path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z" />,
@@ -45,7 +48,10 @@ const ICONS: Record<IconName, ReactNode> = {
   phone: <path d="M6.5 4h3l1.5 4-2 1.5a15 15 0 0 0 5.5 5.5L16 13l4 1.5v3a2 2 0 0 1-2.18 2A17 17 0 0 1 4.5 6.18 2 2 0 0 1 6.5 4Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   activity: <path d="M3 12h4l2-5 4 10 2-5h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   logout: <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-  history: <path d="M12 3a9 9 0 0 1 9 9M3 12a9 9 0 0 1 9-9M9 12l3-3v6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  history: <path d="M12 3a9 9 0 0 1 9 9M3 12a9 9 0 0 1 9-9M9 12l3-3v6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "chevron-down": <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  monitor: <path d="M2 3h20v14H2zM8 21h8M12 17v4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "map-pin": <path d="M12 2a6 6 0 0 1 6 6c0 4-6 14-6 14S6 12 6 8a6 6 0 0 1 6-6Zm0 4a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 };
 
 export function AppIcon({

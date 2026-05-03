@@ -52,7 +52,13 @@ export class AuthService {
 
     const payload = this.buildPayload(user);
     const tokens = await this.issueTokens(payload);
-    await this.storeRefreshToken(user.id, tokens.refreshToken);
+
+    // Single-device enforcement: invalidate all existing sessions before creating new one
+    await this.prisma.userSession.deleteMany({
+      where: { userId: user.id }
+    });
+    const session = await this.createSession(user.id, tokens.refreshToken, meta);
+
     await this.auditService.recordLogin({
       userId: user.id,
       ip: meta?.ip ?? null,
@@ -61,19 +67,32 @@ export class AuthService {
 
     return {
       ...tokens,
+      sessionId: session.id,
       user: this.serializeUser(user)
     };
   }
 
-  async refresh(refreshToken: string) {
-    const { user } = await this.resolveUserFromRefreshToken(refreshToken);
+  async refresh(refreshToken: string, meta?: AuthRequestMeta) {
+    const { user, session } = await this.resolveUserFromRefreshToken(refreshToken);
 
     const nextPayload = this.buildPayload(user);
     const tokens = await this.issueTokens(nextPayload);
-    await this.storeRefreshToken(user.id, tokens.refreshToken);
+
+    // Rotate: update existing session with new token hash
+    const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+    await this.prisma.userSession.update({
+      where: { id: session.id },
+      data: {
+        refreshToken: hashedRefreshToken,
+        lastActiveAt: new Date(),
+        ipAddress: meta?.ip ?? session.ipAddress,
+        userAgent: meta?.userAgent ?? session.userAgent
+      }
+    });
 
     return {
       ...tokens,
+      sessionId: session.id,
       user: this.serializeUser(user)
     };
   }
@@ -121,16 +140,16 @@ export class AuthService {
       throw new UnauthorizedException("Liên kết khôi phục không hợp lệ hoặc đã hết hạn");
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 12);
 
     await this.prisma.user.update({
-      where: {
-        id: user.id
-      },
-      data: {
-        password: hashedPassword,
-        refreshToken: null
-      }
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
+
+    // Invalidate all sessions when password is reset
+    await this.prisma.userSession.deleteMany({
+      where: { userId: user.id }
     });
 
     return {
@@ -139,45 +158,63 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string) {
-    await this.prisma.user.update({
-      where: {
-        id: userId
-      },
-      data: {
-        refreshToken: null
-      }
-    });
-
-    return {
-      success: true
-    };
-  }
-
   async logoutByRefreshToken(refreshToken: string) {
     if (!refreshToken) {
-      return {
-        success: true
-      };
+      return { success: true };
     }
 
     try {
-      const { user } = await this.resolveUserFromRefreshToken(refreshToken);
-      await this.prisma.user.update({
-        where: {
-          id: user.id
-        },
-        data: {
-          refreshToken: null
-        }
+      const { session } = await this.resolveUserFromRefreshToken(refreshToken);
+      await this.prisma.userSession.delete({
+        where: { id: session.id }
       });
     } catch {
-      // Ignore invalid/expired refresh tokens during logout so the cookie can still be cleared.
+      // Ignore invalid/expired tokens — cookie can still be cleared
     }
 
-    return {
-      success: true
-    };
+    return { success: true };
+  }
+
+  async getSessions(userId: string) {
+    return this.prisma.userSession.findMany({
+      where: { userId },
+      orderBy: { lastActiveAt: "desc" },
+      select: {
+        id: true,
+        deviceName: true,
+        ipAddress: true,
+        userAgent: true,
+        lastActiveAt: true,
+        createdAt: true
+      }
+    });
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    const session = await this.prisma.userSession.findUnique({
+      where: { id: sessionId }
+    });
+
+    if (!session || session.userId !== userId) {
+      throw new UnauthorizedException("Phiên đăng nhập không tồn tại");
+    }
+
+    await this.prisma.userSession.delete({
+      where: { id: sessionId }
+    });
+
+    return { success: true };
+  }
+
+  async revokeAllOtherSessions(userId: string, currentSessionId: string) {
+    await this.prisma.userSession.deleteMany({
+      where: {
+        userId,
+        id: { not: currentSessionId }
+      }
+    });
+
+    return { success: true };
   }
 
   private buildPayload(user: any): JwtUser {
@@ -230,17 +267,33 @@ export class AuthService {
     );
   }
 
-  private async storeRefreshToken(userId: string, refreshToken: string) {
+  private async createSession(userId: string, refreshToken: string, meta?: AuthRequestMeta) {
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    const deviceName = meta?.userAgent ? this.parseDeviceName(meta.userAgent) : null;
 
-    await this.prisma.user.update({
-      where: {
-        id: userId
-      },
+    return this.prisma.userSession.create({
       data: {
-        refreshToken: hashedRefreshToken
+        userId,
+        refreshToken: hashedRefreshToken,
+        deviceName,
+        ipAddress: meta?.ip ?? null,
+        userAgent: meta?.userAgent ?? null
       }
     });
+  }
+
+  private parseDeviceName(userAgent: string): string {
+    if (/Mobile|Android|iPhone|iPad/i.test(userAgent)) {
+      if (/iPhone/i.test(userAgent)) return "iPhone";
+      if (/iPad/i.test(userAgent)) return "iPad";
+      if (/Android/i.test(userAgent)) return "Android";
+      return "Mobile";
+    }
+    if (/Chrome/i.test(userAgent)) return "Chrome";
+    if (/Firefox/i.test(userAgent)) return "Firefox";
+    if (/Safari/i.test(userAgent)) return "Safari";
+    if (/Edge/i.test(userAgent)) return "Edge";
+    return "Trình duyệt";
   }
 
   private async resolveUserFromRefreshToken(refreshToken: string) {
@@ -259,32 +312,36 @@ export class AuthService {
     }
 
     const user = await this.prisma.user.findUnique({
-      where: {
-        id: payload.sub
-      },
+      where: { id: payload.sub },
       include: {
         role: {
           include: {
             permissions: true
           }
-        }
+        },
+        sessions: true
       }
     });
 
-    if (!user || !user.refreshToken || !user.isActive) {
+    if (!user || !user.isActive || user.sessions.length === 0) {
       throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
     }
 
-    const isValidRefreshToken = await bcrypt.compare(refreshToken, user.refreshToken);
+    // Find matching session by comparing refresh token hash
+    let matchedSession: (typeof user.sessions)[0] | undefined;
+    for (const session of user.sessions) {
+      const matches = await bcrypt.compare(refreshToken, session.refreshToken);
+      if (matches) {
+        matchedSession = session;
+        break;
+      }
+    }
 
-    if (!isValidRefreshToken) {
+    if (!matchedSession) {
       throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
     }
 
-    return {
-      payload,
-      user
-    };
+    return { payload, user, session: matchedSession };
   }
 
   private serializeUser(user: any) {
@@ -309,8 +366,7 @@ export class AuthService {
   private buildPasswordResetSecret(passwordHash: string) {
     const resetSecret =
       this.configService.get<string>("JWT_RESET_SECRET") ??
-      this.configService.get<string>("JWT_SECRET") ??
-      "ahso-reset-secret";
+      this.configService.get<string>("JWT_SECRET");
 
     return `${resetSecret}:${passwordHash}`;
   }
@@ -333,9 +389,10 @@ export class AuthService {
 
   private buildForgotPasswordResponse(resetToken?: string) {
     const message = "Nếu email tồn tại trong hệ thống, hướng dẫn khôi phục đã được xếp vào hàng đợi gửi.";
-    const isDevelopment = (this.configService.get<string>("NODE_ENV") ?? "development") !== "production";
+    const isDevMode = this.configService.get<string>("NODE_ENV") === "development";
+    const isDebugEnabled = this.configService.get<string>("DEBUG_RESET") === "true";
 
-    if (!isDevelopment || !resetToken) {
+    if (!isDevMode || !isDebugEnabled || !resetToken) {
       return {
         success: true,
         message

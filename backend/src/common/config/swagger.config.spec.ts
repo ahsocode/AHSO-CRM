@@ -5,13 +5,16 @@ const config = (values: Record<string, string | undefined>) => ({
 });
 
 describe("Swagger config", () => {
-  it("is enabled outside production by default", () => {
-    expect(isSwaggerEnabled(config({ NODE_ENV: "development" }))).toBe(true);
-    expect(isSwaggerEnabled(config({ NODE_ENV: "test" }))).toBe(true);
+  it("is disabled by default in all environments", () => {
+    expect(isSwaggerEnabled(config({ NODE_ENV: "development" }))).toBe(false);
+    expect(isSwaggerEnabled(config({ NODE_ENV: "production" }))).toBe(false);
+    expect(isSwaggerEnabled(config({ NODE_ENV: "test" }))).toBe(false);
+    expect(isSwaggerEnabled(config({}))).toBe(false);
   });
 
-  it("is disabled in production unless explicitly enabled", () => {
-    expect(isSwaggerEnabled(config({ NODE_ENV: "production" }))).toBe(false);
+  it("is enabled only when SWAGGER_ENABLED=true is explicitly set", () => {
+    expect(isSwaggerEnabled(config({ SWAGGER_ENABLED: "true" }))).toBe(true);
     expect(isSwaggerEnabled(config({ NODE_ENV: "production", SWAGGER_ENABLED: "true" }))).toBe(true);
+    expect(isSwaggerEnabled(config({ NODE_ENV: "development", SWAGGER_ENABLED: "false" }))).toBe(false);
   });
 });

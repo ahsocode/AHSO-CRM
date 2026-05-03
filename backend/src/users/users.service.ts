@@ -64,7 +64,7 @@ export class UsersService {
       throw new NotFoundException("Không tìm thấy vai trò được chọn");
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,

@@ -15,10 +15,10 @@ model User {
   role              UserRole   @relation(fields: [roleId], references: [id])
   roleId            String
   avatarUrl         String?
-  refreshToken      String?
   isActive          Boolean    @default(true)
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
+  sessions          UserSession[]
   assignedCustomers Customer[] @relation("AssignedTo")
   createdQuotes     Quote[]
   activities        Activity[]
@@ -35,6 +35,20 @@ model User {
   projectHandoversTo      ProjectHandover[] @relation("ProjectHandoverToUser")
   documentTemplateVariantsCreated  DocumentTemplateVariant[] @relation("DocumentTemplateCreatedBy")
   documentTemplateVariantsApproved DocumentTemplateVariant[] @relation("DocumentTemplateApprovedBy")
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String
+  deviceName   String?
+  ipAddress    String?
+  userAgent    String?
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model UserRole {

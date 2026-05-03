@@ -1,9 +1,12 @@
-import { Body, Controller, Post, Req, Res } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Delete, Get, Param, Post, Req, Res, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { ConfigService } from "@nestjs/config";
 import { Throttle } from "@nestjs/throttler";
 import type { Request, Response } from "express";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { JwtUser } from "./auth.types";
 import { AuthService } from "./auth.service";
 import { ForgotPasswordDto, forgotPasswordSchema } from "./dto/forgot-password.dto";
 import { LoginDto, loginSchema } from "./dto/login.dto";
@@ -36,6 +39,7 @@ export class AuthController {
 
     return {
       accessToken: session.accessToken,
+      sessionId: session.sessionId,
       user: session.user
     };
   }
@@ -48,12 +52,16 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     const refreshToken = this.getCookieValue(request, REFRESH_COOKIE_NAME);
-    const session = await this.authService.refresh(refreshToken ?? "");
+    const session = await this.authService.refresh(refreshToken ?? "", {
+      ip: request.ip,
+      userAgent: request.get("user-agent") ?? null
+    });
 
     response.cookie(REFRESH_COOKIE_NAME, session.refreshToken, this.getRefreshCookieOptions());
 
     return {
       accessToken: session.accessToken,
+      sessionId: session.sessionId,
       user: session.user
     };
   }
@@ -86,9 +94,34 @@ export class AuthController {
 
     response.clearCookie(REFRESH_COOKIE_NAME, this.getBaseRefreshCookieOptions());
 
-    return {
-      success: true
-    };
+    return { success: true };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth("bearer")
+  @ApiOperation({ summary: "GET /api/auth/sessions — list active sessions for current user" })
+  @Get("sessions")
+  getSessions(@CurrentUser() user: JwtUser) {
+    return this.authService.getSessions(user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "DELETE /api/auth/sessions/:id — revoke a specific session" })
+  @Delete("sessions/:id")
+  revokeSession(@CurrentUser() user: JwtUser, @Param("id") sessionId: string) {
+    return this.authService.revokeSession(user.sub, sessionId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "DELETE /api/auth/sessions — revoke all other sessions (keep current)" })
+  @Delete("sessions")
+  revokeAllOtherSessions(
+    @CurrentUser() user: JwtUser,
+    @Req() request: Request
+  ) {
+    // sessionId header set by frontend after login to track current session
+    const currentSessionId = request.headers["x-session-id"] as string | undefined;
+    return this.authService.revokeAllOtherSessions(user.sub, currentSessionId ?? "");
   }
 
   private getCookieValue(request: Request, name: string) {
@@ -111,12 +144,8 @@ export class AuthController {
   }
 
   private getRefreshCookieOptions() {
-    return {
-      ...this.getBaseRefreshCookieOptions(),
-      maxAge: this.parseDurationToMs(
-        this.configService.get<string>("JWT_REFRESH_EXPIRES_IN") ?? "7d"
-      )
-    };
+    // No maxAge → session cookie: browser deletes on close, forcing re-login
+    return this.getBaseRefreshCookieOptions();
   }
 
   private getBaseRefreshCookieOptions() {
@@ -126,30 +155,7 @@ export class AuthController {
       httpOnly: true,
       sameSite: "strict" as const,
       secure: nodeEnv === "production",
-      path: "/"
+      path: "/api/auth"
     };
-  }
-
-  private parseDurationToMs(input: string) {
-    const match = input.trim().match(/^(\d+)(ms|s|m|h|d)$/i);
-
-    if (!match) {
-      return 7 * 24 * 60 * 60 * 1000;
-    }
-
-    const value = Number(match[1]);
-    const unit = match[2].toLowerCase();
-    const multiplier =
-      unit === "ms"
-        ? 1
-        : unit === "s"
-          ? 1000
-          : unit === "m"
-            ? 60_000
-            : unit === "h"
-              ? 3_600_000
-              : 86_400_000;
-
-    return value * multiplier;
   }
 }

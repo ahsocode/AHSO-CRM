@@ -1,6 +1,6 @@
 import axios from "axios";
 import { API_URL } from "./constants";
-import { clearServerSession, clearSession, getAccessToken, persistSession } from "./auth";
+import { clearServerSession, clearSession, getAccessToken, getSessionId, persistSession } from "./auth";
 import { ApiErrorPayload, ApiResponse, AuthSession } from "./types";
 
 export const apiClient = axios.create({
@@ -18,6 +18,11 @@ apiClient.interceptors.request.use((config) => {
   const accessToken = getAccessToken();
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const sessionId = getSessionId();
+  if (sessionId) {
+    config.headers["X-Session-Id"] = sessionId;
   }
 
   return config;

@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -48,7 +49,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  // Swagger — chỉ bật ngoài production hoặc khi SWAGGER_ENABLED=true
+  // Swagger — chỉ bật khi SWAGGER_ENABLED=true
   const swaggerEnabled = isSwaggerEnabled(configService);
 
   if (swaggerEnabled) {
@@ -71,11 +72,10 @@ async function bootstrap() {
   const port = configService.get<number>("PORT") ?? 3001;
   await app.listen(port);
 
-  // eslint-disable-next-line no-console
-  console.log(`🚀 AHSO CRM API ready on http://localhost:${port}/api`);
+  const logger = new Logger("Bootstrap");
+  logger.log(`AHSO CRM API ready on port ${port}`);
   if (swaggerEnabled) {
-    // eslint-disable-next-line no-console
-    console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+    logger.log(`Swagger docs available at /api/docs`);
   }
 }
 

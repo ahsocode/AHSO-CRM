@@ -1,4 +1,4 @@
-import { API_URL, ACCESS_TOKEN_KEY, AUTH_USER_KEY, REFRESH_TOKEN_KEY, getRoleLabelByName } from "./constants";
+import { API_URL, ACCESS_TOKEN_KEY, AUTH_USER_KEY, REFRESH_TOKEN_KEY, SESSION_ID_KEY, getRoleLabelByName } from "./constants";
 import { AuthRoleInfo, AuthSession, AuthUser, Role } from "./types";
 
 type NormalizedAuthUser = Omit<AuthUser, "role"> & { role: AuthRoleInfo };
@@ -123,6 +123,9 @@ export function persistSession(session: AuthSession) {
   const normalizedSession = normalizeAuthSession(session);
 
   getSessionStorage()?.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
+  if (normalizedSession.sessionId) {
+    getSessionStorage()?.setItem(SESSION_ID_KEY, normalizedSession.sessionId);
+  }
   clearLegacyAccessCookie();
 
   if (isBrowser()) {
@@ -135,12 +138,17 @@ export function persistSession(session: AuthSession) {
 
 export function clearSession() {
   getSessionStorage()?.removeItem(ACCESS_TOKEN_KEY);
+  getSessionStorage()?.removeItem(SESSION_ID_KEY);
   clearLegacyClientCookies();
 
   if (isBrowser()) {
     window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     window.localStorage.removeItem(AUTH_USER_KEY);
   }
+}
+
+export function getSessionId() {
+  return getSessionStorage()?.getItem(SESSION_ID_KEY) ?? null;
 }
 
 export async function clearServerSession() {

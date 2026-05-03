@@ -85,7 +85,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Prepare Docker env files
         run: |
-          echo "POSTGRES_PASSWORD=ahso_dev_password" > .env
+          echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" > .env
           cp backend/.env.example backend/.env
           cp frontend/.env.local.example frontend/.env.local
       - name: Start application stack

@@ -32,10 +32,6 @@ describe("AuthController", () => {
           return "development";
         }
 
-        if (key === "JWT_REFRESH_EXPIRES_IN") {
-          return "7d";
-        }
-
         return undefined;
       })
     };
@@ -43,32 +39,31 @@ describe("AuthController", () => {
     controller = new AuthController(authService as unknown as AuthService, configService as unknown as ConfigService);
   });
 
-  it("sets a secure refresh cookie contract on login", async () => {
+  it("sets a secure session refresh cookie on login (no maxAge = session cookie, path=/api/auth)", async () => {
     const response = createResponse();
     authService.login.mockResolvedValue({
       accessToken: "access-token",
       refreshToken: "refresh-token",
-      user: {
-        id: "user-1"
-      }
+      sessionId: "session-1",
+      user: { id: "user-1" }
     });
 
-    await expect(
-      controller.login(
-        { email: "admin@ahso.vn", password: "AHSO123!" },
-        {
-          ip: "::1",
-          get: jest.fn().mockReturnValue("jest")
-        } as unknown as Request,
-        response
-      )
-    ).resolves.toEqual({
+    const result = await controller.login(
+      { email: "admin@ahso.vn", password: "AHSO123!" },
+      {
+        ip: "::1",
+        get: jest.fn().mockReturnValue("jest")
+      } as unknown as Request,
+      response
+    );
+
+    expect(result).toMatchObject({
       accessToken: "access-token",
-      user: {
-        id: "user-1"
-      }
+      sessionId: "session-1",
+      user: { id: "user-1" }
     });
 
+    // Session cookie: no maxAge property, path restricted to /api/auth
     expect((response as any).cookie).toHaveBeenCalledWith(
       "ahso_refresh_token",
       "refresh-token",
@@ -76,10 +71,12 @@ describe("AuthController", () => {
         httpOnly: true,
         sameSite: "strict",
         secure: false,
-        path: "/",
-        maxAge: 604800000
+        path: "/api/auth"
       })
     );
+
+    const cookieOptions = (response as any).cookie.mock.calls[0][2];
+    expect(cookieOptions).not.toHaveProperty("maxAge");
   });
 
   it("reads refresh token from the HttpOnly cookie only", async () => {
@@ -87,21 +84,25 @@ describe("AuthController", () => {
     authService.refresh.mockResolvedValue({
       accessToken: "next-access",
       refreshToken: "next-refresh",
-      user: {
-        id: "user-1"
-      }
+      sessionId: "session-1",
+      user: { id: "user-1" }
     });
 
     await controller.refresh(
       {
+        ip: "::1",
+        get: jest.fn().mockReturnValue("jest"),
         headers: {
           cookie: "ahso_refresh_token=cookie-refresh-token"
         }
-      } as Request,
+      } as unknown as Request,
       response
     );
 
-    expect(authService.refresh).toHaveBeenCalledWith("cookie-refresh-token");
+    expect(authService.refresh).toHaveBeenCalledWith(
+      "cookie-refresh-token",
+      expect.objectContaining({ ip: "::1" })
+    );
     expect((response as any).cookie).toHaveBeenCalled();
   });
 
@@ -127,7 +128,7 @@ describe("AuthController", () => {
         httpOnly: true,
         sameSite: "strict",
         secure: false,
-        path: "/"
+        path: "/api/auth"
       })
     );
   });

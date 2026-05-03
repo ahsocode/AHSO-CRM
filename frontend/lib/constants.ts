@@ -30,6 +30,7 @@ export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 export const ACCESS_TOKEN_KEY = "ahso_access_token";
 export const REFRESH_TOKEN_KEY = "ahso_refresh_token";
 export const AUTH_USER_KEY = "ahso_auth_user";
+export const SESSION_ID_KEY = "ahso_session_id";
 
 export const ROLE_LABELS = {
   ADMIN: "Quản trị hệ thống",

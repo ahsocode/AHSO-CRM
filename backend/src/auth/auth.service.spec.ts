@@ -19,9 +19,9 @@ describe("AuthService", () => {
     name: "Admin",
     role: "ADMIN",
     password: "stored-password-hash",
-    refreshToken: "stored-refresh-hash",
     avatarUrl: null,
     isActive: true,
+    sessions: [],
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-02T00:00:00.000Z")
   };
@@ -31,6 +31,11 @@ describe("AuthService", () => {
     user: {
       findUnique: jest.Mock;
       update: jest.Mock;
+    };
+    userSession: {
+      deleteMany: jest.Mock;
+      create: jest.Mock;
+      delete: jest.Mock;
     };
   };
   let jwtService: {
@@ -54,6 +59,11 @@ describe("AuthService", () => {
       user: {
         findUnique: jest.fn(),
         update: jest.fn()
+      },
+      userSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn().mockResolvedValue({ id: "session-1" }),
+        delete: jest.fn().mockResolvedValue({ id: "session-1" })
       }
     };
     jwtService = {
@@ -102,7 +112,8 @@ describe("AuthService", () => {
     expect(jwtService.signAsync).not.toHaveBeenCalled();
   });
 
-  it("issues a password reset token and exposes a debug reset url in development", async () => {
+  it("issues a password reset token and exposes a debug reset url in development with DEBUG_RESET=true", async () => {
+    configValues["DEBUG_RESET"] = "true";
     prisma.user.findUnique.mockResolvedValue(activeUser);
     jwtService.signAsync.mockResolvedValue("reset-token");
 
@@ -137,7 +148,7 @@ describe("AuthService", () => {
     );
   });
 
-  it("resets the password and invalidates existing refresh tokens", async () => {
+  it("resets the password and invalidates all sessions", async () => {
     const hashMock = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
     hashMock.mockResolvedValue("hashed-next-password" as never);
     jwtService.decode.mockReturnValue({
@@ -151,9 +162,7 @@ describe("AuthService", () => {
       type: "password-reset"
     });
     prisma.user.findUnique.mockResolvedValue(activeUser);
-    prisma.user.update.mockResolvedValue({
-      id: activeUser.id
-    });
+    prisma.user.update.mockResolvedValue({ id: activeUser.id });
 
     await expect(
       service.resetPassword({
@@ -169,15 +178,13 @@ describe("AuthService", () => {
     expect(jwtService.verifyAsync).toHaveBeenCalledWith("reset-token", {
       secret: "reset-secret:stored-password-hash"
     });
-    expect(hashMock).toHaveBeenCalledWith("AHSO123!New", 10);
+    expect(hashMock).toHaveBeenCalledWith("AHSO123!New", 12);
     expect(prisma.user.update).toHaveBeenCalledWith({
-      where: {
-        id: activeUser.id
-      },
-      data: {
-        password: "hashed-next-password",
-        refreshToken: null
-      }
+      where: { id: activeUser.id },
+      data: { password: "hashed-next-password" }
+    });
+    expect(prisma.userSession.deleteMany).toHaveBeenCalledWith({
+      where: { userId: activeUser.id }
     });
   });
 

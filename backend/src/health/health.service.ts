@@ -1,6 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { randomUUID } from "node:crypto";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { Socket } from "node:net";
+import { isAbsolute, resolve } from "node:path";
 import { PrismaService } from "../common/prisma.service";
 
 type HealthCheckStatus = "up" | "down";
@@ -19,6 +22,7 @@ export interface ApplicationHealthStatus {
   services: {
     database: DependencyHealth;
     redis: DependencyHealth;
+    uploads: DependencyHealth;
   };
 }
 
@@ -30,8 +34,13 @@ export class HealthService {
   ) {}
 
   async getStatus(): Promise<ApplicationHealthStatus> {
-    const [database, redis] = await Promise.all([this.checkDatabase(), this.checkRedis()]);
-    const status: HealthCheckStatus = database.status === "up" && redis.status === "up" ? "up" : "down";
+    const [database, redis, uploads] = await Promise.all([
+      this.checkDatabase(),
+      this.checkRedis(),
+      this.checkUploads()
+    ]);
+    const status: HealthCheckStatus =
+      database.status === "up" && redis.status === "up" && uploads.status === "up" ? "up" : "down";
 
     return {
       status,
@@ -40,7 +49,8 @@ export class HealthService {
       environment: this.configService.get<string>("NODE_ENV") ?? "development",
       services: {
         database,
-        redis
+        redis,
+        uploads
       }
     };
   }
@@ -83,6 +93,36 @@ export class HealthService {
         details: error instanceof Error ? error.message : "Không thể kết nối Redis."
       };
     }
+  }
+
+  private async checkUploads(): Promise<DependencyHealth> {
+    const startedAt = Date.now();
+    const uploadRoot = this.getUploadRoot();
+    const probePath = resolve(uploadRoot, `.healthcheck-${randomUUID()}`);
+
+    try {
+      await mkdir(uploadRoot, { recursive: true });
+      await writeFile(probePath, "ok");
+      await rm(probePath, { force: true });
+
+      return {
+        status: "up",
+        latencyMs: Date.now() - startedAt
+      };
+    } catch (error) {
+      return {
+        status: "down",
+        latencyMs: Date.now() - startedAt,
+        details: error instanceof Error ? error.message : "Không thể ghi vào thư mục uploads."
+      };
+    }
+  }
+
+  private getUploadRoot() {
+    const configuredUploadDir = this.configService.get<string>("UPLOAD_DIR") ?? "./uploads";
+    return isAbsolute(configuredUploadDir)
+      ? configuredUploadDir
+      : resolve(process.cwd(), configuredUploadDir);
   }
 
   private pingRedis(host: string, port: number) {

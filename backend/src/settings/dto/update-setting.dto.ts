@@ -1,24 +1,41 @@
 import { z } from "zod";
 import { normalizeWebsiteUrlInput } from "../../common/utils/url";
 
+const emptyToNull = (value: unknown) => {
+  if (typeof value !== "string") {
+    return value ?? null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const nullableString = (max: number, message?: string) =>
+  z.preprocess(emptyToNull, z.string().max(max, message).nullable().optional());
+
+const nullableWebsite = z.preprocess((value) => {
+  const normalized = normalizeWebsiteUrlInput(value);
+  return normalized === undefined ? null : normalized;
+}, z.string().url("Website không hợp lệ").nullable().optional());
+
 // Company settings schema
 export const CompanySettingSchema = z.object({
   name: z.string().min(1, "Tên công ty không được để trống").max(255),
-  shortName: z.string().max(50).optional(),
-  taxId: z.string().max(50).optional(),
-  address: z.string().max(500).optional(),
-  phone: z.string().max(20).optional(),
-  email: z.string().email().optional(),
-  website: z.preprocess(normalizeWebsiteUrlInput, z.string().url("Website không hợp lệ").optional()),
+  shortName: nullableString(50),
+  taxId: nullableString(50),
+  address: nullableString(500),
+  phone: nullableString(20),
+  email: z.preprocess(emptyToNull, z.string().email("Email không hợp lệ").nullable().optional()),
+  website: nullableWebsite,
   // Representative — used as default signatory on generated documents.
-  representative: z.string().max(255).optional(),
-  representativeTitle: z.string().max(100).optional(),
+  representative: nullableString(255),
+  representativeTitle: nullableString(100),
   // Bank details — surfaced on quotations, invoices, payment requests.
-  bankName: z.string().max(255).optional(),
-  bankBranch: z.string().max(255).optional(),
-  bankAccount: z.string().max(100).optional(),
-  bankAccountName: z.string().max(255).optional(),
-  swiftCode: z.string().max(50).optional(),
+  bankName: nullableString(255),
+  bankBranch: nullableString(255),
+  bankAccount: nullableString(100),
+  bankAccountName: nullableString(255),
+  swiftCode: nullableString(50),
 });
 
 export type CompanySettingInput = z.infer<typeof CompanySettingSchema>;

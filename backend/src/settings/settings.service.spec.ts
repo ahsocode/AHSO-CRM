@@ -62,6 +62,43 @@ describe("SettingsService", () => {
     expect(publicInfo).not.toHaveProperty("bankAccountName");
   });
 
+  it("tolerates legacy raw string setting values", async () => {
+    prisma.setting.findMany.mockResolvedValue([
+      {
+        key: "company:name",
+        value: "AHSO Legacy",
+        description: null
+      },
+      {
+        key: "company:website",
+        value: JSON.stringify("https://www.ahso.vn"),
+        description: null
+      }
+    ]);
+
+    await expect(service.getCompanyInfo()).resolves.toEqual({
+      name: "AHSO Legacy",
+      website: "https://www.ahso.vn"
+    });
+  });
+
+  it("serializes null instead of undefined when clearing a setting value", async () => {
+    prisma.setting.upsert.mockResolvedValue({
+      key: "company:phone",
+      value: "null",
+      description: "Company phone"
+    });
+
+    await service.upsertSetting("company:phone", undefined, "Company phone");
+
+    expect(prisma.setting.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ value: "null" }),
+        update: expect.objectContaining({ value: "null" })
+      })
+    );
+  });
+
   it("returns a safe default public company profile when company settings are missing", async () => {
     jest.spyOn(service, "getCompanyInfo").mockResolvedValue({});
 
@@ -118,6 +155,16 @@ describe("SettingsService", () => {
 
     await expect(service.getLogoUrl()).resolves.toBe("data:image/png;base64,abc");
     expect(uploadService.readFileAsDataUrl).toHaveBeenCalledWith("/uploads/logos/logo.png");
+  });
+
+  it("supports legacy raw logo setting values", async () => {
+    prisma.setting.findUnique.mockResolvedValue({
+      key: "logo:url",
+      value: "/uploads/logos/logo.png"
+    });
+    uploadService.readFileAsDataUrl.mockResolvedValue("data:image/png;base64,abc");
+
+    await expect(service.getLogoUrl()).resolves.toBe("data:image/png;base64,abc");
   });
 
   it("falls back to the stored path when a local logo cannot be converted", async () => {

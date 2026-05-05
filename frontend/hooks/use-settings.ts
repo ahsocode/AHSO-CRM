@@ -65,7 +65,9 @@ export function useUpdateCompanyInfo() {
       queryClient.setQueryData<SettingsBundle>(["settings"], (old) =>
         old ? { ...old, company: updatedCompany } : old
       );
+      queryClient.setQueryData<CompanyInfo>(["settings", "company"], updatedCompany);
       void queryClient.invalidateQueries({ queryKey: ["settings"], exact: true });
+      void queryClient.invalidateQueries({ queryKey: ["settings", "company"], exact: true });
     }
   });
 }

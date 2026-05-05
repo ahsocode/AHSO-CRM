@@ -38,7 +38,7 @@ export class SettingsService {
     const result: Record<string, any> = {};
 
     for (const setting of settings) {
-      result[setting.key] = JSON.parse(setting.value);
+      result[setting.key] = this.parseSettingValue(setting.value);
     }
 
     return result;
@@ -75,7 +75,7 @@ export class SettingsService {
 
     return {
       key: setting.key,
-      value: JSON.parse(setting.value),
+      value: this.parseSettingValue(setting.value),
       description: setting.description,
     };
   }
@@ -84,15 +84,17 @@ export class SettingsService {
    * Update or create a setting
    */
   async upsertSetting(key: string, value: any, description?: string) {
+    const serializedValue = JSON.stringify(value ?? null);
+
     return this.prisma.setting.upsert({
       where: { key },
       create: {
         key,
-        value: JSON.stringify(value),
+        value: serializedValue,
         description,
       },
       update: {
-        value: JSON.stringify(value),
+        value: serializedValue,
         ...(description && { description }),
       },
     });
@@ -206,7 +208,7 @@ export class SettingsService {
       return null;
     }
 
-    const storedValue = JSON.parse(logo.value) as string;
+    const storedValue = this.parseSettingValue(logo.value) as string;
 
     if (typeof storedValue !== "string" || !storedValue) {
       return null;
@@ -226,5 +228,15 @@ export class SettingsService {
   async updateLogoUrl(url: string) {
     await this.upsertSetting("logo:url", url, "Company logo URL");
     return { url };
+  }
+
+  private parseSettingValue(value: string) {
+    try {
+      return JSON.parse(value);
+    } catch {
+      // Older deployments may contain raw string settings. Keep the API
+      // resilient so one legacy row does not break the whole settings screen.
+      return value;
+    }
   }
 }

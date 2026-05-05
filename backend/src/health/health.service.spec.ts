@@ -39,6 +39,10 @@ describe("HealthService", () => {
   it("returns up when database and redis checks succeed", async () => {
     prisma.$queryRaw.mockResolvedValue([{ "?column?": 1 }]);
     jest.spyOn(service as any, "pingRedis").mockResolvedValue(undefined);
+    jest.spyOn(service as any, "checkUploads").mockResolvedValue({
+      status: "up",
+      latencyMs: 1
+    });
 
     const status = await service.getStatus();
 
@@ -46,12 +50,18 @@ describe("HealthService", () => {
     expect(status.environment).toBe("test");
     expect(status.services.database.status).toBe("up");
     expect(status.services.redis.status).toBe("up");
+    expect(status.services.uploads.status).toBe("up");
     expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
   it("returns down with dependency details when checks fail", async () => {
     prisma.$queryRaw.mockRejectedValue(new Error("db unavailable"));
     jest.spyOn(service as any, "pingRedis").mockRejectedValue(new Error("redis unavailable"));
+    jest.spyOn(service as any, "checkUploads").mockResolvedValue({
+      status: "down",
+      latencyMs: 1,
+      details: "uploads unavailable"
+    });
 
     const status = await service.getStatus();
 
@@ -63,6 +73,10 @@ describe("HealthService", () => {
     expect(status.services.redis).toMatchObject({
       status: "down",
       details: "redis unavailable"
+    });
+    expect(status.services.uploads).toMatchObject({
+      status: "down",
+      details: "uploads unavailable"
     });
   });
 });

@@ -19,9 +19,6 @@ export function useUploadLogo() {
       formData.append("file", file);
 
       const response = await apiClient.post<ApiResponse<LogoUploadResult>>("/upload/logo", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        },
         onUploadProgress: (event) => {
           if (!event.total || !onProgress) {
             return;
@@ -55,9 +52,6 @@ export function useUploadFile() {
       formData.append("file", file);
 
       const response = await apiClient.post<ApiResponse<UploadedFileResult>>("/upload/file", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        },
         onUploadProgress: (event) => {
           if (!event.total || !onProgress) {
             return;

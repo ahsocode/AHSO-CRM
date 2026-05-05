@@ -28,8 +28,8 @@ const companyFormSchema = z.object({
 
 type CompanyFormValues = z.infer<typeof companyFormSchema>;
 
-function toOptionalString(value?: string) {
-  return value?.trim() || undefined;
+function toNullableString(value?: string) {
+  return value?.trim() || null;
 }
 
 function normalizeValues(values: CompanyInfo): CompanyFormValues {
@@ -96,19 +96,21 @@ export function CompanyForm({
         <form
           className="grid gap-4 md:grid-cols-2"
           onSubmit={form.handleSubmit((values) => {
-          onSubmit({
+            const normalizedWebsite = normalizeWebsiteInput(values.website);
+
+            onSubmit({
               name: values.name.trim(),
-              shortName: toOptionalString(values.shortName),
-              taxId: toOptionalString(values.taxId),
-              address: toOptionalString(values.address),
-              phone: toOptionalString(values.phone),
-              email: toOptionalString(values.email),
-              website: toOptionalString(normalizeWebsiteInput(values.website) as string | undefined),
-              bankName: toOptionalString(values.bankName),
-              bankAccount: toOptionalString(values.bankAccount),
-              bankAccountName: toOptionalString(values.bankAccountName),
-              bankBranch: toOptionalString(values.bankBranch),
-              swiftCode: toOptionalString(values.swiftCode)
+              shortName: toNullableString(values.shortName),
+              taxId: toNullableString(values.taxId),
+              address: toNullableString(values.address),
+              phone: toNullableString(values.phone),
+              email: toNullableString(values.email),
+              website: toNullableString(typeof normalizedWebsite === "string" ? normalizedWebsite : undefined),
+              bankName: toNullableString(values.bankName),
+              bankAccount: toNullableString(values.bankAccount),
+              bankAccountName: toNullableString(values.bankAccountName),
+              bankBranch: toNullableString(values.bankBranch),
+              swiftCode: toNullableString(values.swiftCode)
             });
           })}
         >

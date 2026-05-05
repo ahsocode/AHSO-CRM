@@ -1,0 +1,20 @@
+{{!-- Seller / issuing company block. Pulls from company settings loaded in
+       base context. Shows bank details when present. --}}
+<section class="company-info">
+  <div class="company-info__heading">{{t "company_info"}}</div>
+  <div class="company-info__name">{{company.name}}</div>
+  {{#if company.taxCode}}<div class="company-info__line"><span>{{t "tax_code"}}:</span> {{company.taxCode}}</div>{{/if}}
+  {{#if company.address}}<div class="company-info__line"><span>{{t "address"}}:</span> {{company.address}}</div>{{/if}}
+  {{#if company.phone}}<div class="company-info__line"><span>{{t "phone"}}:</span> {{company.phone}}</div>{{/if}}
+  {{#if company.email}}<div class="company-info__line"><span>{{t "email"}}:</span> {{company.email}}</div>{{/if}}
+  {{#if company.website}}<div class="company-info__line"><span>{{t "website"}}:</span> {{company.website}}</div>{{/if}}
+  {{#if company.representative}}<div class="company-info__line"><span>{{t "representative"}}:</span> {{company.representative}}{{#if company.representativeTitle}} &mdash; {{company.representativeTitle}}{{/if}}</div>{{/if}}
+  {{#if company.bankName}}
+    <div class="company-info__bank">
+      <div class="company-info__bank-heading">{{t "bank_info"}}</div>
+      <div class="company-info__line"><span>{{t "bank_name"}}:</span> {{company.bankName}}{{#if company.bankBranch}} &mdash; {{company.bankBranch}}{{/if}}</div>
+      {{#if company.bankAccount}}<div class="company-info__line"><span>{{t "bank_account"}}:</span> {{company.bankAccount}}</div>{{/if}}
+      {{#if company.bankAccountName}}<div class="company-info__line"><span>{{t "bank_account_name"}}:</span> {{company.bankAccountName}}</div>{{/if}}
+    </div>
+  {{/if}}
+</section>

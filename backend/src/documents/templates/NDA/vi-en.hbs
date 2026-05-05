@@ -1,0 +1,121 @@
+{{!-- Phase 6: NDA Template (Bilingual VI-EN) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_nda"}}</h1>
+  <div class="classic-header__meta">
+    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> NDA-{{customer.id}}/{{date generatedAt "year"}}
+  </div>
+</div>
+
+<main class="classic-body">
+  <p><strong>
+    <span class="lang-vi">{{t "nda_agreement_statement" date=(date generatedAt "long") location=company.address}}</span>
+    <span class="lang-en">Today, on {{date generatedAt "short"}}, at {{company.address}}, for the purpose of business cooperation, we are:</span>
+  </strong></p>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">
+    <span class="lang-vi">BÊN TIẾT LỘ</span><span class="lang-en">DISCLOSING PARTY</span> ({{t "party_a"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{company.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "tax_code"}}:</th>
+      <td>{{company.taxCode}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td><span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span> <strong>{{company.representative}}</strong> - <span class="lang-vi">Chức vụ:</span><span class="lang-en">Title:</span> {{company.representativeTitle}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">
+    <span class="lang-vi">BÊN TIẾP NHẬN</span><span class="lang-en">RECEIVING PARTY</span> ({{t "party_b"}})
+  </h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "tax_code"}}:</th>
+      <td>{{customer.taxCode}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td><span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span> <strong>{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</strong> - <span class="lang-vi">Chức vụ:</span><span class="lang-en">Title:</span> {{#if primaryContact}}{{primaryContact.title}}{{else}}...................{{/if}}</td>
+    </tr>
+  </table>
+
+  <div class="classic-article" style="margin-top: 16pt;">
+    <div class="classic-article__heading">{{t "nda_article_1"}}</div>
+    <div class="classic-article__clause">
+      <p>
+        <span class="lang-vi">{{t "nda_purpose_content"}}</span>
+        <span class="lang-en">The parties agree to review and provide each other with internal information for the purpose of evaluating the possibility of establishing a cooperative relationship or signing a commercial/service contract.</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "nda_article_2"}}</div>
+    <div class="classic-article__clause">
+      <p>
+        <span class="lang-vi">{{t "nda_scope_content"}}</span>
+        <span class="lang-en">'Confidential Information' includes but is not limited to: customer data, source code, business strategies, technological know-how, financial documents, and other information marked 'Confidential'. Whether exchanged in writing, electronic data or orally.</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "nda_article_3"}}</div>
+    <div class="classic-article__clause">
+      <p>
+        <span class="lang-vi">{{t "nda_responsibility_content"}}</span>
+        <span class="lang-en">The receiving party commits to use the confidential information solely for the purpose specified in Article 1; Not to copy, disclose or provide to any third party without the written consent of the providing party.</span>
+      </p>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "nda_article_4"}}</div>
+    <div class="classic-article__clause">
+      <p>
+        <span class="lang-vi">{{t "nda_duration_content"}}</span>
+        <span class="lang-en">This agreement is effective from the date of signing and remains in effect for 03 years from the end of negotiations or termination of the contract. The breaching party shall be liable to compensate for all direct and indirect damages arising from the breach.</span>
+      </p>
+      <p>{{t "original_copies_statement"}}</p>
+    </div>
+  </div>
+
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong><span class="lang-vi">ĐẠI DIỆN</span><span class="lang-en">REPRESENTATIVE OF</span> {{t "party_a"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div class="classic-stamp"><span class="lang-vi">ĐÓNG DẤU</span><span class="lang-en">STAMP</span></div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong><span class="lang-vi">ĐẠI DIỆN</span><span class="lang-en">REPRESENTATIVE OF</span> {{t "party_b"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div class="classic-stamp"><span class="lang-vi">ĐÓNG DẤU</span><span class="lang-en">STAMP</span></div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

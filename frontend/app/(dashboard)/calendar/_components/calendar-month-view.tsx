@@ -5,7 +5,6 @@ import { useState } from "react";
 import { AppIcon } from "@/components/shared/app-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useUpdateActivity } from "@/hooks/use-activities";
@@ -94,14 +93,43 @@ function isToday(dateStr: string): boolean {
   return toLocalDateStr(new Date()) === dateStr;
 }
 
-function isCurrentMonth(dateStr: string, year: number, month: number): boolean {
-  const d = new Date(`${dateStr}T00:00:00`);
-  return d.getFullYear() === year && d.getMonth() === month;
-}
-
 function formatTimeShort(dateStr: string): string {
   const d = new Date(dateStr);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function getMonthCount(dateFrom: string, dateTo: string) {
+  const from = new Date(`${dateFrom}T00:00:00`);
+  const to = new Date(`${dateTo}T00:00:00`);
+  return Math.max(1, (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1);
+}
+
+function getMonthsInRange(dateFrom: string, dateTo: string): Array<{ year: number; month: number }> {
+  const from = new Date(`${dateFrom}T00:00:00`);
+  const to = new Date(`${dateTo}T00:00:00`);
+  const monthCount = getMonthCount(dateFrom, dateTo);
+
+  return Array.from({ length: monthCount }, (_, index) => {
+    const current = new Date(from.getFullYear(), from.getMonth() + index, 1);
+    return { year: current.getFullYear(), month: current.getMonth() };
+  });
+}
+
+function getScaleByMonthCount(monthCount: number): MonthViewScale {
+  if (monthCount <= 1) return "single";
+  if (monthCount === 2) return "double";
+  return "triple";
+}
+
+function getMonthRangeLabel(months: Array<{ year: number; month: number }>) {
+  if (months.length === 0) return "";
+  if (months.length === 1) {
+    return `${MONTH_NAMES_VI[months[0].month]} ${months[0].year}`;
+  }
+
+  return months
+    .map((month) => `${MONTH_NAMES_VI[month.month]} ${month.year}`)
+    .join(" - ");
 }
 
 interface RescheduleState {
@@ -119,11 +147,9 @@ interface CalendarMonthViewProps {
   isLoading: boolean;
   isError: boolean;
   errorMessage?: string;
-  /** Controls the visible month — derived from dateFrom */
   dateFrom: string;
+  dateTo: string;
   onMonthChange: (year: number, month: number) => void;
-  /** Scale: single (1 month), double (2 months), triple (3 months) */
-  scale?: MonthViewScale;
 }
 
 export function CalendarMonthView({
@@ -132,61 +158,32 @@ export function CalendarMonthView({
   isError,
   errorMessage,
   dateFrom,
+  dateTo,
   onMonthChange,
-  scale = "single"
 }: CalendarMonthViewProps) {
   const router = useRouter();
   const updateMutation = useUpdateActivity();
 
-  // Parse current month from dateFrom
-  const [viewYear, viewMonth] = (() => {
-    const d = new Date(`${dateFrom}T00:00:00`);
-    return [d.getFullYear(), d.getMonth()];
-  })();
+  const months = getMonthsInRange(dateFrom, dateTo);
+  const firstVisibleMonth = months[0];
+  const monthCount = months.length;
+  const effectiveScale = getScaleByMonthCount(monthCount);
+  const gridConfig = getMonthViewGridConfig(effectiveScale);
+  const periodLabel = getMonthRangeLabel(months);
 
   const [draggedItem, setDraggedItem] = useState<CalendarEventItem | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [rescheduleDialog, setRescheduleDialog] = useState<RescheduleState | null>(null);
 
-  // Get grid config based on scale
-  const gridConfig = getMonthViewGridConfig(scale);
-
-  // Collect months to display based on scale
-  const months: Array<{ year: number; month: number }> = [];
-  if (scale === "single") {
-    months.push({ year: viewYear, month: viewMonth });
-  } else if (scale === "double") {
-    months.push({ year: viewYear, month: viewMonth });
-    const nextMonth = viewMonth + 1;
-    months.push({
-      year: nextMonth > 11 ? viewYear + 1 : viewYear,
-      month: nextMonth > 11 ? 0 : nextMonth
-    });
-  } else {
-    months.push({ year: viewYear, month: viewMonth });
-    const nextMonth = viewMonth + 1;
-    const nextNextMonth = viewMonth + 2;
-    months.push({
-      year: nextMonth > 11 ? viewYear + 1 : viewYear,
-      month: nextMonth > 11 ? 0 : nextMonth
-    });
-    months.push({
-      year: nextNextMonth > 11 ? viewYear + 1 : viewYear,
-      month: nextNextMonth > 11 ? nextNextMonth - 12 : nextNextMonth
-    });
-  }
-
-  // Collect all days from all months
-  const allGridDays = months.flatMap(({ year, month }) => getMonthGridDays(year, month));
   const itemsByDay = groupItemsByDay(items);
 
   // Navigation
   const handlePrevMonth = () => {
-    const d = new Date(viewYear, viewMonth - 1, 1);
+    const d = new Date(firstVisibleMonth.year, firstVisibleMonth.month - 1, 1);
     onMonthChange(d.getFullYear(), d.getMonth());
   };
   const handleNextMonth = () => {
-    const d = new Date(viewYear, viewMonth + 1, 1);
+    const d = new Date(firstVisibleMonth.year, firstVisibleMonth.month + 1, 1);
     onMonthChange(d.getFullYear(), d.getMonth());
   };
   const handleToday = () => {
@@ -247,12 +244,6 @@ export function CalendarMonthView({
     } catch { /* toast handled by hook */ }
   };
 
-  // Generate weeks for all months
-  const weeks: string[][] = [];
-  for (let i = 0; i < allGridDays.length; i += 7) {
-    weeks.push(allGridDays.slice(i, i + 7));
-  }
-
   if (isLoading) {
     return (
       <Card className="border border-white/70">
@@ -284,8 +275,8 @@ export function CalendarMonthView({
             Lịch công tác
           </p>
           <h2 className="font-heading text-xl font-bold text-text-primary">
-            {months.map(m => `${MONTH_NAMES_VI[m.month]}`).join(" - ")} {viewYear}
-            {scale !== "single" && ` (${scale === "double" ? "2" : "3"} tháng)`}
+            {periodLabel}
+            {monthCount > 1 && ` (${monthCount} tháng)`}
           </h2>
           <p className="mt-1 text-sm text-text-secondary">
             {items.length} activity · Kéo thả giữa các ngày để dời lịch, click để sửa
@@ -307,9 +298,9 @@ export function CalendarMonthView({
       <CardContent className="p-0">
         {/* Render months side-by-side based on scale */}
         <div className={cn("grid gap-0", {
-          "grid-cols-1": scale === "single",
-          "grid-cols-2": scale === "double",
-          "grid-cols-3": scale === "triple"
+          "grid-cols-1": effectiveScale === "single",
+          "grid-cols-2": effectiveScale === "double",
+          "grid-cols-3": effectiveScale === "triple"
         })}>
           {months.map((month) => {
             const monthDays = getMonthGridDays(month.year, month.month);
@@ -383,10 +374,7 @@ export function CalendarMonthView({
                           {/* Activity bars */}
                           {dayItems.length > 0 && (
                             <div className="space-y-0.5 overflow-hidden">
-                              {dayItems.slice(0, scale === "single" ? 3 : 1).map((item) => {
-                                const isOverdue =
-                                  !item.isCompleted &&
-                                  Boolean(item.scheduledAt && new Date(item.scheduledAt) < new Date());
+                              {dayItems.slice(0, effectiveScale === "single" ? 3 : 1).map((item) => {
                                 return (
                                   <div
                                     key={item.id}
@@ -412,19 +400,19 @@ export function CalendarMonthView({
                                     )}
                                   >
                                     <span className={cn("shrink-0 rounded-full", ACTIVITY_TYPE_DOT[item.type], {
-                                      "h-1 w-1": scale === "single",
-                                      "h-0.5 w-0.5": scale !== "single"
+                                      "h-1 w-1": effectiveScale === "single",
+                                      "h-0.5 w-0.5": effectiveScale !== "single"
                                     })} />
                                     <span className="truncate flex-1">
-                                      {scale === "single" && item.scheduledAt ? `${formatTimeShort(item.scheduledAt)} ` : ""}
+                                      {effectiveScale === "single" && item.scheduledAt ? `${formatTimeShort(item.scheduledAt)} ` : ""}
                                       {item.title}
                                     </span>
                                   </div>
                                 );
                               })}
-                              {dayItems.length > (scale === "single" ? 3 : 1) && (
+                              {dayItems.length > (effectiveScale === "single" ? 3 : 1) && (
                                 <p className={cn("px-1 font-semibold text-text-secondary", gridConfig.activityClass)}>
-                                  +{dayItems.length - (scale === "single" ? 3 : 1)}
+                                  +{dayItems.length - (effectiveScale === "single" ? 3 : 1)}
                                 </p>
                               )}
                             </div>

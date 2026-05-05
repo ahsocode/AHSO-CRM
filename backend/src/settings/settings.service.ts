@@ -1,10 +1,34 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "src/common/prisma.service";
+import { UploadService } from "src/upload/upload.service";
 import { CompanySettingInput, PolicySettingInput } from "./dto/update-setting.dto";
+
+const PUBLIC_COMPANY_FIELDS = [
+  "name",
+  "shortName",
+  "taxId",
+  "address",
+  "phone",
+  "email",
+  "website"
+] as const;
+
+const DEFAULT_PUBLIC_COMPANY_INFO = {
+  name: "AHSO CRM",
+  shortName: "AHSO",
+  taxId: null,
+  address: null,
+  phone: null,
+  email: null,
+  website: null
+} satisfies Record<(typeof PUBLIC_COMPANY_FIELDS)[number], string | null>;
 
 @Injectable()
 export class SettingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly uploadService: UploadService
+  ) {}
 
   /**
    * Get all settings as key-value pairs
@@ -91,18 +115,36 @@ export class SettingsService {
    * Get company info
    */
   async getCompanyInfo() {
-    const settings = await this.getFlatSettings();
-    const companyKeys = Object.keys(settings).filter((k) =>
-      k.startsWith("company:")
-    );
+    return this.getSettingsByPrefix("company:");
+  }
 
-    const result: Record<string, any> = {};
-    for (const key of companyKeys) {
-      const fieldName = key.replace("company:", "");
-      result[fieldName] = settings[key];
+  /**
+   * Get public company profile safe for unauthenticated screens.
+   */
+  async getPublicCompanyInfo() {
+    const company = await this.getCompanyInfo();
+    const publicCompany: Record<string, any> = {};
+
+    for (const field of PUBLIC_COMPANY_FIELDS) {
+      publicCompany[field] = this.resolvePublicValue(company[field], DEFAULT_PUBLIC_COMPANY_INFO[field]);
     }
 
-    return result;
+    return publicCompany;
+  }
+
+  /**
+   * Get public settings safe for unauthenticated screens.
+   */
+  async getPublicSettings() {
+    const [company, logo] = await Promise.all([
+      this.getPublicCompanyInfo(),
+      this.getLogoUrl()
+    ]);
+
+    return {
+      company,
+      logo
+    };
   }
 
   /**
@@ -124,18 +166,32 @@ export class SettingsService {
    * Get policy settings
    */
   async getPolicies() {
+    return this.getSettingsByPrefix("policy:");
+  }
+
+  private async getSettingsByPrefix(prefix: string) {
     const settings = await this.getFlatSettings();
-    const policyKeys = Object.keys(settings).filter((k) =>
-      k.startsWith("policy:")
+    const scopedKeys = Object.keys(settings).filter((key) =>
+      key.startsWith(prefix)
     );
 
     const result: Record<string, any> = {};
-    for (const key of policyKeys) {
-      const fieldName = key.replace("policy:", "");
+
+    for (const key of scopedKeys) {
+      const fieldName = key.replace(prefix, "");
       result[fieldName] = settings[key];
     }
 
     return result;
+  }
+
+  private resolvePublicValue(value: unknown, fallback: string | null) {
+    if (typeof value === "string") {
+      const trimmedValue = value.trim();
+      return trimmedValue.length > 0 ? value : fallback;
+    }
+
+    return value ?? fallback;
   }
 
   /**
@@ -150,7 +206,18 @@ export class SettingsService {
       return null;
     }
 
-    return JSON.parse(logo.value);
+    const storedValue = JSON.parse(logo.value) as string;
+
+    if (typeof storedValue !== "string" || !storedValue) {
+      return null;
+    }
+
+    if (!storedValue.startsWith("/uploads/")) {
+      return storedValue;
+    }
+
+    const dataUrl = await this.uploadService.readFileAsDataUrl(storedValue);
+    return dataUrl ?? storedValue;
   }
 
   /**

@@ -1,470 +1,110 @@
-# AHSO CRM - B2B Sales Management System
+# AHSO CRM
 
-A comprehensive, production-ready Customer Relationship Management system for B2B sales organizations. Manage the complete sales lifecycle from leads to contracts with intuitive interfaces, powerful analytics, and automated workflows.
+AHSO CRM is a self-hosted B2B sales management system for technical/industrial projects. This README reflects the **current branch state** on `feature/backend-services-ai` as of **2026-04-24**, not an aspirational end-state.
 
-**Status**: ✅ **95% Complete** - Production Ready  
-**Version**: 1.0  
-**Last Updated**: April 2026
+## Current Branch Status
 
-## 📋 Table of Contents
+### Production-ready in this branch
+- Core CRM flow: customers, projects, quotes, contracts, activities, dashboard, calendar
+- Authentication with access token + **HttpOnly refresh cookie**
+- Admin RBAC: roles, permissions, settings, users
+- Local upload flows for logo, files, survey media, and business documents
+- Documents v1 runtime for `QUOTATION` and `CONTRACT`
+- Project 360 v1: overview, timeline, surveys, documents, handover
+- Search, notifications, realtime foundation, health endpoint
+- Docker Compose runtime with service healthchecks
 
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Getting Started](#-getting-started)
-- [Core Modules](#-core-features)
-- [API Documentation](#-api-documentation)
-- [Deployment](#-deployment)
-- [Architecture](#-architecture)
-- [Troubleshooting](#-troubleshooting)
-- [Future Roadmap](#-roadmap)
+### Beta / internal
+- Document template editor outside `QUOTATION` and `CONTRACT`
+- Report builder and advanced analytics still need business validation
+- Push notifications, AI endpoints, and Twilio SMS require real environment verification before rollout
+- Custom fields and some Project 360 polish are functional but still evolving
 
----
+### Deferred
+- Google / Microsoft OAuth
+- Multi-tenant support
+- Offline mutation queue / background sync
+- Gesture-heavy mobile workflows
 
-## 🎯 Features
+### Release posture
+- **Good for internal staging/demo**
+- **Not yet ideal for internet-exposed production** without more hardening and broader automated coverage
+- See [docs/REVIEW_2026-04-24.md](docs/REVIEW_2026-04-24.md) for the current review baseline
 
-**Complete Sales Lifecycle Management**:
-- 📊 **Customers** - Lead tracking, contact management, company hierarchy
-- 📈 **Projects** - Kanban pipeline with 7 stages, drag-drop workflow
-- 📄 **Quotes** - PDF generation, versioning, status tracking
-- 📋 **Contracts** - Signature tracking, milestone management, payments
-- 📞 **Activities** - Call logs, emails, meetings, follow-ups (7 types)
-- 📅 **Calendar** - Google Calendar-style event management
-- 📊 **Dashboard** - KPI metrics, revenue trends, pipeline analysis
-- 📈 **Reports** - Sales analytics, revenue forecasting, status breakdowns
-- 🛡️ **Admin Panel** - Settings, policies, RBAC, user management
-
----
-
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Frontend
-- **Next.js 14** (App Router) + TypeScript
-- **React 18** + Hooks
-- **Tailwind CSS** - Responsive design
-- **React Hook Form** + **Zod** - Form validation
-- **TanStack Query** - Data fetching & caching
-- **Zustand** - State management
-- **Recharts** - Data visualization
-- **shadcn/ui** - Component library
-
-### Backend
-- **NestJS 10** - Node.js framework
-- **Prisma** - ORM with migrations
-- **PostgreSQL 16** - Database
-- **Redis 7** - Caching
-- **JWT** - Authentication
-- **Zod** - Request validation
-- **Puppeteer** - PDF generation
-
-### Deployment
-- **Docker Compose** - Containerization
-- **Self-hosted** - Full control
-
----
-
-## ⚡ Getting Started
-
-### Prerequisites
-- Node.js 18+
-- Docker & Docker Compose
-- PostgreSQL 16 (or Docker)
-- Redis 7 (or Docker)
-
-### Installation
-
-**1. Clone & Install**
-```bash
-git clone https://github.com/your-org/ahso-crm.git
-cd AHSO-CRM
-
-# Frontend
-cd frontend && npm install && cd ..
-
-# Backend
-cd backend && npm install && cd ..
-```
-
-**2. Environment Setup**
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
-# Edit files with your configuration
-```
-
-**3. Database Setup**
-```bash
-cd backend
-npm run prisma:migrate  # Run migrations
-npm run prisma:seed     # Load test data
-```
-
-**4. Run Development Servers**
-```bash
-# Terminal 1: Backend
-cd backend && npm run start:dev
-
-# Terminal 2: Frontend
-cd frontend && npm run dev
-```
-
-**5. Login**
-```
-Email: admin@ahso.vn
-Password: AHSO123!
-```
-
-### Docker Compose
-
-```bash
-docker compose up -d --build
-docker exec ahso-crm-backend npm run prisma:seed
-```
-
----
-
-## 📱 Core Features
-
-### 📊 Customers Module
-- List/detail views with search & filtering
-- Contact management within customers
-- Customer statistics (projects, revenue)
-- Soft delete with recovery option
-
-### 📈 Projects Module
-- **Kanban Board** - 7 stages with drag-drop
-- **Status Transitions** - Workflow validation
-- **Timeline** - Activity history & changes
-- **Customer Linking** - Full project context
-
-### 📄 Quotes Module
-- Full CRUD with status workflow
-- **PDF Generation** - Beautiful output
-- **Line Items** - Quantity, pricing, totals
-- **Versioning** - Track all versions
-- **Duplication** - Create from templates
-
-### 📋 Contracts Module
-- Full lifecycle management
-- **Milestones** - Delivery tracking
-- **Payments** - Payment logging
-- **Acceptance PDF** - Signature documents
-- **Attachments** - File management
-
-### 📞 Activities Module
-7 Activity Types:
-- 📞 CALL - Phone conversations
-- 📧 EMAIL - Email communications  
-- 🤝 MEETING - In-person meetings
-- 🔍 SURVEY - Customer surveys
-- 📺 DEMO - Product demonstrations
-- 📝 NOTE - Internal notes
-- 🔗 FOLLOWUP - Follow-up tasks
-
-### 📅 Calendar
-- **Week View** - Google Calendar style (7 days max)
-- **Month View** - Auto-scale 1-3 columns
-- **Drag-to-Reschedule** - Move activities
-- **Smart Search** - Jump to dates
-
-### 📊 Dashboard
-- KPI cards (revenue, projects, quotes, contracts)
-- 6-month revenue trend chart
-- Pipeline distribution
-- Today's task checklist
-- Recent activity feed
-
-### 📈 Reports
-- Revenue trends & forecasting
-- Status breakdown charts
-- Top customers by revenue
-- Pipeline value analysis
-
----
-
-## 🔐 Security & Access Control
-
-### Authentication
-- **JWT Tokens** - 15 min access, 7 day refresh
-- **bcrypt** - Password hashing
-- **Refresh Rotation** - Automatic token refresh
-- **Password Reset** - Secure email flow
-
-### Authorization (RBAC)
-- **3 System Roles**: ADMIN, MANAGER, STAFF
-- **Custom Roles** - Granular permissions
-- **Resource × Action** - Fine-grained control
-- **Permission Gates** - On all endpoints
-
-### Data Security
-- ✅ HTTPS/TLS encryption
-- ✅ CORS policy enforcement
-- ✅ SQL injection prevention
-- ✅ XSS protection
-- ✅ CSRF tokens
-- ✅ Secure cookies
-
----
-
-## 📊 API Documentation
-
-**Base URL**: `http://localhost:3001/api`  
-**Swagger Docs**: `http://localhost:3001/api/docs`
-
-**Response Format**:
-```json
-{
-  "data": [...],
-  "meta": {
-    "total": 100,
-    "page": 1,
-    "limit": 10
-  }
-}
-```
-
-**Authentication**:
-```
-Authorization: Bearer {accessToken}
-```
-
----
-
-## 🧪 Testing
-
-```bash
-cd backend
-
-# Run tests
-npm test
-
-# Watch mode
-npm test -- --watch
-
-# Specific module
-npm test -- customers
-```
-
-**Test Accounts**:
-- admin@ahso.vn / AHSO123! (ADMIN)
-- manager@ahso.vn / AHSO123! (MANAGER)
-- staff@ahso.vn / AHSO123! (STAFF)
-
----
-
-## 🚀 Deployment
-
-### Docker Compose
-```bash
-docker compose -f docker-compose.yml up -d --build
-docker compose logs -f
-docker compose down
-```
-
-### Environment Variables
-
-**Backend**:
-```
-DATABASE_URL=postgresql://user:pass@host:5432/db
-REDIS_URL=redis://host:6379
-JWT_SECRET=min-32-characters
-NODE_ENV=production
-```
-
-**Frontend**:
-```
-NEXT_PUBLIC_API_URL=https://api.example.com
-NEXT_PUBLIC_APP_NAME=AHSO CRM
-```
-
----
-
-## 📁 Architecture
-
-```
-frontend/
-├── app/                 # Next.js App Router
-│   ├── (auth)/         # Login, password reset
-│   └── (dashboard)/    # Protected pages
-├── components/         # Reusable components
-├── hooks/             # Custom hooks
-└── lib/               # Utilities
-
-backend/
-├── src/
-│   ├── auth/          # Authentication
-│   ├── customers/     # Customers module
-│   ├── projects/      # Projects module
-│   ├── quotes/        # Quotes module
-│   ├── contracts/     # Contracts module
-│   ├── activities/    # Activities module
-│   ├── calendar/      # Calendar module
-│   ├── dashboard/     # KPI aggregation
-│   ├── reports/       # Analytics
-│   ├── admin/         # Admin panel
-│   └── common/        # Shared utilities
-└── prisma/           # Database schema
-```
-
----
-
-## 🐛 Troubleshooting
-
-**Database Connection**
-```bash
-docker ps | grep postgres
-docker logs ahso-crm-postgres
-```
-
-**Port Conflicts**
-```bash
-lsof -i :3000 | grep LISTEN | awk '{print $2}' | xargs kill -9
-```
-
-**Missing Dependencies**
-```bash
-rm -rf node_modules package-lock.json
-npm install
-rm -rf frontend/.next
-```
-
----
-
-## 📚 Documentation
-
-- [Complete Feature Documentation](docs/COMPLETION_SUMMARY.md)
-- [Project Architecture](docs/PROJECT_STRUCTURE.md)
-- [Database Schema](backend/prisma/schema.prisma)
-- [API Documentation](http://localhost:3001/api/docs)
-
----
-
-## 🚀 Future Enhancements
-
-- **Phase 7**: AI features (Claude API integration)
-- **Phase 8**: Mobile app (React Native)
-- **Phase 9**: Enterprise features (SSO, multi-tenant)
-
----
-
-## ✅ Quality Assurance
-
-- ✅ 17/17 backend modules implemented
-- ✅ 20/20 frontend pages implemented
-- ✅ Unit tests for core services
-- ✅ Database migrations tested
-- ✅ Docker deployment verified
-- ✅ Type safety (TypeScript strict)
-- ✅ Code formatting (Prettier)
-- ✅ Linting (ESLint)
-
----
-
-**Last Updated**: April 19, 2026  
-**Status**: Production Ready ✅
-uploads/ local disk
-Puppeteer PDF rendering
-```
+- Next.js 14 App Router
+- TypeScript strict
+- Tailwind CSS + shadcn/ui
+- TanStack Query
+- Zustand
+- React Hook Form + Zod
+- Recharts + selected Nivo charts
 
 ### Backend
 - NestJS 10
 - Prisma 5
 - PostgreSQL 16
 - Redis 7
-- JWT access/refresh
-- Zod validation pipe
-- Transform interceptor với response `{ data, meta }`
-- Local file upload tại `backend/uploads/`
-- Puppeteer cho PDF quotes/contracts
+- JWT auth
+- Zod validation
+- Puppeteer for document/PDF rendering
 
-### Frontend
-- Next.js 14 App Router
-- TypeScript strict
-- Tailwind CSS
-- TanStack Query
-- Zustand
-- React Hook Form + Zod
-- Axios client với refresh-token interceptor
+### Ops
+- Docker Compose
+- GitHub Actions CI/CD
+- Winston logging
+- Sentry hooks
 
-## Cấu trúc repo
+## Repo Layout
 
 ```text
 AHSO-CRM/
-├── backend/
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   ├── migrations/
-│   │   └── seed.ts
-│   └── src/
-│       ├── auth/
-│       ├── common/
-│       ├── contacts/
-│       ├── customers/
-│       ├── dashboard/
-│       ├── projects/
-│       ├── quotes/
-│       ├── contracts/
-│       ├── activities/
-│       ├── calendar/
-│       ├── reports/
-│       ├── settings/
-│       ├── roles/
-│       ├── permissions/
-│       ├── upload/
-│       └── users/
-├── frontend/
-│   ├── app/
-│   │   ├── (auth)/
-│   │   └── (dashboard)/
-│   ├── components/
-│   ├── hooks/
-│   └── lib/
-├── docs/
-├── scripts/
-├── docker-compose.yml
-└── docker-compose.dev.yml
+├── backend/                  NestJS API + Prisma
+├── frontend/                 Next.js App Router UI
+├── e2e/                      Playwright smoke tests
+├── docs/                     Current branch documentation
+├── docker-compose.yml        Local/staging stack
+├── .github/workflows/        CI + deploy workflows
+└── package.json              Root Playwright runner
 ```
 
-## Routes chính
+## Main Functional Areas
 
-### Frontend
-- `/login`
-- `/forgot-password`
-- `/reset-password`
-- `/dashboard`
-- `/customers`
-- `/projects`
-- `/quotes`
-- `/contracts`
-- `/activities`
-- `/calendar`
-- `/reports`
-- `/users`
-- `/admin`
+### CRM lifecycle
+- Customers
+- Projects with kanban and Project 360
+- Quotes with preview/PDF/send flow
+- Contracts with milestones, payments, and acceptance PDF
+- Activities and calendar scheduling
 
-### API
-- `/api/auth/*`
-- `/api/dashboard/*`
-- `/api/customers/*`
-- `/api/projects/*`
-- `/api/quotes/*`
-- `/api/contracts/*`
-- `/api/activities/*`
-- `/api/calendar/*`
-- `/api/reports/*`
-- `/api/settings/*`
-- `/api/roles/*`
-- `/api/permissions/*`
-- `/api/upload/*`
+### Admin and governance
+- Company info and policies
+- Roles and permissions
+- Internal user management
+- Document template administration
 
-Swagger:
-- `http://localhost:3001/api/docs`
+### Documents and knowledge
+- Business document registry for uploaded/received files
+- Documents v1 render/download pipeline for quotation + contract
+- Surveys and survey media linked into Project 360
 
-## Chạy bằng Docker
+## Authentication and Security Notes
 
-Yêu cầu:
-- Docker Desktop / Docker Compose v2
+- Access token is used by the frontend API client
+- Refresh token is rotated through a **backend-set HttpOnly cookie**
+- Core CRM and admin endpoints now use permission enforcement
+- Public settings exposure is reduced to safe branding data only
+- Health endpoint is available at `GET /api/health`
 
-### 1. Chuẩn bị env
+Current caveats:
+- Backend and Playwright coverage are still below a mature production target
+- Some enterprise/reporting surfaces remain beta
+
+## Environment Files
+
+Copy all three:
 
 ```bash
 cp .env.example .env
@@ -472,154 +112,161 @@ cp backend/.env.example backend/.env
 cp frontend/.env.local.example frontend/.env.local
 ```
 
-### 2. Khởi động stack
+### Important backend envs
+- `DATABASE_URL`
+- `REDIS_URL`
+- `JWT_SECRET`
+- `JWT_REFRESH_EXPIRES_IN`
+- `FRONTEND_URL`
+- `CORS_ORIGIN`
+- `THROTTLE_TTL`
+- `THROTTLE_LIMIT`
+- `ANTHROPIC_API_KEY`
+- `SMTP_*`
+- `TWILIO_*`
+- `SENTRY_DSN`
+
+### Important frontend envs
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_APP_NAME`
+
+## Local Development
+
+### Install
 
 ```bash
-docker compose up -d --build backend frontend
+npm install
+cd backend && npm install && cd ..
+cd frontend && npm install && cd ..
 ```
 
-Services:
+### Run with Docker
+
+```bash
+docker compose up -d --build
+docker compose exec -T backend npm run prisma:seed
+docker compose ps
+curl http://127.0.0.1:3001/api/health
+```
+
+Default local URLs:
 - Frontend: `http://localhost:3000`
-- Backend: `http://localhost:3001`
-- PostgreSQL: `localhost:5432`
-- Redis: `localhost:6379`
+- Backend: `http://localhost:3001/api`
+- Swagger: `http://localhost:3001/api/docs`
 
-### 3. Kiểm tra nhanh
+### Run without Docker
 
 ```bash
-docker ps
-docker logs ahso-crm-backend-1 --tail 50
-docker exec ahso-crm-backend-1 npx prisma migrate status
+cd backend && npm run prisma:deploy && npm run prisma:seed
+cd backend && npm run start:dev
+cd frontend && npm run dev
 ```
 
-## Chạy local không dùng full Docker
+## Test Accounts
+
+```text
+admin@ahso.vn    / AHSO123!
+manager@ahso.vn  / AHSO123!
+staff@ahso.vn    / AHSO123!
+```
+
+## Useful Commands
+
+### Root
+
+```bash
+npm run test:e2e
+```
 
 ### Backend
 
 ```bash
 cd backend
-npm install
-npm run prisma:generate
-npm run prisma:migrate
+npm run lint
+npm run typecheck
+npm test -- --runInBand
+npm run build
+npm run prisma:deploy
 npm run prisma:seed
-npm run start:dev
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm run lint
+npm run typecheck
+npm run build
 ```
 
-Lưu ý:
-- Nếu chạy PDF ngoài Docker, máy local cần có Chrome/Chromium để Puppeteer render PDF.
+## Documents v1 Semantics
 
-## Biến môi trường
+Documents v1 is intentionally narrow in this branch.
 
-### Root
+- Runtime document generation is enabled for:
+  - `QUOTATION`
+  - `CONTRACT`
+- `POST /api/documents/:type/:entityId/render`
+  - creates a new document version
+  - renders PDF once
+  - stores the artifact under local uploads
+- `GET /api/documents/:documentId/download`
+  - downloads an existing rendered artifact
+  - does **not** create a new version
+- End-user document creation flows should not expose template types outside the two runtime-ready types above
 
-```env
-POSTGRES_PASSWORD="ahso_dev_password"
-```
+## Deployment Notes
 
-### Backend
+- CI now runs:
+  - backend lint
+  - backend typecheck
+  - backend tests
+  - backend build
+  - frontend lint
+  - frontend typecheck
+  - frontend build
+  - Playwright smoke tests
 
-Các biến mẫu nằm trong [backend/.env.example](backend/.env.example), gồm:
-- `DATABASE_URL`
-- `REDIS_URL`
-- `JWT_SECRET`
-- `JWT_REFRESH_EXPIRES_IN`
-- `JWT_RESET_SECRET`
-- `UPLOAD_DIR`
-- `PORT`
-- `CORS_ORIGIN`
-- `SWAGGER_ENABLED`
+### Production Docker Compose
 
-### Frontend
+Production deploys should use `docker-compose.prod.yml`, not the local development compose file. The production compose file pulls immutable backend/frontend images and keeps Postgres/Redis internal to the Docker network.
 
-Các biến mẫu nằm trong [frontend/.env.local.example](frontend/.env.local.example):
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_APP_NAME`
-
-## Tài khoản seed
-
-```text
-ADMIN   admin@ahso.vn    / AHSO123!
-MANAGER manager@ahso.vn  / AHSO123!
-STAFF   staff@ahso.vn    / AHSO123!
-```
-
-## Commands hay dùng
-
-### Build
+Prepare server-side env files:
 
 ```bash
-cd backend && npm run build
-cd frontend && npm run build
+cp .env.production.example .env.production.local
+cp backend/.env.production.example backend/.env.production.local
+cp frontend/.env.production.example frontend/.env.production.local
 ```
 
-### Seed lại dữ liệu dev
+Then edit the `*.production.local` files with real secrets/domains and run:
 
 ```bash
-cd backend && npm run prisma:seed
+./scripts/check-deploy-readiness.sh
+docker compose --env-file .env.production.local -f docker-compose.prod.yml pull
+docker compose --env-file .env.production.local -f docker-compose.prod.yml up -d
 ```
 
-### Rebuild app containers
+Important deploy notes:
+- `NEXT_PUBLIC_API_URL` is baked into the Next.js browser bundle at image build time.
+- GitHub Actions therefore requires `PROD_PUBLIC_API_URL` to build the frontend image correctly.
+- Deploy health probes use `GET /api/health` and `GET /login`.
+- Uploaded files and generated PDFs should be persisted through `UPLOADS_DIR`.
 
-```bash
-docker compose up -d --build backend frontend
-```
+Required deploy secrets for GitHub Actions:
+- `PROD_HOST`
+- `PROD_USER`
+- `PROD_SSH_KEY`
+- `PROD_APP_DIR`
+- `PROD_PUBLIC_API_URL`
 
-### Smoke test admin panel
+Optional deploy secrets:
+- `PROD_GHCR_USERNAME`
+- `PROD_GHCR_TOKEN`
+- `SLACK_WEBHOOK_URL`
 
-```bash
-./scripts/test-admin-panel.sh
-```
+## Recommended Reading
 
-## Kiểm thử hiện có
-
-Backend unit tests:
-- `auth.service.spec.ts`
-- `quotes.service.spec.ts`
-- `contracts.service.spec.ts`
-
-Chạy:
-
-```bash
-cd backend
-npm test
-```
-
-## File quan trọng cho phase gần nhất
-
-- Quotes PDF:
-  - [backend/src/quotes/quotes-pdf.service.ts](backend/src/quotes/quotes-pdf.service.ts)
-  - [frontend/app/(dashboard)/quotes/_components/quote-preview-client.tsx](frontend/app/(dashboard)/quotes/_components/quote-preview-client.tsx)
-- Contracts acceptance PDF:
-  - [backend/src/contracts/contracts-pdf.service.ts](backend/src/contracts/contracts-pdf.service.ts)
-  - [frontend/app/(dashboard)/contracts/_components/contract-acceptance-preview-client.tsx](frontend/app/(dashboard)/contracts/_components/contract-acceptance-preview-client.tsx)
-- Projects drag-drop:
-  - [frontend/app/(dashboard)/projects/_components/project-kanban-board.tsx](frontend/app/(dashboard)/projects/_components/project-kanban-board.tsx)
-  - [frontend/hooks/use-projects.ts](frontend/hooks/use-projects.ts)
-- Contract attachment upload:
-  - [frontend/app/(dashboard)/contracts/_components/contract-file-uploader.tsx](frontend/app/(dashboard)/contracts/_components/contract-file-uploader.tsx)
-  - [backend/src/upload/upload.service.ts](backend/src/upload/upload.service.ts)
-
-## Phần còn mở
-
-Những phần chưa khóa hoàn toàn ở thời điểm hiện tại:
-- frontend automated tests
-- CI/CD pipeline
-- hardening production deploy
-- một số polish UI giữa các module cũ/mới
-
-## Ghi chú
-
-- `docs/AGENT_HANDOFF.md` hữu ích cho handoff, nhưng source of truth vẫn là code hiện tại trong repo.
-- Nếu Docker báo `no space left on device`, dọn build cache:
-
-```bash
-docker builder prune -af
-```
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
+- [docs/COMPLETION_SUMMARY.md](docs/COMPLETION_SUMMARY.md)
+- [docs/REVIEW_2026-04-24.md](docs/REVIEW_2026-04-24.md)

@@ -1,0 +1,11 @@
+{{!-- Running footer with page number + tiny brand line.
+       Puppeteer doesn't render arbitrary HTML in the header/footer template
+       unless explicitly configured, so this partial is usually placed at the
+       document tail rather than as a per-page running footer. --}}
+<footer class="page-footer">
+  <div class="page-footer__brand">{{company.name}}{{#if company.website}} · {{company.website}}{{/if}}</div>
+  <div class="page-footer__meta">
+    <span class="page-footer__doc">{{#if docNumber}}{{docNumber}}{{/if}}</span>
+    <span class="page-footer__generated">{{t "page"}}: <span class="pageNumber"></span></span>
+  </div>
+</footer>

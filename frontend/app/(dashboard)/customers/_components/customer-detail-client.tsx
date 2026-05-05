@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -9,10 +10,12 @@ import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { DocumentActions } from "@/components/shared/document-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useCustomer } from "@/hooks/use-customers";
-import { ROLE_LABELS } from "@/lib/constants";
+import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatMonthYear, formatRelativeTime } from "@/lib/format";
 import { ActivityType, ContractStatus, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -63,6 +66,7 @@ function getErrorMessage(error: unknown) {
 
 export function CustomerDetailClient({ customerId }: { customerId: string }) {
   const customerQuery = useCustomer(customerId);
+  const customFieldsQuery = useCustomFields("customer");
 
   if (customerQuery.isLoading) {
     return (
@@ -118,6 +122,11 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
             <Link href={`/customers/${customerId}/edit`} className={cn(buttonVariants({ variant: "primary" }))}>
               Chỉnh sửa
             </Link>
+            <DocumentActions 
+              entityType="customer" 
+              entityId={customerId} 
+              customerLanguage={customer.language ?? "vi"} 
+            />
             <Link href="/customers" className={cn(buttonVariants({ variant: "outline" }))}>
               Quay lại danh sách
             </Link>
@@ -170,7 +179,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
               <AvatarInitials name={customer.assignedTo.name} className="h-14 w-14 rounded-full text-base" />
               <div>
                 <p className="font-heading text-xl font-bold text-text-primary">{customer.assignedTo.name}</p>
-                <p className="text-sm text-text-secondary">{ROLE_LABELS[customer.assignedTo.role]}</p>
+                <p className="text-sm text-text-secondary">{getRoleLabelByName(customer.assignedTo.role)}</p>
               </div>
             </div>
 
@@ -196,6 +205,21 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
         <MetricCard label="Tổng dự án" value={stats.projectCount} />
         <MetricCard label="Báo giá đã phát sinh" value={stats.recentQuoteCount} />
       </div>
+
+      <Card className="border border-white/70">
+        <CardHeader className="mb-0 gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dynamic Schema</p>
+          <CardTitle>Custom fields</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CustomFieldRenderer
+            fields={customFieldsQuery.data ?? []}
+            values={customer.customFieldValues ?? {}}
+            emptyTitle="Chưa có custom field cho khách hàng"
+            emptyDescription="Khi admin tạo field động cho resource khách hàng, dữ liệu sẽ hiện ở đây."
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">

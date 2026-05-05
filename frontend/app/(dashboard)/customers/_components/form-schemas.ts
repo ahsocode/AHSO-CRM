@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeWebsiteInput } from "@/lib/url";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") {
@@ -13,7 +14,7 @@ const optionalString = (maxLength: number) =>
   z.preprocess(emptyToUndefined, z.string().trim().max(maxLength).optional());
 
 const optionalUrl = z.preprocess(
-  emptyToUndefined,
+  (value) => emptyToUndefined(normalizeWebsiteInput(value)),
   z.string().trim().url("Website không hợp lệ").optional()
 );
 
@@ -34,6 +35,7 @@ export const customerFormSchema = z.object({
   source: optionalString(80),
   notes: optionalString(2000),
   status: z.enum(["LEAD", "PROSPECT", "ACTIVE", "INACTIVE"]),
+  language: z.enum(["vi", "vi-en"]),
   isVip: z.boolean(),
   assignedToId: z.string().trim().min(1, "Người phụ trách là bắt buộc")
 });
@@ -52,6 +54,7 @@ export const defaultCustomerFormValues: CustomerFormValues = {
   source: "",
   notes: "",
   status: "LEAD",
+  language: "vi",
   isVip: false,
   assignedToId: ""
 };

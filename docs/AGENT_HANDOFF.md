@@ -1,252 +1,177 @@
 # Agent Handoff
 
-Tài liệu này là snapshot để agent mới có thể tiếp tục công việc trong `AHSO-CRM` mà không phải dò lại toàn bộ lịch sử.
+Tài liệu này phản ánh trạng thái thực tế của branch `feature/backend-services-ai` sau đợt fix pack cho `documents`, `reports` và release readiness. Khi có xung đột giữa tài liệu cũ và code hiện tại, ưu tiên:
 
-## Snapshot
+1. `git status` / `git log`
+2. code hiện tại trong `backend/src` và `frontend/app`
+3. tài liệu này
 
-- Repo: `https://github.com/ahsocode/AHSO-CRM`
-- Branch hiện tại: `main`
-- Remote HEAD gần nhất đã push: `19422dd` `feat: add contract form and detail actions frontend`
-- Workspace local tại thời điểm ghi chú: clean working tree
-- Docker stack đang chạy:
-  - Frontend: `http://localhost:3000`
-  - Backend: `http://localhost:3001`
-  - Postgres: `5432`
-  - Redis: `6379`
+## Snapshot hiện tại
 
-## Tài khoản seed
+- Repo: `AHSO-CRM`
+- Branch: `feature/backend-services-ai`
+- Frontend dev URL: `http://localhost:3000`
+- Backend API URL: `http://localhost:3001/api`
+- Swagger: `http://localhost:3001/api/docs`
+- Tài khoản seed:
+  - `admin@ahso.vn / AHSO123!`
+  - `manager@ahso.vn / AHSO123!`
+  - `staff@ahso.vn / AHSO123!`
 
-- Email: `admin@ahso.vn`
-- Password: `AHSO123!`
+## Những phần production-ready
 
-## Recent Commits
+- Auth JWT + refresh token + middleware bảo vệ route
+- RBAC admin panel: settings, roles, permissions, logo upload
+- Customers / Projects / Quotes / Contracts / Activities / Calendar / Dashboard
+- Local file uploads qua `/uploads/*`
+- Quotes PDF backend
+- Contracts acceptance PDF backend
+- Document runtime và drag-drop editor cho:
+  - `QUOTATION`
+  - `CONTRACT`
+- Notifications realtime foundation, email service, webhooks, audit logs
 
-- `19422dd` `feat: add contract form and detail actions frontend`
-- `d3bbd21` `feat: add contract create and update backend`
-- `11ff912` `feat: add quote workflow frontend actions`
-- `ddb295c` `feat: add quote workflow backend actions`
-- `878a612` `feat: add ahso crm sales and delivery workflows`
-- `6fb5805` `feat: add calendar reports and contract workflows`
+## Những phần beta / internal
 
-## Đã Hoàn Thành
+- Tất cả document templates ngoài:
+  - `QUOTATION`
+  - `CONTRACT`
+- Một số `DocumentDataLoaderService` beta template vẫn chứa dữ liệu mẫu ở các section chưa map đủ schema
+- Advanced reports vẫn cần business validation thêm, nhất là các chart phân tích cao cấp
+- Push notifications và SMS mới ở mức cần verify bằng môi trường thật trước khi rollout
 
-### Foundation
+## Những phần deferred
 
-- Next.js App Router frontend
-- NestJS + Prisma backend
-- Docker Compose cho `frontend`, `backend`, `postgres`, `redis`
-- JWT auth với login / refresh / logout
-- Route protection bằng middleware frontend
+- Google OAuth / Microsoft OAuth
+- Multi-tenant
+- Offline mutation queue / background sync
+- Gesture-heavy mobile interactions
 
-### Dashboard
+## Semantics documents đã chốt
 
-- Dashboard thật đã có API và UI
+### Render / Download
 
-### Customers
+- `POST /api/documents/:type/:entityId/render`
+  - tạo **một version tài liệu mới**
+  - render PDF một lần
+  - lưu PDF thật vào local uploads
+  - tạo đúng một bản ghi `Document`
+  - trả về:
+    - `documentId`
+    - `number`
+    - `downloadUrl`
+    - `renderedAt`
 
-- `customers` list/detail thật
-- create / update / soft delete customer
-- create / update / delete contacts
+- `GET /api/documents/:documentId/download`
+  - tải lại artifact đã render
+  - **không** tạo số tài liệu mới
+  - **không** insert `Document` mới
 
-### Projects
+- `GET /api/documents/:type/:entityId/download`
+  - chỉ để backward-compatible
+  - tải document mới nhất đã tồn tại theo `type + entityId + language`
+  - nếu chưa render thì trả lỗi rõ ràng, không render ngầm
 
-- list/detail thật
-- create / update / soft delete project
-- kanban / update status
+### Preview HTML
 
-### Quotes
+- Frontend dùng route protected:
+  - `/documents/preview?type=...&entityId=...&lang=...`
+- Route này fetch preview HTML qua `apiClient` để giữ auth cùng origin frontend
 
-- list / detail / preview thật
-- create quote
-- update quote
-- duplicate quote version
-- update quote status
-- route `/quotes/[id]/edit`
-- CTA tạo contract từ accepted quote
+### Template readiness
 
-### Contracts
+- `QUOTATION`
+  - `runtimeStatus = production`
+  - `endUserEnabled = true`
+- `CONTRACT`
+  - `runtimeStatus = production`
+  - `endUserEnabled = true`
+- Tất cả loại khác
+  - `runtimeStatus = beta`
+  - `endUserEnabled = false`
 
-- list / detail thật
-- create contract
-- update contract
-- route `/contracts/new`
-- route `/contracts/[id]/edit`
-- create / update milestones
-- create payments
-- CTA tạo contract từ `projects` và `quotes`
+Kết quả:
+- `DocumentActions` chỉ hiển thị `QUOTATION` và `CONTRACT`
+- `/admin/document-templates` vẫn hiển thị toàn bộ template với badge `Production` / `Beta`
+- `/quotes/:id` và `/contracts/:id` đều có selector template đã publish để người dùng chọn trước khi preview/render PDF
+- Smoke test chuẩn cho Documents v1:
+  - `scripts/test-documents-v1.sh`
 
-### Calendar / Reports
-
-- `calendar` và `reports` đã có API + UI thật ở mức phase hiện tại
-
-## Chưa Hoàn Thành
-
-- `forgot-password` mới là UI stub, chưa có reset token flow thật
-- Chưa có auto tests bài bản cho auth / quotes / contracts
-- Chưa có upload file thật cho `contract.fileUrl`, hiện là link text
-- Chưa có PDF / acceptance document workflow cho contracts
-- Chưa có CI/CD và hardening production
-
-## Trạng Thái Thực Tế So Với README
-
-`README.md` hiện có phần trạng thái module cũ hơn tiến độ thực tế. Khi cần nguồn sự thật cho tiến độ gần nhất, ưu tiên:
-
-1. `docs/AGENT_HANDOFF.md`
-2. `git log --oneline`
-3. code hiện tại trong `frontend/app/(dashboard)` và `backend/src`
-
-## Entry Points Quan Trọng
-
-### Backend
-
-- Auth: `backend/src/auth`
-- Customers: `backend/src/customers`, `backend/src/contacts`
-- Projects: `backend/src/projects`
-- Quotes: `backend/src/quotes`
-- Contracts: `backend/src/contracts`
-- Prisma schema + seed: `backend/prisma/schema.prisma`, `backend/prisma/seed.ts`
-
-### Frontend
-
-- Layout shell: `frontend/components/layout`
-- Route protection: `frontend/middleware.ts`
-- Shared API/types: `frontend/lib/api-client.ts`, `frontend/lib/types.ts`
-- Query hooks: `frontend/hooks`
-- Quotes UI: `frontend/app/(dashboard)/quotes`
-- Contracts UI: `frontend/app/(dashboard)/contracts`
-- Projects UI: `frontend/app/(dashboard)/projects`
-
-## Hành Vi Nghiệp Vụ Quan Trọng
-
-### Quotes
-
-- Quote editable khi status là `DRAFT` hoặc `REJECTED`
-- Duplicate quote tạo version mới ở `DRAFT`
-- Quote `ACCEPTED` có thể đẩy project từ pre-sale sang `WON`
-- Nếu project đã có contract thì quote workflow bị khóa phù hợp
-
-### Contracts
-
-- `POST /api/contracts` tự sinh `contractNo` dạng `HD-YYYY-XXX`
-- 1 project chỉ có 1 contract
-- Có thể tạo contract từ project + accepted quote
-- Khi tạo/update contract:
-  - `ACTIVE` hoặc `SUSPENDED` => project chuyển `DELIVERING`
-  - `COMPLETED` => project chuyển `COMPLETED`
-  - `CANCELLED` => project hiện quay về `WON`
-
-## Routes Đã Có
-
-### Frontend
-
-- `/login`
-- `/forgot-password`
-- `/dashboard`
-- `/customers`
-- `/customers/new`
-- `/customers/[id]`
-- `/customers/[id]/edit`
-- `/projects`
-- `/projects/new`
-- `/projects/[id]`
-- `/projects/[id]/edit`
-- `/quotes`
-- `/quotes/new`
-- `/quotes/[id]`
-- `/quotes/[id]/edit`
-- `/quotes/[id]/preview`
-- `/contracts`
-- `/contracts/new`
-- `/contracts/[id]`
-- `/contracts/[id]/edit`
-- `/calendar`
-- `/reports`
+## Entry points quan trọng
 
 ### Backend
 
-- Auth:
-  - `POST /api/auth/login`
-  - `POST /api/auth/refresh`
-  - `POST /api/auth/logout`
-- Users:
-  - `GET /api/users`
-  - `PATCH /api/users/:id`
-- Customers / Contacts:
-  - `GET/POST /api/customers`
-  - `GET/PATCH/DELETE /api/customers/:id`
-  - `GET /api/customers/:id/stats`
-  - `GET/POST /api/customers/:customerId/contacts`
-  - `PATCH/DELETE /api/contacts/:id`
-- Projects:
-  - `GET/POST /api/projects`
-  - `GET/PATCH/DELETE /api/projects/:id`
-  - `PATCH /api/projects/:id/status`
-- Quotes:
-  - `GET/POST /api/quotes`
-  - `GET/PATCH /api/quotes/:id`
-  - `POST /api/quotes/:id/duplicate`
-  - `PATCH /api/quotes/:id/status`
-- Contracts:
-  - `GET/POST /api/contracts`
-  - `GET/PATCH /api/contracts/:id`
-  - `POST /api/contracts/:id/milestones`
-  - `PATCH /api/contracts/milestones/:id`
-  - `POST /api/contracts/:id/payments`
-- Calendar:
-  - `GET /api/calendar/events`
+- Documents:
+  - `backend/src/documents/documents.service.ts`
+  - `backend/src/documents/documents.controller.ts`
+  - `backend/src/documents/document-template-variants.service.ts`
+  - `backend/src/documents/document-data-loader.service.ts`
+  - `backend/src/documents/template-registry.ts`
 - Reports:
-  - `GET /api/reports/overview`
-  - `GET /api/reports/revenue-trend`
-  - `GET /api/reports/status-breakdown`
-  - `GET /api/reports/top-customers`
+  - `backend/src/reports/reports.service.ts`
+- Upload:
+  - `backend/src/upload/upload.service.ts`
+- Prisma:
+  - `backend/prisma/schema.prisma`
+  - `backend/prisma/migrations`
 
-## Runbook Nhanh
+### Frontend
 
-### Chạy stack
+- Document actions:
+  - `frontend/components/shared/document-actions.tsx`
+  - `frontend/hooks/use-documents.ts`
+  - `frontend/app/documents/preview/page.tsx`
+- Admin template editor:
+  - `frontend/app/(dashboard)/admin/document-templates`
+- Reports UI:
+  - `frontend/app/(dashboard)/reports/_components/reports-client.tsx`
+- Route protection:
+  - `frontend/middleware.ts`
 
-```bash
-docker compose up -d --build
-docker compose ps
-```
+## Regression coverage hiện có / đang cần ưu tiên
 
-### Kiểm tra cơ bản
+### Đã có
 
-```bash
-node -e "fetch('http://127.0.0.1:3000/login').then(r=>console.log(r.status))"
-node -e "fetch('http://127.0.0.1:3001/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'admin@ahso.vn',password:'AHSO123!'})}).then(r=>console.log(r.status))"
-```
+- Backend unit tests cho:
+  - auth
+  - quotes
+  - contracts
+  - activities
+  - dashboard
+  - reports
+  - AI
+  - email
+  - webhooks
+  - documents lifecycle
+  - document template variants
+- Playwright smoke cho:
+  - auth
+  - dashboard
+  - customers
+  - projects
+  - quotes
+  - contracts
+  - admin
+  - calendar
 
-### Build sạch trong container nếu local bị nhiễu
+### Cần theo dõi thêm
 
-Frontend local từng gặp lỗi `next/dist/compiled/semver/package.json` bị corrupt trong `node_modules`. Nếu local build lỗi kiểu này, ưu tiên:
+- Document template editor interactions sâu hơn:
+  - drag/drop nhiều box
+  - approval / set active cạnh tranh
+- Realtime / notification edge cases
+- Push notifications trên môi trường browser thật
+- Business validation cho advanced reports
 
-1. rebuild bằng Docker
-2. hoặc xóa `frontend/node_modules` rồi cài lại
+## Lưu ý cho agent tiếp theo
 
-### Mẫu xác minh route protected
-
-```bash
-node -e "fetch('http://127.0.0.1:3000/contracts/new',{headers:{cookie:'ahso_access_token=test; ahso_refresh_token=test'},redirect:'manual'}).then(r=>console.log(r.status))"
-```
-
-## Bước Tiếp Theo Đề Xuất
-
-Ưu tiên hợp lý nhất:
-
-1. `forgot-password` backend
-   - tạo reset token
-   - invalidate token
-   - đổi mật khẩu thật
-2. `forgot-password` frontend
-   - gửi email/reset request UI thật
-   - màn hình đặt lại mật khẩu
-3. test coverage tối thiểu
-   - auth smoke
-   - quote workflow
-   - contract workflow
-
-## Ghi Chú Cho Agent Tiếp Theo
-
-- Giữ nhịp commit nhỏ, tách backend trước rồi frontend sau là đang hiệu quả và dễ review.
-- Khi cần xác minh build, Docker là nguồn xác minh ổn định hơn local install hiện tại.
-- Đừng suy ra tiến độ từ README status table cũ; kiểm tra code hiện tại trước.
+- Không over-claim documents: end-user runtime hiện chỉ mở cho `QUOTATION` và `CONTRACT`.
+- Nếu cần sửa thêm document template runtime, luôn kiểm tra:
+  - active variant
+  - fallback HBS
+  - preview frontend route
+  - render/download semantics
+- Nếu cần rollout thêm template production, phải làm đủ 3 lớp:
+  - data loader thật
+  - runtimeStatus/endUserEnabled trong registry
+  - smoke test preview + PDF

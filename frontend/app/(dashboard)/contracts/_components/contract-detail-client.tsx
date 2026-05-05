@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -10,17 +12,24 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCustomFields } from "@/hooks/use-custom-fields";
+import { useRuntimeDocumentTemplateVariants } from "@/hooks/use-documents";
 import { useDownloadContractAcceptancePdf, useContract } from "@/hooks/use-contracts";
 import { useToast } from "@/hooks/use-toast";
+import { DocumentActions } from "@/components/shared/document-actions";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { resolveAssetUrl } from "@/lib/auth";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import type { DocumentTemplateVariant } from "@/lib/types";
 import { cn, downloadBlob } from "@/lib/utils";
 import { ContractMilestoneManager } from "./contract-milestone-manager";
 import { ContractPaymentManager } from "./contract-payment-manager";
 
 export function ContractDetailClient({ contractId }: { contractId: string }) {
+  const [selectedTemplateVariantId, setSelectedTemplateVariantId] = useState("");
   const contractQuery = useContract(contractId);
+  const customFieldsQuery = useCustomFields("contract");
+  const templateVariantsQuery = useRuntimeDocumentTemplateVariants("CONTRACT");
   const downloadAcceptancePdf = useDownloadContractAcceptancePdf();
   const { error: showError } = useToast();
 
@@ -67,6 +76,22 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
 
   const contract = contractQuery.data;
   const attachmentUrl = resolveAssetUrl(contract.fileUrl);
+  const selectedTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.id === selectedTemplateVariantId);
+  const activeTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.isActive);
+  const documentPreviewHref = {
+    pathname: "/documents/preview",
+    query: {
+      type: "CONTRACT",
+      entityId: contract.id,
+      lang: contract.project.customer.language === "vi-en" ? "vi-en" : "vi",
+      ...(selectedTemplateVariantId ? { templateVariantId: selectedTemplateVariantId } : {})
+    }
+  };
+  const selectedTemplateLabel = selectedTemplateVariant
+    ? `${selectedTemplateVariant.name} · v${selectedTemplateVariant.version}`
+    : activeTemplateVariant
+      ? `${activeTemplateVariant.name} · v${activeTemplateVariant.version} · active`
+      : "Mẫu mặc định / fallback hệ thống";
 
   return (
     <div className="space-y-8">
@@ -84,29 +109,14 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
             <Link href={`/projects/${contract.project.id}`} className={cn(buttonVariants({ variant: "outline" }))}>
               Mở dự án
             </Link>
-            <Link
-              href={`/contracts/${contract.id}/acceptance-preview`}
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              Xem biên bản nghiệm thu
-            </Link>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={downloadAcceptancePdf.isPending}
-              onClick={() => {
-                downloadAcceptancePdf.mutate(contract.id, {
-                  onSuccess: ({ blob, filename }) => {
-                    downloadBlob(blob, filename);
-                  },
-                  onError: (downloadError) => {
-                    showError(getApiErrorMessage(downloadError, "Không thể tải PDF biên bản nghiệm thu."));
-                  }
-                });
-              }}
-            >
-              {downloadAcceptancePdf.isPending ? "Đang tạo PDF..." : "Tải PDF"}
-            </Button>
+            <DocumentActions 
+              entityType="contract" 
+              entityId={contract.id} 
+              customerLanguage={contract.project.customer.language ?? "vi"}
+              templateVariantId={selectedTemplateVariantId}
+              templateVariantLabel={selectedTemplateLabel}
+              showTemplateSelector={false}
+            />
           </div>
         }
       />
@@ -138,6 +148,26 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
               <MiniPanel label="Ký ngày" value={contract.signDate ? formatDate(contract.signDate) : "Chưa cập nhật"} />
               <MiniPanel label="Bắt đầu" value={contract.startDate ? formatDate(contract.startDate) : "Chưa cập nhật"} />
               <MiniPanel label="Kết thúc" value={contract.endDate ? formatDate(contract.endDate) : "Chưa cập nhật"} />
+            </div>
+            <div className="mt-6">
+              <ContractTemplateSelector
+                activeTemplateName={activeTemplateVariant?.name}
+                isLoading={templateVariantsQuery.isLoading}
+                selectedTemplateVariantId={selectedTemplateVariantId}
+                templateVariants={templateVariantsQuery.data ?? []}
+                onChange={setSelectedTemplateVariantId}
+              />
+            </div>
+            <div className="mt-4">
+              <Link
+                href={documentPreviewHref}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(buttonVariants({ variant: "outline" }))}
+              >
+                <AppIcon name="preview" className="h-4 w-4" />
+                Xem trước hợp đồng
+              </Link>
             </div>
             {attachmentUrl ? (
               <div className="mt-6">
@@ -188,6 +218,21 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
         <MetricCard label="Còn lại" value={<CurrencyDisplay amount={contract.stats.outstandingAmount} short />} />
         <MetricCard label="Tiến độ milestone" value={`${contract.stats.completionRate}%`} />
       </div>
+
+      <Card className="border border-white/70">
+        <CardHeader className="mb-0 gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dynamic Schema</p>
+          <CardTitle>Custom fields</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CustomFieldRenderer
+            fields={customFieldsQuery.data ?? []}
+            values={contract.customFieldValues ?? {}}
+            emptyTitle="Chưa có custom field cho hợp đồng"
+            emptyDescription="Khi admin tạo field động cho resource hợp đồng, dữ liệu sẽ hiện ở đây."
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
@@ -301,6 +346,68 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
               )}
             </CardContent>
           </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContractTemplateSelector({
+  activeTemplateName,
+  isLoading,
+  selectedTemplateVariantId,
+  templateVariants,
+  onChange
+}: {
+  activeTemplateName?: string;
+  isLoading: boolean;
+  selectedTemplateVariantId: string;
+  templateVariants: DocumentTemplateVariant[];
+  onChange: (variantId: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+          <AppIcon name="description" className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Template hợp đồng</p>
+            <p className="mt-1 text-sm text-text-secondary">
+              Chọn mẫu hợp đồng trước khi xem trước hoặc tạo PDF chính thức.
+            </p>
+          </div>
+
+          {isLoading ? (
+            <div className="rounded-xl border border-border bg-white/70 px-4 py-3 text-sm text-text-secondary">
+              Đang tải danh sách template...
+            </div>
+          ) : (
+            <>
+              <select
+                aria-label="Chọn template hợp đồng"
+                className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                value={selectedTemplateVariantId}
+                onChange={(event) => onChange(event.target.value)}
+              >
+                <option value="">
+                  {activeTemplateName ? `Mẫu active hiện tại: ${activeTemplateName}` : "Mẫu mặc định / fallback hệ thống"}
+                </option>
+                {templateVariants.map((variant) => (
+                  <option key={variant.id} value={variant.id}>
+                    {variant.name} · v{variant.version}
+                    {variant.isActive ? " · active" : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-text-secondary">
+                {templateVariants.length > 0
+                  ? "Danh sách chỉ gồm các template đã publish. Nếu không chọn, hệ thống dùng mẫu active."
+                  : "Chưa có template hợp đồng đã publish; hệ thống sẽ dùng fallback hiện tại."}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

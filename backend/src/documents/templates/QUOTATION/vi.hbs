@@ -1,0 +1,104 @@
+{{!-- Phase 1: Quotation Template (Vietnamese) --}}
+{{> header-modern title=(t "document_title_quotation") }}
+
+<main class="modern-content">
+  {{!-- Parties Section --}}
+  <div class="modern-grid modern-grid--2col">
+    <div class="avoid-break">
+      {{> company-info}}
+    </div>
+    <div class="avoid-break">
+      {{> customer-info}}
+    </div>
+  </div>
+
+  {{!-- Subject Line --}}
+  <div class="modern-subject">
+    <strong>{{t "subject"}}:</strong> {{quote.quoteNo}} — {{quote.project.name}}
+  </div>
+
+  <div class="modern-intro">
+    <p>{{t "attention_to"}} {{#if primaryContact.name}}{{primaryContact.name}}{{else}}{{customer.name}}{{/if}},</p>
+    <p>{{t "quotation_intro"}}</p>
+  </div>
+
+  {{!-- Items Table --}}
+  <table class="modern-items-table">
+    <thead>
+      <tr>
+        <th class="text-center" style="width: 40pt;">STT</th>
+        <th>{{t "description"}}</th>
+        <th class="text-center" style="width: 50pt;">{{t "unit"}}</th>
+        <th class="text-right" style="width: 50pt;">{{t "qty"}}</th>
+        <th class="text-right" style="width: 80pt;">{{t "unit_price"}}</th>
+        <th class="text-right" style="width: 90pt;">{{t "total"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+      <tr>
+        <td class="text-center">{{add @index 1}}</td>
+        <td>
+          <div class="item-name"><strong>{{this.name}}</strong></div>
+          {{#if this.description}}<div class="item-desc small muted">{{this.description}}</div>{{/if}}
+        </td>
+        <td class="text-center">{{this.unit}}</td>
+        <td class="text-right">{{this.quantity}}</td>
+        <td class="text-right">{{currency this.unitPrice}}</td>
+        <td class="text-right">{{currency this.total}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="5" class="text-right">{{t "subtotal"}}</td>
+        <td class="text-right">{{currency quote.subtotal}}</td>
+      </tr>
+      <tr>
+        <td colspan="5" class="text-right">{{t "vat"}} ({{quote.taxRate}}%)</td>
+        <td class="text-right">{{currency quote.taxAmount}}</td>
+      </tr>
+      <tr class="grand-total-row">
+        <td colspan="5" class="text-right"><strong>{{t "grand_total"}}</strong></td>
+        <td class="text-right"><strong>{{currency quote.total}}</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="modern-in-words avoid-break">
+    <strong>{{t "in_words"}}:</strong> {{currency quote.total "words"}}
+  </div>
+
+  {{!-- Terms Section --}}
+  <div class="modern-terms avoid-break">
+    <div class="modern-section-heading">{{t "payment_terms"}} &amp; {{t "notes"}}</div>
+    <div class="modern-callout">
+      <ul>
+        <li>{{t "validity_period_note"}}</li>
+        <li>{{t "payment_terms"}}: {{#if quote.terms}}{{quote.terms}}{{else}}Theo thỏa thuận trong hợp đồng kinh tế.{{/if}}</li>
+        {{#if quote.deliveryTerms}}<li>{{t "delivery_date"}}: {{quote.deliveryTerms}}</li>{{/if}}
+        <li>{{t "vat_note"}}</li>
+      </ul>
+    </div>
+  </div>
+
+  {{!-- Signature Section --}}
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid">
+      <div class="signature-col">
+        {{!-- Empty col for buyer spacer if needed, or just seller --}}
+      </div>
+      <div class="signature-col">
+        {{> signature-block 
+            partyLabel=(t "seller")
+            partyName=company.representative
+            partyTitle=company.representativeTitle
+            showDate=true
+        }}
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}
+{{> legal-footer}}

@@ -1,11 +1,16 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { ModuleRef } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { DomainEventsService } from "../domain-events/domain-events.service";
+import { EmailService } from "../email/email.service";
+import { BulkQuoteDto } from "./dto/bulk-quote.dto";
 import { CreateQuoteDto } from "./dto/create-quote.dto";
 import { QuoteFilterDto } from "./dto/quote-filter.dto";
 import { UpdateQuoteDto } from "./dto/update-quote.dto";
 import { UpdateQuoteStatusDto } from "./dto/update-quote-status.dto";
+import { QuotesPdfService } from "./quotes-pdf.service";
 
 const EXPIRING_SOON_WINDOW_DAYS = 7;
 const EDITABLE_QUOTE_STATUSES = ["DRAFT", "REJECTED"] as const;
@@ -13,7 +18,12 @@ const PRE_SALE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING"] as const;
 
 @Injectable()
 export class QuotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly moduleRef: ModuleRef,
+    private readonly emailService: EmailService,
+    private readonly domainEvents: DomainEventsService
+  ) {}
 
   async findAll(filters: QuoteFilterDto, user: JwtUser) {
     const page = filters.page ?? 1;
@@ -369,8 +379,75 @@ export class QuotesService {
     });
   }
 
+  async send(id: string, user: JwtUser) {
+    const quote = await this.findAccessibleQuote(id, user);
+    const recipientEmail = quote.project.customer.contacts[0]?.email;
+    const recipientName = quote.project.customer.contacts[0]?.name ?? quote.project.customer.name;
+
+    if (!recipientEmail) {
+      throw new BadRequestException("Khách hàng chưa có email liên hệ chính để gửi báo giá");
+    }
+
+    const pdfService = this.moduleRef.get(QuotesPdfService, { strict: false });
+    const pdf = await pdfService.generatePdf(id, user);
+
+    await this.emailService.sendEmail(
+      recipientEmail,
+      `AHSO CRM | Gửi báo giá ${quote.quoteNo}`,
+      "quote-sent",
+      {
+        recipientName,
+        quoteNo: quote.quoteNo,
+        projectName: quote.project.name,
+        quoteTotal: formatCurrency(Number(quote.total)),
+        validUntil: quote.validUntil ? formatDate(quote.validUntil) : "Theo xác nhận trong email",
+        senderName: quote.createdBy.name
+      },
+      [
+        {
+          filename: pdf.filename,
+          content: pdf.buffer,
+          contentType: "application/pdf"
+        }
+      ]
+    );
+
+    const nextStatus = quote.status === "DRAFT" ? "SENT" : quote.status;
+    const sentQuote = await this.prisma.quote.update({
+      where: {
+        id
+      },
+      data: {
+        status: nextStatus,
+        sentAt: quote.sentAt ?? new Date()
+      },
+      select: {
+        id: true,
+        quoteNo: true,
+        status: true,
+        sentAt: true
+      }
+    });
+
+    void this.domainEvents.emit("quote.sent", {
+      quoteId: quote.id,
+      quoteNo: quote.quoteNo,
+      projectId: quote.project.id,
+      customerId: quote.project.customer.id,
+      ownerUserId: quote.createdBy.id,
+      status: sentQuote.status,
+      total: Number(quote.total),
+      sentAt: sentQuote.sentAt
+    });
+
+    return {
+      ...sentQuote,
+      sentTo: recipientEmail
+    };
+  }
+
   async updateStatus(id: string, dto: UpdateQuoteStatusDto, user: JwtUser) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = (await this.prisma.$transaction(async (tx) => {
       const quote = await this.findAccessibleQuoteForMutation(tx, id, user);
 
       if (quote.status === "ACCEPTED" && dto.status !== "ACCEPTED") {
@@ -408,8 +485,105 @@ export class QuotesService {
 
       await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status);
 
-      return updatedQuote;
+      return {
+        updatedQuote,
+        quote
+      };
+    })) as {
+      updatedQuote: {
+        id: string;
+        status: string;
+        sentAt: Date | null;
+        acceptedAt: Date | null;
+      };
+      quote: {
+        id: string;
+        status: string;
+        projectId: string;
+        createdById: string;
+      };
+    };
+
+    if (dto.status === "ACCEPTED" && result.quote.status !== "ACCEPTED") {
+      void this.domainEvents.emit("quote.accepted", {
+        quoteId: result.quote.id,
+        projectId: result.quote.projectId,
+        ownerUserId: result.quote.createdById,
+        status: result.updatedQuote.status,
+        acceptedAt: result.updatedQuote.acceptedAt
+      });
+    }
+
+    if (dto.status === "REJECTED" && result.quote.status !== "REJECTED") {
+      void this.domainEvents.emit("quote.rejected", {
+        quoteId: result.quote.id,
+        projectId: result.quote.projectId,
+        ownerUserId: result.quote.createdById,
+        status: result.updatedQuote.status
+      });
+    }
+
+    return result.updatedQuote;
+  }
+
+  async bulk(dto: BulkQuoteDto, user: JwtUser) {
+    const quotes = await this.prisma.quote.findMany({
+      where: {
+        ...this.buildWhere({}, user),
+        id: {
+          in: dto.ids
+        }
+      },
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            customer: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
     });
+
+    if (dto.action === "export") {
+      return {
+        action: dto.action,
+        items: quotes.map((quote) => ({
+          id: quote.id,
+          quoteNo: quote.quoteNo,
+          status: quote.status,
+          total: Number(quote.total),
+          createdBy: quote.createdBy.name,
+          projectName: quote.project.name,
+          customerName: quote.project.customer.name,
+          createdAt: quote.createdAt
+        }))
+      };
+    }
+
+    if (dto.action === "status" && dto.status) {
+      await Promise.allSettled(quotes.map((quote) => this.updateStatus(quote.id, { status: dto.status! }, user)));
+    }
+
+    if (dto.action === "send") {
+      await Promise.allSettled(quotes.map((quote) => this.send(quote.id, user)));
+    }
+
+    return {
+      action: dto.action,
+      processedCount: quotes.length
+    };
   }
 
   private buildWhere(filters: Partial<QuoteFilterDto>, user: JwtUser): Prisma.QuoteWhereInput {
@@ -765,4 +939,18 @@ export class QuotesService {
       });
     }
   }
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0
+  }).format(value);
+}
+
+function formatDate(value: Date) {
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short"
+  }).format(value);
 }

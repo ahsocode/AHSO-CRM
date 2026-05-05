@@ -1,0 +1,98 @@
+{{!-- Phase 7: Delivery Note Template (Vietnamese) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_delivery"}}</h1>
+  <div class="classic-header__meta">{{t "doc_number"}}: BBGH-{{contract.contractNo}}/{{date generatedAt "year"}}</div>
+</div>
+
+<main class="classic-body">
+  <p><strong>{{t "delivery_statement" date=(date deliveryDate "long") contractNo=contract.contractNo}}</strong></p>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "delivery_sender"}} ({{t "party_b"}})</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th>Tên công ty:</th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{company.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "deliverer"}}:</th>
+      <td>Ông/Bà: <strong>{{company.representative}}</strong> - Chức vụ: {{company.representativeTitle}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "delivery_recipient"}} ({{t "party_a"}})</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th>Tên công ty:</th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "delivery_location"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td>Ông/Bà: <strong>{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</strong> - Chức vụ: {{#if primaryContact}}{{primaryContact.title}}{{else}}...................{{/if}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 16pt;">{{t "items_delivered"}}</h3>
+  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: 1pt solid text;">
+    <thead>
+      <tr style="background-color: #f3f4f6;">
+        <th style="width: 40pt; text-align: center;">STT</th>
+        <th>{{t "description"}}</th>
+        <th style="width: 60pt; text-align: center;">{{t "unit"}}</th>
+        <th style="width: 80pt; text-align: right;">{{t "qty"}}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each deliveredItems}}
+      <tr>
+        <td style="text-align: center;">{{add @index 1}}</td>
+        <td>
+          <strong>{{this.name}}</strong>
+          {{#if this.description}}<div style="font-size: 10pt; color: #4b5563;">{{this.description}}</div>{{/if}}
+        </td>
+        <td style="text-align: center;">{{this.unit}}</td>
+        <td style="text-align: right;">{{this.quantity}}</td>
+      </tr>
+      {{/each}}
+      {{#if (not deliveredItems.length)}}
+      <tr>
+        <td colspan="4" style="text-align: center; color: #6b7280;">(Hạng mục giao nhận được tính theo Phụ lục Hợp đồng)</td>
+      </tr>
+      {{/if}}
+    </tbody>
+  </table>
+
+  <h3 style="margin-top: 16pt;">{{t "quality_status"}}</h3>
+  <p>{{t "quality_status_desc"}}</p>
+
+  <p style="margin-top: 12pt;">
+    Biên bản được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị pháp lý như nhau. Hai bên đã kiểm tra kỹ và đồng ý ký tên xác nhận dưới đây.
+  </p>
+
+  <div class="avoid-break" style="margin-top: 30pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong>ĐẠI DIỆN {{t "delivery_recipient"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong>ĐẠI DIỆN {{t "delivery_sender"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

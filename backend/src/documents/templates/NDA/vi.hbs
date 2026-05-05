@@ -1,0 +1,100 @@
+{{!-- Phase 6: NDA Template (Vietnamese) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_nda"}}</h1>
+  <div class="classic-header__meta">{{t "doc_number"}}: NDA-{{customer.id}}/{{date generatedAt "year"}}</div>
+</div>
+
+<main class="classic-body">
+  <p><strong>{{t "nda_agreement_statement" date=(date generatedAt "long") location=company.address}}</strong></p>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">BÊN TIẾT LỘ ({{t "party_a"}})</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th>Tên công ty:</th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{company.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "tax_code"}}:</th>
+      <td>{{company.taxCode}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td>Ông/Bà: <strong>{{company.representative}}</strong> - Chức vụ: {{company.representativeTitle}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">BÊN TIẾP NHẬN ({{t "party_b"}})</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th>Tên công ty:</th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "tax_code"}}:</th>
+      <td>{{customer.taxCode}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td>Ông/Bà: <strong>{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</strong> - Chức vụ: {{#if primaryContact}}{{primaryContact.title}}{{else}}...................{{/if}}</td>
+    </tr>
+  </table>
+
+  <div class="classic-article" style="margin-top: 16pt;">
+    <div class="classic-article__heading">{{t "nda_article_1"}}</div>
+    <div class="classic-article__clause">
+      <p>{{t "nda_purpose_content"}}</p>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "nda_article_2"}}</div>
+    <div class="classic-article__clause">
+      <p>{{t "nda_scope_content"}}</p>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "nda_article_3"}}</div>
+    <div class="classic-article__clause">
+      <p>{{t "nda_responsibility_content"}}</p>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "nda_article_4"}}</div>
+    <div class="classic-article__clause">
+      <p>{{t "nda_duration_content"}}</p>
+      <p>{{t "original_copies_statement"}}</p>
+    </div>
+  </div>
+
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong>ĐẠI DIỆN {{t "party_a"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div class="classic-stamp">ĐÓNG DẤU</div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong>ĐẠI DIỆN {{t "party_b"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div class="classic-stamp">ĐÓNG DẤU</div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

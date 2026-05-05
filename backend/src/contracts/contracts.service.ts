@@ -2,6 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import type { MilestoneStatus, Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { DomainEventsService } from "../domain-events/domain-events.service";
+import { EmailService } from "../email/email.service";
 import { UploadService } from "../upload/upload.service";
 import { ContractFilterDto } from "./dto/contract-filter.dto";
 import { CreateContractDto } from "./dto/create-contract.dto";
@@ -16,7 +19,10 @@ const CLOSED_CONTRACT_STATUSES = ["COMPLETED", "CANCELLED"] as const;
 export class ContractsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly uploadService: UploadService
+    private readonly customFieldsService: CustomFieldsService,
+    private readonly uploadService: UploadService,
+    private readonly emailService: EmailService,
+    private readonly domainEvents: DomainEventsService
   ) {}
 
   async findAll(filters: ContractFilterDto, user: JwtUser) {
@@ -145,7 +151,7 @@ export class ContractsService {
   }
 
   async create(dto: CreateContractDto, user: JwtUser) {
-    return this.prisma.$transaction(async (tx) => {
+    const createdContract = await this.prisma.$transaction(async (tx) => {
       const project = await this.findAccessibleProjectForContract(tx, dto.projectId, user);
 
       if (project.contract) {
@@ -183,6 +189,11 @@ export class ContractsService {
 
       return contract;
     });
+
+    await this.customFieldsService.saveValues("contract", createdContract.id, dto.customFieldValues);
+    await this.handleContractStatusSideEffects(createdContract.id, null, createdContract.status);
+
+    return createdContract;
   }
 
   async findOne(id: string, user: JwtUser) {
@@ -193,6 +204,7 @@ export class ContractsService {
     const completedMilestones = contract.milestones.filter(
       (milestone) => milestone.status === "DONE" || milestone.status === "ACCEPTED"
     ).length;
+    const customFieldValues = await this.customFieldsService.getValues("contract", contract.id);
 
     return {
       id: contract.id,
@@ -204,6 +216,7 @@ export class ContractsService {
       endDate: contract.endDate,
       fileUrl: contract.fileUrl,
       notes: contract.notes,
+      customFieldValues,
       createdAt: contract.createdAt,
       updatedAt: contract.updatedAt,
       stats: {
@@ -325,6 +338,7 @@ export class ContractsService {
 
       return {
         updatedContract,
+        previousStatus: contract.status,
         previousLocalFileUrl: this.shouldDeletePreviousLocalFile(contract.fileUrl, dto.fileUrl)
           ? contract.fileUrl
           : null
@@ -334,6 +348,9 @@ export class ContractsService {
     if (result.previousLocalFileUrl) {
       await this.uploadService.deleteFile(result.previousLocalFileUrl);
     }
+
+    await this.customFieldsService.saveValues("contract", id, dto.customFieldValues);
+    await this.handleContractStatusSideEffects(id, result.previousStatus, result.updatedContract.status);
 
     return result.updatedContract;
   }
@@ -381,6 +398,16 @@ export class ContractsService {
 
   async createPayment(contractId: string, dto: CreatePaymentDto, user: JwtUser) {
     const contract = await this.findAccessibleContractEntity(contractId, user);
+    const paidAmount = contract.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    const contractValue = Number(contract.value);
+    const nextPaidAmount = paidAmount + dto.amount;
+
+    if (nextPaidAmount > contractValue) {
+      throw new BadRequestException(
+        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị hợp đồng (${this.formatNumber(contractValue)} VND)`
+      );
+    }
+
     const payment = await this.prisma.payment.create({
       data: {
         amount: dto.amount,
@@ -390,6 +417,19 @@ export class ContractsService {
         notes: dto.notes,
         contractId: contract.id
       }
+    });
+
+    const context = await this.loadContractNotificationContext(contract.id);
+
+    void this.domainEvents.emit("payment.received", {
+      paymentId: payment.id,
+      contractId: contract.id,
+      projectId: contract.projectId,
+      ownerUserId: context.project.customer.assignedTo.id,
+      contractNo: context.contractNo,
+      amount: Number(payment.amount),
+      paidAt: payment.paidAt,
+      method: payment.method
     });
 
     return {
@@ -573,7 +613,13 @@ export class ContractsService {
       },
       select: {
         id: true,
-        projectId: true
+        projectId: true,
+        value: true,
+        payments: {
+          select: {
+            amount: true
+          }
+        }
       }
     });
 
@@ -582,6 +628,12 @@ export class ContractsService {
     }
 
     return contract;
+  }
+
+  private formatNumber(value: number) {
+    return new Intl.NumberFormat("vi-VN", {
+      maximumFractionDigits: 0
+    }).format(value);
   }
 
   private async findAccessibleContractForMutation(
@@ -739,6 +791,110 @@ export class ContractsService {
     return this.uploadService.isLocalUploadPath(previousFileUrl);
   }
 
+  private async handleContractStatusSideEffects(
+    contractId: string,
+    previousStatus: string | null,
+    nextStatus: string
+  ) {
+    if (previousStatus === nextStatus) {
+      return;
+    }
+
+    const contract = await this.loadContractNotificationContext(contractId);
+
+    if (nextStatus === "ACTIVE") {
+      const recipients = [
+        contract.project.customer.contacts[0]?.email,
+        contract.project.customer.assignedTo.email
+      ].filter((value): value is string => Boolean(value));
+
+      if (recipients.length > 0) {
+        await this.emailService.sendEmail(
+          recipients,
+          `AHSO CRM | Hợp đồng ${contract.contractNo} đã có hiệu lực`,
+          "contract-signed",
+          {
+            recipientName:
+              contract.project.customer.contacts[0]?.name ?? contract.project.customer.assignedTo.name,
+            contractNo: contract.contractNo,
+            projectName: contract.project.name,
+            customerName: contract.project.customer.name,
+            contractValue: formatCurrency(Number(contract.value))
+          }
+        );
+      }
+
+      void this.domainEvents.emit("contract.signed", {
+        contractId: contract.id,
+        contractNo: contract.contractNo,
+        projectId: contract.projectId,
+        customerId: contract.project.customer.id,
+        ownerUserId: contract.project.customer.assignedTo.id,
+        status: contract.status,
+        value: Number(contract.value)
+      });
+      return;
+    }
+
+    if (nextStatus === "COMPLETED") {
+      void this.domainEvents.emit("contract.completed", {
+        contractId: contract.id,
+        contractNo: contract.contractNo,
+        projectId: contract.projectId,
+        customerId: contract.project.customer.id,
+        ownerUserId: contract.project.customer.assignedTo.id,
+        status: contract.status,
+        value: Number(contract.value)
+      });
+    }
+  }
+
+  private async loadContractNotificationContext(contractId: string) {
+    const contract = await this.prisma.contract.findUnique({
+      where: {
+        id: contractId
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            customer: {
+              select: {
+                id: true,
+                name: true,
+                assignedTo: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true
+                  }
+                },
+                contacts: {
+                  where: {
+                    isPrimary: true
+                  },
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true
+                  },
+                  take: 1
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!contract) {
+      throw new NotFoundException("Không tìm thấy hợp đồng");
+    }
+
+    return contract;
+  }
+
   private async syncProjectStatusForContract(
     tx: Prisma.TransactionClient,
     projectId: string,
@@ -765,4 +921,12 @@ export class ContractsService {
       }
     });
   }
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0
+  }).format(value);
 }

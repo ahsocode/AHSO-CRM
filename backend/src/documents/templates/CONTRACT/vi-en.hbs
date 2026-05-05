@@ -1,0 +1,143 @@
+{{!-- Phase 4: Contract Template (Bilingual VI-EN) --}}
+<div class="classic-header">
+  <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+  <div class="classic-header__motto">{{t "independence_motto"}}</div>
+  <div class="classic-header__dash">-----------------</div>
+  <h1 class="classic-header__title">{{t "document_title_contract"}}</h1>
+  <div class="classic-header__meta">
+    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> {{contract.contractNo}}
+  </div>
+</div>
+
+<main class="classic-body">
+  <div style="font-style: italic; margin-bottom: 12pt;">
+    <p>{{t "legal_preamble"}}</p>
+    <p>
+      <span class="lang-vi">Căn cứ theo nhu cầu và khả năng của hai bên;</span>
+      <span class="lang-en">Based on the needs and capabilities of both parties;</span>
+    </p>
+  </div>
+
+  <p><strong><span class="lang-vi">{{t "agreement_statement" date=(date generatedAt "long") location=company.address}}</span><span class="lang-en">Today, on {{date generatedAt "short"}}, at {{company.address}}, we are:</span></strong></p>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "party_a"}}</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{customer.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{customer.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "tax_code"}}:</th>
+      <td>{{customer.taxCode}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td><span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span> <strong>{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</strong> - <span class="lang-vi">Chức vụ:</span><span class="lang-en">Title:</span> {{#if primaryContact}}{{primaryContact.title}}{{else}}...................{{/if}}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "party_b"}}</h3>
+  <table class="classic-parties" width="100%">
+    <tr>
+      <th><span class="lang-vi">Tên công ty:</span><span class="lang-en">Company Name:</span></th>
+      <td><strong>{{company.name}}</strong></td>
+    </tr>
+    <tr>
+      <th>{{t "address"}}:</th>
+      <td>{{company.address}}</td>
+    </tr>
+    <tr>
+      <th>{{t "tax_code"}}:</th>
+      <td>{{company.taxCode}}</td>
+    </tr>
+    <tr>
+      <th>{{t "bank_info"}}:</th>
+      <td>{{company.bankAccount}} - {{company.bankName}} - {{company.bankBranch}}</td>
+    </tr>
+    <tr>
+      <th>{{t "representative"}}:</th>
+      <td><span class="lang-vi">Ông/Bà:</span><span class="lang-en">Mr/Ms:</span> <strong>{{company.representative}}</strong> - <span class="lang-vi">Chức vụ:</span><span class="lang-en">Title:</span> {{company.representativeTitle}}</td>
+    </tr>
+  </table>
+
+  <p style="margin-top: 12pt; margin-bottom: 12pt; text-indent: 0;"><strong>{{t "after_agreement_statement"}}</strong></p>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "article_1"}}</div>
+    <div class="classic-article__clause">
+      <span class="lang-vi">Bên A đồng ý mua và Bên B đồng ý bán hệ thống phần mềm (hoặc cung cấp dịch vụ) theo nội dung chi tiết quy định tại dự án:</span>
+      <span class="lang-en">Party A agrees to buy and Party B agrees to sell the software system (or provide services) as detailed in the project:</span>
+      <strong>{{project.name}}</strong>.
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "article_2"}}</div>
+    <div class="classic-article__clause">
+      <span class="lang-vi">Tổng giá trị hợp đồng:</span><span class="lang-en">Total Contract Value:</span> <strong>{{currency contract.value}}</strong><br/>
+      (<span class="lang-vi">Bằng chữ:</span><span class="lang-en">In words:</span> <em>{{currency contract.value "words"}}</em>)<br/>
+      <span class="lang-vi">Đã bao gồm thuế GTGT và mọi chi phí liên quan.</span>
+      <span class="lang-en">Inclusive of VAT and all related terms.</span>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "article_3"}}</div>
+    <div class="classic-article__clause">
+      <span class="lang-vi">Bên A thanh toán cho Bên B bằng hình thức chuyển khoản:</span>
+      <span class="lang-en">Party A shall pay Party B via bank transfer:</span>
+      <ul>
+        {{#each milestones}}
+        <li><span class="lang-vi">Lần</span><span class="lang-en">Installment</span> {{add @index 1}}: {{this.name}} - {{currency this.paymentAmount}}</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "article_4"}}</div>
+    <div class="classic-article__clause">
+      <span class="lang-vi">Bên B có trách nhiệm bàn giao toàn bộ sản phẩm và tài liệu liên quan cho Bên A theo thời hạn thỏa thuận bắt đầu từ:</span>
+      <span class="lang-en">Party B is responsible for handing over all products and related documents to Party A within the agreed timeframe starting from:</span>
+      <strong>{{date project.startDate "short"}}</strong> <span class="lang-vi">đến</span><span class="lang-en">to</span> <strong>{{date project.expectedEndDate "short"}}</strong>.
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "article_5"}}</div>
+    <div class="classic-article__clause">
+      <span class="lang-vi">Thời gian bảo hành: {{#if policies.warrantyPeriodMonths}}{{policies.warrantyPeriodMonths}}{{else}}12{{/if}} tháng kể từ ngày ký biên bản nghiệm thu bàn giao. Bên B có trách nhiệm khắc phục các lỗi phát sinh do khâu thiết kế, lập trình trong vòng 48h làm việc.</span>
+      <span class="lang-en">Warranty period: {{#if policies.warrantyPeriodMonths}}{{policies.warrantyPeriodMonths}}{{else}}12{{/if}} months from the date of signing the acceptance protocol. Party B is responsible for fixing errors arising from design and programming within 48 working hours.</span>
+    </div>
+  </div>
+
+  <div class="classic-article">
+    <div class="classic-article__heading">{{t "article_12"}}</div>
+    <div class="classic-article__clause">
+      {{t "original_copies_statement"}}
+    </div>
+  </div>
+
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid classic-signature">
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong><span class="lang-vi">ĐẠI DIỆN</span><span class="lang-en">REPRESENTATIVE OF</span> {{t "party_a"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div class="classic-stamp"><span class="lang-vi">ĐÓNG DẤU</span><span class="lang-en">STAMP</span></div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}.......................................{{/if}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div class="signature-block__label"><strong><span class="lang-vi">ĐẠI DIỆN</span><span class="lang-en">REPRESENTATIVE OF</span> {{t "party_b"}}</strong></div>
+        <div class="signature-block__line"></div>
+        <div class="classic-stamp"><span class="lang-vi">ĐÓNG DẤU</span><span class="lang-en">STAMP</span></div>
+        <div style="font-weight: bold;">{{company.representative}}</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}

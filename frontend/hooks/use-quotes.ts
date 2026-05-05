@@ -135,3 +135,24 @@ export function useDownloadQuotePdf() {
     }
   });
 }
+
+export function useBulkQuotes() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { action: "status" | "send" | "export"; ids: string[]; status?: QuoteStatus }) => {
+      const response = await apiClient.post<ApiResponse<{ action: string; processedCount?: number; items?: Record<string, unknown>[] }>>(
+        "/quotes/bulk",
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async (data) => {
+      if (data.action !== "export") {
+        await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+        await queryClient.invalidateQueries({ queryKey: ["projects"] });
+        await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      }
+    }
+  });
+}

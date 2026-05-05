@@ -2,7 +2,9 @@ import { UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
+import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
+import { EmailService } from "../email/email.service";
 import { AuthService } from "./auth.service";
 
 jest.mock("bcrypt", () => ({
@@ -17,9 +19,9 @@ describe("AuthService", () => {
     name: "Admin",
     role: "ADMIN",
     password: "stored-password-hash",
-    refreshToken: "stored-refresh-hash",
     avatarUrl: null,
     isActive: true,
+    sessions: [],
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-02T00:00:00.000Z")
   };
@@ -29,6 +31,11 @@ describe("AuthService", () => {
     user: {
       findUnique: jest.Mock;
       update: jest.Mock;
+    };
+    userSession: {
+      deleteMany: jest.Mock;
+      create: jest.Mock;
+      delete: jest.Mock;
     };
   };
   let jwtService: {
@@ -40,12 +47,23 @@ describe("AuthService", () => {
   let configService: {
     get: jest.Mock;
   };
+  let emailService: {
+    sendEmail: jest.Mock;
+  };
+  let auditService: {
+    recordLogin: jest.Mock;
+  };
 
   beforeEach(() => {
     prisma = {
       user: {
         findUnique: jest.fn(),
         update: jest.fn()
+      },
+      userSession: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        create: jest.fn().mockResolvedValue({ id: "session-1" }),
+        delete: jest.fn().mockResolvedValue({ id: "session-1" })
       }
     };
     jwtService = {
@@ -63,11 +81,19 @@ describe("AuthService", () => {
     configService = {
       get: jest.fn((key: string) => configValues[key])
     };
+    emailService = {
+      sendEmail: jest.fn().mockResolvedValue({ success: true })
+    };
+    auditService = {
+      recordLogin: jest.fn().mockResolvedValue(undefined)
+    };
 
     service = new AuthService(
       prisma as unknown as PrismaService,
       jwtService as unknown as JwtService,
-      configService as unknown as ConfigService
+      configService as unknown as ConfigService,
+      emailService as unknown as EmailService,
+      auditService as unknown as AuditService
     );
   });
 
@@ -86,7 +112,8 @@ describe("AuthService", () => {
     expect(jwtService.signAsync).not.toHaveBeenCalled();
   });
 
-  it("issues a password reset token and exposes a debug reset url in development", async () => {
+  it("issues a password reset token and exposes a debug reset url in development with DEBUG_RESET=true", async () => {
+    configValues["DEBUG_RESET"] = "true";
     prisma.user.findUnique.mockResolvedValue(activeUser);
     jwtService.signAsync.mockResolvedValue("reset-token");
 
@@ -110,9 +137,18 @@ describe("AuthService", () => {
         expiresIn: "15m"
       }
     );
+    expect(emailService.sendEmail).toHaveBeenCalledWith(
+      activeUser.email,
+      "Yêu cầu đặt lại mật khẩu AHSO CRM",
+      "password-reset",
+      expect.objectContaining({
+        email: activeUser.email,
+        resetUrl: "http://localhost:3000/reset-password?token=reset-token"
+      })
+    );
   });
 
-  it("resets the password and invalidates existing refresh tokens", async () => {
+  it("resets the password and invalidates all sessions", async () => {
     const hashMock = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
     hashMock.mockResolvedValue("hashed-next-password" as never);
     jwtService.decode.mockReturnValue({
@@ -126,9 +162,7 @@ describe("AuthService", () => {
       type: "password-reset"
     });
     prisma.user.findUnique.mockResolvedValue(activeUser);
-    prisma.user.update.mockResolvedValue({
-      id: activeUser.id
-    });
+    prisma.user.update.mockResolvedValue({ id: activeUser.id });
 
     await expect(
       service.resetPassword({
@@ -144,15 +178,13 @@ describe("AuthService", () => {
     expect(jwtService.verifyAsync).toHaveBeenCalledWith("reset-token", {
       secret: "reset-secret:stored-password-hash"
     });
-    expect(hashMock).toHaveBeenCalledWith("AHSO123!New", 10);
+    expect(hashMock).toHaveBeenCalledWith("AHSO123!New", 12);
     expect(prisma.user.update).toHaveBeenCalledWith({
-      where: {
-        id: activeUser.id
-      },
-      data: {
-        password: "hashed-next-password",
-        refreshToken: null
-      }
+      where: { id: activeUser.id },
+      data: { password: "hashed-next-password" }
+    });
+    expect(prisma.userSession.deleteMany).toHaveBeenCalledWith({
+      where: { userId: activeUser.id }
     });
   });
 

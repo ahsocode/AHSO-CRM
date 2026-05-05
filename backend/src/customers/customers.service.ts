@@ -1,17 +1,29 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { RoleValue } from "../common/constants/role.constants";
 import { PrismaService } from "../common/prisma.service";
+import { buildCustomerCodePrefix } from "../common/utils/vietnamese";
 import { JwtUser, isStaff } from "../auth/auth.types";
+import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { DomainEventsService } from "../domain-events/domain-events.service";
+import { BulkCustomerDto } from "./dto/bulk-customer.dto";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { CustomerFilterDto } from "./dto/customer-filter.dto";
 import { UpdateCustomerDto } from "./dto/update-customer.dto";
 
 const ACTIVE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING"] as const;
 
+const MAX_CODE_GENERATION_ATTEMPTS = 20;
+
 @Injectable()
 export class CustomersService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CustomersService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly customFieldsService: CustomFieldsService,
+    private readonly domainEvents: DomainEventsService
+  ) {}
 
   async findAll(filters: CustomerFilterDto, user: JwtUser) {
     const page = filters.page ?? 1;
@@ -91,6 +103,8 @@ export class CustomersService {
     const items = customers.map((customer) => ({
       id: customer.id,
       name: customer.name,
+      code: customer.code,
+      language: customer.language,
       shortName: customer.shortName,
       taxCode: customer.taxCode,
       industry: customer.industry,
@@ -182,9 +196,13 @@ export class CustomersService {
       })
     ]);
 
+    const customFieldValues = await this.customFieldsService.getValues("customer", id);
+
     return {
       id: customer.id,
       name: customer.name,
+      code: customer.code,
+      language: customer.language,
       shortName: customer.shortName,
       taxCode: customer.taxCode,
       industry: customer.industry,
@@ -203,6 +221,7 @@ export class CustomersService {
         name: customer.assignedTo.name,
         role: customer.assignedTo.role
       },
+      customFieldValues,
       stats,
       contacts: contacts.map((contact) => ({
         id: contact.id,
@@ -297,9 +316,19 @@ export class CustomersService {
   async create(dto: CreateCustomerDto) {
     await this.ensureAssignedUserExists(dto.assignedToId);
     await this.ensureTaxCodeUnique(dto.taxCode);
+    const { customFieldValues, ...customerData } = dto;
+
+    // Auto-generate a customer code if the caller did not supply one.
+    // Fall back to a random suffix if sequential generation can't find a
+    // free slot — unique constraint still protects us at the DB layer.
+    if (!customerData.code) {
+      customerData.code = await this.generateCustomerCode(customerData.name);
+    } else {
+      await this.ensureCustomerCodeUnique(customerData.code);
+    }
 
     const customer = await this.prisma.customer.create({
-      data: dto,
+      data: customerData,
       include: {
         assignedTo: {
           select: {
@@ -311,11 +340,25 @@ export class CustomersService {
       }
     });
 
+    await this.customFieldsService.saveValues("customer", customer.id, customFieldValues);
+
+    void this.domainEvents.emit("customer.created", {
+      customerId: customer.id,
+      name: customer.name,
+      status: customer.status,
+      assignedToId: customer.assignedTo.id
+    });
+    void this.domainEvents.emit("customer.assigned", {
+      customerId: customer.id,
+      customerName: customer.name,
+      assignedToId: customer.assignedTo.id
+    });
+
     return customer;
   }
 
   async update(id: string, dto: UpdateCustomerDto, user: JwtUser) {
-    await this.findAccessibleCustomer(id, user);
+    const previousCustomer = await this.findAccessibleCustomer(id, user);
 
     if (dto.assignedToId) {
       await this.ensureAssignedUserExists(dto.assignedToId);
@@ -324,12 +367,16 @@ export class CustomersService {
     if (dto.taxCode) {
       await this.ensureTaxCodeUnique(dto.taxCode, id);
     }
+    if (dto.code) {
+      await this.ensureCustomerCodeUnique(dto.code, id);
+    }
+    const { customFieldValues, ...customerData } = dto;
 
     const customer = await this.prisma.customer.update({
       where: {
         id
       },
-      data: dto,
+      data: customerData,
       include: {
         assignedTo: {
           select: {
@@ -341,11 +388,28 @@ export class CustomersService {
       }
     });
 
+    await this.customFieldsService.saveValues("customer", customer.id, customFieldValues);
+
+    void this.domainEvents.emit("customer.updated", {
+      customerId: customer.id,
+      name: customer.name,
+      status: customer.status,
+      assignedToId: customer.assignedTo.id
+    });
+
+    if (previousCustomer.assignedToId !== customer.assignedTo.id) {
+      void this.domainEvents.emit("customer.assigned", {
+        customerId: customer.id,
+        customerName: customer.name,
+        assignedToId: customer.assignedTo.id
+      });
+    }
+
     return customer;
   }
 
   async remove(id: string, user: JwtUser) {
-    await this.findAccessibleCustomer(id, user);
+    const customer = await this.findAccessibleCustomer(id, user);
 
     await this.prisma.customer.update({
       where: {
@@ -356,8 +420,213 @@ export class CustomersService {
       }
     });
 
+    void this.domainEvents.emit("customer.deleted", {
+      customerId: customer.id,
+      name: customer.name,
+      status: customer.status
+    });
+
     return {
       success: true
+    };
+  }
+
+  async restore(id: string, user: JwtUser) {
+    const customer = await this.findDeletedAccessibleCustomer(id, user);
+
+    if (!customer.deletedAt) {
+      throw new BadRequestException("Khách hàng chưa bị xóa");
+    }
+
+    const restored = await this.prisma.customer.update({
+      where: {
+        id
+      },
+      data: {
+        deletedAt: null
+      },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            role: true
+          }
+        }
+      }
+    });
+
+    void this.domainEvents.emit("customer.updated", {
+      customerId: restored.id,
+      name: restored.name,
+      status: restored.status
+    });
+
+    return restored;
+  }
+
+  async findDeleted(filters: CustomerFilterDto, user: JwtUser) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const where = this.buildDeletedWhere(filters, user);
+
+    const [customers, total] = await this.prisma.$transaction([
+      this.prisma.customer.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          deletedAt: "desc"
+        },
+        include: {
+          assignedTo: {
+            select: {
+              id: true,
+              name: true,
+              role: true
+            }
+          },
+          contacts: {
+            where: {
+              isPrimary: true
+            },
+            take: 1,
+            orderBy: {
+              createdAt: "asc"
+            }
+          }
+        }
+      }),
+      this.prisma.customer.count({ where })
+    ]);
+
+    return {
+      items: customers.map((customer) => ({
+        id: customer.id,
+        name: customer.name,
+        code: customer.code,
+        language: customer.language,
+        shortName: customer.shortName,
+        taxCode: customer.taxCode,
+        industry: customer.industry,
+        address: customer.address,
+        status: customer.status,
+        isVip: customer.isVip,
+        assignedTo: customer.assignedTo,
+        primaryContact: customer.contacts[0]
+          ? {
+              id: customer.contacts[0].id,
+              name: customer.contacts[0].name,
+              title: customer.contacts[0].title,
+              phone: customer.contacts[0].phone,
+              email: customer.contacts[0].email
+            }
+          : null,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+        deletedAt: customer.deletedAt
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
+    };
+  }
+
+  async bulk(dto: BulkCustomerDto, user: JwtUser) {
+    const accessibleCustomers = await this.prisma.customer.findMany({
+      where: {
+        ...this.buildWhere({}, user),
+        id: {
+          in: dto.ids
+        }
+      },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            role: true
+          }
+        },
+        contacts: {
+          where: {
+            isPrimary: true
+          },
+          take: 1
+        },
+        _count: {
+          select: {
+            projects: {
+              where: {
+                deletedAt: null
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (dto.action === "export") {
+      return {
+        action: dto.action,
+        items: accessibleCustomers.map((customer) => ({
+          id: customer.id,
+          name: customer.name,
+          shortName: customer.shortName,
+          status: customer.status,
+          industry: customer.industry,
+          assignedTo: customer.assignedTo.name,
+          projectCount: customer._count.projects,
+          primaryContact: customer.contacts[0]?.name ?? null,
+          updatedAt: customer.updatedAt
+        }))
+      };
+    }
+
+    if (dto.action === "assign" && dto.assignedToId) {
+      await this.ensureAssignedUserExists(dto.assignedToId);
+      await this.prisma.customer.updateMany({
+        where: {
+          id: {
+            in: accessibleCustomers.map((item) => item.id)
+          }
+        },
+        data: {
+          assignedToId: dto.assignedToId
+        }
+      });
+
+      await Promise.allSettled(
+        accessibleCustomers.map((customer) =>
+          this.domainEvents.emit("customer.assigned", {
+            customerId: customer.id,
+            customerName: customer.name,
+            assignedToId: dto.assignedToId
+          })
+        )
+      );
+    }
+
+    if (dto.action === "delete") {
+      await this.prisma.customer.updateMany({
+        where: {
+          id: {
+            in: accessibleCustomers.map((item) => item.id)
+          }
+        },
+        data: {
+          deletedAt: new Date()
+        }
+      });
+    }
+
+    return {
+      action: dto.action,
+      processedCount: accessibleCustomers.length
     };
   }
 
@@ -431,6 +700,36 @@ export class CustomersService {
     return where;
   }
 
+  private buildDeletedWhere(filters: Partial<CustomerFilterDto>, user: JwtUser): Prisma.CustomerWhereInput {
+    return {
+      ...this.buildWhere(filters, user),
+      deletedAt: {
+        not: null
+      }
+    };
+  }
+
+  private async findDeletedAccessibleCustomer(id: string, user: JwtUser) {
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        ...this.buildDeletedWhere({}, user),
+        id
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        deletedAt: true
+      }
+    });
+
+    if (!customer) {
+      throw new NotFoundException("Không tìm thấy khách hàng đã xóa");
+    }
+
+    return customer;
+  }
+
   private async findAccessibleCustomer(id: string, user: JwtUser) {
     const where = this.buildWhere({}, user);
     const customer = await this.prisma.customer.findFirst({
@@ -473,6 +772,63 @@ export class CustomersService {
 
     if (!user || !user.isActive) {
       throw new NotFoundException("Không tìm thấy người phụ trách hợp lệ");
+    }
+  }
+
+  /**
+   * Generate a unique customer code in the `AAA999` format. Tries sequential
+   * suffixes (001, 002, …) starting from the current count of customers
+   * sharing the prefix. Falls back to random 3-digit suffixes after
+   * {@link MAX_CODE_GENERATION_ATTEMPTS} collisions.
+   */
+  private async generateCustomerCode(name: string): Promise<string> {
+    const prefix = buildCustomerCodePrefix(name);
+
+    // Find the highest existing numeric suffix for this prefix so new codes
+    // slot in after it rather than always starting at 001.
+    const existing = await this.prisma.customer.findMany({
+      where: {
+        code: { startsWith: prefix }
+      },
+      select: { code: true }
+    });
+
+    let nextNumber = 1;
+    for (const row of existing) {
+      if (!row.code) continue;
+      const suffix = row.code.slice(3);
+      const n = Number.parseInt(suffix, 10);
+      if (Number.isFinite(n) && n >= nextNumber) nextNumber = n + 1;
+    }
+
+    for (let attempt = 0; attempt < MAX_CODE_GENERATION_ATTEMPTS; attempt += 1) {
+      const candidate = `${prefix}${String(nextNumber + attempt).padStart(3, "0")}`;
+      const conflict = await this.prisma.customer.findUnique({
+        where: { code: candidate },
+        select: { id: true }
+      });
+      if (!conflict) return candidate;
+    }
+
+    // Very unlikely — random fallback so we never block customer creation.
+    const random = Math.floor(Math.random() * 900 + 100);
+    const fallback = `${prefix}${random}`;
+    this.logger.warn(
+      `Sequential customer code generation exhausted for prefix ${prefix}; falling back to ${fallback}`
+    );
+    return fallback;
+  }
+
+  private async ensureCustomerCodeUnique(code: string, excludeId?: string) {
+    const existing = await this.prisma.customer.findFirst({
+      where: {
+        code,
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      select: { id: true }
+    });
+    if (existing) {
+      throw new ForbiddenException("Mã khách hàng đã tồn tại");
     }
   }
 

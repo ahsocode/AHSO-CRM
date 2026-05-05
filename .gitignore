@@ -7,8 +7,13 @@ frontend/node_modules
 frontend/.next
 backend/node_modules
 backend/dist
+backend/dist-bad-*
 backend/uploads/*
 !backend/uploads/.gitkeep
+logs
+playwright-report
+test-results
+e2e/.auth/
 .DS_Store
 npm-debug.log*
 *.tsbuildinfo
@@ -25,8 +30,11 @@ frontend/.env.local
 frontend/.env.*.local
 # Allow example templates
 !.env.example
+!.env.production.example
 !backend/.env.example
+!backend/.env.production.example
 !frontend/.env.local.example
+!frontend/.env.production.example
 
 # Ignore duplicate/backup folders created by Docker/Finder sync issues
 *\ 2/

@@ -1,15 +1,65 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "AHSO CRM";
-export const API_URL = `${(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "")}/api`;
+const DEFAULT_BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
+
+function resolveBackendUrl() {
+  if (typeof window === "undefined") {
+    return DEFAULT_BACKEND_URL;
+  }
+
+  try {
+    const configuredUrl = new URL(DEFAULT_BACKEND_URL);
+    const currentHostname = window.location.hostname;
+    const isLoopbackHost =
+      configuredUrl.hostname === "localhost" ||
+      configuredUrl.hostname === "127.0.0.1";
+
+    if (isLoopbackHost && currentHostname && currentHostname !== configuredUrl.hostname) {
+      configuredUrl.hostname = currentHostname;
+    }
+
+    return configuredUrl.toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_BACKEND_URL;
+  }
+}
+
+export const BACKEND_URL = resolveBackendUrl();
+export const API_URL = `${BACKEND_URL}/api`;
+export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 
 export const ACCESS_TOKEN_KEY = "ahso_access_token";
 export const REFRESH_TOKEN_KEY = "ahso_refresh_token";
 export const AUTH_USER_KEY = "ahso_auth_user";
+export const SESSION_ID_KEY = "ahso_session_id";
 
 export const ROLE_LABELS = {
   ADMIN: "Quản trị hệ thống",
   MANAGER: "Quản lý kinh doanh",
   STAFF: "Nhân viên phụ trách"
 } as const;
+
+type RoleLike =
+  | string
+  | {
+      name?: string | null;
+    }
+  | null
+  | undefined;
+
+export function getRoleLabelByName(roleLike: RoleLike) {
+  const roleName =
+    typeof roleLike === "string"
+      ? roleLike
+      : typeof roleLike === "object" && roleLike
+        ? roleLike.name
+        : undefined;
+
+  if (!roleName) {
+    return "Chưa gán vai trò";
+  }
+
+  return ROLE_LABELS[roleName as keyof typeof ROLE_LABELS] ?? roleName;
+}
 
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard" },

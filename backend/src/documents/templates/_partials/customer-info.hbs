@@ -1,0 +1,12 @@
+{{!-- Buyer / customer block. Expects a `customer` prop with the usual fields.
+       Falls back gracefully when any field is missing. --}}
+<section class="customer-info">
+  <div class="customer-info__heading">{{t "customer_info"}}</div>
+  {{#if customer.name}}<div class="customer-info__name">{{customer.name}}</div>{{/if}}
+  {{#if customer.code}}<div class="customer-info__line"><span>{{t "customer_code"}}:</span> {{customer.code}}</div>{{/if}}
+  {{#if customer.taxCode}}<div class="customer-info__line"><span>{{t "tax_code"}}:</span> {{customer.taxCode}}</div>{{/if}}
+  {{#if customer.address}}<div class="customer-info__line"><span>{{t "address"}}:</span> {{customer.address}}</div>{{/if}}
+  {{#if customer.representative}}<div class="customer-info__line"><span>{{t "representative"}}:</span> {{customer.representative}}{{#if customer.representativeTitle}} &mdash; {{customer.representativeTitle}}{{/if}}</div>{{/if}}
+  {{#if customer.phone}}<div class="customer-info__line"><span>{{t "phone"}}:</span> {{customer.phone}}</div>{{/if}}
+  {{#if customer.email}}<div class="customer-info__line"><span>{{t "email"}}:</span> {{customer.email}}</div>{{/if}}
+</section>

@@ -3,9 +3,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
+import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { AppIcon } from "@/components/shared/app-icon";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,12 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useCreateCustomer, useCustomer, useDeleteCustomer, useUpdateCustomer } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { getRoleLabel, isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
-import { CustomerStatus, Role, UserListItem } from "@/lib/types";
+import { CustomerStatus, CustomFieldValues, RelatedUserRole, UserListItem } from "@/lib/types";
+import { normalizeWebsiteInput } from "@/lib/url";
 import { cn } from "@/lib/utils";
 import {
   customerFormSchema,
@@ -34,7 +37,10 @@ const STATUS_OPTIONS: Array<{ label: string; value: CustomerStatus }> = [
   { label: "Không hoạt động", value: "INACTIVE" }
 ];
 
-function getUserOptions(users: UserListItem[], fallbackUser?: { id: string; name: string; role: Role }) {
+function getUserOptions(
+  users: UserListItem[],
+  fallbackUser?: { id: string; name: string; role: string | RelatedUserRole }
+) {
   const options = [...users];
 
   if (fallbackUser && !options.some((user) => user.id === fallbackUser.id)) {
@@ -42,7 +48,8 @@ function getUserOptions(users: UserListItem[], fallbackUser?: { id: string; name
       id: fallbackUser.id,
       email: "",
       name: fallbackUser.name,
-      role: fallbackUser.role as UserListItem["role"],
+      role: typeof fallbackUser.role === "string" ? fallbackUser.role : (fallbackUser.role.name ?? ""),
+      roleId: "",
       isActive: true,
       createdAt: new Date(0).toISOString()
     });
@@ -62,10 +69,12 @@ export function CustomerFormScreen({
   const user = useAuthStore((state) => state.user);
   const canManageUsers = isLeadershipRole(user?.role);
   const usersQuery = useUsers(canManageUsers);
+  const customFieldsQuery = useCustomFields("customer");
   const customerQuery = useCustomer(mode === "edit" ? customerId ?? "" : "");
   const createCustomerMutation = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer(customerId ?? "");
   const deleteCustomerMutation = useDeleteCustomer(customerId ?? "");
+  const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerFormSchema),
@@ -81,6 +90,7 @@ export function CustomerFormScreen({
         ...defaultCustomerFormValues,
         assignedToId: user?.id ?? ""
       });
+      setCustomFieldValues({});
     }
   }, [form, mode, user?.id]);
 
@@ -98,9 +108,11 @@ export function CustomerFormScreen({
         source: customerQuery.data.source ?? "",
         notes: customerQuery.data.notes ?? "",
         status: customerQuery.data.status,
+        language: customerQuery.data.language === "vi-en" ? "vi-en" : "vi",
         isVip: customerQuery.data.isVip,
         assignedToId: customerQuery.data.assignedTo.id
       });
+      setCustomFieldValues(customerQuery.data.customFieldValues ?? {});
     }
   }, [customerQuery.data, form, mode]);
 
@@ -113,6 +125,7 @@ export function CustomerFormScreen({
     : null;
   const userOptions = getUserOptions(usersQuery.data ?? [], customerQuery.data?.assignedTo);
   const isSubmitting = activeMutation.isPending || deleteCustomerMutation.isPending;
+  const websiteField = form.register("website");
 
   if (mode === "edit" && customerQuery.isLoading) {
     return (
@@ -177,8 +190,13 @@ export function CustomerFormScreen({
       <form
         className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
         onSubmit={form.handleSubmit((values) => {
+          const payload = {
+            ...values,
+            customFieldValues
+          };
+
           if (mode === "create") {
-            createCustomerMutation.mutate(values, {
+            createCustomerMutation.mutate(payload, {
               onSuccess: (createdCustomer) => {
                 router.push(`/customers/${createdCustomer.id}`);
               }
@@ -186,7 +204,7 @@ export function CustomerFormScreen({
             return;
           }
 
-          updateCustomerMutation.mutate(values, {
+          updateCustomerMutation.mutate(payload, {
             onSuccess: () => {
               router.push(`/customers/${customerId}`);
             }
@@ -230,6 +248,15 @@ export function CustomerFormScreen({
                 ))}
               </Select>
               <ErrorText message={form.formState.errors.status?.message} />
+            </Field>
+
+            <Field>
+              <Label htmlFor="language">Ngôn ngữ tài liệu</Label>
+              <Select id="language" {...form.register("language")}>
+                <option value="vi">Tiếng Việt</option>
+                <option value="vi-en">Song ngữ Việt - Anh</option>
+              </Select>
+              <ErrorText message={form.formState.errors.language?.message} />
             </Field>
 
             <Field>
@@ -283,7 +310,23 @@ export function CustomerFormScreen({
 
               <Field>
                 <Label htmlFor="website">Website</Label>
-                <Input id="website" placeholder="https://company.vn" {...form.register("website")} />
+                <Input
+                  id="website"
+                  placeholder="company.vn"
+                  {...websiteField}
+                  onBlur={(event) => {
+                    void websiteField.onBlur(event);
+                    const normalized = normalizeWebsiteInput(event.target.value);
+
+                    if (typeof normalized === "string") {
+                      form.setValue("website", normalized, {
+                        shouldDirty: true,
+                        shouldValidate: true
+                      });
+                    }
+                  }}
+                />
+                <p className="text-xs text-text-secondary">Chỉ cần nhập domain. Hệ thống sẽ tự thêm https:// và www khi phù hợp.</p>
                 <ErrorText message={form.formState.errors.website?.message} />
               </Field>
 
@@ -318,6 +361,23 @@ export function CustomerFormScreen({
                   <p className="text-sm text-text-secondary">Ưu tiên nổi bật trong danh sách và dashboard.</p>
                 </div>
               </label>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="industrial-chip bg-primary/10 text-primary">Dynamic Schema</p>
+              <CardTitle>Custom fields</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CustomFieldRenderer
+                editable
+                fields={customFieldsQuery.data ?? []}
+                values={customFieldValues}
+                onChange={setCustomFieldValues}
+                emptyTitle="Chưa có custom field cho khách hàng"
+                emptyDescription="Admin có thể tạo thêm field động tại Quản trị > Custom Fields."
+              />
             </CardContent>
           </Card>
 

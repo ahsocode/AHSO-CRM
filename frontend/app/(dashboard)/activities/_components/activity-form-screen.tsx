@@ -30,6 +30,7 @@ import { useProjects } from '@/hooks/use-projects';
 import { activityFormSchema, ActivityFormValues } from './form-schemas';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { ArrowLeft } from 'lucide-react';
+import { formatDateTimeLocalInput, parseDateTimeLocalInput } from '@/lib/format';
 
 const ACTIVITY_TYPES = [
   { value: 'CALL', label: 'Cuộc gọi' },
@@ -322,10 +323,10 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                         type="datetime-local"
                         className="border-[#D5D8DC] focus-visible:ring-[#2E86C1]"
                         {...field}
-                        value={field.value instanceof Date ? field.value.toISOString().slice(0, 16) : ''}
+                        value={field.value instanceof Date ? formatDateTimeLocalInput(field.value) : ''}
                         onChange={(e) => {
                           if (e.target.value) {
-                            field.onChange(new Date(e.target.value));
+                            field.onChange(parseDateTimeLocalInput(e.target.value));
                           } else {
                             field.onChange(undefined);
                           }

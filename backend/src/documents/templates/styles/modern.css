@@ -1,0 +1,370 @@
+/* Modern "Pre-sales" brand styling — used for quotations, proposals,
+   surveys, and other customer-facing documents. Uses the AHSO brand
+   accent palette (navy + orange). */
+
+:root {
+  --brand-primary: #1A5276;
+  --brand-accent: #E67E22;
+  --brand-muted: #F4F6F8;
+}
+
+.modern-header {
+  margin-bottom: 14pt;
+}
+
+.modern-header__band {
+  height: 6pt;
+  background: linear-gradient(90deg, #1A5276 0%, #E67E22 100%);
+  margin-bottom: 12pt;
+}
+
+.modern-header__grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24pt;
+}
+
+.modern-header__brand {
+  display: flex;
+  gap: 12pt;
+  align-items: center;
+}
+
+.modern-header__logo {
+  max-height: 42pt;
+  max-width: 120pt;
+  object-fit: contain;
+}
+
+.modern-header__logo-fallback {
+  width: 42pt;
+  height: 42pt;
+  border-radius: 6pt;
+  background: #1A5276;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18pt;
+}
+
+.modern-header__company {
+  font-weight: 700;
+  font-size: 13pt;
+  color: #1A5276;
+}
+
+.modern-header__tagline {
+  font-size: 9.5pt;
+  color: #6b7280;
+  margin-top: 1pt;
+}
+
+.modern-header__meta {
+  text-align: right;
+  min-width: 180pt;
+}
+
+.modern-header__title {
+  font-weight: 700;
+  font-size: 18pt;
+  color: #1A5276;
+  text-transform: uppercase;
+  margin: 0 0 6pt 0;
+}
+
+.modern-header__line {
+  font-size: 10pt;
+  color: #374151;
+}
+
+.modern-header__line span {
+  color: #9ca3af;
+  margin-right: 4pt;
+}
+
+/* Section heading used throughout modern documents. */
+.modern-section-heading {
+  font-weight: 700;
+  font-size: 12pt;
+  color: #1A5276;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1pt solid #E67E22;
+  padding-bottom: 2pt;
+  margin: 10pt 0 6pt 0;
+}
+
+/* Line items table with accent header. */
+.modern-items-table th {
+  background: #1A5276;
+  color: #fff;
+  border-color: #1A5276;
+}
+
+.modern-items-table tr:nth-child(even) td {
+  background: var(--brand-muted);
+}
+
+.modern-items-table .total-row td {
+  font-weight: 700;
+  background: var(--brand-muted);
+  color: #1A5276;
+}
+
+.modern-callout {
+  background: var(--brand-muted);
+  border-left: 3pt solid var(--brand-accent);
+  padding: 6pt 10pt;
+  margin: 6pt 0;
+  border-radius: 2pt;
+}
+
+.modern-subject {
+  font-size: 11pt;
+  margin: 12pt 0;
+  padding: 4pt 8pt;
+  background: #f8fafc;
+  border-left: 2pt solid var(--brand-primary);
+}
+
+.modern-intro {
+  margin-bottom: 14pt;
+}
+
+.modern-items-table .grand-total-row td {
+  font-size: 13pt;
+  background: #f1f5f9;
+  border-top: 1.5pt solid var(--brand-primary);
+  color: var(--brand-primary);
+}
+
+.modern-in-words {
+  margin-top: 8pt;
+  font-style: italic;
+  color: #4b5563;
+}
+
+.signature-grid {
+  display: flex;
+  justify-content: space-between;
+}
+
+.signature-col {
+  flex: 1;
+}
+
+.item-name {
+  margin-bottom: 2pt;
+}
+
+.modern-grid {
+  display: flex;
+  gap: 20pt;
+  margin-bottom: 12pt;
+}
+
+.modern-grid--2col > div {
+  flex: 1;
+}
+
+/* --- Proposal Styles --- */
+.proposal-cover {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+  text-align: center;
+}
+
+.proposal-cover__band {
+  height: 8pt;
+  width: 100%;
+  background: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-accent) 100%);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.proposal-cover__title {
+  font-size: 32pt;
+  font-weight: 700;
+  color: var(--brand-primary);
+  margin-top: 60pt;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.proposal-cover__subtitle {
+  font-size: 16pt;
+  color: var(--brand-accent);
+  margin-bottom: 24pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.proposal-cover__customer {
+  margin-top: 40pt;
+  border-top: 1pt solid #e5e7eb;
+  padding-top: 16pt;
+  font-size: 12pt;
+  color: #4b5563;
+}
+
+.proposal-cover__customer strong {
+  color: var(--brand-primary);
+  font-size: 14pt;
+  display: block;
+  margin-top: 4pt;
+}
+
+.section-card {
+  background: #ffffff;
+  border: 1pt solid #e5e7eb;
+  border-radius: 4pt;
+  padding: 12pt 16pt;
+  margin-bottom: 12pt;
+  box-shadow: 0 1pt 2pt rgba(0,0,0,0.05); /* very subtle, printable shadow */
+}
+
+.section-card__title {
+  font-weight: 700;
+  font-size: 11pt;
+  color: var(--brand-primary);
+  margin-bottom: 6pt;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12pt;
+  margin: 16pt 0;
+  position: relative;
+  padding-left: 16pt;
+  border-left: 2pt solid var(--brand-muted);
+}
+
+.timeline-item {
+  position: relative;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -20pt;
+  top: 4pt;
+  width: 8pt;
+  height: 8pt;
+  border-radius: 50%;
+  background: var(--brand-accent);
+  border: 2pt solid #fff;
+}
+
+.timeline-content {
+  background: #f8fafc;
+  padding: 8pt 12pt;
+  border-radius: 4pt;
+}
+
+.timeline-date {
+  font-size: 10pt;
+  font-weight: 600;
+  color: var(--brand-primary);
+  margin-bottom: 2pt;
+}
+
+.timeline-title {
+  font-weight: 600;
+}
+
+/* --- Survey Report Styles --- */
+.finding-card {
+  background: #ffffff;
+  border: 1pt solid #e5e7eb;
+  border-radius: 4pt;
+  padding: 12pt;
+  margin-bottom: 12pt;
+  page-break-inside: avoid;
+}
+
+.finding-card__header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6pt;
+}
+
+.finding-card__title {
+  font-weight: 700;
+  color: var(--brand-primary);
+  font-size: 11pt;
+}
+
+.finding-card__image {
+  margin-top: 8pt;
+  max-width: 100%;
+  height: auto;
+  border-radius: 4pt;
+  border: 1pt solid #e5e7eb;
+}
+
+.swot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12pt;
+  margin: 12pt 0;
+}
+
+.swot-quadrant {
+  padding: 12pt;
+  border-radius: 4pt;
+  border: 1pt solid #e5e7eb;
+  background: #f8fafc;
+  page-break-inside: avoid;
+}
+
+.swot-quadrant__title {
+  font-weight: 700;
+  font-size: 11pt;
+  margin-bottom: 6pt;
+  text-transform: uppercase;
+  border-bottom: 1pt solid;
+  padding-bottom: 2pt;
+}
+
+.swot-quadrant--s .swot-quadrant__title {
+  color: #059669; /* Green for strengths */
+  border-color: #059669;
+}
+
+.swot-quadrant--w .swot-quadrant__title {
+  color: #d97706; /* Orange for weaknesses */
+  border-color: #d97706;
+}
+
+.swot-quadrant--o .swot-quadrant__title {
+  color: #2563eb; /* Blue for opportunities */
+  border-color: #2563eb;
+}
+
+.swot-quadrant--t .swot-quadrant__title {
+  color: #dc2626; /* Red for threats */
+  border-color: #dc2626;
+}
+
+.meta-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8pt;
+  background: var(--brand-muted);
+  padding: 12pt;
+  border-radius: 4pt;
+  margin-bottom: 16pt;
+}
+
+.meta-info-item span {
+  color: #6b7280;
+  margin-right: 4pt;
+}

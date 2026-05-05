@@ -28,6 +28,18 @@ const ADMIN_CARDS = [
     title: "Users",
     description: "Đi tới module người dùng hiện có để quản trị tài khoản và trạng thái hoạt động.",
     icon: "groups" as const
+  },
+  {
+    href: "/admin/custom-fields" as Route,
+    title: "Custom Fields",
+    description: "Tạo trường động cho khách hàng, dự án và hợp đồng mà không phải sửa schema chính.",
+    icon: "analytics" as const
+  },
+  {
+    href: "/admin/document-templates" as Route,
+    title: "Document Templates",
+    description: "Chỉnh layout tài liệu bằng canvas drag-drop A4, quản lý variant draft/published và kích hoạt đúng mẫu runtime.",
+    icon: "description" as const
   }
 ];
 

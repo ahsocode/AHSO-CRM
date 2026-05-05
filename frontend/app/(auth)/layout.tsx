@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCompanyInfo, useLogo } from "@/hooks/use-settings";
 import { resolveAssetUrl } from "@/lib/auth";
 
@@ -14,44 +15,74 @@ export default function AuthLayout({
   const logoUrl = resolveAssetUrl(logoQuery.data);
 
   return (
-    <main className="auth-grid min-h-screen px-4 py-6 md:px-8 md:py-8">
-      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-7xl overflow-hidden rounded-[28px] bg-white/10 shadow-2xl ring-1 ring-white/15 backdrop-blur-sm lg:grid-cols-[1.1fr_0.9fr]">
-        <section className="hidden flex-col justify-between p-10 text-white lg:flex">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/10">
-                {logoUrl ? (
-                  <img src={logoUrl} alt={brandName} className="h-full w-full object-contain p-2" />
-                ) : (
-                  <span className="font-heading text-base font-extrabold tracking-[0.18em] text-white">AHSO</span>
-                )}
+    <main className="auth-grid relative min-h-screen overflow-hidden px-4 py-5 md:px-8 md:py-8">
+      <div className="pointer-events-none absolute inset-0 opacity-70">
+        <div className="absolute left-[-12rem] top-[-10rem] h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute bottom-[-14rem] right-[-12rem] h-[28rem] w-[28rem] rounded-full bg-accent/20 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto grid min-h-[calc(100vh-2.5rem)] max-w-7xl overflow-hidden rounded-[34px] bg-white/10 shadow-[0_30px_90px_rgba(3,18,30,0.35)] ring-1 ring-white/15 backdrop-blur-md lg:grid-cols-[1.02fr_0.98fr]">
+        <section className="auth-motion-field relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex xl:p-12">
+          <div className="auth-orb left-16 top-32 h-48 w-48 bg-white/12" />
+          <div className="auth-orb auth-orb-delayed bottom-20 right-20 h-60 w-60 bg-accent/20" />
+          <div className="absolute inset-x-12 bottom-24 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/14 shadow-[0_18px_45px_rgba(0,0,0,0.18)]">
+                  {logoUrl ? (
+                    <Image
+                      src={logoUrl}
+                      alt={brandName}
+                      width={56}
+                      height={56}
+                      unoptimized
+                      className="h-full w-full object-contain p-2"
+                    />
+                  ) : (
+                    <span className="font-heading text-base font-extrabold tracking-[0.18em] text-white">AHSO</span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">AHSO Workspace</p>
+                  <p className="mt-1 font-heading text-lg font-extrabold text-white">{brandName}</p>
+                </div>
               </div>
-              <p className="industrial-chip bg-white/10 text-white">{brandName}</p>
+              <div className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
+                CRM B2B
+              </div>
             </div>
-            <h1 className="mt-8 max-w-lg text-5xl font-extrabold tracking-tight">
-              Bảng điều phối cho chu trình bán hàng kỹ thuật công nghiệp.
-            </h1>
-            <p className="mt-6 max-w-xl text-base text-white/75">
-              Nền tảng tập trung dữ liệu khách hàng, cơ hội dự án, báo giá và tài liệu triển khai để đội {brandName} làm việc với cùng một nhịp vận hành.
-            </p>
+
+            <div className="mt-20 max-w-2xl">
+              <p className="industrial-chip bg-white/12 text-white/78">Project 360</p>
+              <h1 className="mt-6 text-balance font-heading text-5xl font-extrabold leading-tight tracking-tight xl:text-6xl">
+                CRM cho đội bán hàng kỹ thuật.
+              </h1>
+              <p className="mt-5 max-w-lg text-base leading-8 text-white/70">
+                Khách hàng, dự án, báo giá và tài liệu nằm trên cùng một luồng.
+              </p>
+            </div>
+
+            <div className="mt-12 grid max-w-xl grid-cols-3 gap-3 text-sm">
+              {["Lead", "Quote", "Contract"].map((item) => (
+                <div key={item} className="auth-float-card rounded-2xl border border-white/14 bg-white/10 px-4 py-5 text-center shadow-[0_14px_35px_rgba(0,0,0,0.12)] backdrop-blur">
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-accent" />
+                  <p className="font-semibold text-white">{item}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid gap-4 text-sm text-white/80 md:grid-cols-2">
-            <div className="rounded-2xl bg-white/10 p-5 ring-1 ring-white/10">
-              <p className="text-xs uppercase tracking-[0.24em] text-white/55">KPI</p>
-              <p className="mt-3 text-2xl font-bold text-white">2,45 tỷ</p>
-              <p className="mt-2">Doanh số tháng này từ các hợp đồng đã kích hoạt.</p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-5 ring-1 ring-white/10">
-              <p className="text-xs uppercase tracking-[0.24em] text-white/55">Pipeline</p>
-              <p className="mt-3 text-2xl font-bold text-white">24 dự án</p>
-              <p className="mt-2">Theo dõi từ khảo sát, báo giá, đàm phán đến triển khai.</p>
-            </div>
+          <div className="relative flex items-center justify-between gap-4 rounded-3xl border border-white/12 bg-white/10 px-5 py-4 text-sm text-white/72 backdrop-blur">
+            <span>Realtime</span>
+            <span>RBAC</span>
+            <span>Document Hub</span>
           </div>
         </section>
 
-        <section className="flex items-center justify-center bg-white/92 px-5 py-10 md:px-10">
-          <div className="w-full max-w-md">{children}</div>
+        <section className="flex items-center justify-center bg-[radial-gradient(circle_at_30%_12%,rgba(214,234,248,0.72),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] px-5 py-8 md:px-10">
+          <div className="w-full max-w-[460px]">{children}</div>
         </section>
       </div>
     </main>

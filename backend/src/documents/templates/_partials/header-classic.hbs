@@ -1,0 +1,13 @@
+{{!-- Traditional Vietnamese legal document header --}}
+<div class="classic-header">
+  <div class="classic-header__republic">
+    <div class="classic-header__republic-line">{{t "republic_header"}}</div>
+    <div class="classic-header__motto">{{t "independence_motto"}}</div>
+    <div class="classic-header__dash">————————————</div>
+  </div>
+  <h1 class="classic-header__title">{{title}}</h1>
+  <div class="classic-header__meta">
+    {{#if docNumber}}<div>{{t "doc_number"}}: {{docNumber}}</div>{{/if}}
+    <div>{{date generatedAt "long"}}</div>
+  </div>
+</div>

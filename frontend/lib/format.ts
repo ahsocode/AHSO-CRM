@@ -1,9 +1,40 @@
+export const APP_TIME_ZONE = "Asia/Ho_Chi_Minh";
+const APP_TIME_ZONE_OFFSET = "+07:00";
+
 export function formatVND(amount: number | string): string {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
     maximumFractionDigits: 0
   }).format(Number(amount));
+}
+
+export function formatDateTimeLocalInput(date: string | Date): string {
+  const value = new Date(date);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(value);
+
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart("minute")}`;
+}
+
+export function parseDateTimeLocalInput(value: string): Date | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
+    return undefined;
+  }
+
+  // datetime-local carries no timezone, so persist AHSO business time as Vietnam time.
+  const parsed = new Date(`${value}:00${APP_TIME_ZONE_OFFSET}`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
 export function formatVNDShort(amount: number): string {

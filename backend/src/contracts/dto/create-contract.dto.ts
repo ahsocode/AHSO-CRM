@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { customFieldValuesSchema } from "../../custom-fields/dto/custom-field.dto";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") {
@@ -26,7 +27,8 @@ export const createContractSchema = z
     value: z.coerce.number().positive("Giá trị hợp đồng phải lớn hơn 0").max(999_999_999_999),
     status: z.enum(["ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"]).default("ACTIVE"),
     fileUrl: optionalNullableString(1000),
-    notes: optionalString(2000)
+    notes: optionalString(2000),
+    customFieldValues: customFieldValuesSchema
   })
   .refine(
     (value) => !value.startDate || !value.endDate || value.endDate.getTime() >= value.startDate.getTime(),

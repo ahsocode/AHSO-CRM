@@ -3,13 +3,16 @@ import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../common/prisma.service";
 
 const ACTIVE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING"] as const;
+const RECEIVABLE_CONTRACT_STATUSES = ["ACTIVE", "SUSPENDED", "COMPLETED"] as const;
 const PENDING_QUOTE_STATUSES = ["DRAFT", "SENT"] as const;
 const PIPELINE_STAGE_CONFIG = [
   { status: "SURVEY", label: "Khảo sát", color: "stage-survey" },
   { status: "QUOTING", label: "Báo giá", color: "stage-quoting" },
   { status: "NEGOTIATING", label: "Đàm phán", color: "stage-negotiating" },
+  { status: "WON", label: "Đã ký HĐ", color: "stage-won" },
   { status: "DELIVERING", label: "Triển khai", color: "stage-delivering" },
-  { status: "COMPLETED", label: "Hoàn thành", color: "stage-completed" }
+  { status: "COMPLETED", label: "Hoàn thành", color: "stage-completed" },
+  { status: "LOST", label: "Không thành", color: "stage-lost" }
 ];
 
 @Injectable()
@@ -52,6 +55,11 @@ export class DashboardService {
     });
 
     const contracts = await this.prisma.contract.findMany({
+      where: {
+        status: {
+          in: [...RECEIVABLE_CONTRACT_STATUSES]
+        }
+      },
       include: {
         payments: true
       }

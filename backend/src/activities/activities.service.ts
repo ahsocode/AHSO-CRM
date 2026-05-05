@@ -1,14 +1,18 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
 import { JwtUser, isStaff } from '../auth/auth.types';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { ActivityFilterDto } from './dto/activity-filter.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 
 @Injectable()
 export class ActivitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService
+  ) {}
 
   private buildWhere(filters: ActivityFilterDto, user: JwtUser): Prisma.ActivityWhereInput {
     const where: Prisma.ActivityWhereInput = {
@@ -47,6 +51,15 @@ export class ActivitiesService {
     return where;
   }
 
+  private buildDeletedWhere(filters: ActivityFilterDto, user: JwtUser): Prisma.ActivityWhereInput {
+    return {
+      ...this.buildWhere(filters, user),
+      deletedAt: {
+        not: null
+      }
+    };
+  }
+
   async findAll(filters: ActivityFilterDto, user: JwtUser) {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
@@ -59,6 +72,54 @@ export class ActivitiesService {
         skip,
         take: limit,
         orderBy: [{ scheduledAt: 'desc' }, { createdAt: 'desc' }],
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          project: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+      this.prisma.activity.count({ where }),
+    ]);
+
+    return {
+      items: activities,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  async findDeleted(filters: ActivityFilterDto, user: JwtUser) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 10;
+    const skip = (page - 1) * limit;
+    const where = this.buildDeletedWhere(filters, user);
+
+    const [activities, total] = await this.prisma.$transaction([
+      this.prisma.activity.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ deletedAt: 'desc' }, { createdAt: 'desc' }],
         include: {
           customer: {
             select: {
@@ -209,6 +270,11 @@ export class ActivitiesService {
       },
     });
 
+    await this.notificationsService.createMentionNotifications(input.content, {
+      title: `Bạn được nhắc tới trong hoạt động "${activity.title}"`,
+      link: `/activities/${activity.id}`
+    });
+
     return activity;
   }
 
@@ -248,6 +314,11 @@ export class ActivitiesService {
       },
     });
 
+    await this.notificationsService.createMentionNotifications(updated.content, {
+      title: `Bạn được nhắc tới trong hoạt động "${updated.title}"`,
+      link: `/activities/${updated.id}`
+    });
+
     return updated;
   }
 
@@ -263,5 +334,67 @@ export class ActivitiesService {
     });
 
     return { success: true, id: updated.id };
+  }
+
+  async restore(id: string, user: JwtUser) {
+    const activity = await this.prisma.activity.findFirst({
+      where: {
+        id,
+        deletedAt: {
+          not: null
+        }
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            assignedToId: true
+          }
+        }
+      }
+    });
+
+    if (!activity) {
+      throw new NotFoundException('Không tìm thấy hoạt động đã xóa');
+    }
+
+    if (!activity.deletedAt) {
+      throw new BadRequestException('Hoạt động chưa bị xóa');
+    }
+
+    if (isStaff(user) && activity.customer?.assignedToId !== user.sub) {
+      throw new ForbiddenException('Bạn không có quyền khôi phục hoạt động này');
+    }
+
+    return this.prisma.activity.update({
+      where: { id },
+      data: {
+        deletedAt: null
+      },
+      include: {
+        customer: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            status: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
   }
 }

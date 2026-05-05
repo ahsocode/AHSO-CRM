@@ -1,0 +1,117 @@
+{{!-- Phase 3: Survey Report Template (Vietnamese) --}}
+{{> header-modern title=(t "document_title_survey_report") }}
+
+<main class="modern-content">
+  <div class="meta-info-grid">
+    <div class="meta-info-item">
+      <span>{{t "survey_date"}}:</span>
+      <strong>{{date surveyDate "short"}}</strong>
+    </div>
+    <div class="meta-info-item">
+      <span>{{t "location"}}:</span>
+      <strong>{{customer.address}}</strong>
+    </div>
+    <div class="meta-info-item">
+      <span>{{t "surveyor"}}:</span>
+      <strong>{{surveyorName}}</strong>
+    </div>
+    <div class="meta-info-item">
+      <span>{{t "customer_rep"}}:</span>
+      <strong>{{#if primaryContact}}{{primaryContact.name}} ({{primaryContact.title}}){{else}}{{customer.name}}{{/if}}</strong>
+    </div>
+  </div>
+
+  <h2 class="modern-section-heading">01. {{t "survey_objectives"}}</h2>
+  <div class="section-card avoid-break">
+    <ul>
+      <li>Khảo sát hiện trạng hệ thống và cơ sở hạ tầng thực tế.</li>
+      <li>Ghi nhận các vướng mắc, khó khăn trong quy trình vận hành.</li>
+      <li>Đánh giá mức độ khả thi và yêu cầu kỹ thuật để triển khai giải pháp mới.</li>
+    </ul>
+  </div>
+
+  <h2 class="modern-section-heading">02. {{t "methodology"}}</h2>
+  <div class="section-card avoid-break">
+    <p>Khảo sát trực tiếp tại địa bàn, phỏng vấn người dùng cuối và kiểm tra các tài liệu nghiệp vụ/kỹ thuật liên quan. Mọi thông tin ghi nhận được xác nhận bởi đại diện khách hàng.</p>
+  </div>
+
+  <h2 class="modern-section-heading">03. {{t "findings"}}</h2>
+  <div class="findings-list">
+    {{#each findings}}
+    <div class="finding-card">
+      <div class="finding-card__header">
+        <div class="finding-card__title">3.{{add @index 1}} {{this.title}}</div>
+      </div>
+      <p style="margin: 0;">{{this.description}}</p>
+      {{#if this.imageUrl}}
+      <img src="{{this.imageUrl}}" class="finding-card__image" alt="{{this.title}}" />
+      {{/if}}
+    </div>
+    {{/each}}
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2 class="modern-section-heading">04. {{t "analysis"}}</h2>
+  <div class="swot-grid">
+    <div class="swot-quadrant swot-quadrant--s">
+      <div class="swot-quadrant__title">{{t "strengths"}}</div>
+      <ul style="margin: 0; padding-left: 16pt;">
+        <li>Đội ngũ nhân sự nắm bắt nhanh chóng.</li>
+        <li>Cơ sở dữ liệu khách hàng tương đối đầy đủ.</li>
+      </ul>
+    </div>
+    <div class="swot-quadrant swot-quadrant--w">
+      <div class="swot-quadrant__title">{{t "weaknesses"}}</div>
+      <ul style="margin: 0; padding-left: 16pt;">
+        <li>Quy trình thủ công chiếm 60% thời gian.</li>
+        <li>Hạ tầng phần cứng chưa đạt chuẩn.</li>
+      </ul>
+    </div>
+    <div class="swot-quadrant swot-quadrant--o">
+      <div class="swot-quadrant__title">{{t "opportunities"}}</div>
+      <ul style="margin: 0; padding-left: 16pt;">
+        <li>Sẵn sàng chuyển đổi số toàn diện.</li>
+        <li>Ban lãnh đạo quyết tâm ứng dụng công nghệ.</li>
+      </ul>
+    </div>
+    <div class="swot-quadrant swot-quadrant--t">
+      <div class="swot-quadrant__title">{{t "threats"}}</div>
+      <ul style="margin: 0; padding-left: 16pt;">
+        <li>Thời gian triển khai bị eo hẹp.</li>
+        <li>Rủi ro gián đoạn công việc trong thời gian chuyển vùng dữ liệu.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="modern-section-heading">05. {{t "conclusions"}}</h2>
+  <div class="section-card avoid-break">
+    <p>Dựa trên kết quả khảo sát, AHSO đánh giá hệ thống hiện tại hoàn toàn phù hợp để nâng cấp lên kiến trúc mới. Đề xuất ưu tiên xử lý hạ tầng mạng trước khi cài đặt phần mềm.</p>
+  </div>
+
+  <h2 class="modern-section-heading">06. {{t "next_steps"}}</h2>
+  <div class="section-card avoid-break">
+    <ul>
+      <li>Gửi Đề xuất dự án &amp; Báo giá chi tiết.</li>
+      <li>Thống nhất phương án thiết kế.</li>
+      <li>Ký kết Hợp đồng kinh tế.</li>
+    </ul>
+  </div>
+
+  <div class="avoid-break" style="margin-top: 40pt;">
+    <div class="signature-grid">
+      <div class="signature-col text-center">
+        <div style="font-weight: bold; margin-bottom: 40pt; text-transform: uppercase;">{{t "customer_rep"}}</div>
+        <div style="font-weight: bold;">{{#if primaryContact}}{{primaryContact.name}}{{else}}{{customer.name}}{{/if}}</div>
+      </div>
+      <div class="signature-col text-center">
+        <div style="font-weight: bold; margin-bottom: 40pt; text-transform: uppercase;">{{t "surveyor"}}</div>
+        <div style="font-weight: bold;">{{surveyorName}}</div>
+        <div style="font-size: 10pt; color: #4b5563;">AHSO CRM</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{{> footer-page}}
+{{> legal-footer}}

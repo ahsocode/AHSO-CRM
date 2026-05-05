@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { customFieldValuesSchema } from "../../custom-fields/dto/custom-field.dto";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") {
@@ -24,7 +25,8 @@ export const updateContractSchema = z
     value: z.coerce.number().positive("Giá trị hợp đồng phải lớn hơn 0").max(999_999_999_999).optional(),
     status: z.enum(["ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"]).optional(),
     fileUrl: optionalNullableString(1000),
-    notes: optionalString(2000)
+    notes: optionalString(2000),
+    customFieldValues: customFieldValuesSchema
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "Cần cung cấp ít nhất một trường để cập nhật"

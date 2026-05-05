@@ -18,13 +18,13 @@ export function PipelinePreview({
       </CardHeader>
 
       {isLoading || !data ? (
-        <div className="grid gap-4 xl:grid-cols-5">
-          {Array.from({ length: 5 }, (_, index) => (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+          {Array.from({ length: 7 }, (_, index) => (
             <LoadingSkeleton key={index} className="h-48 w-full" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
           {data.map((stage) => (
             <div className="rounded-2xl bg-bg-hover/60 p-4" key={stage.status}>
               <div className="mb-4 flex items-center justify-between gap-3">
@@ -62,4 +62,3 @@ export function PipelinePreview({
     </Card>
   );
 }
-

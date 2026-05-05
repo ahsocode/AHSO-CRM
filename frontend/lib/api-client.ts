@@ -1,10 +1,11 @@
 import axios from "axios";
 import { API_URL } from "./constants";
-import { clearSession, getAccessToken, getRefreshToken, persistSession } from "./auth";
+import { clearServerSession, clearSession, getAccessToken, getSessionId, persistSession } from "./auth";
 import { ApiErrorPayload, ApiResponse, AuthSession } from "./types";
 
 export const apiClient = axios.create({
-  baseURL: API_URL
+  baseURL: API_URL,
+  withCredentials: true
 });
 
 let refreshRequest: Promise<string | null> | null = null;
@@ -17,6 +18,11 @@ apiClient.interceptors.request.use((config) => {
   const accessToken = getAccessToken();
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const sessionId = getSessionId();
+  if (sessionId) {
+    config.headers["X-Session-Id"] = sessionId;
   }
 
   return config;
@@ -37,29 +43,21 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const refreshToken = getRefreshToken();
-
-    if (!refreshToken) {
-      clearSession();
-      window.location.href = "/login";
-      return Promise.reject(error);
-    }
-
     originalRequest._retry = true;
 
     if (!refreshRequest) {
       refreshRequest = axios
-        .post<ApiResponse<AuthSession>>(`${API_URL}/auth/refresh`, {
-          refreshToken
-        })
+        .post<ApiResponse<AuthSession>>(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
         .then((response) => {
           persistSession(response.data.data);
           return response.data.data.accessToken;
         })
         .catch((refreshError) => {
-          clearSession();
-          window.location.href = "/login";
-          return Promise.reject(refreshError);
+          return clearServerSession().then(() => {
+            clearSession();
+            window.location.href = "/login";
+            throw refreshError;
+          });
         })
         .finally(() => {
           refreshRequest = null;
@@ -80,7 +78,13 @@ apiClient.interceptors.response.use(
 
 export function getApiErrorMessage(error: unknown, fallback = "Đã xảy ra lỗi, vui lòng thử lại.") {
   if (axios.isAxiosError<ApiErrorPayload>(error)) {
-    return error.response?.data?.message ?? fallback;
+    const payload = error.response?.data;
+
+    if (payload?.errors?.length) {
+      return payload.errors.join("; ");
+    }
+
+    return payload?.message ?? fallback;
   }
 
   if (error instanceof Error) {

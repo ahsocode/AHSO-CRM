@@ -67,6 +67,31 @@ export class UploadService {
     };
   }
 
+  async saveBuffer(
+    buffer: Buffer,
+    options: {
+      originalName?: string;
+      mimeType: string;
+      size?: number;
+      subfolder: string;
+    }
+  ): Promise<UploadResponseDto> {
+    const uploadRoot = this.getUploadRoot();
+    const targetDirectory = resolve(uploadRoot, options.subfolder);
+    const extension = this.resolveExtension(options.originalName ?? "", options.mimeType);
+    const filename = `${randomUUID()}${extension}`;
+
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(join(targetDirectory, filename), buffer);
+
+    return {
+      url: this.getFileUrl(filename, options.subfolder),
+      filename,
+      size: options.size ?? buffer.byteLength,
+      mimeType: options.mimeType
+    };
+  }
+
   async deleteFile(filePathOrUrl?: string | null) {
     const absolutePath = this.resolveStoredFilePath(filePathOrUrl);
 
@@ -103,6 +128,25 @@ export class UploadService {
       const buffer = await readFile(absolutePath);
       const mimeType = this.resolveMimeType(extname(absolutePath).toLowerCase());
       return `data:${mimeType};base64,${buffer.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  }
+
+  async readStoredFile(filePathOrUrl?: string | null) {
+    const absolutePath = this.resolveStoredPath(filePathOrUrl);
+
+    if (!absolutePath) {
+      return null;
+    }
+
+    try {
+      const buffer = await readFile(absolutePath);
+      return {
+        buffer,
+        mimeType: this.resolveMimeType(extname(absolutePath).toLowerCase()),
+        absolutePath
+      };
     } catch {
       return null;
     }

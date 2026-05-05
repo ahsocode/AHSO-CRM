@@ -58,11 +58,14 @@ export function useUpdateCompanyInfo() {
       const response = await apiClient.patch<ApiResponse<CompanyInfo>>("/settings/company", payload);
       return response.data.data;
     },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["settings"] }),
-        queryClient.invalidateQueries({ queryKey: ["settings", "company"] })
-      ]);
+    onSuccess: (updatedCompany) => {
+      // Immediately update the settings bundle cache so the form reflects saved values
+      // without waiting for a background refetch. Use exact:true so we don't trigger
+      // the public GET /settings/company endpoint (which only returns 7 fields).
+      queryClient.setQueryData<SettingsBundle>(["settings"], (old) =>
+        old ? { ...old, company: updatedCompany } : old
+      );
+      void queryClient.invalidateQueries({ queryKey: ["settings"], exact: true });
     }
   });
 }

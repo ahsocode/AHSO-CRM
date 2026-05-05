@@ -35,9 +35,8 @@ export function useUploadLogo() {
     },
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["settings"] }),
-        queryClient.invalidateQueries({ queryKey: ["settings", "logo"] }),
-        queryClient.invalidateQueries({ queryKey: ["settings", "company"] })
+        queryClient.invalidateQueries({ queryKey: ["settings"], exact: true }),
+        queryClient.invalidateQueries({ queryKey: ["settings", "logo"], exact: true })
       ]);
     }
   });

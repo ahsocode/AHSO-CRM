@@ -18,7 +18,7 @@ export const CompanySettingSchema = z.object({
   bankBranch: z.string().max(255).optional(),
   bankAccount: z.string().max(100).optional(),
   bankAccountName: z.string().max(255).optional(),
-  swift: z.string().max(50).optional(),
+  swiftCode: z.string().max(50).optional(),
 });
 
 export type CompanySettingInput = z.infer<typeof CompanySettingSchema>;

@@ -87,7 +87,7 @@ export function useActivities(filters: ActivityFilters) {
         meta: res.data.meta
       };
     },
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 
@@ -102,7 +102,7 @@ export function useDeletedActivities(filters: ActivityFilters, enabled = true) {
         meta: res.data.meta
       };
     },
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 
@@ -114,7 +114,7 @@ export function useActivity(id: string) {
       return res.data.data;
     },
     enabled: !!id,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 }
 

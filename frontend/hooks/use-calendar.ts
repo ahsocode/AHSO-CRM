@@ -22,10 +22,8 @@ export function useCalendarEvents(filters: CalendarFilters) {
         meta: response.data.meta as CalendarListMeta
       };
     },
-    // Keep data fresh longer to avoid rapid refetches
-    staleTime: 10 * 60 * 1000,      // 10 minutes
-    gcTime: 15 * 60 * 1000,         // 15 minutes
-    refetchOnWindowFocus: false,    // Don't refetch on tab switch
-    refetchOnReconnect: false,      // Don't refetch on network reconnect
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true
   });
 }

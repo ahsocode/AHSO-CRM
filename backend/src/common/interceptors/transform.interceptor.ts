@@ -1,10 +1,14 @@
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from "@nestjs/common";
+import type { Response } from "express";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
 
 @Injectable()
 export class TransformInterceptor implements NestInterceptor {
-  intercept(_context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const response = context.switchToHttp().getResponse<Response>();
+    response.setHeader("Cache-Control", "no-store");
+
     return next.handle().pipe(
       map((value) => {
         if (value && typeof value === "object" && "data" in (value as Record<string, unknown>) && "meta" in (value as Record<string, unknown>)) {

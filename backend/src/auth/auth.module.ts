@@ -3,6 +3,7 @@ import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { AuditModule } from "../audit/audit.module";
 import { EmailModule } from "../email/email.module";
+import { WebsocketModule } from "../websocket/websocket.module";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./jwt.strategy";
@@ -11,6 +12,7 @@ import { JwtStrategy } from "./jwt.strategy";
   imports: [
     AuditModule,
     EmailModule,
+    WebsocketModule,
     PassportModule.register({
       defaultStrategy: "jwt"
     }),

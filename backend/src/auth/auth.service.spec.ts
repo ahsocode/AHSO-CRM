@@ -88,12 +88,17 @@ describe("AuthService", () => {
       recordLogin: jest.fn().mockResolvedValue(undefined)
     };
 
+    const websocketGateway = {
+      publishSessionInvalidated: jest.fn()
+    };
+
     service = new AuthService(
       prisma as unknown as PrismaService,
       jwtService as unknown as JwtService,
       configService as unknown as ConfigService,
       emailService as unknown as EmailService,
-      auditService as unknown as AuditService
+      auditService as unknown as AuditService,
+      websocketGateway as unknown as import("../websocket/websocket.gateway").WebsocketGateway
     );
   });
 

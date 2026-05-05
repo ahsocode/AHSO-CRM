@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";
 import { getAccessToken } from "@/lib/auth";
+import { useAuthStore } from "@/hooks/use-auth";
 import { BACKEND_URL } from "@/lib/constants";
 import { RealtimeEvent } from "@/lib/types";
 import { toast } from "@/hooks/use-toast";
@@ -99,6 +100,18 @@ export function useWebsocket(enabled = true) {
 
     socket.on("disconnect", () => {
       setIsConnected(false);
+    });
+
+    socket.on("auth:session-invalidated", () => {
+      socket.disconnect();
+      toast({
+        title: "Đăng xuất",
+        description: "Tài khoản của bạn đã đăng nhập ở thiết bị khác.",
+        variant: "destructive"
+      });
+      setTimeout(() => {
+        void useAuthStore.getState().logout();
+      }, 3000);
     });
 
     socket.on("domain-event", (event: RealtimeEvent) => {

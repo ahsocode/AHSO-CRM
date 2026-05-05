@@ -6,6 +6,7 @@ import type { User } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
 import { EmailService } from "../email/email.service";
+import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
@@ -23,7 +24,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
-    private readonly auditService: AuditService
+    private readonly auditService: AuditService,
+    private readonly websocketGateway: WebsocketGateway
   ) {}
 
   async login(dto: LoginDto, meta?: AuthRequestMeta) {
@@ -53,7 +55,9 @@ export class AuthService {
     const payload = this.buildPayload(user);
     const tokens = await this.issueTokens(payload);
 
-    // Single-device enforcement: invalidate all existing sessions before creating new one
+    // Single-device enforcement: kick existing sessions before creating the new one.
+    // Emit via WebSocket BEFORE deleting so connected sockets can still be addressed.
+    this.websocketGateway.publishSessionInvalidated(user.id);
     await this.prisma.userSession.deleteMany({
       where: { userId: user.id }
     });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ContentArea } from "@/components/layout/content-area";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -9,16 +9,24 @@ import { CommandPalette } from "@/components/shared/command-palette";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { getAccessToken } from "@/lib/auth";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useIdleTimeout } from "@/hooks/use-idle-timeout";
 import { useWebsocket } from "@/hooks/use-websocket";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const isHydrated = useAuthStore((state) => state.isHydrated);
   const hydrate = useAuthStore((state) => state.hydrate);
-  const refreshSession = useAuthStore((state) => state.refreshSession);
   const logout = useAuthStore((state) => state.logout);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const realtime = useWebsocket(isHydrated && !isCheckingAuth);
+  const isActive = isHydrated && !isCheckingAuth;
+
+  const realtime = useWebsocket(isActive);
+
+  // Auto-logout after 15 minutes of inactivity
+  const handleIdleTimeout = useCallback(() => {
+    void logout();
+  }, [logout]);
+  useIdleTimeout(handleIdleTimeout, isActive);
 
   useEffect(() => {
     hydrate();
@@ -30,13 +38,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     async function ensureSession() {
       const hasAccessToken = Boolean(getAccessToken());
 
+      // No access token means this is a new browser session.
+      // Do NOT auto-refresh via cookie — require explicit login.
       if (!hasAccessToken) {
-        try {
-          await refreshSession();
-        } catch {
-          await logout();
-          return;
-        }
+        await logout();
+        return;
       }
 
       if (!isCancelled) {
@@ -51,7 +57,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return () => {
       isCancelled = true;
     };
-  }, [isHydrated, logout, refreshSession]);
+  }, [isHydrated, logout]);
 
   if (!isHydrated || isCheckingAuth) {
     return (

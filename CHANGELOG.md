@@ -6,6 +6,33 @@ All notable changes to this project are documented in this file.
 
 ---
 
+## [1.3.0] - 2026-05-05
+
+### Fixed
+- **Quotes soft delete** — added `deletedAt` column to `Quote` model; quotes no longer appear in lists after deletion; `DELETE /api/quotes/:id` endpoint added
+- **Contracts soft delete** — added `deletedAt` column to `Contract` model; `DELETE /api/contracts/:id` endpoint added; deleted contracts filtered from all list queries
+- **Bulk quote delete** — extended bulk action enum to include `"delete"`; backend enforces `quotes.delete` permission for bulk delete
+- **`useDeleteQuote` hook** — new frontend hook for single quote deletion with cache invalidation
+- **`useDeleteContract` hook** — new frontend hook for single contract deletion with cache invalidation
+- **`useUpdateUser` cache flush bug** — `onSuccess` was calling `invalidateQueries()` with no key, wiping the entire TanStack Query cache on every user edit; now scoped to `["users"]`
+- **`use-activities.ts` type safety** — replaced `meta: any` with typed `ActivityListMeta` interface; replaced `error: any` with `unknown` + `getApiErrorMessage()`
+
+### Migration
+- `20260505092709_add_soft_delete_quote_contract` — adds `deletedAt DateTime?` to `Quote` and `Contract` tables
+
+---
+
+## [1.2.0] - 2026-05-05
+
+### Fixed
+- **Company info persistence** — `swiftCode` field was being silently stripped by Zod due to a field name mismatch (`swift` vs `swiftCode`) between backend DTO and frontend form
+- **Settings form refresh** — form data now updates immediately after save using `setQueryData` instead of waiting for a background refetch
+- **Public settings cache pollution** — `invalidateQueries({ queryKey: ["settings"] })` was also invalidating the public company endpoint (which only returns 7 safe fields); fixed with `exact: true`
+- **Logo upload** — removed explicit `Content-Type: multipart/form-data` header; axios now sets boundary automatically
+- **Backend `representative` / `representativeTitle` fields** — added to company info DTO with `nullableString` pattern to allow clearing values
+
+---
+
 ## [1.1.0] - 2026-04-19
 
 ### ✨ Backend Services & Production Infrastructure

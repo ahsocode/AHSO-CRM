@@ -1,272 +1,292 @@
 # AHSO CRM
 
-AHSO CRM is a self-hosted B2B sales management system for technical/industrial projects. This README reflects the **current branch state** on `feature/backend-services-ai` as of **2026-04-24**, not an aspirational end-state.
+Self-hosted B2B sales management system for technical/industrial projects.
 
-## Current Branch Status
+**Production:** https://crm.ahso.vn
 
-### Production-ready in this branch
-- Core CRM flow: customers, projects, quotes, contracts, activities, dashboard, calendar
-- Authentication with access token + **HttpOnly refresh cookie**
-- Admin RBAC: roles, permissions, settings, users
-- Local upload flows for logo, files, survey media, and business documents
-- Documents v1 runtime for `QUOTATION` and `CONTRACT`
-- Project 360 v1: overview, timeline, surveys, documents, handover
-- Search, notifications, realtime foundation, health endpoint
-- Docker Compose runtime with service healthchecks
-
-### Beta / internal
-- Document template editor outside `QUOTATION` and `CONTRACT`
-- Report builder and advanced analytics still need business validation
-- Push notifications, AI endpoints, and Twilio SMS require real environment verification before rollout
-- Custom fields and some Project 360 polish are functional but still evolving
-
-### Deferred
-- Google / Microsoft OAuth
-- Multi-tenant support
-- Offline mutation queue / background sync
-- Gesture-heavy mobile workflows
-
-### Release posture
-- **Good for internal staging/demo**
-- **Not yet ideal for internet-exposed production** without more hardening and broader automated coverage
-- See [docs/REVIEW_2026-04-24.md](docs/REVIEW_2026-04-24.md) for the current review baseline
+---
 
 ## Tech Stack
 
-### Frontend
-- Next.js 14 App Router
-- TypeScript strict
-- Tailwind CSS + shadcn/ui
-- TanStack Query
-- Zustand
-- React Hook Form + Zod
-- Recharts + selected Nivo charts
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14 App Router, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, Zustand, React Hook Form + Zod |
+| Backend | NestJS 10, Prisma 5, PostgreSQL 16, Redis 7, JWT auth, Zod validation, Puppeteer |
+| Deployment | Docker Compose, GitHub Actions CI/CD, GHCR |
 
-### Backend
-- NestJS 10
-- Prisma 5
-- PostgreSQL 16
-- Redis 7
-- JWT auth
-- Zod validation
-- Puppeteer for document/PDF rendering
+---
 
-### Ops
-- Docker Compose
-- GitHub Actions CI/CD
-- Winston logging
-- Sentry hooks
+## Features
 
-## Repo Layout
+- **Customers** — CRUD, contacts, soft delete, customer stats
+- **Projects** — 7-stage kanban (Survey → Proposal → Negotiation → Active → Delivery → Closing → Closed), drag-drop
+- **Quotes** — line items, PDF generation, versioning, 5-status workflow (Draft → Sent → Accepted/Rejected/Expired)
+- **Contracts** — milestones, payment logging, file attachments, acceptance PDF
+- **Activities** — 7 types (Call, Email, Meeting, Survey, Demo, Note, Follow-up), calendar integration
+- **Calendar** — week/month views, drag-to-reschedule, date range filters
+- **Dashboard** — KPI cards, 6-month revenue chart, pipeline overview, today's tasks
+- **Reports** — revenue trends, status breakdowns, top customers
+- **Admin** — company info/logo, policies, roles & permissions matrix, user management
+- **RBAC** — granular `resource.action` permissions, 3 system roles (ADMIN, MANAGER, STAFF) + custom roles
 
-```text
-AHSO-CRM/
-├── backend/                  NestJS API + Prisma
-├── frontend/                 Next.js App Router UI
-├── e2e/                      Playwright smoke tests
-├── docs/                     Current branch documentation
-├── docker-compose.yml        Local/staging stack
-├── .github/workflows/        CI + deploy workflows
-└── package.json              Root Playwright runner
-```
-
-## Main Functional Areas
-
-### CRM lifecycle
-- Customers
-- Projects with kanban and Project 360
-- Quotes with preview/PDF/send flow
-- Contracts with milestones, payments, and acceptance PDF
-- Activities and calendar scheduling
-
-### Admin and governance
-- Company info and policies
-- Roles and permissions
-- Internal user management
-- Document template administration
-
-### Documents and knowledge
-- Business document registry for uploaded/received files
-- Documents v1 render/download pipeline for quotation + contract
-- Surveys and survey media linked into Project 360
-
-## Authentication and Security Notes
-
-- Access token is used by the frontend API client
-- Refresh token is rotated through a **backend-set HttpOnly cookie**
-- Core CRM and admin endpoints now use permission enforcement
-- Public settings exposure is reduced to safe branding data only
-- Health endpoint is available at `GET /api/health`
-
-Current caveats:
-- Backend and Playwright coverage are still below a mature production target
-- Some enterprise/reporting surfaces remain beta
-
-## Environment Files
-
-Copy all three:
-
-```bash
-cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/.env.local.example frontend/.env.local
-```
-
-### Important backend envs
-- `DATABASE_URL`
-- `REDIS_URL`
-- `JWT_SECRET`
-- `JWT_REFRESH_EXPIRES_IN`
-- `FRONTEND_URL`
-- `CORS_ORIGIN`
-- `THROTTLE_TTL`
-- `THROTTLE_LIMIT`
-- `ANTHROPIC_API_KEY`
-- `SMTP_*`
-- `TWILIO_*`
-- `SENTRY_DSN`
-
-### Important frontend envs
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_APP_NAME`
+---
 
 ## Local Development
 
-### Install
+### Prerequisites
+
+- Node.js 20+
+- Docker + Docker Compose
+
+### Start with Docker (recommended)
 
 ```bash
-npm install
-cd backend && npm install && cd ..
-cd frontend && npm install && cd ..
-```
+# 1. Copy env files
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.local.example frontend/.env.local
 
-### Run with Docker
+# 2. Edit backend/.env — at minimum set POSTGRES_PASSWORD and JWT_SECRET
 
-```bash
+# 3. Start all services
 docker compose up -d --build
+
+# 4. Seed test data
 docker compose exec -T backend npm run prisma:seed
-docker compose ps
-curl http://127.0.0.1:3001/api/health
+
+# 5. Verify
+curl http://localhost:3001/api/health
 ```
 
-Default local URLs:
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:3001/api`
-- Swagger: `http://localhost:3001/api/docs`
+URLs:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:3001/api
+- Swagger UI: http://localhost:3001/api/docs (requires `SWAGGER_ENABLED=true` in `backend/.env`)
 
-### Run without Docker
+### Start without Docker
 
 ```bash
+# Install dependencies
+npm install
+cd backend && npm install
+cd ../frontend && npm install
+
+# Apply migrations + seed
 cd backend && npm run prisma:deploy && npm run prisma:seed
-cd backend && npm run start:dev
-cd frontend && npm run dev
+
+# Run in separate terminals
+cd backend && npm run start:dev   # port 3001
+cd frontend && npm run dev         # port 3000
 ```
 
-## Test Accounts
+### Test Accounts
 
-```text
+```
 admin@ahso.vn    / AHSO123!
 manager@ahso.vn  / AHSO123!
 staff@ahso.vn    / AHSO123!
 ```
 
-## Useful Commands
+---
 
-### Root
+## Production Deployment
+
+Production uses pre-built Docker images from GHCR via `docker-compose.prod.yml`.
+
+### First-time server setup
 
 ```bash
-npm run test:e2e
+# 1. Copy env templates to server
+cp .env.production.example .env.production.local
+cp backend/.env.production.example backend/.env.production.local
+cp frontend/.env.production.example frontend/.env.production.local
+
+# 2. Fill in real values (see Environment Variables below)
+
+# 3. Pull images and start
+docker compose --env-file .env.production.local -f docker-compose.prod.yml pull
+docker compose --env-file .env.production.local -f docker-compose.prod.yml up -d
 ```
+
+Prisma migrations are applied automatically at backend startup via `prisma migrate deploy`.
+
+### CI/CD (GitHub Actions)
+
+Push to `main` triggers:
+1. Backend: lint → typecheck → unit tests → build → push Docker image to GHCR
+2. Frontend: lint → typecheck → unit tests → build → push Docker image to GHCR
+3. Deploy: SSH to VPS → pull new images → `docker compose up -d`
+
+Required GitHub Actions secrets:
+
+| Secret | Description |
+|---|---|
+| `PROD_HOST` | VPS IP or hostname |
+| `PROD_USER` | SSH user |
+| `PROD_SSH_KEY` | Private SSH key |
+| `PROD_APP_DIR` | App directory on server |
+| `PROD_PUBLIC_API_URL` | Backend URL baked into frontend image at build time |
+
+Optional: `SLACK_WEBHOOK_URL` for deploy notifications.
+
+### Nginx reverse proxy
+
+The production compose binds backend to `127.0.0.1:3001` and frontend to `127.0.0.1:3000`. Use Nginx to terminate TLS:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name crm.ahso.vn;
+
+    location /api     { proxy_pass http://127.0.0.1:3001; }
+    location /uploads { proxy_pass http://127.0.0.1:3001; }
+    location /        { proxy_pass http://127.0.0.1:3000; }
+}
+```
+
+---
+
+## Environment Variables
+
+### Root (`.env.production.local`)
+
+```env
+POSTGRES_DB=ahso_crm
+POSTGRES_USER=ahso
+POSTGRES_PASSWORD=<strong-password>
+BACKEND_IMAGE=ghcr.io/ahsocode/ahso-crm-backend:latest
+FRONTEND_IMAGE=ghcr.io/ahsocode/ahso-crm-frontend:latest
+BACKEND_BIND=127.0.0.1:3001
+FRONTEND_BIND=127.0.0.1:3000
+UPLOADS_DIR=./backend/uploads
+```
+
+### Backend (`backend/.env.production.local`)
+
+```env
+NODE_ENV=production
+PORT=3001
+JWT_SECRET=<32+ random chars>
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+JWT_RESET_SECRET=<different 32+ random chars>
+FRONTEND_URL=https://crm.ahso.vn
+CORS_ORIGIN=https://crm.ahso.vn
+SWAGGER_ENABLED=false
+THROTTLE_TTL=60
+THROTTLE_LIMIT=100
+
+# Optional — AI suggestions
+ANTHROPIC_API_KEY=
+
+# Optional — Email (required for password reset and quote sending)
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=AHSO CRM <noreply@ahso.vn>
+```
+
+### Frontend (`frontend/.env.production.local`)
+
+```env
+NEXT_PUBLIC_API_URL=https://crm.ahso.vn
+NEXT_PUBLIC_APP_NAME=AHSO CRM
+```
+
+> `NEXT_PUBLIC_API_URL` is baked into the Next.js bundle at **image build time** via the `PROD_PUBLIC_API_URL` GitHub Actions secret.
+
+---
+
+## Useful Commands
 
 ### Backend
 
 ```bash
 cd backend
-npm run lint
-npm run typecheck
-npm test -- --runInBand
-npm run build
-npm run prisma:deploy
-npm run prisma:seed
+npm run start:dev        # dev server with hot reload (port 3001)
+npm run build            # production build
+npm run typecheck        # tsc --noEmit
+npm run lint             # ESLint
+npm test                 # Jest unit tests (--runInBand)
+npm run prisma:generate  # regenerate Prisma client after schema change
+npm run prisma:migrate   # create + apply new dev migration
+npm run prisma:deploy    # apply pending migrations (production)
+npm run prisma:seed      # seed test accounts and sample data
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-npm run lint
-npm run typecheck
-npm run build
+npm run dev              # dev server (port 3000)
+npm run build            # production build
+npm run typecheck        # tsc --noEmit
+npm run lint             # next lint
+npm run test:unit        # Vitest
 ```
 
-## Documents v1 Semantics
-
-Documents v1 is intentionally narrow in this branch.
-
-- Runtime document generation is enabled for:
-  - `QUOTATION`
-  - `CONTRACT`
-- `POST /api/documents/:type/:entityId/render`
-  - creates a new document version
-  - renders PDF once
-  - stores the artifact under local uploads
-- `GET /api/documents/:documentId/download`
-  - downloads an existing rendered artifact
-  - does **not** create a new version
-- End-user document creation flows should not expose template types outside the two runtime-ready types above
-
-## Deployment Notes
-
-- CI now runs:
-  - backend lint
-  - backend typecheck
-  - backend tests
-  - backend build
-  - frontend lint
-  - frontend typecheck
-  - frontend build
-  - Playwright smoke tests
-
-### Production Docker Compose
-
-Production deploys should use `docker-compose.prod.yml`, not the local development compose file. The production compose file pulls immutable backend/frontend images and keeps Postgres/Redis internal to the Docker network.
-
-Prepare server-side env files:
+### E2E (root)
 
 ```bash
-cp .env.production.example .env.production.local
-cp backend/.env.production.example backend/.env.production.local
-cp frontend/.env.production.example frontend/.env.production.local
+npm run test:e2e         # Playwright (requires full stack running with seeded DB)
 ```
 
-Then edit the `*.production.local` files with real secrets/domains and run:
+---
 
-```bash
-./scripts/check-deploy-readiness.sh
-docker compose --env-file .env.production.local -f docker-compose.prod.yml pull
-docker compose --env-file .env.production.local -f docker-compose.prod.yml up -d
+## Repo Layout
+
+```
+AHSO-CRM/
+├── backend/                 NestJS API + Prisma
+│   ├── prisma/              Schema, migrations, seed
+│   ├── src/
+│   │   ├── auth/            JWT auth, refresh tokens, password reset
+│   │   ├── users/           User CRUD + role assignment
+│   │   ├── customers/       Customer + contact management
+│   │   ├── projects/        Project kanban + timeline
+│   │   ├── quotes/          Quote workflow + PDF
+│   │   ├── contracts/       Contract + milestones + payments + PDF
+│   │   ├── activities/      Activity log + calendar
+│   │   ├── dashboard/       KPI aggregation
+│   │   ├── reports/         Revenue analytics
+│   │   ├── calendar/        Calendar event queries
+│   │   ├── settings/        Company info + policies
+│   │   ├── roles/           Role CRUD
+│   │   ├── permissions/     Permission matrix
+│   │   ├── upload/          File + logo upload
+│   │   ├── documents/       PDF template runtime
+│   │   ├── notifications/   In-app notifications
+│   │   └── common/          Guards, pipes, interceptors, filters
+│   └── uploads/             Uploaded files — persisted via Docker volume
+├── frontend/                Next.js 14 App Router
+│   ├── app/
+│   │   ├── (auth)/          Login, forgot-password, reset-password
+│   │   └── (dashboard)/     All CRM pages
+│   ├── components/          Shared UI components
+│   ├── hooks/               TanStack Query hooks (use-*.ts)
+│   └── lib/                 API client, types, utils, formatters
+├── e2e/                     Playwright smoke tests
+├── docs/                    Architecture reference
+├── scripts/                 Deploy and utility scripts
+├── docker-compose.yml       Local development stack
+├── docker-compose.prod.yml  Production stack (pre-built images from GHCR)
+└── .github/workflows/       CI + deploy pipelines
 ```
 
-Important deploy notes:
-- `NEXT_PUBLIC_API_URL` is baked into the Next.js browser bundle at image build time.
-- GitHub Actions therefore requires `PROD_PUBLIC_API_URL` to build the frontend image correctly.
-- Deploy health probes use `GET /api/health` and `GET /login`.
-- Uploaded files and generated PDFs should be persisted through `UPLOADS_DIR`.
+---
 
-Required deploy secrets for GitHub Actions:
-- `PROD_HOST`
-- `PROD_USER`
-- `PROD_SSH_KEY`
-- `PROD_APP_DIR`
-- `PROD_PUBLIC_API_URL`
+## Auth Flow
 
-Optional deploy secrets:
-- `PROD_GHCR_USERNAME`
-- `PROD_GHCR_TOKEN`
-- `SLACK_WEBHOOK_URL`
+1. `POST /api/auth/login` → returns `accessToken` (JWT, 15 min) + sets `ahso_refresh_token` **HttpOnly cookie** (7 days)
+2. Frontend stores `accessToken` in `sessionStorage`; Zustand hydrates user profile from `localStorage`
+3. On 401, `apiClient` auto-calls `POST /api/auth/refresh` via the HttpOnly cookie, retries the original request
+4. `POST /api/auth/logout` → deletes session from DB + clears cookie
 
-## Recommended Reading
+---
 
-- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
-- [docs/COMPLETION_SUMMARY.md](docs/COMPLETION_SUMMARY.md)
-- [docs/REVIEW_2026-04-24.md](docs/REVIEW_2026-04-24.md)
+## Documentation
+
+- [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) — detailed architecture reference
+- [CHANGELOG.md](CHANGELOG.md) — version history
+- [CLAUDE.md](CLAUDE.md) — AI assistant coding instructions

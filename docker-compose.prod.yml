@@ -6,8 +6,21 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ahso_crm}
       POSTGRES_USER: ${POSTGRES_USER:-ahso}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    # Tuned for a 4 GB VPS: keep shared_buffers small so the OS page cache
+    # does the heavy lifting, cap connections to 50 (CRM traffic is low).
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c max_connections=50
+      -c effective_cache_size=512MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=8MB
+      -c log_min_duration_statement=1000
     volumes:
       - pgdata:/var/lib/postgresql/data
+    mem_limit: 768m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ahso} -d ${POSTGRES_DB:-ahso_crm}"]
       interval: 10s
@@ -18,9 +31,15 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    # appendonly for durability; maxmemory caps Redis at 128 MB with LRU eviction.
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
     volumes:
       - redisdata:/data
+    mem_limit: 192m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -37,6 +56,9 @@ services:
       NODE_ENV: production
       DATABASE_URL: "postgresql://${POSTGRES_USER:-ahso}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ahso_crm}?schema=public"
       REDIS_URL: "redis://redis:6379"
+      # Cap Node.js V8 heap. Chromium (Puppeteer) gets memory outside this heap,
+      # so leave headroom for PDF generation spikes (~300 MB per render).
+      NODE_OPTIONS: "--max-old-space-size=512"
     ports:
       - "${BACKEND_BIND:-127.0.0.1:3001}:3001"
     depends_on:
@@ -46,6 +68,7 @@ services:
         condition: service_healthy
     volumes:
       - ${UPLOADS_DIR:-./backend/uploads}:/app/uploads
+    mem_limit: 1g
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s
@@ -58,11 +81,14 @@ services:
     restart: unless-stopped
     env_file:
       - ./frontend/.env.production.local
+    environment:
+      NODE_OPTIONS: "--max-old-space-size=256"
     ports:
       - "${FRONTEND_BIND:-127.0.0.1:3000}:3000"
     depends_on:
       backend:
         condition: service_healthy
+    mem_limit: 512m
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s

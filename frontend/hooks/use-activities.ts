@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, getApiErrorMessage } from '@/lib/api-client';
 import { toast } from '@/hooks/use-toast';
 
 export interface ActivityListItem {
@@ -59,6 +59,13 @@ export interface ActivityInput {
   isCompleted?: boolean;
 }
 
+export interface ActivityListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface ActivityFilters {
   page?: number;
   limit?: number;
@@ -74,7 +81,7 @@ export function useActivities(filters: ActivityFilters) {
   return useQuery({
     queryKey: ['activities', filters],
     queryFn: async () => {
-      const res = await apiClient.get<{ data: ActivityListItem[]; meta: any }>('/activities', { params: filters });
+      const res = await apiClient.get<{ data: ActivityListItem[]; meta: ActivityListMeta }>('/activities', { params: filters });
       return {
         items: res.data.data,
         meta: res.data.meta
@@ -89,7 +96,7 @@ export function useDeletedActivities(filters: ActivityFilters, enabled = true) {
     enabled,
     queryKey: ['activities', 'deleted', filters],
     queryFn: async () => {
-      const res = await apiClient.get<{ data: ActivityListItem[]; meta: any }>('/activities/deleted', { params: filters });
+      const res = await apiClient.get<{ data: ActivityListItem[]; meta: ActivityListMeta }>('/activities/deleted', { params: filters });
       return {
         items: res.data.data,
         meta: res.data.meta
@@ -117,16 +124,18 @@ export function useCreateActivity() {
     mutationFn: (data: ActivityInput) => apiClient.post('/activities', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast({
         title: 'Thành công',
         description: 'Đã tạo hoạt động',
         variant: 'default',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Lỗi',
-        description: error.response?.data?.message || 'Không thể tạo hoạt động',
+        description: getApiErrorMessage(error, 'Không thể tạo hoạt động'),
         variant: 'destructive',
       });
     },
@@ -143,16 +152,17 @@ export function useUpdateActivity() {
       queryClient.invalidateQueries({ queryKey: ['activities', variables.id] });
       // Also refresh calendar so drag-drop reschedule reflects immediately
       queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast({
         title: 'Thành công',
         description: 'Đã cập nhật hoạt động',
         variant: 'default',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Lỗi',
-        description: error.response?.data?.message || 'Không thể cập nhật hoạt động',
+        description: getApiErrorMessage(error, 'Không thể cập nhật hoạt động'),
         variant: 'destructive',
       });
     },
@@ -165,16 +175,18 @@ export function useDeleteActivity() {
     mutationFn: (id: string) => apiClient.delete(`/activities/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
+      queryClient.invalidateQueries({ queryKey: ['calendar'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast({
         title: 'Thành công',
         description: 'Đã xoá hoạt động',
         variant: 'default',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Lỗi',
-        description: error.response?.data?.message || 'Không thể xoá hoạt động',
+        description: getApiErrorMessage(error, 'Không thể xoá hoạt động'),
         variant: 'destructive',
       });
     },
@@ -195,10 +207,10 @@ export function useRestoreActivity() {
         variant: 'default',
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Lỗi',
-        description: error.response?.data?.message || 'Không thể khôi phục hoạt động',
+        description: getApiErrorMessage(error, 'Không thể khôi phục hoạt động'),
         variant: 'destructive',
       });
     },

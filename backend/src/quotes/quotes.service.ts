@@ -580,6 +580,13 @@ export class QuotesService {
       await Promise.allSettled(quotes.map((quote) => this.send(quote.id, user)));
     }
 
+    if (dto.action === "delete") {
+      await this.prisma.quote.updateMany({
+        where: { id: { in: quotes.map((q) => q.id) } },
+        data: { deletedAt: new Date() }
+      });
+    }
+
     return {
       action: dto.action,
       processedCount: quotes.length
@@ -598,6 +605,7 @@ export class QuotesService {
     }
 
     const where: Prisma.QuoteWhereInput = {
+      deletedAt: null,
       project: projectWhere
     };
 
@@ -682,6 +690,17 @@ export class QuotesService {
       deletedAt: null,
       customer: customerWhere
     };
+  }
+
+  async remove(id: string, user: JwtUser) {
+    const quote = await this.findAccessibleQuote(id, user);
+
+    await this.prisma.quote.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+
+    return { success: true, id: quote.id };
   }
 
   private async findAccessibleQuote(id: string, user: JwtUser) {

@@ -144,6 +144,23 @@ export function useCreateContractPayment(contractId: string) {
   });
 }
 
+export function useDeleteContract(contractId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.delete<ApiResponse<{ success: boolean }>>(`/contracts/${contractId}`);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
 export function useDownloadContractAcceptancePdf() {
   return useMutation({
     mutationFn: async (contractId: string) => {

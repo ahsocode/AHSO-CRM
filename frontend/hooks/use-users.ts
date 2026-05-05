@@ -31,7 +31,7 @@ export function useUpdateUser() {
       return response.data.data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries();
+      await queryClient.invalidateQueries({ queryKey: ["users"] });
     }
   });
 }
@@ -44,7 +44,17 @@ export function useCreateUser() {
       const response = await apiClient.post<ApiResponse<UserListItem>>("/users", payload);
       return response.data.data;
     },
-    onSuccess: async () => {
+    onSuccess: async (createdUser) => {
+      queryClient.setQueryData<UserListItem[]>(["users"], (current) => {
+        const users = current ?? [];
+        const nextUsers = users.some((user) => user.id === createdUser.id)
+          ? users.map((user) => (user.id === createdUser.id ? createdUser : user))
+          : [...users, createdUser];
+
+        return [...nextUsers].sort(
+          (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+        );
+      });
       await queryClient.invalidateQueries({ queryKey: ["users"] });
     }
   });

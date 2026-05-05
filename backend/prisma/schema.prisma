@@ -203,6 +203,7 @@ model Quote {
   createdById   String
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
   items         QuoteItem[]
   businessDocuments BusinessDocument[]
 }
@@ -244,6 +245,7 @@ model Contract {
   projectId  String         @unique
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+  deletedAt  DateTime?
   milestones Milestone[]
   payments   Payment[]
   businessDocuments BusinessDocument[]

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
@@ -98,6 +98,13 @@ export class ContractsController {
     @CurrentUser() user: JwtUser
   ) {
     return this.contractsService.updateMilestone(id, dto, user);
+  }
+
+  @RequirePermissions("contracts.delete")
+  @ApiOperation({ summary: "DELETE /api/contracts/:id" })
+  @Delete(":id")
+  remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.contractsService.remove(id, user);
   }
 
   @RequirePermissions("payments.create")

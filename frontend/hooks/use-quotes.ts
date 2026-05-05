@@ -54,6 +54,7 @@ export function useCreateQuote() {
       await queryClient.invalidateQueries({ queryKey: ["quotes"] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }
@@ -74,6 +75,7 @@ export function useUpdateQuote(quoteId: string) {
       await queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }
@@ -92,6 +94,7 @@ export function useDuplicateQuote() {
       await queryClient.invalidateQueries({ queryKey: ["quotes"] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }
@@ -117,6 +120,7 @@ export function useUpdateQuoteStatus() {
       await queryClient.invalidateQueries({ queryKey: ["quotes", variables.quoteId] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }
@@ -136,11 +140,28 @@ export function useDownloadQuotePdf() {
   });
 }
 
+export function useDeleteQuote(quoteId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.delete<ApiResponse<{ success: boolean }>>(`/quotes/${quoteId}`);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["quotes"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
 export function useBulkQuotes() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: { action: "status" | "send" | "export"; ids: string[]; status?: QuoteStatus }) => {
+    mutationFn: async (payload: { action: "status" | "send" | "export" | "delete"; ids: string[]; status?: QuoteStatus }) => {
       const response = await apiClient.post<ApiResponse<{ action: string; processedCount?: number; items?: Record<string, unknown>[] }>>(
         "/quotes/bulk",
         payload
@@ -152,6 +173,7 @@ export function useBulkQuotes() {
         await queryClient.invalidateQueries({ queryKey: ["quotes"] });
         await queryClient.invalidateQueries({ queryKey: ["projects"] });
         await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        await queryClient.invalidateQueries({ queryKey: ["reports"] });
       }
     }
   });

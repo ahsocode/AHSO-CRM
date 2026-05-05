@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { hasPermission, JwtUser } from "../auth/auth.types";
@@ -116,8 +116,15 @@ export class QuotesController {
     return this.quotesService.updateStatus(id, dto, user);
   }
 
+  @RequirePermissions("quotes.delete")
+  @ApiOperation({ summary: "DELETE /api/quotes/:id" })
+  @Delete(":id")
+  remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.quotesService.remove(id, user);
+  }
+
   private assertBulkPermission(user: JwtUser, action: BulkQuoteDto["action"]) {
-    const permission = action === "export" ? "quotes.view" : "quotes.edit";
+    const permission = action === "export" ? "quotes.view" : action === "delete" ? "quotes.delete" : "quotes.edit";
 
     if (!hasPermission(user, permission)) {
       throw new ForbiddenException("Bạn không có quyền thực hiện thao tác này");

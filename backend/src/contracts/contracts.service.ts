@@ -442,9 +442,21 @@ export class ContractsService {
     };
   }
 
+  async remove(id: string, user: JwtUser) {
+    const contract = await this.findAccessibleContract(id, user);
+
+    await this.prisma.contract.update({
+      where: { id },
+      data: { deletedAt: new Date() }
+    });
+
+    return { success: true, id: contract.id };
+  }
+
   private buildWhere(filters: Partial<ContractFilterDto>, user: JwtUser): Prisma.ContractWhereInput {
     const projectWhere: Prisma.ProjectWhereInput = this.buildAccessibleProjectWhere(user);
     const where: Prisma.ContractWhereInput = {
+      deletedAt: null,
       project: projectWhere
     };
 

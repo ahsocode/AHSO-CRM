@@ -82,15 +82,13 @@ export async function renderPdfBuffer(html: string, configService: ConfigService
 
   try {
     await page.setContent(html, { waitUntil: "networkidle0" });
+    // No margin here — CSS @page rules in each template are the source of truth.
+    // HBS templates use base.css (@page { margin: 20mm 18mm 22mm 22mm }).
+    // Schema templates override with @page { margin: 0 } so 210×297 mm divs
+    // map exactly to one A4 page without overflow.
     return await page.pdf({
       format: "A4",
-      printBackground: true,
-      margin: {
-        top: "14mm",
-        right: "12mm",
-        bottom: "14mm",
-        left: "12mm"
-      }
+      printBackground: true
     });
   } finally {
     await page.close();

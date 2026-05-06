@@ -92,6 +92,14 @@ function toObjectPosition(
 export class DocumentLayoutRendererService {
   getCss() {
     return `
+/* Each .schema-document__page is exactly one A4 sheet.
+   @page margin: 0 overrides base.css so the 210×297 mm div maps 1-to-1
+   to the PDF page without any Puppeteer/CSS margin stacking. */
+@page {
+  size: A4;
+  margin: 0;
+}
+
 .schema-document {
   background: #f8fafc;
   color: #0f172a;
@@ -101,7 +109,7 @@ export class DocumentLayoutRendererService {
 .schema-document__page {
   position: relative;
   width: 210mm;
-  min-height: 297mm;
+  height: 297mm;
   margin: 0 auto 12mm;
   background: #ffffff;
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);

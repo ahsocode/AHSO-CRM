@@ -8,6 +8,7 @@ import type { UploadResponseDto } from "./dto/upload-response.dto";
 @Injectable()
 export class UploadService {
   readonly logoMimeTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"] as const;
+  readonly avatarMimeTypes = ["image/png", "image/jpeg", "image/webp"] as const;
   readonly fileMimeTypes = [
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -16,6 +17,7 @@ export class UploadService {
     "image/jpeg"
   ] as const;
   readonly maxLogoSize = 5 * 1024 * 1024;
+  readonly maxAvatarSize = 5 * 1024 * 1024;
   readonly maxFileSize = 10 * 1024 * 1024;
 
   private readonly extensionMap: Record<string, string> = {
@@ -40,6 +42,14 @@ export class UploadService {
 
   validateLogoSize(size: number) {
     return size <= this.maxLogoSize;
+  }
+
+  validateAvatarType(mimeType: string) {
+    return this.avatarMimeTypes.includes(mimeType as (typeof this.avatarMimeTypes)[number]);
+  }
+
+  validateAvatarSize(size: number) {
+    return size <= this.maxAvatarSize;
   }
 
   validateFileSize(size: number) {

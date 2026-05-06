@@ -65,3 +65,30 @@ export function useUploadFile() {
     }
   });
 }
+
+export function useUploadAvatar() {
+  return useMutation({
+    mutationFn: async ({
+      file,
+      onProgress
+    }: {
+      file: File;
+      onProgress?: (progress: number) => void;
+    }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await apiClient.post<ApiResponse<UploadedFileResult>>("/upload/avatar", formData, {
+        onUploadProgress: (event) => {
+          if (!event.total || !onProgress) {
+            return;
+          }
+
+          onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      });
+
+      return response.data.data;
+    }
+  });
+}

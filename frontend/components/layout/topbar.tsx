@@ -111,7 +111,11 @@ export function Topbar({
                 className="flex items-center gap-3 rounded-full border border-slate-200/80 bg-white/92 px-2 py-1.5 shadow-sm transition hover:border-primary/25 hover:bg-white"
                 type="button"
               >
-                <AvatarInitials className="h-10 w-10 rounded-full bg-primary/12 text-xs text-primary" name={user?.name ?? "AHSO CRM"} />
+                <AvatarInitials
+                  className="h-10 w-10 rounded-full bg-primary/12 text-xs text-primary"
+                  name={user?.name ?? "AHSO CRM"}
+                  src={resolveAssetUrl(user?.avatarUrl)}
+                />
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-semibold text-text-primary">{user?.name ?? "Đang tải..."}</p>
                   <p className="text-xs text-text-secondary">{getRoleLabel(user?.role)}</p>

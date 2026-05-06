@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
+import { resolveAssetUrl } from "@/lib/auth";
 import { UserListItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +79,7 @@ export function UserTable({
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <AvatarInitials name={item.name} />
+                      <AvatarInitials name={item.name} src={resolveAssetUrl(item.avatarUrl)} />
                       <div className="min-w-0">
                         <p className="truncate font-semibold text-text-primary">{item.name}</p>
                         <p className="truncate text-sm text-text-secondary">{item.email}</p>

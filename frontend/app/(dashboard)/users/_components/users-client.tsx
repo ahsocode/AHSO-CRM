@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import type { ChangeEvent, DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -16,9 +17,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { useUploadAvatar } from "@/hooks/use-upload";
 import { useCreateUser, useUpdateUser, useUsers } from "@/hooks/use-users";
 import { useRoles } from "@/hooks/use-roles";
-import { isLeadershipRole } from "@/lib/auth";
+import { isLeadershipRole, resolveAssetUrl } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -27,11 +30,38 @@ import { cn } from "@/lib/utils";
 import { UserOverviewCards } from "./user-overview-cards";
 import { UserTable } from "./user-table";
 
+const MAX_AVATAR_SIZE = 5 * 1024 * 1024;
+const AVATAR_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+function isValidAvatarUrl(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return true;
+  }
+
+  if (trimmed.startsWith("/uploads/avatars/") && !trimmed.includes("..")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+const avatarUrlSchema = z
+  .string()
+  .trim()
+  .refine(isValidAvatarUrl, "Avatar URL không hợp lệ");
+
 const userEditorSchema = z.object({
   name: z.string().trim().min(2, "Tên phải có ít nhất 2 ký tự").max(100, "Tên quá dài"),
   roleId: z.string().trim().min(1, "Vai trò không được để trống"),
   status: z.enum(["active", "inactive"]),
-  avatarUrl: z.string().trim().url("Avatar URL không hợp lệ").or(z.literal(""))
+  avatarUrl: avatarUrlSchema
 });
 
 const userCreateSchema = z
@@ -42,7 +72,7 @@ const userCreateSchema = z
     password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự").max(100, "Mật khẩu quá dài"),
     confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
     status: z.enum(["active", "inactive"]),
-    avatarUrl: z.string().trim().url("Avatar URL không hợp lệ").or(z.literal(""))
+    avatarUrl: avatarUrlSchema
   })
   .refine((values) => values.password === values.confirmPassword, {
     path: ["confirmPassword"],
@@ -131,6 +161,119 @@ function getCreateDefaultValues(roleId: string): UserCreateValues {
   };
 }
 
+function AvatarUploader({
+  inputId,
+  name,
+  value,
+  disabled,
+  onUploaded
+}: {
+  inputId: string;
+  name: string;
+  value?: string | null;
+  disabled?: boolean;
+  onUploaded: (url: string) => void;
+}) {
+  const uploadAvatar = useUploadAvatar();
+  const { error: showError, success } = useToast();
+  const [progress, setProgress] = useState(0);
+  const previewUrl = resolveAssetUrl(value);
+
+  const handleFile = async (file?: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    if (!AVATAR_MIME_TYPES.includes(file.type)) {
+      showError("Avatar chỉ chấp nhận PNG, JPG hoặc WEBP.");
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_SIZE) {
+      showError("Kích thước avatar vượt quá 5MB.");
+      return;
+    }
+
+    try {
+      setProgress(0);
+      const result = await uploadAvatar.mutateAsync({
+        file,
+        onProgress: setProgress
+      });
+      onUploaded(result.url);
+      success("Đã tải avatar lên. Bấm Lưu thay đổi để áp dụng vào hồ sơ.");
+    } catch (error) {
+      showError(getApiErrorMessage(error, "Không thể tải avatar lên."));
+    } finally {
+      setProgress(0);
+    }
+  };
+
+  const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    void handleFile(event.target.files?.[0]);
+    event.target.value = "";
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    if (disabled || uploadAvatar.isPending) {
+      return;
+    }
+
+    void handleFile(event.dataTransfer.files?.[0]);
+  };
+
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-slate-50/70 p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <AvatarInitials
+          name={name || "Avatar"}
+          src={previewUrl}
+          className="h-20 w-20 rounded-2xl text-lg"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-text-primary">Upload avatar</p>
+          <p className="mt-1 text-sm text-text-secondary">
+            Kéo thả ảnh vào đây hoặc chọn file. Hỗ trợ PNG, JPG, WEBP và tối đa 5MB.
+          </p>
+          {value ? (
+            <p className="mt-2 truncate text-xs text-text-secondary">Đường dẫn hiện tại: {value}</p>
+          ) : null}
+          {uploadAvatar.isPending ? (
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg-hover">
+              <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <input
+          id={inputId}
+          type="file"
+          accept={AVATAR_MIME_TYPES.join(",")}
+          onChange={handleInputChange}
+          disabled={disabled || uploadAvatar.isPending}
+          className="hidden"
+        />
+        <label
+          htmlFor={inputId}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={handleDrop}
+          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md border border-border bg-bg-card px-4 text-sm font-medium text-text-primary transition hover:bg-bg-hover"
+        >
+          {uploadAvatar.isPending ? "Đang tải..." : "Chọn ảnh avatar"}
+        </label>
+        {value ? (
+          <Button type="button" variant="ghost" onClick={() => onUploaded("")} disabled={disabled || uploadAvatar.isPending}>
+            Xóa avatar
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function UsersClient() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -171,6 +314,10 @@ export function UsersClient() {
     resolver: zodResolver(userCreateSchema),
     defaultValues: getCreateDefaultValues(getPreferredRoleId(roleOptions))
   });
+  const createAvatarUrl = createForm.watch("avatarUrl");
+  const createName = createForm.watch("name");
+  const editAvatarUrl = editForm.watch("avatarUrl");
+  const editName = editForm.watch("name");
 
   useEffect(() => {
     if (!selectedUserId && users[0]) {
@@ -408,7 +555,11 @@ export function UsersClient() {
             {panelMode === "create" ? (
               <div className="space-y-5">
                 <div className="flex items-start gap-4 rounded-2xl bg-slate-50/90 p-4 ring-1 ring-border/50">
-                  <AvatarInitials name="Tài khoản mới" className="h-14 w-14 rounded-2xl text-base" />
+                  <AvatarInitials
+                    name={createName || "Tài khoản mới"}
+                    src={resolveAssetUrl(createAvatarUrl)}
+                    className="h-14 w-14 rounded-2xl text-base"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-bold text-text-primary">Tài khoản mới</h3>
@@ -509,13 +660,25 @@ export function UsersClient() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <AvatarUploader
+                      inputId="create-user-avatar-file"
+                      name={createName || "Tài khoản mới"}
+                      value={createAvatarUrl}
+                      disabled={createUserMutation.isPending}
+                      onUploaded={(url) => {
+                        createForm.setValue("avatarUrl", url, {
+                          shouldDirty: true,
+                          shouldValidate: true
+                        });
+                      }}
+                    />
                     <label className="text-sm font-semibold text-text-primary" htmlFor="create-user-avatar">
-                      Avatar URL
+                      Avatar URL thủ công
                     </label>
                     <Input
                       id="create-user-avatar"
-                      placeholder="https://cdn.ahso.vn/avatar/user.png"
+                      placeholder="/uploads/avatars/avatar.png hoặc https://cdn.ahso.vn/avatar/user.png"
                       {...createForm.register("avatarUrl")}
                     />
                     <p className="text-xs text-text-secondary">
@@ -556,7 +719,11 @@ export function UsersClient() {
             ) : (
               <div className="space-y-5">
                 <div className="flex items-start gap-4 rounded-2xl bg-slate-50/90 p-4 ring-1 ring-border/50">
-                  <AvatarInitials name={selectedUser.name} className="h-14 w-14 rounded-2xl text-base" />
+                  <AvatarInitials
+                    name={editName || selectedUser.name}
+                    src={resolveAssetUrl(editAvatarUrl || selectedUser.avatarUrl)}
+                    className="h-14 w-14 rounded-2xl text-base"
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-bold text-text-primary">{selectedUser.name}</h3>
@@ -617,13 +784,26 @@ export function UsersClient() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
+                    <AvatarUploader
+                      inputId={`user-avatar-file-${selectedUser.id}`}
+                      name={editName || selectedUser.name}
+                      value={editAvatarUrl}
+                      disabled={updateUserMutation.isPending}
+                      onUploaded={(url) => {
+                        editForm.setValue("avatarUrl", url, {
+                          shouldDirty: true,
+                          shouldValidate: true
+                        });
+                        setSuccessMessage(null);
+                      }}
+                    />
                     <label className="text-sm font-semibold text-text-primary" htmlFor="user-avatar">
-                      Avatar URL
+                      Avatar URL thủ công
                     </label>
                     <Input
                       id="user-avatar"
-                      placeholder="https://cdn.ahso.vn/avatar/user.png"
+                      placeholder="/uploads/avatars/avatar.png hoặc https://cdn.ahso.vn/avatar/user.png"
                       {...editForm.register("avatarUrl")}
                     />
                     <p className="text-xs text-text-secondary">

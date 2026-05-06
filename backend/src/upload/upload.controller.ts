@@ -53,6 +53,27 @@ export class UploadController {
     return this.uploadService.saveFile(file, "files");
   }
 
+  @ApiOperation({ summary: "POST /api/upload/avatar" })
+  @Post("avatar")
+  @UseInterceptors(FileInterceptor("file"))
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: JwtUser
+  ) {
+    void user;
+    this.ensureFilePresent(file);
+
+    if (!this.uploadService.validateAvatarType(file.mimetype)) {
+      throw new BadRequestException("Avatar chỉ chấp nhận PNG, JPG hoặc WEBP");
+    }
+
+    if (!this.uploadService.validateAvatarSize(file.size)) {
+      throw new BadRequestException("Kích thước avatar vượt quá 5MB");
+    }
+
+    return this.uploadService.saveFile(file, "avatars");
+  }
+
   @ApiOperation({ summary: "POST /api/upload/logo" })
   @Post("logo")
   @UseGuards(PermissionsGuard)

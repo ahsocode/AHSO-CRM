@@ -80,6 +80,8 @@ export function useCreateCustomer() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }
@@ -96,6 +98,8 @@ export function useUpdateCustomer(customerId: string) {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
       await queryClient.invalidateQueries({ queryKey: ["customers", customerId] });
       await queryClient.invalidateQueries({ queryKey: ["customers", customerId, "stats"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }
@@ -110,6 +114,8 @@ export function useDeleteCustomer(customerId: string) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
     }
   });
 }
@@ -197,6 +203,7 @@ export function useBulkCustomers() {
       if (data.action !== "export") {
         await queryClient.invalidateQueries({ queryKey: ["customers"] });
         await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        await queryClient.invalidateQueries({ queryKey: ["reports"] });
       }
     }
   });

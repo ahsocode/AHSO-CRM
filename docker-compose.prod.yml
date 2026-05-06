@@ -20,7 +20,10 @@ services:
       -c log_min_duration_statement=1000
     volumes:
       - pgdata:/var/lib/postgresql/data
-    mem_limit: 768m
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ahso} -d ${POSTGRES_DB:-ahso_crm}"]
       interval: 10s
@@ -39,7 +42,10 @@ services:
       --maxmemory-policy allkeys-lru
     volumes:
       - redisdata:/data
-    mem_limit: 192m
+    deploy:
+      resources:
+        limits:
+          memory: 192m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -68,7 +74,10 @@ services:
         condition: service_healthy
     volumes:
       - ${UPLOADS_DIR:-./backend/uploads}:/app/uploads
-    mem_limit: 1g
+    deploy:
+      resources:
+        limits:
+          memory: 1g
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s
@@ -88,7 +97,10 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    mem_limit: 512m
+    deploy:
+      resources:
+        limits:
+          memory: 512m
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s

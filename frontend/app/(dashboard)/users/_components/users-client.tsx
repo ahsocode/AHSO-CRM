@@ -267,17 +267,18 @@ export function UsersClient() {
         isActive: values.status === "active"
       });
 
-      await usersQuery.refetch();
+      const hadActiveFilters = hasActiveFilters;
       setSearch("");
       setRoleFilter("");
       setActivityFilter("all");
       setSelectedUserId(createdUser.id);
       setPanelMode("edit");
       setSuccessMessage(
-        hasActiveFilters
+        hadActiveFilters
           ? `Đã tạo tài khoản cho ${createdUser.name}. Bộ lọc đã được đặt lại để hiển thị người dùng mới.`
           : `Đã tạo tài khoản cho ${createdUser.name}.`
       );
+      await usersQuery.refetch();
     } catch {
       // Error surfaced by mutation state.
     }

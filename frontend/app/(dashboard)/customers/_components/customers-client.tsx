@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isLeadershipRole } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { CustomerStatus, CustomerUpsertInput } from "@/lib/types";
-import { CsvImportDialog, CsvColumnSpec } from "@/components/shared/csv-import-dialog";
+import { CsvImportDialog, CsvColumnSpec, CsvImportResultItem } from "@/components/shared/csv-import-dialog";
 import { buildCsv, downloadCsv } from "@/lib/csv";
 import { downloadExcelRows } from "@/lib/utils";
 import { CustomerFilters, type VipFilterValue } from "./customer-filters";
@@ -58,6 +58,7 @@ export function CustomersClient() {
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [importSummary, setImportSummary] = useState<{ successCount: number; errorCount: number } | null>(null);
   const [bulkAction, setBulkAction] = useState<"assign" | "delete">("assign");
   const [bulkAssignedToId, setBulkAssignedToId] = useState("");
   const [showDeleted, setShowDeleted] = useState(false);
@@ -109,6 +110,55 @@ export function CustomersClient() {
     normalizedIndustry.length > 0 ||
     assignedToId.length > 0 ||
     vipFilter !== "all";
+
+  const resetFilters = () => {
+    setSearch("");
+    setStatus("");
+    setIndustry("");
+    setAssignedToId("");
+    setVipFilter("all");
+    setPage(1);
+  };
+
+  useEffect(() => {
+    const totalPages = Math.max(customersQuery.data?.meta?.totalPages ?? 1, 1);
+
+    if (!showDeleted && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [customersQuery.data?.meta?.totalPages, page, showDeleted]);
+
+  useEffect(() => {
+    const totalPages = Math.max(deletedCustomersQuery.data?.meta?.totalPages ?? 1, 1);
+
+    if (showDeleted && deletedPage > totalPages) {
+      setDeletedPage(totalPages);
+    }
+  }, [deletedCustomersQuery.data?.meta?.totalPages, deletedPage, showDeleted]);
+
+  const handleImportFinish = (results: CsvImportResultItem[]) => {
+    const successCount = results.filter((item) => item.status === "success").length;
+    const errorCount = results.filter((item) => item.status === "error").length;
+
+    setImportSummary({ successCount, errorCount });
+    setSelectedIds([]);
+    setShowDeleted(false);
+    resetFilters();
+
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["customers"] }),
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
+      queryClient.invalidateQueries({ queryKey: ["reports"] })
+    ]).then(() => queryClient.refetchQueries({ queryKey: ["customers"], type: "active" }));
+
+    if (successCount > 0) {
+      success(`Đã import ${successCount} khách hàng. Bộ lọc đã được đặt lại để hiển thị dữ liệu mới.`);
+    }
+
+    if (errorCount > 0) {
+      showError(`${errorCount} dòng import bị lỗi. Tải error report trong hộp thoại để kiểm tra chi tiết.`);
+    }
+  };
 
   const assigneeList = usersQuery.data ?? [];
   const visibleIds = customersQuery.data?.items.map((customer) => customer.id) ?? [];
@@ -214,9 +264,7 @@ export function CustomersClient() {
           const result = await createCustomer.mutateAsync(input);
           return { displayName: input.name + (result?.id ? ` (ID: ${result.id.slice(0, 6)}…)` : "") };
         }}
-        onFinish={() => {
-          queryClient.invalidateQueries({ queryKey: ["customers"] });
-        }}
+        onFinish={handleImportFinish}
       />
 
       <CustomerOverviewCards meta={customersQuery.data?.meta} isLoading={customersQuery.isLoading} />
@@ -232,14 +280,7 @@ export function CustomersClient() {
         onAssignedToIdChange={setAssignedToId}
         vipFilter={vipFilter}
         onVipFilterChange={setVipFilter}
-        onReset={() => {
-          setSearch("");
-          setStatus("");
-          setIndustry("");
-          setAssignedToId("");
-          setVipFilter("all");
-          setPage(1);
-        }}
+        onReset={resetFilters}
         canReset={canReset}
         users={usersQuery.data ?? []}
         usersUnavailable={!canManageUsers || usersQuery.isError}
@@ -365,6 +406,16 @@ export function CustomersClient() {
         </BulkActionsBar>
       ) : null}
 
+      {importSummary ? (
+        <div className="rounded-2xl border border-info/25 bg-info-bg/60 px-5 py-4 text-sm text-info">
+          <p className="font-semibold">Kết quả import khách hàng</p>
+          <p className="mt-1">
+            {importSummary.successCount} dòng thành công
+            {importSummary.errorCount > 0 ? ` · ${importSummary.errorCount} dòng lỗi` : ""}. Danh sách đã được đưa về bộ lọc mặc định để dễ kiểm tra dữ liệu mới.
+          </p>
+        </div>
+      ) : null}
+
       <CustomerTable
         allVisibleSelected={allVisibleSelected}
         items={customersQuery.data?.items ?? []}
@@ -373,6 +424,8 @@ export function CustomersClient() {
         isError={customersQuery.isError}
         errorMessage={getErrorMessage(customersQuery.error)}
         onPageChange={setPage}
+        hasActiveFilters={canReset}
+        onResetFilters={resetFilters}
         onToggleSelect={(id) =>
           setSelectedIds((current) =>
             current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]

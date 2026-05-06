@@ -80,6 +80,10 @@ export function getApiErrorMessage(error: unknown, fallback = "Đã xảy ra l�
   if (axios.isAxiosError<ApiErrorPayload>(error)) {
     const payload = error.response?.data;
 
+    if (!error.response) {
+      return `Không kết nối được API (${API_URL}). Kiểm tra cấu hình backend hoặc NEXT_PUBLIC_API_URL.`;
+    }
+
     if (payload?.errors?.length) {
       return payload.errors.join("; ");
     }

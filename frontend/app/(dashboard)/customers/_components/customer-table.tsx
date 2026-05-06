@@ -22,7 +22,9 @@ export function CustomerTable({
   selectedIds,
   allVisibleSelected,
   onToggleSelect,
-  onToggleSelectAll
+  onToggleSelectAll,
+  hasActiveFilters = false,
+  onResetFilters
 }: {
   items: CustomerListItem[];
   meta?: CustomerListMeta;
@@ -34,6 +36,8 @@ export function CustomerTable({
   allVisibleSelected: boolean;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
+  hasActiveFilters?: boolean;
+  onResetFilters?: () => void;
 }) {
   if (isLoading) {
     return (
@@ -72,16 +76,25 @@ export function CustomerTable({
   }
 
   if (items.length === 0) {
+    const title = hasActiveFilters ? "Không có khách hàng khớp bộ lọc" : "Chưa có khách hàng";
+    const description = hasActiveFilters
+      ? "Dữ liệu có thể đang bị bộ lọc hoặc trang hiện tại che mất. Xóa bộ lọc để xem lại toàn bộ danh sách."
+      : "Tạo khách hàng mới hoặc import CSV để bắt đầu theo dõi pipeline.";
+
     return (
       <Card className="border border-white/70">
         <CardHeader>
           <CardTitle>Danh sách khách hàng</CardTitle>
         </CardHeader>
-        <CardContent>
-          <EmptyState
-            title="Không có khách hàng phù hợp"
-            description="Hãy nới bộ lọc hiện tại hoặc tạo thêm dữ liệu seed để kiểm tra các luồng pipeline tiếp theo."
-          />
+        <CardContent className="space-y-4">
+          <EmptyState title={title} description={description} />
+          {hasActiveFilters && onResetFilters ? (
+            <div className="flex justify-center">
+              <Button type="button" variant="outline" onClick={onResetFilters}>
+                Xóa bộ lọc và về trang đầu
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     );

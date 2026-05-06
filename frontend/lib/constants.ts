@@ -1,5 +1,10 @@
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "AHSO CRM";
-const DEFAULT_BACKEND_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001").replace(/\/$/, "");
+
+export function normalizeBackendUrl(value: string) {
+  return value.trim().replace(/\/+$/, "").replace(/\/api$/i, "");
+}
+
+const DEFAULT_BACKEND_URL = normalizeBackendUrl(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001");
 
 function resolveBackendUrl() {
   if (typeof window === "undefined") {
@@ -17,7 +22,7 @@ function resolveBackendUrl() {
       configuredUrl.hostname = currentHostname;
     }
 
-    return configuredUrl.toString().replace(/\/$/, "");
+    return normalizeBackendUrl(configuredUrl.toString());
   } catch {
     return DEFAULT_BACKEND_URL;
   }

@@ -35,4 +35,10 @@ describe("getApiErrorMessage", () => {
     expect(getApiErrorMessage(new Error("Network failed"))).toBe("Network failed");
     expect(getApiErrorMessage("unknown", "Lỗi dự phòng")).toBe("Lỗi dự phòng");
   });
+
+  it("surfaces a clearer diagnostic when the API is unreachable", () => {
+    const networkError = new axios.AxiosError("Network Error");
+
+    expect(getApiErrorMessage(networkError)).toContain("Không kết nối được API");
+  });
 });

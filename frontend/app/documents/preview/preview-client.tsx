@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -19,6 +20,7 @@ export function DocumentPreviewClient({
   lang?: string;
   templateVariantId?: string;
 }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const isReady = Boolean(type && entityId);
   const language = lang ?? "vi";
 
@@ -48,7 +50,7 @@ export function DocumentPreviewClient({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => window.print()} disabled={!previewQuery.data}>
+            <Button variant="outline" onClick={() => iframeRef.current?.contentWindow?.print()} disabled={!previewQuery.data}>
               In / Lưu PDF
             </Button>
             <Link href="/dashboard" className={cn(buttonVariants({ variant: "ghost" }))}>
@@ -72,6 +74,7 @@ export function DocumentPreviewClient({
         ) : (
           <div className="overflow-hidden rounded-[32px] border border-white/70 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
             <iframe
+              ref={iframeRef}
               title="document-preview"
               srcDoc={previewQuery.data}
               className="h-[calc(100vh-180px)] w-full bg-white"

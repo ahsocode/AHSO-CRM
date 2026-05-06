@@ -69,6 +69,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
 
   return (
     <div className="space-y-8 print:space-y-0">
+      <style>{`@media print { @page { size: A4; margin: 0; } }`}</style>
       <PageHeader
         className="print:hidden"
         title="Xem trước bản in"

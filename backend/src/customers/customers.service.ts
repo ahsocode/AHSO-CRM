@@ -939,6 +939,102 @@ export class CustomersService {
     return new Date(now.getFullYear(), quarterMonth, 1);
   }
 
+  async findDuplicates() {
+    const customers = await this.prisma.customer.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        taxCode: true,
+        code: true,
+        phone: true,
+        email: true,
+        address: true,
+        industry: true,
+        status: true,
+        createdAt: true,
+        assignedTo: { select: { id: true, name: true } },
+        _count: { select: { projects: true, contacts: true, activities: true } }
+      },
+      orderBy: { createdAt: "asc" }
+    });
+
+    const groups = new Map<string, typeof customers>();
+    for (const customer of customers) {
+      const key = this.normalizeForDedup(customer.name);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(customer);
+    }
+
+    return Array.from(groups.values())
+      .filter((group) => group.length >= 2)
+      .map((group) => ({ customers: group }));
+  }
+
+  async merge(primaryId: string, duplicateIds: string[]) {
+    await this.prisma.$transaction(async (tx) => {
+      const primary = await tx.customer.findFirstOrThrow({
+        where: { id: primaryId, deletedAt: null },
+        select: { id: true, taxCode: true, code: true }
+      });
+
+      for (const dupId of duplicateIds) {
+        const duplicate = await tx.customer.findFirstOrThrow({
+          where: { id: dupId, deletedAt: null },
+          select: { id: true, taxCode: true, code: true }
+        });
+
+        // Null out unique fields on duplicate first to avoid constraint violations
+        await tx.customer.update({
+          where: { id: dupId },
+          data: { taxCode: null, code: null }
+        });
+
+        // Adopt taxCode from duplicate if primary has none
+        if (!primary.taxCode && duplicate.taxCode) {
+          await tx.customer.update({ where: { id: primaryId }, data: { taxCode: duplicate.taxCode } });
+          primary.taxCode = duplicate.taxCode;
+        }
+
+        // Reassign all relations
+        await tx.contact.updateMany({ where: { customerId: dupId }, data: { customerId: primaryId } });
+        await tx.project.updateMany({ where: { customerId: dupId }, data: { customerId: primaryId } });
+        await tx.activity.updateMany({ where: { customerId: dupId }, data: { customerId: primaryId } });
+        await tx.document.updateMany({ where: { customerId: dupId }, data: { customerId: primaryId } });
+        await tx.businessDocument.updateMany({ where: { customerId: dupId }, data: { customerId: primaryId } });
+        await tx.survey.updateMany({ where: { customerId: dupId }, data: { customerId: primaryId } });
+
+        // Merge custom field values — skip fields already set on primary
+        const primaryFieldIds = new Set(
+          (await tx.customFieldValue.findMany({
+            where: { resourceId: primaryId },
+            select: { fieldId: true }
+          })).map((v) => v.fieldId)
+        );
+
+        await tx.customFieldValue.updateMany({
+          where: { resourceId: dupId, fieldId: { notIn: [...primaryFieldIds] } },
+          data: { resourceId: primaryId }
+        });
+        await tx.customFieldValue.deleteMany({ where: { resourceId: dupId } });
+
+        // Soft-delete the duplicate
+        await tx.customer.update({ where: { id: dupId }, data: { deletedAt: new Date() } });
+      }
+    });
+
+    return { success: true };
+  }
+
+  private normalizeForDedup(name: string): string {
+    return name
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
   private mapProjectProgress(status: string) {
     switch (status) {
       case "SURVEY":

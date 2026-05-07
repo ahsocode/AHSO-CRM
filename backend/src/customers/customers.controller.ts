@@ -9,6 +9,7 @@ import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { CreateCustomerDto, createCustomerSchema } from "./dto/create-customer.dto";
 import { BulkCustomerDto, bulkCustomerSchema } from "./dto/bulk-customer.dto";
 import { CustomerFilterDto, customerFilterSchema } from "./dto/customer-filter.dto";
+import { MergeCustomerDto, mergeCustomerSchema } from "./dto/merge-customer.dto";
 import { UpdateCustomerDto, updateCustomerSchema } from "./dto/update-customer.dto";
 import { CustomersService } from "./customers.service";
 
@@ -34,6 +35,20 @@ export class CustomersController {
   @Post()
   create(@Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto) {
     return this.customersService.create(dto);
+  }
+
+  @RequirePermissions("customers.view")
+  @ApiOperation({ summary: "GET /api/customers/duplicates" })
+  @Get("duplicates")
+  findDuplicates() {
+    return this.customersService.findDuplicates();
+  }
+
+  @RequirePermissions("customers.edit")
+  @ApiOperation({ summary: "POST /api/customers/merge" })
+  @Post("merge")
+  merge(@Body(new ZodValidationPipe(mergeCustomerSchema)) dto: MergeCustomerDto) {
+    return this.customersService.merge(dto.primaryId, dto.duplicateIds);
   }
 
   @RequirePermissions("customers.create")

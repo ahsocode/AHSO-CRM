@@ -17,6 +17,7 @@ import { isLeadershipRole } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { CustomerStatus, CustomerUpsertInput } from "@/lib/types";
 import { CsvImportDialog, CsvColumnSpec, CsvImportResultItem } from "@/components/shared/csv-import-dialog";
+import { CustomerDuplicatesDialog } from "@/components/shared/customer-duplicates-dialog";
 import { buildCsv, downloadCsv } from "@/lib/csv";
 import { downloadExcelRows } from "@/lib/utils";
 import { CustomerFilters, type VipFilterValue } from "./customer-filters";
@@ -57,6 +58,7 @@ export function CustomersClient() {
   const [vipFilter, setVipFilter] = useState<VipFilterValue>("all");
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
+  const [dedupeOpen, setDedupeOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [importSummary, setImportSummary] = useState<{ successCount: number; errorCount: number } | null>(null);
   const [bulkAction, setBulkAction] = useState<"assign" | "delete">("assign");
@@ -243,6 +245,9 @@ export function CustomersClient() {
             <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
               Import CSV
             </Button>
+            <Button type="button" variant="outline" onClick={() => setDedupeOpen(true)}>
+              Xử lý trùng lặp
+            </Button>
             <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)}>
               {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
             </Button>
@@ -267,6 +272,8 @@ export function CustomersClient() {
         }}
         onFinish={handleImportFinish}
       />
+
+      <CustomerDuplicatesDialog open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
 
       <CustomerOverviewCards meta={customersQuery.data?.meta} isLoading={customersQuery.isLoading} />
 

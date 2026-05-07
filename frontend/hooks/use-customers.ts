@@ -204,6 +204,52 @@ export function useDeleteContact(customerId: string) {
   });
 }
 
+export interface CustomerDuplicateRecord {
+  id: string;
+  name: string;
+  taxCode?: string | null;
+  code?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  industry?: string | null;
+  status: string;
+  createdAt: string;
+  assignedTo: { id: string; name: string };
+  _count: { projects: number; contacts: number; activities: number };
+}
+
+export interface CustomerDuplicateGroup {
+  customers: CustomerDuplicateRecord[];
+}
+
+export function useDuplicateCustomers() {
+  return useQuery({
+    queryKey: ["customers", "duplicates"],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<CustomerDuplicateGroup[]>>("/customers/duplicates");
+      return response.data.data;
+    },
+    staleTime: 0
+  });
+}
+
+export function useMergeCustomers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { primaryId: string; duplicateIds: string[] }) => {
+      const response = await apiClient.post<ApiResponse<{ success: boolean }>>("/customers/merge", payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
 export function useBulkCustomers() {
   const queryClient = useQueryClient();
 

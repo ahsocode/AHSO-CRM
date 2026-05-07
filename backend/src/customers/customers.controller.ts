@@ -36,6 +36,13 @@ export class CustomersController {
     return this.customersService.create(dto);
   }
 
+  @RequirePermissions("customers.create")
+  @ApiOperation({ summary: "POST /api/customers/import — upsert a single row from CSV (match by taxCode → name → create)" })
+  @Post("import")
+  importUpsert(@Body(new ZodValidationPipe(createCustomerSchema)) dto: CreateCustomerDto) {
+    return this.customersService.upsertFromImport(dto);
+  }
+
   @RequirePermissions("customers.view")
   @ApiOperation({ summary: "POST /api/customers/bulk" })
   @Post("bulk")

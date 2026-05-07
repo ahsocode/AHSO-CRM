@@ -86,6 +86,22 @@ export function useCreateCustomer() {
   });
 }
 
+export function useImportCustomer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: CustomerUpsertInput) => {
+      const response = await apiClient.post<ApiResponse<{ id: string; isNew: boolean }>>("/customers/import", payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
 export function useUpdateCustomer(customerId: string) {
   const queryClient = useQueryClient();
 

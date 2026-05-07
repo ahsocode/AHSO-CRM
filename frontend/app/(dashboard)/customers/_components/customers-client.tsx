@@ -10,7 +10,7 @@ import { DeletedRecordsPanel } from "@/components/shared/deleted-records-panel";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
-import { useBulkCustomers, useCreateCustomer, useDeletedCustomers, useRestoreCustomer, useCustomers } from "@/hooks/use-customers";
+import { useBulkCustomers, useImportCustomer, useDeletedCustomers, useRestoreCustomer, useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { useToast } from "@/hooks/use-toast";
 import { isLeadershipRole } from "@/lib/auth";
@@ -65,7 +65,7 @@ export function CustomersClient() {
   const [deletedPage, setDeletedPage] = useState(1);
   const deferredSearch = useDeferredValue(search.trim());
   const normalizedIndustry = industry.trim();
-  const createCustomer = useCreateCustomer();
+  const importCustomer = useImportCustomer();
   const bulkCustomers = useBulkCustomers();
   const restoreCustomer = useRestoreCustomer();
   const queryClient = useQueryClient();
@@ -261,8 +261,9 @@ export function CustomersClient() {
         templateFilename="khach-hang-mau.csv"
         columns={importColumns}
         submitRow={async (input) => {
-          const result = await createCustomer.mutateAsync(input);
-          return { displayName: input.name + (result?.id ? ` (ID: ${result.id.slice(0, 6)}…)` : "") };
+          const result = await importCustomer.mutateAsync(input);
+          const action = result?.isNew ? "Tạo mới" : "Cập nhật";
+          return { displayName: `${action}: ${input.name}${result?.id ? ` (${result.id.slice(0, 6)}…)` : ""}` };
         }}
         onFinish={handleImportFinish}
       />

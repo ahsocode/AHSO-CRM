@@ -357,6 +357,55 @@ export class CustomersService {
     return customer;
   }
 
+  async upsertFromImport(dto: CreateCustomerDto): Promise<{ id: string; isNew: boolean }> {
+    // Priority 1: match by taxCode (most reliable unique identifier)
+    if (dto.taxCode) {
+      const existing = await this.prisma.customer.findFirst({
+        where: { taxCode: dto.taxCode, deletedAt: null },
+        select: { id: true }
+      });
+      if (existing) {
+        await this.applyImportUpdate(existing.id, dto, { skipTaxCode: true });
+        return { id: existing.id, isNew: false };
+      }
+    }
+
+    // Priority 2: match by name (case-insensitive exact match)
+    const existingByName = await this.prisma.customer.findFirst({
+      where: { name: { equals: dto.name, mode: "insensitive" }, deletedAt: null },
+      select: { id: true }
+    });
+    if (existingByName) {
+      await this.applyImportUpdate(existingByName.id, dto, { skipTaxCode: false });
+      return { id: existingByName.id, isNew: false };
+    }
+
+    // No match — create a new record
+    const created = await this.create(dto);
+    return { id: created.id, isNew: true };
+  }
+
+  private async applyImportUpdate(
+    id: string,
+    dto: CreateCustomerDto,
+    options: { skipTaxCode: boolean }
+  ) {
+    const { customFieldValues, code: _code, ...fields } = dto;
+
+    // Build update payload — only include fields with actual values to avoid
+    // clearing existing data with empty CSV cells.
+    const updateData: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      if (key === "taxCode" && options.skipTaxCode) continue;
+      if (value !== undefined && value !== null && value !== "") {
+        updateData[key] = value;
+      }
+    }
+
+    await this.prisma.customer.update({ where: { id }, data: updateData });
+    await this.customFieldsService.saveValues("customer", id, customFieldValues);
+  }
+
   async update(id: string, dto: UpdateCustomerDto, user: JwtUser) {
     const previousCustomer = await this.findAccessibleCustomer(id, user);
 

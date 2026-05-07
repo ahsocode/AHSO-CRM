@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomFields } from "@/hooks/use-custom-fields";
-import { useCustomers } from "@/hooks/use-customers";
+import { useCustomerContacts, useCustomers } from "@/hooks/use-customers";
 import {
   useCreateProject,
   useDeleteProject,
@@ -108,6 +108,7 @@ export function ProjectFormScreen({
         estimatedValue: projectQuery.data.estimatedValue || undefined,
         startDate: projectQuery.data.startDate ? projectQuery.data.startDate.slice(0, 10) : "",
         expectedEndDate: projectQuery.data.expectedEndDate ? projectQuery.data.expectedEndDate.slice(0, 10) : "",
+        contactId: projectQuery.data.contactId ?? undefined,
         notes: projectQuery.data.notes ?? ""
       });
       setCustomFieldValues(projectQuery.data.customFieldValues ?? {});
@@ -125,6 +126,15 @@ export function ProjectFormScreen({
   const isSubmitting = activeMutation.isPending || deleteProjectMutation.isPending;
   const watchedCustomerId = form.watch("customerId");
   const selectedCustomer = customerOptions.find((customer) => customer.id === watchedCustomerId) ?? null;
+  const contactsQuery = useCustomerContacts(watchedCustomerId ?? "");
+
+  const prevCustomerIdRef = useRef(watchedCustomerId);
+  useEffect(() => {
+    if (prevCustomerIdRef.current !== watchedCustomerId) {
+      form.setValue("contactId", undefined);
+      prevCustomerIdRef.current = watchedCustomerId;
+    }
+  }, [form, watchedCustomerId]);
 
   if (mode === "edit" && projectQuery.isLoading) {
     return (
@@ -230,6 +240,32 @@ export function ProjectFormScreen({
                 ))}
               </Select>
               <ErrorText message={form.formState.errors.customerId?.message} />
+            </Field>
+
+            <Field className="md:col-span-2">
+              <Label htmlFor="contactId">Người phụ trách phía khách hàng</Label>
+              <Select
+                id="contactId"
+                disabled={!watchedCustomerId || contactsQuery.isLoading}
+                {...form.register("contactId")}
+              >
+                <option value="">
+                  {!watchedCustomerId
+                    ? "Chọn khách hàng trước"
+                    : contactsQuery.isLoading
+                      ? "Đang tải danh sách liên hệ..."
+                      : contactsQuery.data?.length === 0
+                        ? "Khách hàng chưa có liên hệ nào"
+                        : "Chọn người phụ trách dự án (tùy chọn)"}
+                </option>
+                {(contactsQuery.data ?? []).map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.name}{contact.title ? ` — ${contact.title}` : ""}{contact.phone ? ` (${contact.phone})` : ""}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-xs text-text-secondary">Người quản lý dự án phía khách hàng cho dự án này.</p>
+              <ErrorText message={form.formState.errors.contactId?.message} />
             </Field>
 
             <Field className="md:col-span-2">

@@ -37,7 +37,11 @@ export const customerFormSchema = z.object({
   status: z.enum(["LEAD", "PROSPECT", "ACTIVE", "INACTIVE"]),
   language: z.enum(["vi", "vi-en"]),
   isVip: z.boolean(),
-  assignedToId: z.string().trim().min(1, "Người phụ trách là bắt buộc")
+  assignedToId: z.string().trim().min(1, "Người phụ trách là bắt buộc"),
+  primaryContactName: z.string().trim().min(2, "Tên người liên hệ phải có ít nhất 2 ký tự").max(120),
+  primaryContactPhone: z.string().trim().min(1, "Số điện thoại người liên hệ là bắt buộc").max(40),
+  primaryContactTitle: optionalString(120),
+  primaryContactEmail: optionalEmail
 });
 
 export type CustomerFormValues = z.infer<typeof customerFormSchema>;
@@ -56,7 +60,11 @@ export const defaultCustomerFormValues: CustomerFormValues = {
   status: "LEAD",
   language: "vi",
   isVip: false,
-  assignedToId: ""
+  assignedToId: "",
+  primaryContactName: "",
+  primaryContactPhone: "",
+  primaryContactTitle: "",
+  primaryContactEmail: ""
 };
 
 export const contactFormSchema = z.object({

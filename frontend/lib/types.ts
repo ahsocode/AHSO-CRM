@@ -565,6 +565,8 @@ export interface ProjectDetail {
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
+  contactId?: string | null;
+  projectContact?: CustomerContact | null;
   stats: ProjectDetailStats;
   customer: ProjectDetailCustomer;
   contract: ProjectDetailContract | null;

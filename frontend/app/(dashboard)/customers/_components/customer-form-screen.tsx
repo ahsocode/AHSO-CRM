@@ -16,10 +16,18 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useCustomFields } from "@/hooks/use-custom-fields";
-import { useCreateCustomer, useCustomer, useDeleteCustomer, useUpdateCustomer } from "@/hooks/use-customers";
+import {
+  useCreateContact,
+  useCreateCustomer,
+  useCustomer,
+  useCustomerContacts,
+  useDeleteCustomer,
+  useUpdateContact,
+  useUpdateCustomer
+} from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { getRoleLabel, isLeadershipRole } from "@/lib/auth";
-import { getApiErrorMessage } from "@/lib/api-client";
+import { apiClient, getApiErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { CustomerStatus, CustomFieldValues, RelatedUserRole, UserListItem } from "@/lib/types";
 import { normalizeWebsiteInput } from "@/lib/url";
@@ -74,6 +82,10 @@ export function CustomerFormScreen({
   const createCustomerMutation = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer(customerId ?? "");
   const deleteCustomerMutation = useDeleteCustomer(customerId ?? "");
+  const contactsQuery = useCustomerContacts(mode === "edit" ? customerId ?? "" : "");
+  const createContactMutation = useCreateContact(customerId ?? "");
+  const primaryContact = contactsQuery.data?.find((c) => c.isPrimary) ?? contactsQuery.data?.[0] ?? null;
+  const updateContactMutation = useUpdateContact(customerId ?? "", primaryContact?.id ?? null);
   const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
 
   const form = useForm<CustomerFormValues>({
@@ -110,11 +122,24 @@ export function CustomerFormScreen({
         status: customerQuery.data.status,
         language: customerQuery.data.language === "vi-en" ? "vi-en" : "vi",
         isVip: customerQuery.data.isVip,
-        assignedToId: customerQuery.data.assignedTo.id
+        assignedToId: customerQuery.data.assignedTo.id,
+        primaryContactName: "",
+        primaryContactPhone: "",
+        primaryContactTitle: "",
+        primaryContactEmail: ""
       });
       setCustomFieldValues(customerQuery.data.customFieldValues ?? {});
     }
   }, [customerQuery.data, form, mode]);
+
+  useEffect(() => {
+    if (mode === "edit" && primaryContact) {
+      form.setValue("primaryContactName", primaryContact.name);
+      form.setValue("primaryContactPhone", primaryContact.phone ?? "");
+      form.setValue("primaryContactTitle", primaryContact.title ?? "");
+      form.setValue("primaryContactEmail", primaryContact.email ?? "");
+    }
+  }, [form, mode, primaryContact]);
 
   const activeMutation = mode === "create" ? createCustomerMutation : updateCustomerMutation;
   const activeErrorMessage = activeMutation.isError
@@ -124,7 +149,7 @@ export function CustomerFormScreen({
       )
     : null;
   const userOptions = getUserOptions(usersQuery.data ?? [], customerQuery.data?.assignedTo);
-  const isSubmitting = activeMutation.isPending || deleteCustomerMutation.isPending;
+  const isSubmitting = activeMutation.isPending || deleteCustomerMutation.isPending || createContactMutation.isPending || updateContactMutation.isPending;
   const websiteField = form.register("website");
 
   if (mode === "edit" && customerQuery.isLoading) {
@@ -190,27 +215,38 @@ export function CustomerFormScreen({
       <form
         className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
         onSubmit={form.handleSubmit((values) => {
-          const payload = {
-            ...values,
-            customFieldValues
+          const { primaryContactName, primaryContactPhone, primaryContactTitle, primaryContactEmail, ...customerPayload } = values;
+          const contactPayload = {
+            name: primaryContactName,
+            phone: primaryContactPhone,
+            title: primaryContactTitle,
+            email: primaryContactEmail,
+            isPrimary: true
           };
 
           if (mode === "create") {
-            createCustomerMutation.mutate(payload, {
-              onSuccess: (createdCustomer) => {
+            createCustomerMutation.mutate({ ...customerPayload, customFieldValues }, {
+              onSuccess: async (createdCustomer) => {
+                await apiClient.post(`/customers/${createdCustomer.id}/contacts`, contactPayload);
                 router.push(`/customers/${createdCustomer.id}`);
               }
             });
             return;
           }
 
-          updateCustomerMutation.mutate(payload, {
-            onSuccess: () => {
+          updateCustomerMutation.mutate({ ...customerPayload, customFieldValues }, {
+            onSuccess: async () => {
+              if (primaryContact) {
+                await updateContactMutation.mutateAsync(contactPayload);
+              } else {
+                await createContactMutation.mutateAsync(contactPayload);
+              }
               router.push(`/customers/${customerId}`);
             }
           });
         })}
       >
+        <div className="space-y-6">
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
             <p className="industrial-chip bg-primary/10 text-primary">Customer Core</p>
@@ -288,6 +324,63 @@ export function CustomerFormScreen({
             </Field>
           </CardContent>
         </Card>
+
+        <Card className="border border-white/70">
+          <CardHeader className="mb-0 gap-2">
+            <p className="industrial-chip bg-accent/10 text-accent">Primary Contact</p>
+            <CardTitle>Người liên hệ chính</CardTitle>
+            <p className="text-sm text-text-secondary">
+              Người phụ trách phía khách hàng — dùng để liên lạc và gán vào từng dự án cụ thể.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <Field>
+              <Label htmlFor="primaryContactName">
+                Họ tên <span className="text-danger">*</span>
+              </Label>
+              <Input
+                id="primaryContactName"
+                placeholder="Ví dụ: Nguyễn Văn A"
+                {...form.register("primaryContactName")}
+              />
+              <ErrorText message={form.formState.errors.primaryContactName?.message} />
+            </Field>
+
+            <Field>
+              <Label htmlFor="primaryContactPhone">
+                Số điện thoại <span className="text-danger">*</span>
+              </Label>
+              <Input
+                id="primaryContactPhone"
+                placeholder="0901 234 567"
+                {...form.register("primaryContactPhone")}
+              />
+              <ErrorText message={form.formState.errors.primaryContactPhone?.message} />
+            </Field>
+
+            <Field>
+              <Label htmlFor="primaryContactTitle">Chức vụ</Label>
+              <Input
+                id="primaryContactTitle"
+                placeholder="Ví dụ: Trưởng phòng kỹ thuật"
+                {...form.register("primaryContactTitle")}
+              />
+              <ErrorText message={form.formState.errors.primaryContactTitle?.message} />
+            </Field>
+
+            <Field>
+              <Label htmlFor="primaryContactEmail">Email liên hệ</Label>
+              <Input
+                id="primaryContactEmail"
+                type="email"
+                placeholder="contact@company.vn"
+                {...form.register("primaryContactEmail")}
+              />
+              <ErrorText message={form.formState.errors.primaryContactEmail?.message} />
+            </Field>
+          </CardContent>
+        </Card>
+        </div>
 
         <div className="space-y-6">
           <Card className="border border-white/70">

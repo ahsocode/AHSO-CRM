@@ -33,6 +33,7 @@ export const projectFormSchema = z
     ),
     startDate: optionalDateString,
     expectedEndDate: optionalDateString,
+    contactId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     notes: optionalString(2000)
   })
   .refine(
@@ -55,5 +56,6 @@ export const defaultProjectFormValues: ProjectFormValues = {
   estimatedValue: undefined,
   startDate: "",
   expectedEndDate: "",
+  contactId: undefined,
   notes: ""
 };

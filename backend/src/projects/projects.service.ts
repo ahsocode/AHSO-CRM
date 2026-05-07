@@ -298,6 +298,7 @@ export class ProjectsService {
         outstandingAmount,
         progressPercent: this.mapProjectProgress(project.status)
       },
+      projectContact: project.contact ?? null,
       customer: {
         id: project.customer.id,
         name: project.customer.name,
@@ -1512,6 +1513,15 @@ export class ProjectsService {
         id
       },
       include: {
+        contact: {
+          select: {
+            id: true,
+            name: true,
+            title: true,
+            phone: true,
+            email: true
+          }
+        },
         customer: {
           select: {
             id: true,

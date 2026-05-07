@@ -25,6 +25,7 @@ export const createProjectSchema = z
     estimatedValue: z.coerce.number().min(0, "Giá trị dự kiến không được âm").max(999_999_999_999).optional(),
     startDate: optionalDate,
     expectedEndDate: optionalDate,
+    contactId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     notes: optionalString(2000),
     customFieldValues: customFieldValuesSchema
   })

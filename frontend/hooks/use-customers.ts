@@ -152,6 +152,19 @@ export function useRestoreCustomer() {
   });
 }
 
+export function useCustomerContacts(customerId: string) {
+  return useQuery({
+    queryKey: ["customers", customerId, "contacts"],
+    enabled: Boolean(customerId),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<CustomerContact[]>>(
+        `/customers/${customerId}/contacts`
+      );
+      return response.data.data;
+    }
+  });
+}
+
 export function useCreateContact(customerId: string) {
   const queryClient = useQueryClient();
 

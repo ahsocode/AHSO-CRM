@@ -79,13 +79,38 @@ jobs:
           script: |
             set -euo pipefail
             cd ${{ secrets.PROD_APP_DIR }}
+
+            print_disk_usage() {
+              echo "[deploy] Disk usage: $1"
+              df -h / /var/lib/docker /var/lib/containerd 2>/dev/null || df -h /
+              docker system df || true
+            }
+
+            cleanup_docker_space() {
+              echo "[deploy] Pruning unused Docker data before pulling images."
+              echo "[deploy] Volumes are intentionally preserved for Postgres, Redis and uploads."
+              docker container prune -f || true
+              docker image prune -af || true
+              docker builder prune -af || true
+              docker network prune -f || true
+              print_disk_usage "after cleanup"
+            }
+
+            COMPOSE="docker compose --env-file .env.production.local -f docker-compose.prod.yml"
+            print_disk_usage "before cleanup"
             if [ -n "${PROD_GHCR_TOKEN:-}" ]; then
               echo "$PROD_GHCR_TOKEN" | docker login ghcr.io -u "${PROD_GHCR_USERNAME:-${{ github.actor }}}" --password-stdin
             fi
             ./scripts/check-deploy-readiness.sh
-            docker compose --env-file .env.production.local -f docker-compose.prod.yml pull backend frontend
-            docker compose --env-file .env.production.local -f docker-compose.prod.yml up -d --remove-orphans --wait --timeout 120
-            docker compose --env-file .env.production.local -f docker-compose.prod.yml ps
+            cleanup_docker_space
+            if ! $COMPOSE pull backend frontend; then
+              echo "[deploy] Pull failed. Running one more cleanup pass and retrying once."
+              cleanup_docker_space
+              $COMPOSE pull backend frontend
+            fi
+            $COMPOSE up -d --remove-orphans --wait --timeout 120
+            $COMPOSE ps
+            cleanup_docker_space
             read_env() {
               grep -E "^[[:space:]]*$1=" .env.production.local | tail -n 1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']$//"
             }

@@ -304,19 +304,20 @@ export function QuoteFormScreen({
                     </Button>
                   </div>
 
-                  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_120px_140px]">
-                    <Field className="md:col-span-2 xl:col-span-1">
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <Field className="md:col-span-2">
                       <Label htmlFor={`items.${index}.name`}>Tên hạng mục</Label>
                       <Input id={`items.${index}.name`} disabled={!isEditableQuote} {...form.register(`items.${index}.name`)} />
                       <ErrorText message={form.formState.errors.items?.[index]?.name?.message} />
                     </Field>
 
-                    <Field>
+                    <Field className="md:col-span-2">
                       <Label htmlFor={`items.${index}.description`}>Mô tả</Label>
-                      <Input
+                      <Textarea
                         id={`items.${index}.description`}
                         disabled={!isEditableQuote}
-                        placeholder="Quy cách / phạm vi / model"
+                        placeholder="Quy cách, phạm vi, model, thông số kỹ thuật..."
+                        rows={3}
                         {...form.register(`items.${index}.description`)}
                       />
                       <ErrorText message={form.formState.errors.items?.[index]?.description?.message} />

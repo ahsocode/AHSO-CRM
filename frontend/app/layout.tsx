@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { AppProviders } from "@/components/providers";
 import "./globals.css";
@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   title: "AHSO CRM",
   description: "CRM quản lý vòng đời bán hàng kỹ thuật công nghiệp cho AHSO",
   manifest: "/manifest.json"
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1
 };
 
 export default function RootLayout({

@@ -8,6 +8,18 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
+function safeLocalStorage() {
+  if (!isBrowser()) return null;
+  try {
+    // In Safari Private mode or when "Block All Cookies" is enabled,
+    // localStorage access can throw SecurityError or QuotaExceededError.
+    window.localStorage.getItem("__test__");
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 function removeCookie(name: string) {
   if (!isBrowser()) {
     return;
@@ -128,11 +140,9 @@ export function persistSession(session: AuthSession) {
   }
   clearLegacyAccessCookie();
 
-  if (isBrowser()) {
-    // Also store in localStorage so new tabs (target="_blank") can read without needing a refresh
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
-    window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(normalizedSession.user));
-  }
+  const ls = safeLocalStorage();
+  ls?.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
+  ls?.setItem(AUTH_USER_KEY, JSON.stringify(normalizedSession.user));
 
   return normalizedSession;
 }
@@ -142,10 +152,9 @@ export function clearSession() {
   getSessionStorage()?.removeItem(SESSION_ID_KEY);
   clearLegacyClientCookies();
 
-  if (isBrowser()) {
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-    window.localStorage.removeItem(AUTH_USER_KEY);
-  }
+  const ls = safeLocalStorage();
+  ls?.removeItem(ACCESS_TOKEN_KEY);
+  ls?.removeItem(AUTH_USER_KEY);
 }
 
 export function getSessionId() {
@@ -170,7 +179,7 @@ export async function clearServerSession() {
 export function getAccessToken() {
   return (
     getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ??
-    (isBrowser() ? window.localStorage.getItem(ACCESS_TOKEN_KEY) : null) ??
+    safeLocalStorage()?.getItem(ACCESS_TOKEN_KEY) ??
     null
   );
 }
@@ -180,7 +189,7 @@ export function getStoredUser(): AuthUser | null {
     return null;
   }
 
-  const rawUser = window.localStorage.getItem(AUTH_USER_KEY);
+  const rawUser = safeLocalStorage()?.getItem(AUTH_USER_KEY) ?? null;
   if (!rawUser) {
     return null;
   }

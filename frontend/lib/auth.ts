@@ -129,7 +129,8 @@ export function persistSession(session: AuthSession) {
   clearLegacyAccessCookie();
 
   if (isBrowser()) {
-    window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+    // Also store in localStorage so new tabs (target="_blank") can read without needing a refresh
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
     window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(normalizedSession.user));
   }
 
@@ -167,7 +168,11 @@ export async function clearServerSession() {
 }
 
 export function getAccessToken() {
-  return getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
+  return (
+    getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ??
+    (isBrowser() ? window.localStorage.getItem(ACCESS_TOKEN_KEY) : null) ??
+    null
+  );
 }
 
 export function getStoredUser(): AuthUser | null {

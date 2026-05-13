@@ -103,7 +103,7 @@ describe("apiClient", () => {
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBe("next-access-token");
   });
 
-  it("clears session and redirects to login when refresh fails", async () => {
+  it("clears local session and redirects to login when refresh fails without calling the logout API", async () => {
     window.sessionStorage.setItem(ACCESS_TOKEN_KEY, "expired-access-token");
     window.localStorage.setItem(ACCESS_TOKEN_KEY, "expired-access-token");
     vi.spyOn(axios, "post").mockRejectedValue(new Error("refresh failed"));
@@ -117,11 +117,11 @@ describe("apiClient", () => {
         }
       });
 
-    await expect(apiClient.get("/customers")).rejects.toThrow("refresh failed");
-    expect(fetch).toHaveBeenCalledWith("http://localhost:3001/api/auth/logout", {
-      method: "POST",
-      credentials: "include"
-    });
+    // Rejects with the original 401 error (not the refresh failure — that is swallowed).
+    await expect(apiClient.get("/customers")).rejects.toMatchObject({ response: { status: 401 } });
+    // Must NOT call POST /auth/logout: in a multi-tab scenario the refresh-token cookie may
+    // already belong to another tab that just succeeded — calling logout would destroy its session.
+    expect(fetch).not.toHaveBeenCalled();
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
     expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
     expect(window.location.href).toBe("/login");

@@ -37,11 +37,13 @@ describe("auth helpers", () => {
     });
   });
 
-  it("persists access token only in session storage and stores user profile separately", () => {
+  it("persists access token in both session storage and local storage for cross-tab sharing", () => {
     persistSession(session);
 
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBe("access-token");
-    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
+    // Token is also written to localStorage so other tabs can read it without triggering
+    // a second refresh (which would fail due to refresh-token rotation).
+    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBe("access-token");
     expect(getAccessToken()).toBe("access-token");
     expect(getStoredUser()).toMatchObject({
       id: "user-1",
@@ -52,10 +54,10 @@ describe("auth helpers", () => {
     });
   });
 
-  it("ignores legacy local storage access tokens", () => {
-    window.localStorage.setItem(ACCESS_TOKEN_KEY, "legacy-token");
+  it("reads access token from local storage when session storage is empty", () => {
+    window.localStorage.setItem(ACCESS_TOKEN_KEY, "cross-tab-token");
 
-    expect(getAccessToken()).toBeNull();
+    expect(getAccessToken()).toBe("cross-tab-token");
   });
 
   it("clears current session storage and legacy persisted state", () => {

@@ -144,8 +144,9 @@ export class AuthController {
   }
 
   private getRefreshCookieOptions() {
-    // No maxAge → session cookie: browser deletes on close, forcing re-login
-    return this.getBaseRefreshCookieOptions();
+    // 7 days — matches JWT_REFRESH_EXPIRES_IN so cookie and token expire together.
+    // Session-only cookies are cleared by iOS when Safari is backgrounded.
+    return { ...this.getBaseRefreshCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 };
   }
 
   private getBaseRefreshCookieOptions() {
@@ -153,7 +154,11 @@ export class AuthController {
 
     return {
       httpOnly: true,
-      sameSite: "strict" as const,
+      // "lax" (not "strict"): strict blocks the cookie on top-level navigations from
+      // external links (email, home-screen icon, other apps) — the primary cause of
+      // login failures on iPhone/Safari. Lax still prevents CSRF on state-changing
+      // requests while allowing the cookie through on safe top-level GETs.
+      sameSite: "lax" as const,
       secure: nodeEnv === "production",
       path: "/api/auth"
     };

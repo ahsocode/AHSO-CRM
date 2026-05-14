@@ -6,7 +6,7 @@ const API_URL = process.env.E2E_API_URL ?? "http://127.0.0.1:3001/api";
 test("mở projects và thao tác drag-drop kanban nếu có card", async ({ page }) => {
   await login(page);
   await page.goto("/projects?view=kanban");
-  await expect(page.getByText("Pipeline Dự án")).toBeVisible();
+  await expect(page.getByText("Pipeline Dự án").first()).toBeVisible();
 
   const draggableCard = page.locator('article[draggable="true"]').first();
   if ((await draggableCard.count()) > 0) {

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
@@ -81,6 +81,8 @@ type ProjectListRecord = Prisma.ProjectGetPayload<{
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly customFieldsService: CustomFieldsService,
@@ -199,13 +201,17 @@ export class ProjectsService {
 
     await this.customFieldsService.saveValues("project", project.id, dto.customFieldValues);
 
-    void this.domainEvents.emit("project.created", {
-      projectId: project.id,
-      code: project.code,
-      customerId: dto.customerId,
-      status: project.status,
-      estimatedValue: Number(project.estimatedValue ?? 0)
-    });
+    void this.domainEvents
+      .emit("project.created", {
+        projectId: project.id,
+        code: project.code,
+        customerId: dto.customerId,
+        status: project.status,
+        estimatedValue: Number(project.estimatedValue ?? 0)
+      })
+      .catch((err: unknown) =>
+        this.logger.error("Domain event handler failed", { event: "project.created", err })
+      );
 
     return {
       id: project.id,
@@ -1089,11 +1095,15 @@ export class ProjectsService {
     });
 
     if (project.status !== updatedProject.status) {
-      void this.domainEvents.emit("project.status_changed", {
-        projectId: updatedProject.id,
-        previousStatus: project.status,
-        status: updatedProject.status
-      });
+      void this.domainEvents
+        .emit("project.status_changed", {
+          projectId: updatedProject.id,
+          previousStatus: project.status,
+          status: updatedProject.status
+        })
+        .catch((err: unknown) =>
+          this.logger.error("Domain event handler failed", { event: "project.status_changed", err })
+        );
     }
 
     return {

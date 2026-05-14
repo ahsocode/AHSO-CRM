@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
-import type { User } from "@prisma/client";
+import type { Prisma, User } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
 import { EmailService } from "../email/email.service";
@@ -16,6 +16,16 @@ interface AuthRequestMeta {
   ip?: string | null;
   userAgent?: string | null;
 }
+
+type AuthUserWithRole = Prisma.UserGetPayload<{
+  include: {
+    role: {
+      include: {
+        permissions: true;
+      };
+    };
+  };
+}>;
 
 @Injectable()
 export class AuthService {
@@ -221,7 +231,7 @@ export class AuthService {
     return { success: true };
   }
 
-  private buildPayload(user: any): JwtUser {
+  private buildPayload(user: AuthUserWithRole): JwtUser {
     const permissions = user.role?.permissions?.map(
       (permission: { resource: string; action: string }) => `${permission.resource}.${permission.action}`
     ) ?? [];
@@ -348,7 +358,7 @@ export class AuthService {
     return { payload, user, session: matchedSession };
   }
 
-  private serializeUser(user: any) {
+  private serializeUser(user: AuthUserWithRole) {
     const permissions = user.role?.permissions?.map(
       (permission: { resource: string; action: string }) => `${permission.resource}.${permission.action}`
     ) ?? [];

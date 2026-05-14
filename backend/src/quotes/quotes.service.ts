@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
@@ -18,6 +18,8 @@ const PRE_SALE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING"] as const;
 
 @Injectable()
 export class QuotesService {
+  private readonly logger = new Logger(QuotesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly moduleRef: ModuleRef,
@@ -429,16 +431,20 @@ export class QuotesService {
       }
     });
 
-    void this.domainEvents.emit("quote.sent", {
-      quoteId: quote.id,
-      quoteNo: quote.quoteNo,
-      projectId: quote.project.id,
-      customerId: quote.project.customer.id,
-      ownerUserId: quote.createdBy.id,
-      status: sentQuote.status,
-      total: Number(quote.total),
-      sentAt: sentQuote.sentAt
-    });
+    void this.domainEvents
+      .emit("quote.sent", {
+        quoteId: quote.id,
+        quoteNo: quote.quoteNo,
+        projectId: quote.project.id,
+        customerId: quote.project.customer.id,
+        ownerUserId: quote.createdBy.id,
+        status: sentQuote.status,
+        total: Number(quote.total),
+        sentAt: sentQuote.sentAt
+      })
+      .catch((err: unknown) =>
+        this.logger.error("Domain event handler failed", { event: "quote.sent", err })
+      );
 
     return {
       ...sentQuote,
@@ -465,6 +471,10 @@ export class QuotesService {
           sentAt: quote.sentAt,
           acceptedAt: quote.acceptedAt
         };
+      }
+
+      if (quote.status === "REJECTED" && dto.status !== "DRAFT") {
+        throw new BadRequestException("Báo giá đã bị từ chối, chỉ có thể chuyển về nháp để chỉnh sửa");
       }
 
       const updatedQuote = await tx.quote.update({
@@ -505,22 +515,30 @@ export class QuotesService {
     };
 
     if (dto.status === "ACCEPTED" && result.quote.status !== "ACCEPTED") {
-      void this.domainEvents.emit("quote.accepted", {
-        quoteId: result.quote.id,
-        projectId: result.quote.projectId,
-        ownerUserId: result.quote.createdById,
-        status: result.updatedQuote.status,
-        acceptedAt: result.updatedQuote.acceptedAt
-      });
+      void this.domainEvents
+        .emit("quote.accepted", {
+          quoteId: result.quote.id,
+          projectId: result.quote.projectId,
+          ownerUserId: result.quote.createdById,
+          status: result.updatedQuote.status,
+          acceptedAt: result.updatedQuote.acceptedAt
+        })
+        .catch((err: unknown) =>
+          this.logger.error("Domain event handler failed", { event: "quote.accepted", err })
+        );
     }
 
     if (dto.status === "REJECTED" && result.quote.status !== "REJECTED") {
-      void this.domainEvents.emit("quote.rejected", {
-        quoteId: result.quote.id,
-        projectId: result.quote.projectId,
-        ownerUserId: result.quote.createdById,
-        status: result.updatedQuote.status
-      });
+      void this.domainEvents
+        .emit("quote.rejected", {
+          quoteId: result.quote.id,
+          projectId: result.quote.projectId,
+          ownerUserId: result.quote.createdById,
+          status: result.updatedQuote.status
+        })
+        .catch((err: unknown) =>
+          this.logger.error("Domain event handler failed", { event: "quote.rejected", err })
+        );
     }
 
     return result.updatedQuote;
@@ -684,6 +702,9 @@ export class QuotesService {
 
     if (isStaff(user)) {
       customerWhere.assignedToId = user.sub;
+      customerWhere.assignedTo = {
+        isActive: true
+      };
     }
 
     return {

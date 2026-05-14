@@ -118,6 +118,10 @@ model Customer {
   documents    Document[]
   businessDocuments BusinessDocument[]
   surveys      Survey[]
+
+  @@index([deletedAt])
+  @@index([assignedToId, deletedAt])
+  @@index([status, deletedAt])
 }
 
 enum CustomerStatus {
@@ -167,6 +171,9 @@ model Project {
   businessDocuments BusinessDocument[]
   surveys         Survey[]
   handovers       ProjectHandover[]
+
+  @@index([customerId, deletedAt])
+  @@index([status, deletedAt])
 }
 
 enum ProjectStatus {
@@ -209,6 +216,10 @@ model Quote {
   deletedAt     DateTime?
   items         QuoteItem[]
   businessDocuments BusinessDocument[]
+
+  @@index([projectId, deletedAt])
+  @@index([status, deletedAt])
+  @@index([createdById, deletedAt])
 }
 
 model QuoteItem {
@@ -252,6 +263,9 @@ model Contract {
   milestones Milestone[]
   payments   Payment[]
   businessDocuments BusinessDocument[]
+
+  @@index([projectId, deletedAt])
+  @@index([status, deletedAt])
 }
 
 enum ContractStatus {

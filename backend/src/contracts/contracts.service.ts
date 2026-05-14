@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { MilestoneStatus, Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
@@ -17,6 +17,8 @@ const CLOSED_CONTRACT_STATUSES = ["COMPLETED", "CANCELLED"] as const;
 
 @Injectable()
 export class ContractsService {
+  private readonly logger = new Logger(ContractsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly customFieldsService: CustomFieldsService,
@@ -421,16 +423,20 @@ export class ContractsService {
 
     const context = await this.loadContractNotificationContext(contract.id);
 
-    void this.domainEvents.emit("payment.received", {
-      paymentId: payment.id,
-      contractId: contract.id,
-      projectId: contract.projectId,
-      ownerUserId: context.project.customer.assignedTo.id,
-      contractNo: context.contractNo,
-      amount: Number(payment.amount),
-      paidAt: payment.paidAt,
-      method: payment.method
-    });
+    void this.domainEvents
+      .emit("payment.received", {
+        paymentId: payment.id,
+        contractId: contract.id,
+        projectId: contract.projectId,
+        ownerUserId: context.project.customer.assignedTo.id,
+        contractNo: context.contractNo,
+        amount: Number(payment.amount),
+        paidAt: payment.paidAt,
+        method: payment.method
+      })
+      .catch((err: unknown) =>
+        this.logger.error("Domain event handler failed", { event: "payment.received", err })
+      );
 
     return {
       id: payment.id,
@@ -836,28 +842,36 @@ export class ContractsService {
         );
       }
 
-      void this.domainEvents.emit("contract.signed", {
-        contractId: contract.id,
-        contractNo: contract.contractNo,
-        projectId: contract.projectId,
-        customerId: contract.project.customer.id,
-        ownerUserId: contract.project.customer.assignedTo.id,
-        status: contract.status,
-        value: Number(contract.value)
-      });
+      void this.domainEvents
+        .emit("contract.signed", {
+          contractId: contract.id,
+          contractNo: contract.contractNo,
+          projectId: contract.projectId,
+          customerId: contract.project.customer.id,
+          ownerUserId: contract.project.customer.assignedTo.id,
+          status: contract.status,
+          value: Number(contract.value)
+        })
+        .catch((err: unknown) =>
+          this.logger.error("Domain event handler failed", { event: "contract.signed", err })
+        );
       return;
     }
 
     if (nextStatus === "COMPLETED") {
-      void this.domainEvents.emit("contract.completed", {
-        contractId: contract.id,
-        contractNo: contract.contractNo,
-        projectId: contract.projectId,
-        customerId: contract.project.customer.id,
-        ownerUserId: contract.project.customer.assignedTo.id,
-        status: contract.status,
-        value: Number(contract.value)
-      });
+      void this.domainEvents
+        .emit("contract.completed", {
+          contractId: contract.id,
+          contractNo: contract.contractNo,
+          projectId: contract.projectId,
+          customerId: contract.project.customer.id,
+          ownerUserId: contract.project.customer.assignedTo.id,
+          status: contract.status,
+          value: Number(contract.value)
+        })
+        .catch((err: unknown) =>
+          this.logger.error("Domain event handler failed", { event: "contract.completed", err })
+        );
     }
   }
 

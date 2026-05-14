@@ -39,7 +39,7 @@ describe("AuthController", () => {
     controller = new AuthController(authService as unknown as AuthService, configService as unknown as ConfigService);
   });
 
-  it("sets a secure session refresh cookie on login (no maxAge = session cookie, path=/api/auth)", async () => {
+  it("sets a persistent refresh cookie on login (maxAge=7d, sameSite=lax, path=/api/auth)", async () => {
     const response = createResponse();
     authService.login.mockResolvedValue({
       accessToken: "access-token",
@@ -63,20 +63,17 @@ describe("AuthController", () => {
       user: { id: "user-1" }
     });
 
-    // Session cookie: no maxAge property, path restricted to /api/auth
     expect((response as any).cookie).toHaveBeenCalledWith(
       "ahso_refresh_token",
       "refresh-token",
       expect.objectContaining({
         httpOnly: true,
-        sameSite: "strict",
+        sameSite: "lax",
         secure: false,
-        path: "/api/auth"
+        path: "/api/auth",
+        maxAge: 7 * 24 * 60 * 60 * 1000
       })
     );
-
-    const cookieOptions = (response as any).cookie.mock.calls[0][2];
-    expect(cookieOptions).not.toHaveProperty("maxAge");
   });
 
   it("reads refresh token from the HttpOnly cookie only", async () => {
@@ -126,7 +123,7 @@ describe("AuthController", () => {
       "ahso_refresh_token",
       expect.objectContaining({
         httpOnly: true,
-        sameSite: "strict",
+        sameSite: "lax",
         secure: false,
         path: "/api/auth"
       })

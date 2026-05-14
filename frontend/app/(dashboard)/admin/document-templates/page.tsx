@@ -8,7 +8,6 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useApproveDocumentTemplateVariant,
@@ -403,284 +402,119 @@ export default function DocumentTemplatesPage() {
           </aside>
 
           <div className="space-y-4">
-            <section className="overflow-hidden rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
-              <div className="space-y-5 p-6">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 flex-1 space-y-3">
-                    <h2 className="text-xl font-bold text-text-primary">
-                      {activeVariant?.name ?? "Chọn một variant để mở editor"}
-                    </h2>
-                    <p className="max-w-3xl text-sm leading-6 text-text-secondary">
-                      Canvas A4 là vùng làm việc trung tâm. Chọn loại tài liệu ở cột trái, tinh chỉnh box ở cột phải, và dùng thanh điều khiển bên dưới để lưu hoặc đưa variant sang quy trình duyệt.
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      {activeVariant ? (
-                        <Badge variant={activeVariant.isActive ? "success" : "info"}>
-                          {activeVariant.isActive ? "Đang dùng" : activeVariant.status}
-                        </Badge>
-                      ) : null}
-                      {selectedType ? (
-                        <span className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-text-secondary">
-                          Loại: {selectedType}
-                        </span>
-                      ) : null}
-                      <span
-                        className={cn(
-                          "inline-flex rounded-full border px-3 py-1 text-xs font-semibold",
-                          isDirty
-                            ? "border-amber-200 bg-amber-50 text-amber-700"
-                            : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        )}
-                      >
-                        {isDirty ? "Có thay đổi chưa lưu" : "Đã đồng bộ với draft"}
+            <section className="overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
+              <div className="space-y-3 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-base font-bold text-text-primary">
+                    {activeVariant?.name ?? "Chọn một variant để mở editor"}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activeVariant ? (
+                      <Badge variant={activeVariant.isActive ? "success" : "info"}>
+                        {activeVariant.isActive ? "Đang dùng" : activeVariant.status}
+                      </Badge>
+                    ) : null}
+                    {selectedType ? (
+                      <span className="inline-flex rounded-full border border-border/60 bg-white px-3 py-1 text-xs font-semibold text-text-secondary">
+                        {selectedType}
                       </span>
-                      <span
-                        className={cn(
-                          "inline-flex rounded-full border px-3 py-1 text-xs font-semibold",
-                          blockingIssues.length > 0
-                            ? "border-rose-200 bg-rose-50 text-rose-700"
-                            : warningIssues.length > 0
-                              ? "border-amber-200 bg-amber-50 text-amber-700"
-                              : "border-slate-200 bg-white text-text-secondary"
-                        )}
-                      >
-                        {blockingIssues.length > 0
-                          ? `${blockingIssues.length} lỗi chặn publish`
-                          : warningIssues.length > 0
-                            ? `${warningIssues.length} cảnh báo`
-                            : "Không có lỗi layout"}
+                    ) : null}
+                    {isDirty ? (
+                      <span className="inline-flex rounded-full border border-warning/40 bg-warning-bg px-3 py-1 text-xs font-semibold text-warning">
+                        Chưa lưu
                       </span>
-                    </div>
-                  </div>
-
-                  {activeVariant ? (
-                    <div className="space-y-2 xl:min-w-[220px]">
-                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                        Chế độ xem trước
-                      </p>
-                      <Tabs
-                        value={previewLanguage}
-                        onValueChange={(value) => setPreviewLanguage(value as "vi" | "viEn")}
-                      >
-                        <TabsList className="h-11 rounded-xl bg-slate-100/80">
-                          <TabsTrigger value="vi">VI</TabsTrigger>
-                          <TabsTrigger value="viEn">VI-EN</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    </div>
-                  ) : (
+                    ) : null}
+                    {blockingIssues.length > 0 ? (
+                      <span className="inline-flex rounded-full border border-danger/30 bg-danger-bg px-3 py-1 text-xs font-semibold text-danger">
+                        {blockingIssues.length} lỗi chặn publish
+                      </span>
+                    ) : warningIssues.length > 0 ? (
+                      <span className="inline-flex rounded-full border border-warning/40 bg-warning-bg px-3 py-1 text-xs font-semibold text-warning">
+                        {warningIssues.length} cảnh báo
+                      </span>
+                    ) : null}
                     <Tabs
                       value={previewLanguage}
                       onValueChange={(value) => setPreviewLanguage(value as "vi" | "viEn")}
                     >
-                      <TabsList className="h-11 rounded-xl bg-slate-100/80">
-                        <TabsTrigger value="vi">VI</TabsTrigger>
-                        <TabsTrigger value="viEn">VI-EN</TabsTrigger>
+                      <TabsList className="h-8 rounded-xl bg-slate-100/80">
+                        <TabsTrigger value="vi" className="text-xs">VI</TabsTrigger>
+                        <TabsTrigger value="viEn" className="text-xs">VI-EN</TabsTrigger>
                       </TabsList>
                     </Tabs>
-                  )}
+                  </div>
                 </div>
 
                 {activeVariant ? (
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                          Tên variant
-                        </Label>
-                        <Input
-                          value={draftName}
-                          disabled={!isEditable}
-                          onChange={(event) => setDraftName(event.target.value)}
-                        />
-                      </div>
-
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                            Box đang chọn
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-text-primary">
-                            {selectedBoxId ?? "Chưa chọn box"}
-                          </p>
-                          <p className="mt-1 text-xs text-text-secondary">
-                            {selectedBoxId
-                              ? "Bạn có thể kéo thả trên canvas hoặc chỉnh sâu ở inspector."
-                              : "Chọn một box trên canvas để chỉnh vị trí và nội dung."}
-                          </p>
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                            Trạng thái chỉnh sửa
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-text-primary">
-                            {isEditable
-                              ? "Draft có thể chỉnh sửa"
-                              : activeVariant.status === "PUBLISHED"
-                                ? "Bản đã publish đang khóa"
-                                : "Variant đang khóa chỉnh sửa"}
-                          </p>
-                          <p className="mt-1 text-xs text-text-secondary">
-                            {isEditable
-                              ? "Lưu draft trước khi gửi duyệt hoặc publish."
-                              : activeVariant.status === "PUBLISHED"
-                                ? "Tạo bản nháp chỉnh sửa, sau đó gửi duyệt và publish lại."
-                                : "Chỉ draft chưa active mới có thể chỉnh trực tiếp."}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 xl:w-[320px]">
-                      <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                          Công cụ bản nháp
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {activeVariant.status === "PUBLISHED" ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              onClick={handleEditPublishedVariant}
-                              disabled={duplicateMutation.isPending}
-                            >
-                              {existingDraftFork ? "Mở draft chỉnh sửa" : "Sửa bản đã publish"}
-                            </Button>
-                          ) : null}
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleSaveDraft}
-                            disabled={!isEditable || !isDirty}
-                          >
-                            Lưu draft
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setIsPreviewOpen(true)}
-                            disabled={!activeVariant || !draftLayout}
-                          >
-                            Xem trước
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleDeleteSelectedBox}
-                            disabled={!isEditable || !selectedBoxId}
-                          >
-                            Xóa box
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleDuplicate}
-                            disabled={!activeVariant}
-                          >
-                            Nhân bản
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleDelete}
-                            disabled={!isEditable}
-                          >
-                            Xóa draft
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                          Quy trình phê duyệt
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleSubmitReview}
-                            disabled={!isEditable}
-                          >
-                            Gửi duyệt
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={handleSetActive}
-                            disabled={!activeVariant || activeVariant.status !== "PUBLISHED" || activeVariant.isActive}
-                          >
-                            Đặt làm bản dùng
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleApprove}
-                            disabled={!activeVariant || activeVariant.status !== "PENDING_APPROVAL" || blockingIssues.length > 0}
-                          >
-                            Duyệt & publish
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+                    <Input
+                      value={draftName}
+                      disabled={!isEditable}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      className="h-8 max-w-[260px] text-sm"
+                    />
+                    <span className="mx-1 h-5 w-px bg-border/60" />
+                    {activeVariant.status === "PUBLISHED" ? (
+                      <Button type="button" size="sm" onClick={handleEditPublishedVariant} disabled={duplicateMutation.isPending}>
+                        {existingDraftFork ? "Mở draft chỉnh sửa" : "Sửa bản đã publish"}
+                      </Button>
+                    ) : null}
+                    <Button type="button" size="sm" onClick={handleSaveDraft} disabled={!isEditable || !isDirty}>
+                      Lưu draft
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setIsPreviewOpen(true)} disabled={!draftLayout}>
+                      Xem trước
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={handleDeleteSelectedBox} disabled={!isEditable || !selectedBoxId}>
+                      Xóa box
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={handleDuplicate} disabled={!activeVariant}>
+                      Nhân bản
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={handleDelete} disabled={!isEditable}>
+                      Xóa draft
+                    </Button>
+                    <span className="mx-1 h-5 w-px bg-border/60" />
+                    <Button type="button" size="sm" variant="outline" onClick={handleSubmitReview} disabled={!isEditable}>
+                      Gửi duyệt
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSetActive}
+                      disabled={!activeVariant || activeVariant.status !== "PUBLISHED" || activeVariant.isActive}
+                    >
+                      Đặt làm bản dùng
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleApprove}
+                      disabled={!activeVariant || activeVariant.status !== "PENDING_APPROVAL" || blockingIssues.length > 0}
+                    >
+                      Duyệt & publish
+                    </Button>
                   </div>
                 ) : null}
 
-                <div
-                  className={cn(
-                    "rounded-2xl border px-4 py-3",
-                    allIssues.length > 0
-                      ? "border-amber-200 bg-amber-50"
-                      : "border-emerald-200 bg-emerald-50"
-                  )}
-                >
-                  <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <p
-                        className={cn(
-                          "text-sm font-semibold",
-                          allIssues.length > 0 ? "text-amber-700" : "text-emerald-700"
-                        )}
-                      >
-                        {allIssues.length > 0
-                          ? blockingIssues.length > 0
-                            ? `${blockingIssues.length} lỗi chặn publish`
-                            : `${warningIssues.length} cảnh báo cần kiểm tra`
-                          : "Canvas hiện không có lỗi layout"}
-                      </p>
-                      <p
-                        className={cn(
-                          "mt-1 text-sm",
-                          allIssues.length > 0 ? "text-amber-700" : "text-emerald-700"
-                        )}
-                      >
-                        {allIssues.length > 0
-                          ? blockingIssues.length > 0
-                            ? "Sửa lỗi chồng lấn hoặc vượt vùng in trước khi publish."
-                            : "Có cảnh báo tràn nội dung; bạn vẫn có thể publish nhưng nên xem trước PDF."
-                          : "Bạn có thể tiếp tục căn chỉnh, lưu draft hoặc đưa variant sang bước duyệt."}
-                      </p>
-                    </div>
-
-                    {allIssues.length > 0 ? (
-                      <ul className="max-w-xl space-y-1 text-sm text-amber-700">
-                        {allIssues.slice(0, 4).map((issue, index) => (
-                          <li key={`${issue.code}-${issue.boxId}-${index}`}>{issue.message}</li>
-                        ))}
-                        {allIssues.length > 4 ? (
-                          <li>... và thêm {allIssues.length - 4} vấn đề khác</li>
-                        ) : null}
-                      </ul>
-                    ) : null}
+                {allIssues.length > 0 ? (
+                  <div
+                    className={cn(
+                      "rounded-xl border px-4 py-2.5",
+                      blockingIssues.length > 0 ? "border-danger/20 bg-danger-bg/60" : "border-warning/30 bg-warning-bg/60"
+                    )}
+                  >
+                    <ul className={cn("space-y-0.5 text-xs", blockingIssues.length > 0 ? "text-danger" : "text-warning")}>
+                      {allIssues.slice(0, 3).map((issue, index) => (
+                        <li key={`${issue.code}-${issue.boxId}-${index}`}>{issue.message}</li>
+                      ))}
+                      {allIssues.length > 3 ? (
+                        <li>+ {allIssues.length - 3} vấn đề khác</li>
+                      ) : null}
+                    </ul>
                   </div>
-                </div>
+                ) : null}
               </div>
             </section>
 
@@ -698,17 +532,17 @@ export default function DocumentTemplatesPage() {
                       Kéo thả box trực tiếp trên mặt giấy A4. Vùng khung nét đứt là giới hạn in an toàn.
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-text-secondary">
+                  <div className="flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-text-secondary">
                       Grid: {draftLayout.page.gridMm}mm
                     </span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-text-secondary">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-text-secondary">
                       Trang: {draftLayout.pages.length}
                     </span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-text-secondary">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-text-secondary">
                       Box: {draftLayout.pages.reduce((total, page) => total + page.boxes.length, 0)}
                     </span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-text-secondary">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-text-secondary">
                       Ngôn ngữ: {previewLanguage === "vi" ? "VI" : "VI-EN"}
                     </span>
                   </div>
@@ -730,20 +564,6 @@ export default function DocumentTemplatesPage() {
           </div>
 
           <aside className="space-y-4 xl:sticky xl:top-24">
-            <section className="rounded-[28px] border border-white/70 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                Inspector nhanh
-              </p>
-              <p className="mt-2 text-sm font-semibold text-text-primary">
-                {selectedBox ? selectedBox.id : "Chưa chọn box"}
-              </p>
-              <p className="mt-1 text-sm text-text-secondary">
-                {selectedBox
-                  ? "Chỉnh nội dung, vị trí và style ở các nhóm bên dưới."
-                  : "Chọn một box trên canvas để mở đúng nhóm thiết lập."}
-              </p>
-            </section>
-
             <TemplateInspector
               selectedBox={selectedBox}
               editable={isEditable}

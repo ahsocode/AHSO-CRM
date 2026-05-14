@@ -59,7 +59,7 @@ function CustomerJourneyCard({
               nodeOpacity={1}
               nodeThickness={18}
               nodeSpacing={24}
-              labelTextColor="#0f172a"
+              labelTextColor="#5d6d7e"
               linkOpacity={0.35}
               animate={false}
             />
@@ -116,7 +116,7 @@ function ActivityHeatmapCard({
               axisTop={null}
               axisRight={null}
               colors={{ type: "sequential", scheme: "blues" }}
-              emptyColor="#e2e8f0"
+              emptyColor="rgba(213,216,220,0.8)"
               enableLabels={false}
               animate={false}
             />
@@ -307,10 +307,12 @@ export function ReportsClient() {
 
       <ReportsOverviewCards data={overviewQuery.data} isLoading={overviewQuery.isLoading} />
 
-      <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.857fr_1fr]">
         <ReportRevenueTrend data={revenueTrendQuery.data} isLoading={revenueTrendQuery.isLoading} />
-        <StatusBreakdown data={statusBreakdownQuery.data} isLoading={statusBreakdownQuery.isLoading} />
+        <FunnelCard data={funnelQuery.data} isLoading={funnelQuery.isLoading} />
       </div>
+
+      <StatusBreakdown data={statusBreakdownQuery.data} isLoading={statusBreakdownQuery.isLoading} />
 
       <TopCustomersReport
         customers={topCustomersQuery.data}
@@ -318,15 +320,12 @@ export function ReportsClient() {
         isLoading={topCustomersQuery.isLoading || overviewQuery.isLoading}
       />
 
-      <div className="grid gap-5 xl:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-[1.222fr_1fr]">
         <CustomerJourneyCard data={customerJourneyQuery.data} isLoading={customerJourneyQuery.isLoading} />
-        <FunnelCard data={funnelQuery.data} isLoading={funnelQuery.isLoading} />
+        <ActivityHeatmapCard data={activityHeatmapQuery.data} isLoading={activityHeatmapQuery.isLoading} />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <ActivityHeatmapCard data={activityHeatmapQuery.data} isLoading={activityHeatmapQuery.isLoading} />
-        <CohortCard data={cohortQuery.data} isLoading={cohortQuery.isLoading} />
-      </div>
+      <CohortCard data={cohortQuery.data} isLoading={cohortQuery.isLoading} />
     </div>
   );
 }

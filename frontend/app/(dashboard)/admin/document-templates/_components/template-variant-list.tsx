@@ -56,40 +56,44 @@ function VariantCard({
   onSelect: (variantId: string) => void;
 }) {
   const hasBlockingIssues = variant.validationIssues?.some((issue) => issue.severity === "error");
+  const description =
+    variant.status === "PUBLISHED" || variant.isActive
+      ? "Bản đang dùng cho runtime hoặc sẵn sàng phát hành."
+      : variant.status === "PENDING_APPROVAL"
+        ? "Đang chờ duyệt trước khi publish."
+        : variant.status === "ARCHIVED"
+          ? "Biến thể lưu trữ để đối chiếu về sau."
+          : "Bản nháp đang chỉnh sửa trong editor.";
 
   return (
     <button
       type="button"
       className={cn(
-        "w-full rounded-2xl border px-4 py-3 text-left transition shadow-sm",
+        "w-full rounded-2xl border px-3 py-2.5 text-left shadow-sm transition",
         selected
           ? "border-primary bg-primary/5"
           : "border-border bg-white hover:border-primary/30 hover:bg-slate-50/80"
       )}
       onClick={() => onSelect(variant.id)}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-text-primary">{variant.name}</p>
-          <p className="mt-1 text-xs text-text-muted">
-            Phiên bản {variant.version} • Cập nhật {new Date(variant.updatedAt).toLocaleString("vi-VN")}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-text-primary">{variant.name}</p>
+          <p className="mt-0.5 text-xs text-text-muted">
+            v{variant.version} · {new Date(variant.updatedAt).toLocaleDateString("vi-VN")}
           </p>
-          <p className="mt-1 text-xs text-text-secondary">
-            {variant.status === "PUBLISHED" || variant.isActive
-              ? "Bản dùng cho runtime hoặc đã sẵn sàng phát hành."
-              : variant.status === "PENDING_APPROVAL"
-                ? "Đang chờ duyệt trước khi publish."
-                : variant.status === "ARCHIVED"
-                  ? "Biến thể đã lưu trữ để đối chiếu về sau."
-                  : "Bản nháp đang được chỉnh sửa trong editor."}
-          </p>
+          {selected ? (
+            <p className="mt-1 text-xs text-text-secondary">{description}</p>
+          ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-1">
           <Badge variant={variant.isActive ? "success" : variant.status === "PUBLISHED" ? "info" : "neutral"}>
             {variant.isActive ? "Đang dùng" : getStatusLabel(variant.status)}
           </Badge>
-          {hasBlockingIssues ? <span className="text-xs font-medium text-rose-600">Có lỗi layout</span> : null}
+          {hasBlockingIssues ? (
+            <span className="text-[11px] font-medium text-danger">Có lỗi</span>
+          ) : null}
         </div>
       </div>
     </button>
@@ -98,7 +102,6 @@ function VariantCard({
 
 function VariantSection({
   title,
-  description,
   variants,
   selectedVariantId,
   onSelectVariant,
@@ -118,7 +121,6 @@ function VariantSection({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-          <p className="text-sm text-text-secondary">{description}</p>
         </div>
         {action}
       </div>
@@ -181,7 +183,7 @@ export function TemplateVariantList({
               key={item.type}
               type="button"
               className={cn(
-                "rounded-2xl border px-4 py-3 text-left transition shadow-sm",
+                "rounded-2xl border px-3 py-2.5 text-left shadow-sm transition",
                 selectedType === item.type
                   ? "border-primary bg-primary/5"
                   : "border-border bg-white hover:border-primary/30 hover:bg-slate-50/80"
@@ -213,7 +215,7 @@ export function TemplateVariantList({
               {passiveTypes.map((item) => (
                 <div
                   key={item.type}
-                  className="rounded-2xl border border-border/70 bg-bg-hover/40 px-4 py-3"
+                  className="rounded-2xl border border-border/70 bg-bg-hover/40 px-3 py-2.5"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -229,29 +231,23 @@ export function TemplateVariantList({
         ) : null}
       </section>
 
-      <section className="grid gap-3 rounded-[28px] border border-white/70 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)] sm:grid-cols-3">
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-emerald-700">
-            Bản chính thức
-          </p>
-          <p className="mt-2 text-2xl font-bold text-emerald-900">{officialVariants.length}</p>
-          <p className="mt-1 text-xs text-emerald-700">{activeCount} bản đang active trên runtime</p>
+      <div className="flex gap-3 rounded-[28px] border border-white/70 bg-white/90 p-3 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-1 flex-col items-center gap-1 rounded-2xl bg-success-bg px-3 py-2.5 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-success">Chính thức</p>
+          <p className="text-xl font-bold text-text-primary">{officialVariants.length}</p>
+          <p className="text-[11px] text-success">{activeCount} active</p>
         </div>
-        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-sky-700">
-            Bản nháp
-          </p>
-          <p className="mt-2 text-2xl font-bold text-sky-900">{draftCount}</p>
-          <p className="mt-1 text-xs text-sky-700">Các variant còn có thể chỉnh sửa trực tiếp</p>
+        <div className="flex flex-1 flex-col items-center gap-1 rounded-2xl bg-primary-bg px-3 py-2.5 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">Bản nháp</p>
+          <p className="text-xl font-bold text-text-primary">{draftCount}</p>
+          <p className="text-[11px] text-primary">có thể sửa</p>
         </div>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-amber-700">
-            Chờ duyệt
-          </p>
-          <p className="mt-2 text-2xl font-bold text-amber-900">{pendingCount}</p>
-          <p className="mt-1 text-xs text-amber-700">Biến thể đang chờ admin duyệt & publish</p>
+        <div className="flex flex-1 flex-col items-center gap-1 rounded-2xl bg-accent-bg px-3 py-2.5 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-accent">Chờ duyệt</p>
+          <p className="text-xl font-bold text-text-primary">{pendingCount}</p>
+          <p className="text-[11px] text-accent">chờ admin</p>
         </div>
-      </section>
+      </div>
 
       <VariantSection
         title="Phiên bản chính thức"

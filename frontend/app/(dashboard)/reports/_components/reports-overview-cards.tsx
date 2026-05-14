@@ -16,10 +16,10 @@ export function ReportsOverviewCards({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <Card key={index} className="metric-sheen noise-edge border border-white/70">
-            <CardHeader>
+            <CardHeader className="px-5 py-4">
               <LoadingSkeleton className="h-4 w-28" />
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 px-5 py-4 pt-0">
               <LoadingSkeleton className="h-8 w-24" />
               <LoadingSkeleton className="h-4 w-full" />
             </CardContent>
@@ -71,7 +71,14 @@ export function ReportsOverviewCards({
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {cards.map((card) => (
-        <V2MetricCard key={card.label} label={card.label} value={card.value} hint={card.helper} tone={card.tone} />
+        <V2MetricCard
+          key={card.label}
+          label={card.label}
+          value={card.value}
+          hint={card.helper}
+          tone={card.tone}
+          className="px-5 py-4"
+        />
       ))}
     </div>
   );

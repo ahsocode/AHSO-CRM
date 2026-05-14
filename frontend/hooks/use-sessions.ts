@@ -26,3 +26,5 @@ export function useRevokeSession() {
     }
   });
 }
+
+export const useTerminateSession = useRevokeSession;

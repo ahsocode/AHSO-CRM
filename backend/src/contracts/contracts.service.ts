@@ -423,7 +423,7 @@ export class ContractsService {
 
     const context = await this.loadContractNotificationContext(contract.id);
 
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("payment.received", {
         paymentId: payment.id,
         contractId: contract.id,
@@ -433,7 +433,7 @@ export class ContractsService {
         amount: Number(payment.amount),
         paidAt: payment.paidAt,
         method: payment.method
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "payment.received", err })
       );
@@ -842,7 +842,7 @@ export class ContractsService {
         );
       }
 
-      void this.domainEvents
+      void Promise.resolve(this.domainEvents
         .emit("contract.signed", {
           contractId: contract.id,
           contractNo: contract.contractNo,
@@ -851,7 +851,7 @@ export class ContractsService {
           ownerUserId: contract.project.customer.assignedTo.id,
           status: contract.status,
           value: Number(contract.value)
-        })
+        }))
         .catch((err: unknown) =>
           this.logger.error("Domain event handler failed", { event: "contract.signed", err })
         );
@@ -859,7 +859,7 @@ export class ContractsService {
     }
 
     if (nextStatus === "COMPLETED") {
-      void this.domainEvents
+      void Promise.resolve(this.domainEvents
         .emit("contract.completed", {
           contractId: contract.id,
           contractNo: contract.contractNo,
@@ -868,7 +868,7 @@ export class ContractsService {
           ownerUserId: contract.project.customer.assignedTo.id,
           status: contract.status,
           value: Number(contract.value)
-        })
+        }))
         .catch((err: unknown) =>
           this.logger.error("Domain event handler failed", { event: "contract.completed", err })
         );

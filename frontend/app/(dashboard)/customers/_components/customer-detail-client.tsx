@@ -11,8 +11,9 @@ import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { DocumentActions } from "@/components/shared/document-actions";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAiCustomerSummary } from "@/hooks/use-ai";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useCustomer } from "@/hooks/use-customers";
 import { getRoleLabelByName } from "@/lib/constants";
@@ -67,6 +68,7 @@ function getErrorMessage(error: unknown) {
 export function CustomerDetailClient({ customerId }: { customerId: string }) {
   const customerQuery = useCustomer(customerId);
   const customFieldsQuery = useCustomFields("customer");
+  const aiSummaryMutation = useAiCustomerSummary(customerId);
 
   if (customerQuery.isLoading) {
     return (
@@ -301,11 +303,43 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
           </Card>
 
           <Card className="border border-white/70">
-            <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Activity Pulse</p>
-              <CardTitle>Hoạt động gần đây</CardTitle>
+            <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Activity Pulse</p>
+                <CardTitle>Hoạt động gần đây</CardTitle>
+              </div>
+              <Button
+                type="button"
+                disabled={aiSummaryMutation.isPending}
+                onClick={() => aiSummaryMutation.mutate()}
+                variant="outline"
+              >
+                <AppIcon name="analytics" className="h-4 w-4" />
+                {aiSummaryMutation.isPending ? "Đang tóm tắt..." : "AI tóm tắt"}
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
+              {aiSummaryMutation.isPending ? <LoadingSkeleton className="h-28 w-full" /> : null}
+              {aiSummaryMutation.isError ? (
+                <div className="rounded-2xl border border-danger/20 bg-danger-bg/70 p-4 text-sm text-danger">
+                  Không thể tạo tóm tắt AI. Vui lòng kiểm tra API Claude hoặc thử lại sau.
+                </div>
+              ) : null}
+              {aiSummaryMutation.data?.summary ? (
+                <article className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+                      <AppIcon name="analytics" className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Summary</p>
+                      <p className="mt-2 whitespace-pre-line text-sm leading-6 text-text-primary">
+                        {aiSummaryMutation.data.summary}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ) : null}
               {customer.activities.length === 0 ? (
                 <EmptyState
                   title="Chưa có hoạt động"

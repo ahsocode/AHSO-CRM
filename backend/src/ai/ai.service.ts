@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Anthropic from "@anthropic-ai/sdk";
-import type { ProjectStatus } from "@prisma/client";
+import type { Prisma, ProjectStatus } from "@prisma/client";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { DraftEmailDto } from "./dto/draft-email.dto";
 
@@ -26,12 +27,9 @@ export class AiService {
     private readonly configService: ConfigService
   ) {}
 
-  async summarizeActivities(customerId: string) {
+  async summarizeActivities(customerId: string, user: JwtUser) {
     const customer = await this.prisma.customer.findFirst({
-      where: {
-        id: customerId,
-        deletedAt: null
-      },
+      where: this.buildCustomerWhere(user, { id: customerId }),
       include: {
         assignedTo: {
           select: {
@@ -136,12 +134,9 @@ Hãy tóm tắt:
     };
   }
 
-  async suggestFollowUp(customerId: string) {
+  async suggestFollowUp(customerId: string, user: JwtUser) {
     const customer = await this.prisma.customer.findFirst({
-      where: {
-        id: customerId,
-        deletedAt: null
-      },
+      where: this.buildCustomerWhere(user, { id: customerId }),
       include: {
         activities: {
           where: {
@@ -223,14 +218,49 @@ Hãy đề xuất bước tiếp theo phù hợp nhất trong 48 giờ tới. B�
     };
   }
 
-  async draftEmail(context: DraftEmailDto) {
+  async draftEmail(context: DraftEmailDto, user: JwtUser) {
+    const quote = context.quoteId
+      ? await this.prisma.quote.findFirst({
+          where: this.buildQuoteWhere(user, { id: context.quoteId }),
+          select: {
+            id: true,
+            quoteNo: true,
+            status: true,
+            total: true,
+            validUntil: true,
+            project: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                status: true,
+                estimatedValue: true,
+                customer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    shortName: true,
+                    address: true
+                  }
+                }
+              }
+            }
+          }
+        })
+      : null;
+
+    if (context.quoteId && !quote) {
+      throw new NotFoundException("Không tìm thấy báo giá để soạn email AI");
+    }
+
+    const resolvedProjectId = context.projectId ?? quote?.project.id;
+    const resolvedCustomerId = context.customerId ?? quote?.project.customer.id;
+    const emailPurpose = context.purpose?.trim() || context.instruction?.trim() || "Cập nhật thông tin dự án";
+
     const [customer, project] = await Promise.all([
-      context.customerId
+      resolvedCustomerId
         ? this.prisma.customer.findFirst({
-            where: {
-              id: context.customerId,
-              deletedAt: null
-            },
+            where: this.buildCustomerWhere(user, { id: resolvedCustomerId }),
             select: {
               id: true,
               name: true,
@@ -239,12 +269,9 @@ Hãy đề xuất bước tiếp theo phù hợp nhất trong 48 giờ tới. B�
             }
           })
         : Promise.resolve(null),
-      context.projectId
+      resolvedProjectId
         ? this.prisma.project.findFirst({
-            where: {
-              id: context.projectId,
-              deletedAt: null
-            },
+            where: this.buildProjectWhere(user, { id: resolvedProjectId }),
             select: {
               id: true,
               code: true,
@@ -256,15 +283,24 @@ Hãy đề xuất bước tiếp theo phù hợp nhất trong 48 giờ tới. B�
         : Promise.resolve(null)
     ]);
 
-    const fallback = this.buildEmailFallback(context, customer?.name, project?.name);
+    if (resolvedCustomerId && !customer) {
+      throw new NotFoundException("Không tìm thấy khách hàng để soạn email AI");
+    }
+
+    if (resolvedProjectId && !project) {
+      throw new NotFoundException("Không tìm thấy dự án để soạn email AI");
+    }
+
+    const fallback = this.buildEmailFallback(context, customer?.name, project?.name, emailPurpose);
     const raw = await this.generateText(
       "Bạn là trợ lý soạn email bán hàng B2B cho AHSO CRM. Luôn viết bằng tiếng Việt, lịch sự, rõ ràng, thực dụng. Chỉ trả về JSON hợp lệ với 2 khóa: subject, body.",
       `
 Ngữ cảnh:
 - Khách hàng: ${customer?.name ?? "không xác định"}
 - Dự án: ${project ? `${project.code} - ${project.name} (${project.status})` : "không xác định"}
+- Báo giá: ${quote ? `${quote.quoteNo} (${quote.status}) - tổng ${formatCurrency(Number(quote.total))}` : "không xác định"}
 - Người nhận: ${context.recipientName ?? "Quý khách"}
-- Mục đích: ${context.purpose}
+- Mục đích: ${emailPurpose}
 - Tone: ${context.tone}
 - Ghi chú thêm: ${context.additionalContext ?? "Không có"}
 
@@ -283,8 +319,79 @@ Yêu cầu:
       body: parsed?.body?.trim() || fallback.body,
       context: {
         customer,
-        project
+        project,
+        quote
       }
+    };
+  }
+
+  async forecastProject(projectId: string, user: JwtUser) {
+    const project = await this.prisma.project.findFirst({
+      where: this.buildProjectWhere(user, { id: projectId }),
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        status: true,
+        estimatedValue: true,
+        expectedEndDate: true,
+        customer: {
+          select: {
+            name: true
+          }
+        },
+        quotes: {
+          orderBy: {
+            createdAt: "desc"
+          },
+          take: 1,
+          select: {
+            quoteNo: true,
+            status: true,
+            total: true
+          }
+        },
+        contract: {
+          select: {
+            contractNo: true,
+            status: true,
+            value: true
+          }
+        }
+      }
+    });
+
+    if (!project) {
+      throw new NotFoundException("Không tìm thấy dự án để dự báo AI");
+    }
+
+    const weight = PROJECT_FORECAST_WEIGHTS[project.status];
+    const probabilityPercent = Math.round(weight * 100);
+    const estimatedValue = Number(project.estimatedValue ?? project.quotes[0]?.total ?? project.contract?.value ?? 0);
+    const forecastedRevenue = Math.round(estimatedValue * weight);
+    const fallbackReasoning = `Dự án ${project.code} đang ở giai đoạn ${project.status}, xác suất thắng quy đổi khoảng ${probabilityPercent}%. Doanh thu kỳ vọng được tính từ giá trị dự kiến nhân trọng số theo stage hiện tại.`;
+    const reasoning = await this.generateText(
+      "Bạn là trợ lý phân tích pipeline B2B cho AHSO CRM. Trả lời bằng tiếng Việt, ngắn gọn, thực dụng, tối đa 120 từ.",
+      `
+Dự án: ${project.code} - ${project.name}
+Khách hàng: ${project.customer.name}
+Stage hiện tại: ${project.status}
+Giá trị dự kiến: ${formatCurrency(estimatedValue)}
+Xác suất theo stage: ${probabilityPercent}%
+Báo giá gần nhất: ${project.quotes[0]?.quoteNo ?? "chưa có"} (${project.quotes[0]?.status ?? "N/A"})
+Hợp đồng: ${project.contract?.contractNo ?? "chưa có"} (${project.contract?.status ?? "N/A"})
+Ngày kết thúc dự kiến: ${formatDateTime(project.expectedEndDate)}
+
+Hãy giải thích ngắn gọn vì sao forecast này hợp lý và đề xuất 1 hành động tiếp theo.
+`,
+      fallbackReasoning
+    );
+
+    return {
+      projectId: project.id,
+      probabilityPercent,
+      forecastedRevenue,
+      reasoning
     };
   }
 
@@ -375,17 +482,61 @@ Hãy viết:
     };
   }
 
+  private buildCustomerWhere(
+    user: JwtUser,
+    extra?: Prisma.CustomerWhereInput
+  ): Prisma.CustomerWhereInput {
+    const where: Prisma.CustomerWhereInput = {
+      deletedAt: null,
+      ...extra
+    };
+
+    if (isStaff(user)) {
+      where.assignedToId = user.sub;
+      where.assignedTo = {
+        isActive: true
+      };
+    }
+
+    return where;
+  }
+
+  private buildProjectWhere(
+    user: JwtUser,
+    extra?: Prisma.ProjectWhereInput
+  ): Prisma.ProjectWhereInput {
+    return {
+      deletedAt: null,
+      customer: this.buildCustomerWhere(user),
+      ...extra
+    };
+  }
+
+  private buildQuoteWhere(user: JwtUser, extra?: Prisma.QuoteWhereInput): Prisma.QuoteWhereInput {
+    return {
+      deletedAt: null,
+      project: this.buildProjectWhere(user),
+      ...extra
+    };
+  }
+
   private buildSummaryFallback(customerName: string, activityCount: number) {
     return `Khách hàng ${customerName} đang có ${activityCount} hoạt động gần đây trong hệ thống. Nên rà lại các điểm đã trao đổi, xác định blocker chính và chốt một bước follow-up rõ ràng trong 48 giờ tới.`;
   }
 
-  private buildEmailFallback(context: DraftEmailDto, customerName?: string | null, projectName?: string | null) {
+  private buildEmailFallback(
+    context: DraftEmailDto,
+    customerName?: string | null,
+    projectName?: string | null,
+    purposeOverride?: string
+  ) {
     const greetingName = context.recipientName?.trim() || customerName || "Quý khách";
-    const subject = `AHSO CRM | ${context.purpose.slice(0, 80)}`;
+    const purpose = purposeOverride ?? context.purpose ?? context.instruction ?? "Cập nhật thông tin dự án";
+    const subject = `AHSO CRM | ${purpose.slice(0, 80)}`;
     const body = [
       `Kính gửi ${greetingName},`,
       "",
-      `AHSO CRM xin liên hệ về nội dung: ${context.purpose}.`,
+      `AHSO CRM xin liên hệ về nội dung: ${purpose}.`,
       projectName ? `Liên quan đến dự án ${projectName}, chúng tôi mong muốn cập nhật nhanh để hai bên chốt bước tiếp theo phù hợp.` : "Chúng tôi mong muốn cập nhật nhanh để hai bên chốt bước tiếp theo phù hợp.",
       context.additionalContext ? context.additionalContext : "Anh/chị vui lòng phản hồi thời gian phù hợp để chúng tôi hỗ trợ tiếp theo.",
       "",

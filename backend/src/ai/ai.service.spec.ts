@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ConfigService } from "@nestjs/config";
+import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { AiService } from "./ai.service";
 
@@ -18,6 +19,13 @@ describe("AiService", () => {
   };
   let configService: {
     get: jest.Mock;
+  };
+  const managerUser: JwtUser = {
+    sub: "manager-1",
+    email: "manager@ahso.vn",
+    name: "Manager",
+    role: "MANAGER",
+    permissions: []
   };
 
   beforeEach(() => {
@@ -71,7 +79,7 @@ describe("AiService", () => {
       projects: []
     });
 
-    await expect(service.summarizeActivities("customer-1")).resolves.toEqual({
+    await expect(service.summarizeActivities("customer-1", managerUser)).resolves.toEqual({
       customerId: "customer-1",
       summary:
         "Khách hàng Khách hàng A hiện chưa có lịch sử tương tác đủ để tạo tóm tắt AI. Nên bắt đầu bằng một cuộc gọi khảo sát nhu cầu hoặc email giới thiệu giải pháp phù hợp."
@@ -92,12 +100,15 @@ describe("AiService", () => {
     });
 
     await expect(
-      service.draftEmail({
-        customerId: "customer-1",
-        projectId: "project-1",
-        purpose: "Chốt lịch họp kỹ thuật",
-        tone: "formal"
-      })
+      service.draftEmail(
+        {
+          customerId: "customer-1",
+          projectId: "project-1",
+          purpose: "Chốt lịch họp kỹ thuật",
+          tone: "formal"
+        },
+        managerUser
+      )
     ).resolves.toMatchObject({
       subject: "Chốt lịch họp dự án",
       body: expect.stringContaining("AHSO xin đề nghị")

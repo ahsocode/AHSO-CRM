@@ -431,7 +431,7 @@ export class QuotesService {
       }
     });
 
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("quote.sent", {
         quoteId: quote.id,
         quoteNo: quote.quoteNo,
@@ -441,7 +441,7 @@ export class QuotesService {
         status: sentQuote.status,
         total: Number(quote.total),
         sentAt: sentQuote.sentAt
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "quote.sent", err })
       );
@@ -515,27 +515,27 @@ export class QuotesService {
     };
 
     if (dto.status === "ACCEPTED" && result.quote.status !== "ACCEPTED") {
-      void this.domainEvents
+      void Promise.resolve(this.domainEvents
         .emit("quote.accepted", {
           quoteId: result.quote.id,
           projectId: result.quote.projectId,
           ownerUserId: result.quote.createdById,
           status: result.updatedQuote.status,
           acceptedAt: result.updatedQuote.acceptedAt
-        })
+        }))
         .catch((err: unknown) =>
           this.logger.error("Domain event handler failed", { event: "quote.accepted", err })
         );
     }
 
     if (dto.status === "REJECTED" && result.quote.status !== "REJECTED") {
-      void this.domainEvents
+      void Promise.resolve(this.domainEvents
         .emit("quote.rejected", {
           quoteId: result.quote.id,
           projectId: result.quote.projectId,
           ownerUserId: result.quote.createdById,
           status: result.updatedQuote.status
-        })
+        }))
         .catch((err: unknown) =>
           this.logger.error("Domain event handler failed", { event: "quote.rejected", err })
         );

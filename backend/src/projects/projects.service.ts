@@ -201,14 +201,14 @@ export class ProjectsService {
 
     await this.customFieldsService.saveValues("project", project.id, dto.customFieldValues);
 
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("project.created", {
         projectId: project.id,
         code: project.code,
         customerId: dto.customerId,
         status: project.status,
         estimatedValue: Number(project.estimatedValue ?? 0)
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "project.created", err })
       );
@@ -1095,12 +1095,12 @@ export class ProjectsService {
     });
 
     if (project.status !== updatedProject.status) {
-      void this.domainEvents
+      void Promise.resolve(this.domainEvents
         .emit("project.status_changed", {
           projectId: updatedProject.id,
           previousStatus: project.status,
           status: updatedProject.status
-        })
+        }))
         .catch((err: unknown) =>
           this.logger.error("Domain event handler failed", { event: "project.status_changed", err })
         );

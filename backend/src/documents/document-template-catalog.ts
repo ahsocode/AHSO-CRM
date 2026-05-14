@@ -566,7 +566,7 @@ function createQuotationLayout(): DocumentTemplateLayout {
       type: "signature_block",
       page: 0,
       x: 12,
-      y: 268,
+      y: 266,
       width: 186,
       height: 18,
       zIndex: 10,

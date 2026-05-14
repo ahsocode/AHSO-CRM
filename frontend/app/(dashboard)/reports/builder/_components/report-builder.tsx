@@ -220,10 +220,14 @@ export function ReportBuilder() {
       return;
     }
 
-    const field = payload.field as { key?: string; label?: string } | undefined;
+    const field = payload.field as { key?: string; label?: string; kind?: string } | undefined;
     if (!field?.key || !field.label) {
       return;
     }
+    if (field.kind !== zone) {
+      return;
+    }
+
     const fieldKey = field.key;
     const fieldLabel = field.label;
 
@@ -339,7 +343,7 @@ export function ReportBuilder() {
         description="Kéo field vào Dimensions, Measures, Filters hoặc Chart để lắp một báo cáo tùy biến theo đúng pipeline của đội."
         action={
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="outline" onClick={() => void runQueryMutation.mutateAsync(config)}>
+            <Button type="button" variant="outline" onClick={() => runQueryMutation.mutate(config)}>
               Chạy truy vấn
             </Button>
             <Button type="button" variant="outline" onClick={handleSaveTemplate}>

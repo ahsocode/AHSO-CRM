@@ -342,22 +342,22 @@ export class CustomersService {
 
     await this.customFieldsService.saveValues("customer", customer.id, customFieldValues);
 
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("customer.created", {
         customerId: customer.id,
         name: customer.name,
         status: customer.status,
         assignedToId: customer.assignedTo.id
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "customer.created", err })
       );
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("customer.assigned", {
         customerId: customer.id,
         customerName: customer.name,
         assignedToId: customer.assignedTo.id
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "customer.assigned", err })
       );
@@ -447,24 +447,24 @@ export class CustomersService {
 
     await this.customFieldsService.saveValues("customer", customer.id, customFieldValues);
 
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("customer.updated", {
         customerId: customer.id,
         name: customer.name,
         status: customer.status,
         assignedToId: customer.assignedTo.id
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "customer.updated", err })
       );
 
     if (previousCustomer.assignedToId !== customer.assignedTo.id) {
-      void this.domainEvents
+      void Promise.resolve(this.domainEvents
         .emit("customer.assigned", {
           customerId: customer.id,
           customerName: customer.name,
           assignedToId: customer.assignedTo.id
-        })
+        }))
         .catch((err: unknown) =>
           this.logger.error("Domain event handler failed", { event: "customer.assigned", err })
         );
@@ -485,12 +485,12 @@ export class CustomersService {
       }
     });
 
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("customer.deleted", {
         customerId: customer.id,
         name: customer.name,
         status: customer.status
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "customer.deleted", err })
       );
@@ -525,12 +525,12 @@ export class CustomersService {
       }
     });
 
-    void this.domainEvents
+    void Promise.resolve(this.domainEvents
       .emit("customer.updated", {
         customerId: restored.id,
         name: restored.name,
         status: restored.status
-      })
+      }))
       .catch((err: unknown) =>
         this.logger.error("Domain event handler failed", { event: "customer.updated", err })
       );
@@ -675,12 +675,12 @@ export class CustomersService {
 
       await Promise.allSettled(
         accessibleCustomers.map((customer) =>
-          this.domainEvents
+          Promise.resolve(this.domainEvents
             .emit("customer.assigned", {
               customerId: customer.id,
               customerName: customer.name,
               assignedToId: dto.assignedToId
-            })
+            }))
             .catch((err: unknown) =>
               this.logger.error("Domain event handler failed", { event: "customer.assigned", err })
             )

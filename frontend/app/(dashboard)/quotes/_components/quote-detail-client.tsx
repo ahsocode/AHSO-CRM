@@ -12,7 +12,10 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { DocumentActions } from "@/components/shared/document-actions";
+import { useAiDraftEmail } from "@/hooks/use-ai";
+import { toast } from "@/hooks/use-toast";
 import { useRuntimeDocumentTemplateVariants } from "@/hooks/use-documents";
 import { useDuplicateQuote, useQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -48,6 +51,7 @@ const STATUS_ACTIONS: Partial<
 export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const router = useRouter();
   const [selectedTemplateVariantId, setSelectedTemplateVariantId] = useState("");
+  const [isDraftEmailOpen, setIsDraftEmailOpen] = useState(false);
   const quoteQuery = useQuote(quoteId);
   const templateVariantsQuery = useRuntimeDocumentTemplateVariants("QUOTATION");
   const duplicateQuoteMutation = useDuplicateQuote();
@@ -366,6 +370,17 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               </div>
 
               <div className="grid gap-3">
+                <Button
+                  className="justify-start"
+                  onClick={() => setIsDraftEmailOpen(true)}
+                  size="lg"
+                  type="button"
+                  variant="outline"
+                >
+                  <AppIcon name="mail" className="h-4 w-4" />
+                  Soạn email AI
+                </Button>
+
                 <Link
                   href={documentPreviewHref}
                   target="_blank"
@@ -533,6 +548,136 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               )}
             </CardContent>
           </Card>
+        </div>
+      </div>
+
+      <AiDraftEmailDialog
+        isOpen={isDraftEmailOpen}
+        onClose={() => setIsDraftEmailOpen(false)}
+        projectId={quote.project.id}
+        quoteId={quote.id}
+      />
+    </div>
+  );
+}
+
+function AiDraftEmailDialog({
+  isOpen,
+  onClose,
+  projectId,
+  quoteId
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId: string;
+  quoteId: string;
+}) {
+  const [instruction, setInstruction] = useState("Soạn email gửi khách hàng để follow-up báo giá và đề xuất bước tiếp theo.");
+  const draftEmailMutation = useAiDraftEmail();
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const handleCopy = async () => {
+    if (!draftEmailMutation.data) return;
+    try {
+      await navigator.clipboard.writeText(
+        `Subject: ${draftEmailMutation.data.subject}\n\n${draftEmailMutation.data.body}`
+      );
+      toast({ title: "Đã copy email AI" });
+    } catch {
+      toast({
+        title: "Không thể copy email",
+        description: "Trình duyệt đang chặn clipboard. Hãy copy thủ công từ ô nội dung."
+      });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Email Assistant</p>
+            <h3 className="mt-2 font-heading text-2xl font-extrabold text-text-primary">Soạn email báo giá</h3>
+            <p className="mt-2 text-sm text-text-secondary">
+              Nhập chỉ dẫn ngắn để AI tạo subject và nội dung email chuyên nghiệp cho báo giá này.
+            </p>
+          </div>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Đóng
+          </Button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div>
+            <label className="text-sm font-semibold text-text-primary" htmlFor="ai-email-instruction">
+              Chỉ dẫn cho AI
+            </label>
+            <Textarea
+              id="ai-email-instruction"
+              className="mt-2 min-h-[120px]"
+              value={instruction}
+              onChange={(event) => setInstruction(event.target.value)}
+              placeholder="Ví dụ: Soạn email nhắc khách xác nhận báo giá, giọng lịch sự và có CTA đặt lịch họp."
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              disabled={draftEmailMutation.isPending || instruction.trim().length < 5}
+              onClick={() =>
+                draftEmailMutation.mutate({
+                  projectId,
+                  quoteId,
+                  instruction: instruction.trim()
+                })
+              }
+            >
+              <AppIcon name="mail" className="h-4 w-4" />
+              {draftEmailMutation.isPending ? "Đang soạn..." : "Gửi AI"}
+            </Button>
+            {draftEmailMutation.data ? (
+              <Button type="button" variant="outline" onClick={handleCopy}>
+                Copy email
+              </Button>
+            ) : null}
+          </div>
+
+          {draftEmailMutation.isError ? (
+            <div className="rounded-2xl border border-danger/20 bg-danger-bg/70 p-4 text-sm text-danger">
+              Không thể soạn email AI. Vui lòng kiểm tra Claude API hoặc thử lại sau.
+            </div>
+          ) : null}
+
+          {draftEmailMutation.data ? (
+            <div className="space-y-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div>
+                <label className="text-sm font-semibold text-text-primary" htmlFor="ai-email-subject">
+                  Subject
+                </label>
+                <input
+                  id="ai-email-subject"
+                  readOnly
+                  className="mt-2 w-full rounded-md border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none"
+                  value={draftEmailMutation.data.subject}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-text-primary" htmlFor="ai-email-body">
+                  Nội dung email
+                </label>
+                <Textarea
+                  id="ai-email-body"
+                  readOnly
+                  className="mt-2 min-h-[260px] bg-white"
+                  value={draftEmailMutation.data.body}
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

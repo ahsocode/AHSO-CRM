@@ -23,6 +23,7 @@ import {
   useUpdateBusinessDocument,
   useUploadBusinessDocumentFile
 } from "@/hooks/use-business-documents";
+import { useAiProjectForecast } from "@/hooks/use-ai";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import {
   useCreateProjectHandover,
@@ -35,7 +36,7 @@ import { useAddSurveyNote, useCreateSurvey, useProjectSurveys, useUploadSurveyMe
 import { toast } from "@/hooks/use-toast";
 import { apiClient, getApiErrorMessage } from "@/lib/api-client";
 import { PROJECT_STATUS_LABELS } from "@/lib/constants";
-import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatRelativeTime, formatVNDShort } from "@/lib/format";
 import {
   BusinessDocument,
   BusinessDocumentSource,
@@ -531,6 +532,8 @@ function OverviewPanel({
       </div>
 
       <div className="space-y-6">
+        <AiForecastCard projectId={project.id} />
+
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Critical Docs</p>
@@ -570,6 +573,60 @@ function OverviewPanel({
         </Card>
       </div>
     </div>
+  );
+}
+
+function AiForecastCard({ projectId }: { projectId: string }) {
+  const forecastMutation = useAiProjectForecast(projectId);
+  const probability = forecastMutation.data?.probabilityPercent ?? 0;
+
+  return (
+    <Card className="border border-primary/20 bg-primary/5">
+      <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Forecast</p>
+          <CardTitle>Dự báo AI</CardTitle>
+        </div>
+        <Button
+          type="button"
+          disabled={forecastMutation.isPending}
+          onClick={() => forecastMutation.mutate()}
+          variant="outline"
+        >
+          <AppIcon name="analytics" className="h-4 w-4" />
+          {forecastMutation.isPending ? "Đang dự báo..." : "Chạy dự báo"}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {forecastMutation.isPending ? <LoadingSkeleton className="h-32 w-full" /> : null}
+        {forecastMutation.isError ? (
+          <div className="rounded-2xl border border-danger/20 bg-danger-bg/70 p-4 text-sm text-danger">
+            Không thể tạo dự báo AI. Vui lòng kiểm tra cấu hình Claude API hoặc thử lại sau.
+          </div>
+        ) : null}
+        {forecastMutation.data ? (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MiniInfo label="Xác suất thắng" value={`${probability}%`} />
+              <MiniInfo label="Doanh thu kỳ vọng" value={formatVNDShort(forecastMutation.data.forecastedRevenue)} />
+            </div>
+            <div className="h-3 overflow-hidden rounded-full bg-white">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-primary-light"
+                style={{ width: `${Math.min(100, Math.max(0, probability))}%` }}
+              />
+            </div>
+            <p className="whitespace-pre-line text-sm leading-6 text-text-secondary">
+              {forecastMutation.data.reasoning}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-text-secondary">
+            Chạy dự báo để xem xác suất thắng, doanh thu kỳ vọng và khuyến nghị hành động tiếp theo.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -46,9 +46,13 @@ export interface AuthSession {
 
 export interface UserSessionInfo {
   id: string;
+  device?: string | null;
   deviceName: string | null;
+  ip?: string | null;
   ipAddress: string | null;
+  lastUsed?: string | null;
   userAgent: string | null;
+  current?: boolean;
   lastActiveAt: string;
   createdAt: string;
 }

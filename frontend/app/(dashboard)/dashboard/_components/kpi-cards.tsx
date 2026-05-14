@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { V2MetricCard } from "@/components/shared/composite-cards";
@@ -15,10 +15,14 @@ export function KpiCards({
     return (
       <div className="grid gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <Card key={index} className="space-y-4 p-5">
-            <LoadingSkeleton className="h-4 w-32" />
-            <LoadingSkeleton className="h-8 w-28" />
-            <LoadingSkeleton className="h-4 w-36" />
+          <Card key={index}>
+            <CardHeader className="px-5 py-4">
+              <LoadingSkeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-3 px-5 py-4">
+              <LoadingSkeleton className="h-8 w-28" />
+              <LoadingSkeleton className="h-4 w-36" />
+            </CardContent>
           </Card>
         ))}
       </div>
@@ -55,7 +59,14 @@ export function KpiCards({
   return (
     <div className="grid gap-4 xl:grid-cols-4">
       {cards.map((card) => (
-        <V2MetricCard key={card.label} label={card.label} value={card.value} hint={card.hint} tone={card.tone} />
+        <V2MetricCard
+          key={card.label}
+          label={card.label}
+          value={card.value}
+          hint={card.hint}
+          tone={card.tone}
+          className="px-5 py-4"
+        />
       ))}
     </div>
   );

@@ -1,7 +1,16 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Area,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { formatVNDShort } from "@/lib/format";
 import { RevenueChartPoint } from "@/lib/types";
@@ -14,41 +23,69 @@ export function RevenueChart({
   isLoading: boolean;
 }) {
   return (
-    <Card className="h-full p-6">
-      <CardHeader className="mb-6">
+    <Card className="border border-white/70">
+      <CardHeader className="mb-0 gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Revenue Trend</p>
         <CardTitle>Doanh thu 6 tháng</CardTitle>
-        <CardDescription>Theo dõi dòng tiền từ các hợp đồng và đợt thanh toán đã ghi nhận.</CardDescription>
       </CardHeader>
-
-      {isLoading || !data ? (
-        <LoadingSkeleton className="h-[320px] w-full" />
-      ) : (
-        <div className="h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="4 4" stroke="rgba(93, 109, 126, 0.18)" vertical={false} />
-              <XAxis dataKey="month" stroke="#5d6d7e" tickLine={false} axisLine={false} />
-              <YAxis
-                stroke="#5d6d7e"
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => formatVNDShort(Number(value))}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 16,
-                  border: "1px solid rgba(213, 216, 220, 0.8)",
-                  boxShadow: "0 10px 28px rgba(28, 40, 51, 0.08)"
-                }}
-                formatter={(value: number) => formatVNDShort(Number(value))}
-              />
-              <Bar dataKey="target" fill="rgba(230, 126, 34, 0.18)" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="revenue" fill="#1a5276" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <CardContent>
+        {isLoading || !data ? (
+          <LoadingSkeleton className="h-[280px] w-full" />
+        ) : (
+          <div className="space-y-3">
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={data}>
+                  <defs>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1a5276" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#1a5276" stopOpacity={0.01} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="4 4" stroke="rgba(213,216,220,0.5)" vertical={false} />
+                  <XAxis dataKey="month" stroke="#5d6d7e" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis
+                    stroke="#5d6d7e"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => formatVNDShort(Number(value))}
+                  />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid rgba(213,216,220,0.8)", fontSize: 12 }}
+                    formatter={(value: number) => formatVNDShort(Number(value))}
+                  />
+                  <Area
+                    dataKey="revenue"
+                    type="monotone"
+                    stroke="#1a5276"
+                    strokeWidth={2}
+                    fill="url(#revenueGrad)"
+                  />
+                  <Line
+                    dataKey="target"
+                    type="monotone"
+                    stroke="#e67e22"
+                    strokeDasharray="5 5"
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center gap-5 text-xs text-text-secondary">
+              <span className="inline-flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-primary" />
+                Thu thực
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <span className="inline-block h-px w-5 border-t-2 border-dashed border-accent" />
+                Mục tiêu
+              </span>
+            </div>
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
 }
-

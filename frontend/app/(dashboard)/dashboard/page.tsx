@@ -23,11 +23,10 @@ export default function DashboardPage() {
   const activityQuery = useRecentActivity();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <PageHeader
         eyebrow="Tổng quan"
         title="Dashboard điều phối"
-        description="Theo dõi doanh thu, pipeline và nhịp công việc của đội kinh doanh kỹ thuật theo dữ liệu realtime."
       />
 
       <KpiCards data={kpisQuery.data} isLoading={kpisQuery.isLoading} />
@@ -39,7 +38,7 @@ export default function DashboardPage() {
 
       <PipelinePreview data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_1.15fr]">
+      <div className="grid gap-5 xl:grid-cols-[1fr_1.4fr]">
         <TaskChecklist data={tasksQuery.data} isLoading={tasksQuery.isLoading} />
         <ActivityFeed data={activityQuery.data} isLoading={activityQuery.isLoading} />
       </div>

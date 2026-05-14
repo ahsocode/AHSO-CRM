@@ -1,7 +1,9 @@
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CurrencyDisplay } from "@/components/shared/currency-display";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { formatVNDShort } from "@/lib/format";
 import { PipelineStage } from "@/lib/types";
+
+const STAGE_COLORS = ["#78909c", "#2e86c1", "#e67e22", "#1a5276", "#1e8449", "#c0392b", "#5d6d7e"];
 
 export function PipelinePreview({
   data,
@@ -10,55 +12,67 @@ export function PipelinePreview({
   data?: PipelineStage[];
   isLoading: boolean;
 }) {
+  if (isLoading || !data) {
+    return (
+      <Card className="border border-white/70">
+        <CardHeader className="mb-0 gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Pipeline Overview</p>
+          <CardTitle>Phân bổ pipeline theo giai đoạn</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <LoadingSkeleton className="h-9 w-full rounded-full" />
+          <LoadingSkeleton className="h-16 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalValue = data.reduce((sum, stage) => sum + stage.totalValue, 0);
+
   return (
-    <Card className="p-6">
-      <CardHeader className="mb-6">
-        <CardTitle>Pipeline dự án</CardTitle>
-        <CardDescription>Rút gọn từ màn hình kanban để theo dõi nhanh các cơ hội đang dịch chuyển.</CardDescription>
+    <Card className="border border-white/70">
+      <CardHeader className="mb-0 gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Pipeline Overview</p>
+        <CardTitle>Phân bổ pipeline theo giai đoạn</CardTitle>
       </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex h-9 overflow-hidden rounded-full">
+          {data.map((stage, index) => {
+            const pct = totalValue > 0 ? (stage.totalValue / totalValue) * 100 : 0;
+            if (pct < 0.5) {
+              return null;
+            }
 
-      {isLoading || !data ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-          {Array.from({ length: 7 }, (_, index) => (
-            <LoadingSkeleton key={index} className="h-48 w-full" />
-          ))}
+            return (
+              <div
+                key={stage.status}
+                title={`${stage.label}: ${stage.count} dự án · ${formatVNDShort(stage.totalValue)}`}
+                className="transition-opacity hover:opacity-80"
+                style={{
+                  flex: stage.totalValue,
+                  backgroundColor: STAGE_COLORS[index % STAGE_COLORS.length]
+                }}
+              />
+            );
+          })}
         </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-          {data.map((stage) => (
-            <div className="rounded-2xl bg-bg-hover/60 p-4" key={stage.status}>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.24em] text-text-muted">{stage.label}</p>
-                  <p className="mt-1 text-sm font-semibold text-text-primary">{stage.count} cơ hội</p>
-                </div>
-                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-text-secondary shadow-sm">
-                  <CurrencyDisplay amount={stage.totalValue} short />
-                </span>
-              </div>
 
-              <div className="space-y-3">
-                {stage.items.length > 0 ? (
-                  stage.items.map((item) => (
-                    <article className="rounded-xl bg-white p-3 shadow-sm" key={item.id}>
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-text-muted">{item.code}</p>
-                      <h4 className="mt-2 text-sm font-bold text-text-primary">{item.name}</h4>
-                      <p className="mt-1 text-xs text-text-secondary">{item.customerName}</p>
-                      <p className="mt-3 text-sm font-semibold text-primary">
-                        <CurrencyDisplay amount={item.estimatedValue} />
-                      </p>
-                    </article>
-                  ))
-                ) : (
-                  <div className="rounded-xl border border-dashed border-border bg-white/60 px-3 py-6 text-center text-sm text-text-muted">
-                    Chưa có cơ hội
-                  </div>
-                )}
-              </div>
+        <div className="flex divide-x divide-border/40">
+          {data.map((stage, index) => (
+            <div key={stage.status} className="flex flex-1 flex-col items-center gap-1 px-2 text-center">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: STAGE_COLORS[index % STAGE_COLORS.length] }}
+              />
+              <p className="text-[10px] font-semibold uppercase leading-tight tracking-[0.12em] text-text-muted">
+                {stage.label}
+              </p>
+              <p className="text-lg font-bold leading-none text-text-primary">{stage.count}</p>
+              <p className="text-[11px] text-text-muted">{formatVNDShort(stage.totalValue)}</p>
             </div>
           ))}
         </div>
-      )}
+      </CardContent>
     </Card>
   );
 }

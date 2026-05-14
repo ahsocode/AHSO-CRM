@@ -253,8 +253,9 @@ export function ProjectsClient() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Dự án & Pipeline"
-        description="Projects module giờ chạy cả list lẫn kanban để sales và delivery cùng nhìn một pipeline, không phải đổi context giữa nhiều màn hình."
+        eyebrow="Project Pipeline"
+        title="Pipeline Dự án"
+        description="Điều phối cơ hội từ khảo sát, báo giá, đàm phán đến triển khai với kanban kéo thả và dữ liệu đồng bộ."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex rounded-md border border-border bg-white p-1">

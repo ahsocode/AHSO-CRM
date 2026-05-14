@@ -21,6 +21,16 @@ const PRIORITY_VARIANTS: Record<Priority, "neutral" | "info" | "warning"> = {
   HIGH: "warning"
 };
 
+const STAGE_COLORS: Record<ProjectStatus, string> = {
+  SURVEY: "#78909c",
+  QUOTING: "#2e86c1",
+  NEGOTIATING: "#e67e22",
+  WON: "#2563eb",
+  LOST: "#c0392b",
+  DELIVERING: "#00897b",
+  COMPLETED: "#1e8449"
+};
+
 export function ProjectKanbanBoard({
   columns,
   meta,
@@ -103,9 +113,9 @@ export function ProjectKanbanBoard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Kanban Pipeline</p>
-          <h2 className="mt-2 font-heading text-2xl font-bold text-text-primary">Board theo trạng thái dự án</h2>
+          <h2 className="mt-2 font-heading text-2xl font-bold text-text-primary">Pipeline Dự án</h2>
         </div>
-        <p className="text-sm text-text-secondary">
+        <p className="max-w-2xl text-sm text-text-secondary">
           {meta?.total ?? totalItems} dự án trong tập lọc hiện tại. Có thể kéo thả card giữa các cột hoặc dùng select làm fallback.
         </p>
       </div>
@@ -115,7 +125,7 @@ export function ProjectKanbanBoard({
           {columns.map((column) => (
             <Card
               key={column.key}
-              className={`flex w-[320px] shrink-0 flex-col border transition ${
+              className={`flex w-[280px] shrink-0 flex-col border bg-transparent p-0 shadow-none transition ${
                 dragOverStatus === column.key ? "border-primary/45 bg-primary/5 shadow-lg" : "border-white/70"
               }`}
               onDragOver={(event) => {
@@ -149,20 +159,28 @@ export function ProjectKanbanBoard({
                 onStatusChange(projectId, column.key);
               }}
             >
-              <CardHeader className="space-y-3 border-b border-border/60 bg-white/70">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Stage</p>
-                    <CardTitle className="mt-2 text-xl">{column.label}</CardTitle>
+              <CardHeader className="mb-0 space-y-2 px-1 pb-2 pt-0">
+                <div className="flex items-center gap-2">
+                  <span className="v2-stage-dot" style={{ backgroundColor: STAGE_COLORS[column.key] }} />
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="truncate text-sm">{column.label}</CardTitle>
                   </div>
-                  <Badge variant="neutral">{column.itemCount}</Badge>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+                    style={{
+                      backgroundColor: `${STAGE_COLORS[column.key]}22`,
+                      color: STAGE_COLORS[column.key]
+                    }}
+                  >
+                    {column.itemCount}
+                  </span>
                 </div>
-                <p className="text-sm text-text-secondary">
+                <p className="px-4 text-xs font-semibold text-text-secondary">
                   <CurrencyDisplay amount={column.totalValue} short />
                 </p>
               </CardHeader>
 
-              <CardContent className="flex-1 space-y-4 pt-4">
+              <CardContent className="flex-1 space-y-2 px-0 pt-1">
                 {column.items.length === 0 ? (
                   <div
                     className={`rounded-2xl border border-dashed p-4 text-sm transition ${
@@ -188,21 +206,22 @@ export function ProjectKanbanBoard({
                         setDraggingProjectId(null);
                         setDragOverStatus(null);
                       }}
-                      className={`rounded-2xl border p-4 shadow-sm transition ${
+                      className={`v2-card-hover rounded-lg border-l-4 bg-white p-3 shadow-sm transition ${
                         draggingProjectId === project.id
-                          ? "cursor-grabbing border-primary/45 bg-primary/5 opacity-60 shadow-xl"
-                          : "border-border/60 bg-white/85"
+                          ? "cursor-grabbing border-primary/45 opacity-60 shadow-xl"
+                          : "border-y-transparent border-r-transparent"
                       } ${isUpdating && updatingProjectId === project.id ? "pointer-events-none opacity-60" : "cursor-grab"}`}
+                      style={{ borderLeftColor: STAGE_COLORS[project.status] }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <Link
                             href={`/projects/${project.id}`}
-                            className="line-clamp-2 font-heading text-lg font-bold text-text-primary hover:text-primary"
+                            className="line-clamp-2 font-heading text-[13.5px] font-bold leading-5 text-text-primary hover:text-primary"
                           >
                             {project.name}
                           </Link>
-                          <p className="mt-1 text-sm text-text-secondary">{project.code}</p>
+                          <p className="mt-1 text-[11.5px] text-text-muted">{project.code}</p>
                         </div>
                         {project.isOverdue ? <Badge variant="danger">Trễ hạn</Badge> : null}
                       </div>
@@ -223,10 +242,10 @@ export function ProjectKanbanBoard({
                         </div>
                       </div>
 
-                      <div className="mt-4 rounded-2xl border border-border/60 bg-bg-hover/40 p-3">
+                      <div className="mt-3 rounded-lg bg-bg-subtle p-3">
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Giá trị</span>
-                          <span className="font-heading text-xl font-extrabold text-text-primary">
+                          <span className="font-heading text-base font-extrabold text-primary">
                             <CurrencyDisplay amount={project.estimatedValue} short />
                           </span>
                         </div>
@@ -234,8 +253,8 @@ export function ProjectKanbanBoard({
                           <span>{project.progressPercent}% tiến độ</span>
                           <span>{project.expectedEndDate ? formatDate(project.expectedEndDate) : "Chưa có hạn"}</span>
                         </div>
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                          <div className="h-full rounded-full bg-primary" style={{ width: `${project.progressPercent}%` }} />
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                          <div className="h-full rounded-full" style={{ width: `${project.progressPercent}%`, backgroundColor: STAGE_COLORS[project.status] }} />
                         </div>
                       </div>
 

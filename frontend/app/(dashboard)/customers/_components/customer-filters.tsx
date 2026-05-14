@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { AppIcon } from "@/components/shared/app-icon";
 import { CustomerStatus, UserListItem } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export type VipFilterValue = "all" | "vip" | "standard";
 
@@ -48,96 +49,95 @@ export function CustomerFilters({
   usersUnavailable: boolean;
 }) {
   return (
-    <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2">
-        <p className="industrial-chip bg-primary/10 text-primary">Filter Workspace</p>
-        <CardTitle>Bộ lọc khách hàng</CardTitle>
-        <p className="text-sm text-text-secondary">
-          Kết hợp tìm kiếm nhanh, phân công phụ trách và mức ưu tiên để đọc đúng danh sách cần xử lý.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 lg:grid-cols-[1.45fr_repeat(4,minmax(0,1fr))]">
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tìm kiếm</span>
+    <Card className="border border-white/70 p-0">
+      <CardContent className="space-y-3 p-4">
+        <div className="relative">
+          <AppIcon
+            name="search"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
+          />
+          <Input
+            aria-label="Tìm kiếm khách hàng"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            className="h-10 rounded-lg border-border pl-10 text-[13.5px]"
+            placeholder="Tìm theo tên công ty, mã số thuế, email..."
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="min-w-[180px]">
+            <span className="sr-only">Trạng thái</span>
+            <Select
+              value={status}
+              onChange={(event) => onStatusChange(event.target.value as CustomerStatus | "")}
+              className="h-9 rounded-full text-[12.5px]"
+            >
+              <option value="">Trạng thái: Tất cả</option>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  Trạng thái: {option.label}
+                </option>
+              ))}
+            </Select>
+          </label>
+
+          <label className="min-w-[170px]">
+            <span className="sr-only">Ngành hàng</span>
             <div className="relative">
-              <AppIcon
-                name="search"
-                className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
-              />
               <Input
-                aria-label="Tìm kiếm khách hàng"
-                value={search}
-                onChange={(event) => onSearchChange(event.target.value)}
-                className="pl-11"
-                placeholder="Tên công ty, MST, email, điện thoại..."
+                value={industry}
+                onChange={(event) => onIndustryChange(event.target.value)}
+                className="h-9 rounded-full text-[12.5px]"
+                placeholder="Ngành: Tất cả"
               />
             </div>
           </label>
 
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trạng thái</span>
-            <Select
-              value={status}
-              onChange={(event) => onStatusChange(event.target.value as CustomerStatus | "")}
-            >
-              <option value="">Tất cả trạng thái</option>
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Ngành hàng</span>
-            <Input
-              value={industry}
-              onChange={(event) => onIndustryChange(event.target.value)}
-              placeholder="Ví dụ: Y tế, Thực phẩm..."
-            />
-          </label>
-
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Phụ trách</span>
+          <label className="min-w-[180px]">
+            <span className="sr-only">Phụ trách</span>
             <Select
               value={assignedToId}
               onChange={(event) => onAssignedToIdChange(event.target.value)}
               disabled={usersUnavailable}
+              className="h-9 rounded-full text-[12.5px]"
             >
-              <option value="">Tất cả nhân sự</option>
+              <option value="">Phụ trách: Tất cả</option>
               {users.map((user) => (
                 <option key={user.id} value={user.id}>
-                  {user.name}
+                  Phụ trách: {user.name}
                 </option>
               ))}
             </Select>
           </label>
 
-          <label className="block space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Nhóm ưu tiên</span>
-            <Select
-              value={vipFilter}
-              onChange={(event) => onVipFilterChange(event.target.value as VipFilterValue)}
-            >
-              <option value="all">Tất cả khách hàng</option>
-              <option value="vip">Chỉ VIP</option>
-              <option value="standard">Chuẩn</option>
-            </Select>
-          </label>
+          <button
+            type="button"
+            className={cn("v2-chip", vipFilter === "vip" && "border-accent bg-accent-bg text-accent")}
+            onClick={() => onVipFilterChange(vipFilter === "vip" ? "all" : "vip")}
+          >
+            ★ VIP
+          </button>
+
+          <div className="ml-auto flex items-center gap-3">
+            <span className="hidden text-xs text-text-muted md:inline">
+              {usersUnavailable
+                ? "Bộ lọc nhân sự không khả dụng."
+                : "Danh sách cập nhật theo dữ liệu customers/contacts."}
+            </span>
+            <Button variant="ghost" onClick={onReset} disabled={!canReset}>
+              Xóa bộ lọc
+            </Button>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-border/60 pt-4 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-text-secondary">
+        {usersUnavailable ? (
+          <p className="text-xs text-text-muted">
             {usersUnavailable
               ? "Bộ lọc nhân sự không khả dụng với tài khoản hiện tại hoặc chưa tải được danh sách người dùng."
               : "Danh sách được cập nhật theo thời gian thực từ backend customers/contacts."}
           </p>
-          <Button variant="ghost" onClick={onReset} disabled={!canReset}>
-            Xóa bộ lọc
-          </Button>
-        </div>
+        ) : null}
       </CardContent>
     </Card>
   );

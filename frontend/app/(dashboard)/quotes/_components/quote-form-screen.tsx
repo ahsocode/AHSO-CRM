@@ -158,7 +158,8 @@ export function QuoteFormScreen({
   return (
     <div className="space-y-8">
       <PageHeader
-        title={mode === "create" ? "Tạo báo giá" : "Cập nhật báo giá"}
+        eyebrow="Quotation Desk"
+        title={mode === "create" ? "Tạo báo giá mới" : "Cập nhật báo giá"}
         description={
           mode === "create"
             ? "Tạo quote trực tiếp từ dự án thật, tính toán line item và khóa luôn payload để sang được màn hình preview/in."
@@ -183,7 +184,7 @@ export function QuoteFormScreen({
       />
 
       <form
-        className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
+        className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]"
         onSubmit={form.handleSubmit((values) => {
           if (mode === "edit" && quoteId) {
             updateQuoteMutation.mutate(values, {
@@ -204,7 +205,7 @@ export function QuoteFormScreen({
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">
+              <p className="v2-label text-primary">
                 {mode === "create" ? "Quote Identity" : "Quote Revision"}
               </p>
               <CardTitle>Thông tin cơ bản</CardTitle>
@@ -283,12 +284,12 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-accent/10 text-accent">Line Items</p>
+              <p className="v2-label text-accent">Line Items</p>
               <CardTitle>Danh mục chào giá</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {itemsFieldArray.fields.map((field, index) => (
-                <article key={field.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+                <article key={field.id} className="rounded-xl border border-border-light bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <Badge variant="neutral">#{String(index + 1).padStart(2, "0")}</Badge>
@@ -365,7 +366,7 @@ export function QuoteFormScreen({
                     </Field>
                   </div>
 
-                  <div className="mt-4 rounded-xl bg-primary/5 px-4 py-3 text-sm text-text-secondary">
+                  <div className="mt-4 rounded-lg bg-primary-bg/50 px-4 py-3 text-sm text-text-secondary">
                     Thành tiền:{" "}
                     <span className="font-semibold text-text-primary">
                       <CurrencyDisplay
@@ -387,7 +388,7 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Terms</p>
+              <p className="v2-label text-primary">Terms</p>
               <CardTitle>Điều khoản & ghi chú</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
@@ -428,9 +429,9 @@ export function QuoteFormScreen({
         </div>
 
         <div className="space-y-6">
-          <Card className="border border-white/70">
+          <Card className="sticky top-28 border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Project Snapshot</p>
+              <p className="v2-label text-primary">Project Snapshot</p>
               <CardTitle>Dự án và khách hàng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -475,7 +476,7 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-accent/10 text-accent">Quote Summary</p>
+              <p className="v2-label text-accent">Quote Summary</p>
               <CardTitle>Tổng hợp giá trị</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -488,7 +489,7 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Action Desk</p>
+              <p className="v2-label text-primary">Action Desk</p>
               <CardTitle>Kiểm tra trước khi lưu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

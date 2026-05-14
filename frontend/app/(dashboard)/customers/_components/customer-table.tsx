@@ -104,13 +104,13 @@ export function CustomerTable({
   const totalPages = meta?.totalPages ?? 1;
 
   return (
-    <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
+    <Card className="overflow-hidden border border-white/70 p-0">
+      <CardHeader className="mb-0 gap-2 border-b border-border-light px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Customer Ledger</p>
-          <CardTitle>Danh sách khách hàng</CardTitle>
-          <p className="mt-2 text-sm text-text-secondary">
-            {meta?.total ?? items.length} khách hàng, trang {currentPage}/{totalPages}
+          <p className="v2-label">Customer Ledger</p>
+          <CardTitle className="text-base">Danh sách khách hàng</CardTitle>
+          <p className="mt-1 text-xs text-text-secondary">
+            {meta?.total ?? items.length} kết quả · Trang {currentPage}/{totalPages}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -127,7 +127,7 @@ export function CustomerTable({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 bg-white p-4 md:p-0">
         <div className="grid gap-4 md:hidden">
           {items.map((customer) => (
             <article key={customer.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
@@ -178,79 +178,84 @@ export function CustomerTable({
         </div>
 
         <div className="hidden overflow-x-auto md:block">
-          <table className="min-w-full border-separate border-spacing-y-3">
+          <table className="min-w-full border-collapse">
             <thead>
-              <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                <th className="px-4">
+              <tr className="v2-table-head">
+                <th className="w-10 px-4 py-2.5">
                   <Checkbox checked={allVisibleSelected} onCheckedChange={onToggleSelectAll} />
                 </th>
-                <th className="px-4">Khách hàng</th>
-                <th className="px-4">Liên hệ chính</th>
-                <th className="px-4">Phụ trách</th>
-                <th className="px-4">Dự án</th>
-                <th className="px-4">Cập nhật</th>
+                <th className="px-4 py-2.5">Khách hàng</th>
+                <th className="px-4 py-2.5">Liên hệ chính</th>
+                <th className="px-4 py-2.5">Trạng thái</th>
+                <th className="px-4 py-2.5">Dự án</th>
+                <th className="px-4 py-2.5">Phụ trách</th>
+                <th className="px-4 py-2.5">Cập nhật</th>
+                <th className="w-12 px-4 py-2.5" />
               </tr>
             </thead>
             <tbody>
               {items.map((customer) => (
-                <tr key={customer.id} className="rounded-2xl bg-white/80 shadow-sm">
-                  <td className="px-4 py-4 align-top">
+                <tr key={customer.id} className="border-b border-border-light transition hover:bg-primary-bg/30">
+                  <td className="px-4 py-3 align-middle">
                     <Checkbox checked={selectedIds.includes(customer.id)} onCheckedChange={() => onToggleSelect(customer.id)} />
                   </td>
-                  <td className="rounded-l-2xl px-4 py-4 align-top">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          href={`/customers/${customer.id}`}
-                          className="font-heading text-lg font-bold text-text-primary hover:text-primary"
-                        >
-                          {customer.name}
-                        </Link>
-                        <StatusBadge status={customer.status} />
-                        {customer.isVip ? <Badge variant="warning">VIP</Badge> : null}
-                      </div>
-                      <div className="space-y-1 text-sm text-text-secondary">
-                        <p>{customer.industry ?? "Chưa gắn ngành"}</p>
-                        <p>{customer.address ?? customer.taxCode ?? "Chưa bổ sung địa chỉ"}</p>
+                  <td className="px-4 py-3 align-middle">
+                    <div className="flex items-center gap-3">
+                      <AvatarInitials name={customer.name} className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-primary-mid text-xs text-white" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/customers/${customer.id}`}
+                            className="truncate font-heading text-[13.5px] font-semibold text-text-primary hover:text-primary"
+                          >
+                            {customer.name}
+                          </Link>
+                          {customer.isVip ? <Badge variant="warning">VIP</Badge> : null}
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-text-muted">{customer.industry ?? customer.taxCode ?? "Chưa gắn ngành"}</p>
                       </div>
                     </div>
                   </td>
 
-                  <td className="px-4 py-4 align-top">
+                  <td className="px-4 py-3 align-middle">
                     <div className="space-y-1 text-sm">
-                      <p className="font-semibold text-text-primary">
+                      <p className="text-[13px] font-medium text-text-primary">
                         {customer.primaryContact?.name ?? "Chưa gắn liên hệ chính"}
                       </p>
-                      <p className="text-text-secondary">{customer.primaryContact?.title ?? "Đầu mối làm việc"}</p>
-                      {customer.primaryContact?.phone ? (
-                        <p className="text-text-secondary">{customer.primaryContact.phone}</p>
-                      ) : null}
-                      {customer.primaryContact?.email ? (
-                        <p className="text-text-secondary">{customer.primaryContact.email}</p>
-                      ) : null}
+                      <p className="text-xs text-text-muted">{customer.primaryContact?.phone ?? customer.primaryContact?.email ?? "Chưa có liên hệ"}</p>
                     </div>
                   </td>
 
-                  <td className="px-4 py-4 align-top">
-                    <div className="flex items-start gap-3">
-                      <AvatarInitials name={customer.assignedTo.name} className="h-10 w-10 rounded-full text-xs" />
-                      <div className="text-sm">
+                  <td className="px-4 py-3 align-middle">
+                    <StatusBadge status={customer.status} />
+                  </td>
+
+                  <td className="px-4 py-3 align-middle">
+                    <p className="text-[13px] font-semibold text-text-primary">{customer.projectCount} dự án</p>
+                    <p className="text-xs text-text-muted">Đang gắn</p>
+                  </td>
+
+                  <td className="px-4 py-3 align-middle">
+                    <div className="flex items-center gap-2">
+                      <AvatarInitials name={customer.assignedTo.name} className="h-7 w-7 rounded-full bg-primary-bg text-[10px] text-primary" />
+                      <div className="text-xs">
                         <p className="font-semibold text-text-primary">{customer.assignedTo.name}</p>
-                        <p className="text-text-secondary">{getRoleLabelByName(customer.assignedTo.role)}</p>
+                        <p className="text-text-muted">{getRoleLabelByName(customer.assignedTo.role)}</p>
                       </div>
                     </div>
                   </td>
 
-                  <td className="px-4 py-4 align-top">
-                    <p className="font-heading text-2xl font-extrabold text-text-primary">{customer.projectCount}</p>
-                    <p className="text-sm text-text-secondary">Dự án đang gắn</p>
-                  </td>
-
-                  <td className="rounded-r-2xl px-4 py-4 align-top">
-                    <div className="space-y-1 text-sm text-text-secondary">
+                  <td className="px-4 py-3 align-middle">
+                    <div className="space-y-0.5 text-xs text-text-muted">
                       <p>{formatDate(customer.updatedAt)}</p>
                       <p>{formatRelativeTime(customer.updatedAt)}</p>
                     </div>
+                  </td>
+
+                  <td className="px-4 py-3 text-center align-middle">
+                    <Link href={`/customers/${customer.id}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-bg-hover hover:text-primary">
+                      <AppIcon name="arrow-right" className="h-4 w-4" />
+                    </Link>
                   </td>
                 </tr>
               ))}

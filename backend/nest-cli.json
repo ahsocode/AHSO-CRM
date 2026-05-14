@@ -4,9 +4,10 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "assets": [
-      "src/email/templates/**/*",
-      "src/documents/templates/**/*",
-      "src/documents/i18n/**/*"
-    ]
+      { "include": "email/templates/**/*", "outDir": "./dist" },
+      { "include": "documents/templates/**/*", "outDir": "./dist" },
+      { "include": "documents/i18n/**/*", "outDir": "./dist" }
+    ],
+    "watchAssets": true
   }
 }

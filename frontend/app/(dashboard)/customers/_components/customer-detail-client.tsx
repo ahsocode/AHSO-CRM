@@ -115,8 +115,9 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Chi tiết khách hàng"
-        description="Customer 360 cho sales và delivery: thông tin doanh nghiệp, đầu mối, dự án, hoạt động gần nhất."
+        eyebrow="Customer 360"
+        title={customer.name}
+        description="Hồ sơ khách hàng dành cho bàn giao vận hành: thông tin doanh nghiệp, người phụ trách, liên hệ, dự án và hoạt động gần nhất."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Link href={`/customers/${customerId}/edit`} className={cn(buttonVariants({ variant: "primary" }))}>
@@ -134,12 +135,12 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
         }
       />
 
-      <section className="surface-card noise-edge overflow-hidden border border-white/70">
+      <section className="v2-shell-card noise-edge overflow-hidden border border-white/70">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
-            <p className="industrial-chip bg-primary/10 text-primary">Customer 360</p>
+            <p className="v2-label text-primary">Customer Profile</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <h2 className="font-heading text-3xl font-extrabold text-text-primary">{customer.name}</h2>
+              <h2 className="font-heading text-3xl font-extrabold text-text-primary">{customer.shortName || customer.name}</h2>
               <StatusBadge status={customer.status} />
               {customer.isVip ? <Badge variant="warning">VIP</Badge> : null}
             </div>

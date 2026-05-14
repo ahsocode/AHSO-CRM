@@ -234,26 +234,25 @@ export function CustomersClient() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Danh mục khách hàng"
-        description="Không gian theo dõi lead, prospect và khách hàng đang vận hành. Giao diện này bám layout AHSO để khóa pattern cho module tuần 2."
+        eyebrow="CRM"
+        title="Khách hàng"
+        description="Quản lý danh sách khách hàng và lead của AHSO."
         action={
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
+              <AppIcon name="arrow-right" className="h-4 w-4 -rotate-90" />
+              Nhập CSV
+            </Button>
             <Link href="/customers/new" className={cn(buttonVariants({ variant: "primary" }))}>
               <AppIcon name="plus" className="h-4 w-4" />
               Thêm khách hàng
             </Link>
-            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
-              Import CSV
-            </Button>
             <Button type="button" variant="outline" onClick={() => setDedupeOpen(true)}>
               Xử lý trùng lặp
             </Button>
             <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)}>
               {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
             </Button>
-            <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
-              Về dashboard
-            </Link>
           </div>
         }
       />
@@ -275,7 +274,11 @@ export function CustomersClient() {
 
       <CustomerDuplicatesDialog open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
 
-      <CustomerOverviewCards meta={customersQuery.data?.meta} isLoading={customersQuery.isLoading} />
+      <CustomerOverviewCards
+        items={customersQuery.data?.items ?? []}
+        meta={customersQuery.data?.meta}
+        isLoading={customersQuery.isLoading}
+      />
 
       <CustomerFilters
         search={search}

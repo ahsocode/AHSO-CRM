@@ -25,24 +25,24 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Tổng quan hoạt động"
-        description="Bảng điều phối theo phong cách thiết kế AHSO để theo dõi doanh thu, pipeline và nhịp công việc của đội ngũ."
+        eyebrow="Tổng quan"
+        title="Dashboard điều phối"
+        description="Theo dõi doanh thu, pipeline và nhịp công việc của đội kinh doanh kỹ thuật theo dữ liệu realtime."
       />
 
       <KpiCards data={kpisQuery.data} isLoading={kpisQuery.isLoading} />
 
-      <div className="grid gap-6 xl:grid-cols-[1.65fr_1fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.65fr_1fr]">
         <RevenueChart data={revenueChartQuery.data} isLoading={revenueChartQuery.isLoading} />
         <ProjectDonut data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
       </div>
 
       <PipelinePreview data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_1.15fr]">
+      <div className="grid gap-5 xl:grid-cols-[1fr_1.15fr]">
         <TaskChecklist data={tasksQuery.data} isLoading={tasksQuery.isLoading} />
         <ActivityFeed data={activityQuery.data} isLoading={activityQuery.isLoading} />
       </div>
     </div>
   );
 }
-

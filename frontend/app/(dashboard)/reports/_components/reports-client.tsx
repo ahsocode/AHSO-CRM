@@ -273,8 +273,9 @@ export function ReportsClient() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Báo cáo"
-        description="Màn hình tổng hợp hiệu quả kinh doanh, dòng tiền, chuyển đổi pipeline và mật độ hoạt động theo thời gian."
+        eyebrow="Analytics Center"
+        title="Báo cáo & Phân tích"
+        description="Tổng hợp doanh thu, pipeline, chuyển đổi, cohort và mật độ hoạt động theo dữ liệu CRM hiện tại."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Select value={String(months)} onChange={(event) => setMonths(Number(event.target.value))}>
@@ -286,9 +287,6 @@ export function ReportsClient() {
             </Select>
             <Link href="/reports/builder" className={cn(buttonVariants({ variant: "primary" }))}>
               Mở Report Builder
-            </Link>
-            <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
-              Về dashboard
             </Link>
           </div>
         }
@@ -309,7 +307,7 @@ export function ReportsClient() {
 
       <ReportsOverviewCards data={overviewQuery.data} isLoading={overviewQuery.isLoading} />
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
         <ReportRevenueTrend data={revenueTrendQuery.data} isLoading={revenueTrendQuery.isLoading} />
         <StatusBreakdown data={statusBreakdownQuery.data} isLoading={statusBreakdownQuery.isLoading} />
       </div>
@@ -320,12 +318,12 @@ export function ReportsClient() {
         isLoading={topCustomersQuery.isLoading || overviewQuery.isLoading}
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-2">
         <CustomerJourneyCard data={customerJourneyQuery.data} isLoading={customerJourneyQuery.isLoading} />
         <FunnelCard data={funnelQuery.data} isLoading={funnelQuery.isLoading} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <ActivityHeatmapCard data={activityHeatmapQuery.data} isLoading={activityHeatmapQuery.isLoading} />
         <CohortCard data={cohortQuery.data} isLoading={cohortQuery.isLoading} />
       </div>

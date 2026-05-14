@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { CustomerListMeta } from "@/lib/types";
+import { V2MetricCard } from "@/components/shared/composite-cards";
+import { CustomerListItem, CustomerListMeta } from "@/lib/types";
 
 export function CustomerOverviewCards({
   meta,
+  items = [],
   isLoading
 }: {
   meta?: CustomerListMeta;
+  items?: CustomerListItem[];
   isLoading: boolean;
 }) {
   if (isLoading) {
@@ -30,39 +32,35 @@ export function CustomerOverviewCards({
 
   const cards = [
     {
-      label: "Doanh thu quý đang lọc",
-      value: <CurrencyDisplay amount={meta?.summary.quarterlyRevenue ?? 0} short />,
-      helper: "Tổng thanh toán gắn với tập khách hàng hiện tại"
+      label: "Tổng khách hàng",
+      value: meta?.total ?? 0,
+      helper: `Trang ${meta?.page ?? 1}/${meta?.totalPages ?? 1}`,
+      tone: "primary" as const
     },
     {
       label: "Khách mới 30 ngày",
       value: meta?.summary.newCustomersLast30Days ?? 0,
-      helper: "Dùng để theo dõi nhịp mở rộng danh mục"
+      helper: "Dùng để theo dõi nhịp mở rộng danh mục",
+      tone: "info" as const
     },
     {
       label: "Tỷ lệ duy trì",
       value: `${meta?.summary.retentionRate ?? 0}%`,
-      helper: "Tỷ lệ khách đang ở trạng thái hoạt động"
+      helper: "Tỷ lệ khách đang ở trạng thái hoạt động",
+      tone: "success" as const
     },
     {
-      label: "Tổng khách hàng",
-      value: meta?.total ?? 0,
-      helper: `Trang ${meta?.page ?? 1}/${meta?.totalPages ?? 1}`
+      label: "VIP trên trang",
+      value: items.filter((customer) => customer.isVip).length,
+      helper: "Khách ưu tiên trong trang hiện tại",
+      tone: "accent" as const
     }
   ];
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {cards.map((card) => (
-        <Card key={card.label} className="metric-sheen noise-edge border border-white/70">
-          <CardHeader className="mb-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-text-secondary">{card.label}</p>
-          </CardHeader>
-          <CardContent>
-            <p className="font-heading text-3xl font-extrabold text-text-primary">{card.value}</p>
-            <p className="mt-2 text-sm text-text-secondary">{card.helper}</p>
-          </CardContent>
-        </Card>
+        <V2MetricCard key={card.label} label={card.label} value={card.value} hint={card.helper} tone={card.tone} />
       ))}
     </div>
   );

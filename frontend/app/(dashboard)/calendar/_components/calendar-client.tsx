@@ -190,8 +190,9 @@ export function CalendarClient() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Lịch & Công việc"
-        description="Xem lịch công tác theo tuần hoặc tháng. Kéo activity sang ngày khác để dời lịch, click để sửa."
+        eyebrow="Work Calendar"
+        title="Lịch công việc"
+        description="Điều phối cuộc gọi, họp, khảo sát và follow-up theo tuần hoặc tháng. Kéo activity sang ngày khác để dời lịch."
         action={
           <div className="flex flex-wrap items-center gap-3">
 {/* View mode toggle with smart enable/disable */}
@@ -232,9 +233,6 @@ export function CalendarClient() {
 
             <Link href="/activities/new" className={cn(buttonVariants({ variant: "primary" }))}>
               + Tạo hoạt động
-            </Link>
-            <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
-              Về dashboard
             </Link>
           </div>
         }

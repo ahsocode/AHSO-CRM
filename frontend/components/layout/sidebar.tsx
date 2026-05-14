@@ -62,27 +62,21 @@ export function Sidebar() {
       : visibleItems;
 
   return (
-    <aside className="hide-scrollbar w-full overflow-x-auto border-b border-slate-200/80 bg-white/92 px-4 py-5 text-text-primary shadow-[0_18px_48px_rgba(21,67,96,0.08)] backdrop-blur-xl print:hidden md:sticky md:top-0 md:h-screen md:w-[260px] md:min-w-[260px] md:border-b-0 md:border-r">
-      <div className="rounded-[24px] border border-slate-200/70 bg-white/72 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-        <div className="flex items-center gap-3 md:px-1">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-light text-white shadow-[0_12px_24px_rgba(26,82,118,0.28)]">
-            <span className="font-heading text-lg font-extrabold">A</span>
-          </div>
-          <div>
-            <div className="font-heading text-lg font-bold text-text-primary">AHSO CRM</div>
-            <div className="text-[10px] uppercase tracking-[0.28em] text-text-secondary">Automation Hub</div>
-          </div>
+    <aside className="hide-scrollbar w-full overflow-x-auto border-b border-border-light bg-white/92 text-text-primary shadow-[1px_0_12px_rgba(0,59,90,0.06)] backdrop-blur-xl print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-[220px] md:min-w-[220px] md:flex-col md:overflow-y-auto md:border-b-0 md:border-r">
+      <div className="flex h-14 items-center gap-3 px-4 md:border-b md:border-border-light">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-extrabold text-white shadow-[0_4px_12px_rgba(0,59,90,0.30)]">
+          A
         </div>
-
-        <div className="mt-4 rounded-2xl bg-gradient-to-br from-primary/10 via-info-bg/60 to-white px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-primary/80">Sales Console</p>
-          <p className="mt-2 text-sm font-medium text-text-primary">
-            Giúp quản lý công việc tốt hơn.
-          </p>
+        <div className="min-w-0">
+          <div className="font-heading text-sm font-bold leading-tight tracking-[-0.02em] text-text-primary">AHSO CRM</div>
+          <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-text-muted">Automation Hub</div>
         </div>
       </div>
 
-      <nav className="mt-6 flex min-w-max gap-2 pb-1 md:min-w-0 md:flex-col md:gap-2">
+      <nav className="flex min-w-max gap-2 px-3 py-3 md:min-w-0 md:flex-col md:gap-1">
+        <p className="hidden px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-text-muted md:block">
+          Menu chính
+        </p>
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
@@ -91,31 +85,26 @@ export function Sidebar() {
               key={item.href}
               href={item.href as Route}
               className={cn(
-                "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
+                "group flex items-center gap-2.5 rounded-lg border-l-[3px] px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 md:mx-0",
                 isActive
-                  ? "bg-gradient-to-r from-white to-info-bg/70 text-primary shadow-[0_10px_24px_rgba(26,82,118,0.14)] ring-1 ring-primary/25"
-                  : "text-slate-600 hover:bg-white hover:text-primary hover:shadow-[0_10px_20px_rgba(21,67,96,0.08)]"
+                  ? "border-primary bg-primary-bg text-primary"
+                  : "border-transparent text-text-secondary hover:bg-bg-subtle hover:text-primary-mid"
               )}
             >
               <div
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-xl transition-all",
+                  "flex h-8 w-8 items-center justify-center rounded-md transition-all",
                   isActive
-                    ? "bg-primary text-white shadow-[0_10px_18px_rgba(26,82,118,0.22)]"
-                    : "bg-slate-100 text-slate-500 group-hover:bg-primary/12 group-hover:text-primary"
+                    ? "bg-primary text-white"
+                    : "bg-bg-hover text-text-secondary group-hover:text-primary-mid"
                 )}
               >
-                <AppIcon name={item.icon} className="h-[18px] w-[18px]" />
+                <AppIcon name={item.icon} className="h-4 w-4" />
               </div>
 
               <div className="min-w-0 flex-1">
                 <span className="block whitespace-nowrap">{item.label}</span>
-                <span
-                  className={cn(
-                    "mt-0.5 block text-[11px] leading-none",
-                    isActive ? "text-primary/70" : "text-text-muted group-hover:text-primary/65"
-                  )}
-                >
+                <span className={cn("mt-0.5 hidden text-[10.5px] leading-none md:block", isActive ? "text-primary/70" : "text-text-muted")}>
                   {getItemHint(item.href)}
                 </span>
               </div>
@@ -123,6 +112,24 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      <div className="hidden px-3 pb-4 md:mt-auto md:block">
+        <div className="mb-3 h-px bg-border-light" />
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-bg-subtle">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-bg text-xs font-bold text-primary">
+            {(user?.name ?? "AHSO")
+              .split(" ")
+              .map((part) => part[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-tight text-text-primary">{user?.name ?? "AHSO CRM"}</p>
+            <p className="text-[11px] text-text-muted">{roleName ?? "Người dùng"}</p>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }

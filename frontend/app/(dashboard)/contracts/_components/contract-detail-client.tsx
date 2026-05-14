@@ -96,8 +96,9 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Chi tiết hợp đồng"
-        description="Contract 360 gom commercial context, delivery milestone và dòng tiền trên cùng một màn hình."
+        eyebrow="Contract Desk"
+        title={contract.contractNo}
+        description="Hồ sơ hợp đồng gom commercial context, milestone triển khai, dòng tiền, attachment và biên bản nghiệm thu."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/contracts" className={cn(buttonVariants({ variant: "outline" }))}>
@@ -121,12 +122,12 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
         }
       />
 
-      <section className="surface-card noise-edge overflow-hidden border border-white/70">
+      <section className="v2-shell-card noise-edge overflow-hidden border border-white/70">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
-            <p className="industrial-chip bg-primary/10 text-primary">Contract Desk</p>
+            <p className="v2-label text-primary">Contract Control</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <h2 className="font-heading text-3xl font-extrabold text-text-primary">{contract.contractNo}</h2>
+              <h2 className="font-heading text-3xl font-extrabold tracking-[-0.03em] text-text-primary">{contract.project.name}</h2>
               <StatusBadge kind="contract" status={contract.status} />
             </div>
 
@@ -139,7 +140,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
               </Link>
             </div>
 
-            <p className="mt-5 max-w-3xl text-sm text-text-secondary">
+            <p className="mt-5 max-w-3xl text-sm leading-6 text-text-secondary">
               Hợp đồng này bám theo dự án <strong className="text-text-primary">{contract.project.name}</strong> và là
               điểm đọc nhanh cho toàn bộ tiến độ thu tiền, milestone delivery và quote nguồn.
             </p>

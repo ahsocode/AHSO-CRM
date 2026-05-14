@@ -11,14 +11,18 @@ const config: Config = {
     extend: {
       colors: {
         primary: "var(--color-primary)",
+        "primary-mid": "var(--color-primary-mid)",
         "primary-light": "var(--color-primary-light)",
         "primary-hover": "var(--color-primary-hover)",
+        "primary-bg": "var(--color-primary-bg)",
         accent: "var(--color-accent)",
+        "accent-bg": "var(--color-accent-bg)",
         "bg-page": "var(--color-bg-page)",
         "bg-card": "var(--color-bg-card)",
         "bg-sidebar": "var(--color-bg-sidebar)",
         "bg-input": "var(--color-bg-input)",
         "bg-hover": "var(--color-bg-hover)",
+        "bg-subtle": "var(--color-bg-subtle)",
         "text-primary": "var(--color-text-primary)",
         "text-secondary": "var(--color-text-secondary)",
         "text-muted": "var(--color-text-muted)",
@@ -32,12 +36,15 @@ const config: Config = {
         info: "var(--color-info)",
         "info-bg": "var(--color-info-bg)",
         border: "var(--color-border)",
+        "border-light": "var(--color-border-light)",
         "border-focus": "var(--color-border-focus)",
         "stage-survey": "var(--color-stage-survey)",
         "stage-quoting": "var(--color-stage-quoting)",
         "stage-negotiating": "var(--color-stage-negotiating)",
+        "stage-won": "var(--color-stage-won)",
         "stage-delivering": "var(--color-stage-delivering)",
-        "stage-completed": "var(--color-stage-completed)"
+        "stage-completed": "var(--color-stage-completed)",
+        "stage-lost": "var(--color-stage-lost)"
       },
       fontFamily: {
         sans: [

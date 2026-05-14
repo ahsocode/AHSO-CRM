@@ -72,6 +72,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
       <style>{`@media print { @page { size: A4; margin: 0; } }`}</style>
       <PageHeader
         className="print:hidden"
+        eyebrow="Quotation Preview"
         title="Xem trước bản in"
         description="Canvas A4 để rà lại nội dung thương mại trước khi in hoặc tải PDF chuẩn gửi khách."
         action={
@@ -103,7 +104,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
         }
       />
 
-      <div className="rounded-[28px] bg-slate-300/25 p-4 md:p-8 print:bg-transparent print:p-0">
+      <div className="rounded-[28px] bg-slate-300/25 p-4 shadow-inner md:p-8 print:bg-transparent print:p-0 print:shadow-none">
         <article className="mx-auto flex min-h-[297mm] w-full max-w-[210mm] flex-col bg-white p-[14mm] text-sm text-slate-800 shadow-2xl print:min-h-0 print:max-w-none print:shadow-none">
           <header className="flex items-start justify-between gap-8">
             <div className="max-w-[46%]">

@@ -62,7 +62,7 @@ export function Sidebar() {
       : visibleItems;
 
   return (
-    <aside className="hide-scrollbar w-full overflow-x-auto border-b border-border-light bg-white/92 text-text-primary shadow-[1px_0_12px_rgba(0,59,90,0.06)] backdrop-blur-xl print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-[220px] md:min-w-[220px] md:flex-col md:overflow-y-auto md:border-b-0 md:border-r">
+    <aside className="hidden border-border-light bg-white/92 text-text-primary shadow-[1px_0_12px_rgba(0,59,90,0.06)] backdrop-blur-xl print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-[220px] md:min-w-[220px] md:flex-col md:overflow-y-auto md:border-r">
       <div className="flex h-14 items-center gap-3 px-4 md:border-b md:border-border-light">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-extrabold text-white shadow-[0_4px_12px_rgba(0,59,90,0.30)]">
           A

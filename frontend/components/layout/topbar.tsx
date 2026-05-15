@@ -107,7 +107,7 @@ export function Topbar({
           onFocus={openCommandPalette}
           placeholder="Tìm kiếm khách hàng, dự án, báo giá..."
         />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded bg-bg-hover px-1.5 py-0.5 font-mono text-[11px] text-text-muted">
+        <span className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded bg-bg-hover px-1.5 py-0.5 font-mono text-[11px] text-text-muted sm:block">
           ⌘K
         </span>
       </div>

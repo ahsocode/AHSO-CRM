@@ -342,6 +342,8 @@ export function CalendarWeekView({
       </CardHeader>
 
       <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <div className="min-w-[480px]">
         <div className="grid grid-cols-7 border-b border-border/50">
           {days.map((day) => {
             const today = isToday(day);
@@ -480,6 +482,8 @@ export function CalendarWeekView({
               </div>
             );
           })}
+        </div>
+          </div>
         </div>
 
         {items.length === 0 && (

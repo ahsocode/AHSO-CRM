@@ -296,12 +296,16 @@ export function CalendarMonthView({
       </CardHeader>
 
       <CardContent className="p-0">
+        <div className="overflow-x-auto">
         {/* Render months side-by-side based on scale */}
-        <div className={cn("grid gap-0", {
-          "grid-cols-1": effectiveScale === "single",
-          "grid-cols-2": effectiveScale === "double",
-          "grid-cols-3": effectiveScale === "triple"
-        })}>
+        <div
+          className={cn("grid gap-0", {
+            "grid-cols-1": effectiveScale === "single",
+            "grid-cols-2": effectiveScale === "double",
+            "grid-cols-3": effectiveScale === "triple"
+          })}
+          style={{ minWidth: effectiveScale === "triple" ? "840px" : effectiveScale === "double" ? "560px" : undefined }}
+        >
           {months.map((month) => {
             const monthDays = getMonthGridDays(month.year, month.month);
             const monthWeeks: string[][] = [];
@@ -425,6 +429,7 @@ export function CalendarMonthView({
               </div>
             );
           })}
+        </div>
         </div>
 
         {items.length === 0 && (

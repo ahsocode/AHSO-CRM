@@ -33,7 +33,7 @@ export function StatusBreakdown({
           <CardTitle>Phân bổ trạng thái</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
             {Array.from({ length: 3 }).map((_, index) => (
               <LoadingSkeleton key={index} className="h-[280px] w-full" />
             ))}
@@ -50,7 +50,7 @@ export function StatusBreakdown({
         <CardTitle>Phân bổ trạng thái</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
           <DonutSection title="Project Status" items={data.projects} colors={PROJECT_COLORS} />
           <DonutSection title="Quote Status" items={data.quotes} colors={QUOTE_COLORS} />
           <DonutSection title="Contract Status" items={data.contracts} colors={CONTRACT_COLORS} />

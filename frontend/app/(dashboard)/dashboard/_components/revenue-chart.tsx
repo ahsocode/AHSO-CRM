@@ -36,12 +36,6 @@ export function RevenueChart({
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data}>
-                  <defs>
-                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1a5276" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#1a5276" stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid strokeDasharray="4 4" stroke="rgba(213,216,220,0.5)" vertical={false} />
                   <XAxis dataKey="month" stroke="#5d6d7e" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                   <YAxis
@@ -60,7 +54,8 @@ export function RevenueChart({
                     type="monotone"
                     stroke="#1a5276"
                     strokeWidth={2}
-                    fill="url(#revenueGrad)"
+                    fill="#1a5276"
+                    fillOpacity={0.1}
                   />
                   <Line
                     dataKey="target"

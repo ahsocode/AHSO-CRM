@@ -22,9 +22,16 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export function usePushNotifications() {
-  const [permission, setPermission] = useState<NotificationPermission>(
-    typeof window === "undefined" || typeof Notification === "undefined" ? "default" : Notification.permission
-  );
+  const [permission, setPermission] = useState<NotificationPermission>(() => {
+    if (typeof window === "undefined" || typeof Notification === "undefined") {
+      return "default";
+    }
+    try {
+      return Notification.permission;
+    } catch {
+      return "default";
+    }
+  });
   const [hasCheckedSupport, setHasCheckedSupport] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);

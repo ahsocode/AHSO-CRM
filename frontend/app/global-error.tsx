@@ -23,7 +23,12 @@ export default function GlobalError({
             <p className="mt-3 text-sm leading-6 text-[#5b6776]">
               Hệ thống đã chặn lỗi để không hiển thị màn hình trắng. Hãy thử tải lại màn hình hoặc quay về dashboard.
             </p>
-            {error.digest ? <p className="mt-3 text-xs text-[#7b8794]">Mã lỗi: {error.digest}</p> : null}
+            {error.message ? (
+              <p className="mt-3 rounded-xl bg-[#fef2f2] px-3 py-2 font-mono text-xs text-[#b91c1c]">
+                {error.message}
+              </p>
+            ) : null}
+            {error.digest ? <p className="mt-2 text-xs text-[#7b8794]">Mã lỗi: {error.digest}</p> : null}
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"

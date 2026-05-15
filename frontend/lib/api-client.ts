@@ -11,12 +11,21 @@ let sessionChannel: BroadcastChannel | null = null;
 function getSessionChannel(): BroadcastChannel | null {
   if (typeof window === "undefined" || !("BroadcastChannel" in window)) return null;
   if (!sessionChannel) {
-    sessionChannel = new BroadcastChannel("ahso-crm-session");
-    sessionChannel.onmessage = (event) => {
-      if (event.data?.type === "SESSION_REFRESHED" && event.data?.accessToken) {
-        window.sessionStorage.setItem(ACCESS_TOKEN_KEY, event.data.accessToken);
-      }
-    };
+    try {
+      sessionChannel = new BroadcastChannel("ahso-crm-session");
+      sessionChannel.onmessage = (event) => {
+        try {
+          if (event.data?.type === "SESSION_REFRESHED" && event.data?.accessToken) {
+            window.sessionStorage.setItem(ACCESS_TOKEN_KEY, event.data.accessToken);
+          }
+        } catch {
+          // sessionStorage may be unavailable (private mode, restricted context)
+        }
+      };
+    } catch {
+      // BroadcastChannel construction can fail in some restricted iOS contexts
+      return null;
+    }
   }
   return sessionChannel;
 }

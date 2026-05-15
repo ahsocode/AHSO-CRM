@@ -1657,45 +1657,592 @@ function createContractLayout(): DocumentTemplateLayout {
   ]);
 }
 
+interface StandardLayoutOptions {
+  prefix: string;
+  titleVi: string;
+  titleViEn?: string;
+  metaText: TemplateLocalizedText;
+  subjectRows: Array<{ id: string; label: TemplateLocalizedText; value: string }>;
+  tableSource: string;
+  tableColumns: Array<{ id: string; label: TemplateLocalizedText; value: string; width?: number; align?: "left" | "center" | "right" }>;
+  notesText: TemplateLocalizedText;
+  signatureLeft?: TemplateLocalizedText;
+  signatureRight?: TemplateLocalizedText;
+}
+
+function createStandardDocumentLayout(options: StandardLayoutOptions): DocumentTemplateLayout {
+  return createBaseLayout([
+    {
+      id: `${options.prefix}-logo`,
+      type: "image",
+      page: 0,
+      x: 12,
+      y: 12,
+      width: 34,
+      height: 18,
+      zIndex: 10,
+      visible: true,
+      content: {
+        src: "{{logo}}",
+        alt: "Logo",
+        fit: "contain"
+      }
+    },
+    {
+      id: `${options.prefix}-title`,
+      type: "text",
+      page: 0,
+      x: 62,
+      y: 12,
+      width: 136,
+      height: 18,
+      zIndex: 20,
+      visible: true,
+      style: {
+        fontSize: 16,
+        fontWeight: 700,
+        textAlign: "right",
+        lineHeight: 1.2,
+        color: "#1e3a5f"
+      },
+      content: {
+        text: localize(options.titleVi, options.titleViEn)
+      }
+    },
+    {
+      id: `${options.prefix}-company`,
+      type: "key_value_table",
+      page: 0,
+      x: 12,
+      y: 38,
+      width: 88,
+      height: 58,
+      zIndex: 10,
+      visible: true,
+      style: {
+        fontSize: 9.4,
+        lineHeight: 1.35,
+        padding: 2
+      },
+      content: {
+        labelWidth: 30,
+        rows: [
+          { id: "company-name", label: localize("Công ty", "Company"), value: "{{company.name}}" },
+          { id: "company-tax", label: localize("MST", "Tax ID"), value: "{{company.taxId}}" },
+          { id: "company-address", label: localize("Địa chỉ", "Address"), value: "{{company.address}}" },
+          { id: "company-phone", label: localize("Điện thoại", "Phone"), value: "{{company.phone}}" },
+          { id: "company-rep", label: localize("Đại diện", "Representative"), value: "{{company.representative}}" }
+        ]
+      }
+    },
+    {
+      id: `${options.prefix}-subject`,
+      type: "key_value_table",
+      page: 0,
+      x: 108,
+      y: 38,
+      width: 90,
+      height: 58,
+      zIndex: 10,
+      visible: true,
+      style: {
+        fontSize: 9.4,
+        lineHeight: 1.35,
+        padding: 2
+      },
+      content: {
+        labelWidth: 32,
+        rows: options.subjectRows
+      }
+    },
+    {
+      id: `${options.prefix}-meta`,
+      type: "text",
+      page: 0,
+      x: 12,
+      y: 102,
+      width: 186,
+      height: 24,
+      zIndex: 10,
+      visible: true,
+      style: {
+        fontSize: 10,
+        lineHeight: 1.42,
+        padding: 2,
+        borderWidth: 0.6,
+        borderColor: "#cbd5e1",
+        borderRadius: 4
+      },
+      content: {
+        text: options.metaText
+      }
+    },
+    {
+      id: `${options.prefix}-table`,
+      type: "line_items_table",
+      page: 0,
+      x: 12,
+      y: 132,
+      width: 186,
+      height: 82,
+      zIndex: 10,
+      visible: true,
+      style: {
+        fontSize: 9,
+        lineHeight: 1.32,
+        padding: 2
+      },
+      content: {
+        source: options.tableSource,
+        columns: options.tableColumns,
+        emptyText: localize("Chưa có dữ liệu", "No data")
+      }
+    },
+    {
+      id: `${options.prefix}-notes`,
+      type: "text",
+      page: 0,
+      x: 12,
+      y: 220,
+      width: 186,
+      height: 34,
+      zIndex: 10,
+      visible: true,
+      style: {
+        fontSize: 9.2,
+        lineHeight: 1.45,
+        padding: 2,
+        borderWidth: 0.6,
+        borderColor: "#cbd5e1",
+        borderRadius: 4
+      },
+      content: {
+        text: options.notesText
+      }
+    },
+    {
+      id: `${options.prefix}-signature`,
+      type: "signature_block",
+      page: 0,
+      x: 12,
+      y: 260,
+      width: 186,
+      height: 24,
+      zIndex: 10,
+      visible: true,
+      style: {
+        fontSize: 9.8,
+        lineHeight: 1.35,
+        padding: 1
+      },
+      content: {
+        leftTitle: options.signatureLeft ?? localize("ĐẠI DIỆN AHSO", "AHSO REPRESENTATIVE"),
+        rightTitle: options.signatureRight ?? localize("ĐẠI DIỆN KHÁCH HÀNG", "CUSTOMER REPRESENTATIVE"),
+        leftCaption: localize("Ký, ghi rõ họ tên", "Sign and full name"),
+        rightCaption: localize("Ký, ghi rõ họ tên", "Sign and full name")
+      }
+    }
+  ]);
+}
+
+const STANDARD_CUSTOMER_ROWS = [
+  { id: "customer-name", label: localize("Khách hàng", "Customer"), value: "{{customer.name}}" },
+  { id: "customer-address", label: localize("Địa chỉ", "Address"), value: "{{customer.address}}" },
+  { id: "customer-phone", label: localize("Điện thoại", "Phone"), value: "{{customer.phone}}" },
+  { id: "contact-name", label: localize("Liên hệ", "Contact"), value: "{{primaryContact.name}}" }
+];
+
+const STANDARD_CONTRACT_ROWS = [
+  { id: "contract-no", label: localize("Số HĐ", "Contract No."), value: "{{contract.contractNo}}" },
+  { id: "customer-name", label: localize("Khách hàng", "Customer"), value: "{{customer.name}}" },
+  { id: "contact-name", label: localize("Liên hệ", "Contact"), value: "{{primaryContact.name}}" },
+  { id: "contract-value", label: localize("Giá trị", "Value"), value: "{{contract.value|currency}}" }
+];
+
+function createProposalLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "proposal",
+    titleVi: "ĐỀ XUẤT DỰ ÁN",
+    titleViEn: "ĐỀ XUẤT DỰ ÁN / PROJECT PROPOSAL",
+    metaText: localize(
+      "Dự án: {{project.name}}  |  Giá trị dự kiến: {{project.estimatedValue|currency}}  |  Báo giá liên kết: {{linkedQuote.total|currency}}",
+      "Project: {{project.name}}  |  Estimated Value: {{project.estimatedValue|currency}}  |  Linked Quote: {{linkedQuote.total|currency}}"
+    ),
+    subjectRows: [
+      ...STANDARD_CUSTOMER_ROWS,
+      { id: "project-name", label: localize("Dự án", "Project"), value: "{{project.name}}" }
+    ],
+    tableSource: "milestones",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Mốc triển khai", "Milestone"), value: "{{name}}", width: 74 },
+      { id: "due-date", label: localize("Hạn", "Due"), value: "{{dueDate|date}}", width: 34, align: "center" },
+      { id: "amount", label: localize("Giá trị", "Amount"), value: "{{paymentAmount|currency}}", width: 38, align: "right" },
+      { id: "status", label: localize("Trạng thái", "Status"), value: "{{status}}", width: 28, align: "center" }
+    ],
+    notesText: localize(
+      "AHSO đề xuất phạm vi triển khai theo các mốc trên. Chi tiết thương mại có thể được chốt trong báo giá/hợp đồng chính thức.",
+      "AHSO proposes the implementation scope above. Commercial details can be finalized in the formal quote/contract."
+    )
+  });
+}
+
+function createSurveyReportLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "survey",
+    titleVi: "BÁO CÁO KHẢO SÁT",
+    titleViEn: "BÁO CÁO KHẢO SÁT / SURVEY REPORT",
+    metaText: localize(
+      "Dự án: {{project.name}}  |  Người khảo sát: {{surveyorName}}  |  Ngày khảo sát: {{surveyDate|date}}",
+      "Project: {{project.name}}  |  Surveyor: {{surveyorName}}  |  Survey Date: {{surveyDate|date}}"
+    ),
+    subjectRows: STANDARD_CUSTOMER_ROWS,
+    tableSource: "findings",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "title", label: localize("Hạng mục", "Finding"), value: "{{title}}", width: 58 },
+      { id: "description", label: localize("Mô tả hiện trạng", "Description"), value: "{{description}}", width: 116 }
+    ],
+    notesText: localize(
+      "Các phát hiện khảo sát là cơ sở để AHSO đề xuất phạm vi kỹ thuật, tiến độ và ngân sách triển khai.",
+      "Survey findings are the basis for AHSO's technical scope, timeline, and budget proposal."
+    )
+  });
+}
+
+function createContractAddendumLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "addendum",
+    titleVi: "PHỤ LỤC HỢP ĐỒNG",
+    titleViEn: "PHỤ LỤC HỢP ĐỒNG / CONTRACT ADDENDUM",
+    metaText: localize(
+      "Số hợp đồng: {{contract.contractNo}}  |  Ngày phụ lục: {{addendumDate|date}}  |  Dự án: {{project.name}}",
+      "Contract No: {{contract.contractNo}}  |  Addendum Date: {{addendumDate|date}}  |  Project: {{project.name}}"
+    ),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "modifications",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 14, align: "center" },
+      { id: "content", label: localize("Nội dung điều chỉnh", "Modification"), value: "{{content}}", width: 172 }
+    ],
+    notesText: localize(
+      "Các nội dung không được điều chỉnh trong phụ lục này vẫn giữ nguyên hiệu lực theo hợp đồng đã ký.",
+      "Terms not amended by this addendum remain effective under the signed contract."
+    )
+  });
+}
+
+function createNdaLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "nda",
+    titleVi: "THỎA THUẬN BẢO MẬT",
+    titleViEn: "THỎA THUẬN BẢO MẬT / NDA",
+    metaText: localize(
+      "Ngày hiệu lực: {{ndaDate|date}}  |  Bên nhận thông tin: {{customer.name}}  |  Liên hệ: {{primaryContact.name}}",
+      "Effective Date: {{ndaDate|date}}  |  Receiving Party: {{customer.name}}  |  Contact: {{primaryContact.name}}"
+    ),
+    subjectRows: STANDARD_CUSTOMER_ROWS,
+    tableSource: "confidentialScopes",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 14, align: "center" },
+      { id: "scope", label: localize("Phạm vi bảo mật", "Confidential Scope"), value: "{{scope}}", width: 68 },
+      { id: "description", label: localize("Mô tả", "Description"), value: "{{description}}", width: 104 }
+    ],
+    notesText: localize(
+      "Hai bên cam kết bảo mật toàn bộ thông tin kỹ thuật, thương mại và vận hành được trao đổi trong quá trình làm việc.",
+      "Both parties agree to keep all technical, commercial, and operational information confidential."
+    )
+  });
+}
+
+function createDeliveryNoteLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "delivery",
+    titleVi: "BIÊN BẢN GIAO HÀNG",
+    titleViEn: "BIÊN BẢN GIAO HÀNG / DELIVERY NOTE",
+    metaText: localize(
+      "Số hợp đồng: {{contract.contractNo}}  |  Ngày giao hàng: {{deliveryDate|date}}  |  Dự án: {{project.name}}",
+      "Contract No: {{contract.contractNo}}  |  Delivery Date: {{deliveryDate|date}}  |  Project: {{project.name}}"
+    ),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "deliveredItems",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Hàng hóa / thiết bị", "Item"), value: "{{name}}", width: 116 },
+      { id: "quantity", label: localize("SL", "Qty"), value: "{{quantity}}", width: 24, align: "center" },
+      { id: "unit", label: localize("Đơn vị", "Unit"), value: "{{unit}}", width: 34, align: "center" }
+    ],
+    notesText: localize("Các bên xác nhận số lượng hàng hóa đã được bàn giao theo danh sách trên.", "Both parties confirm the listed items have been delivered.")
+  });
+}
+
+function createDocHandoverLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "handover",
+    titleVi: "BIÊN BẢN BÀN GIAO TÀI LIỆU",
+    titleViEn: "BIÊN BẢN BÀN GIAO TÀI LIỆU / DOCUMENT HANDOVER",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Ngày bàn giao: {{handoverDate|date}}", "Contract No: {{contract.contractNo}}  |  Handover Date: {{handoverDate|date}}"),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "handedOverDocs",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Tài liệu", "Document"), value: "{{name}}", width: 76 },
+      { id: "format", label: localize("Định dạng", "Format"), value: "{{format}}", width: 48 },
+      { id: "note", label: localize("Ghi chú", "Note"), value: "{{note}}", width: 50 }
+    ],
+    notesText: localize("Danh sách tài liệu trên là một phần của hồ sơ bàn giao dự án.", "The listed documents are part of the project handover package.")
+  });
+}
+
+function createInstallationReportLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "installation",
+    titleVi: "BIÊN BẢN CÀI ĐẶT & TRIỂN KHAI",
+    titleViEn: "BIÊN BẢN CÀI ĐẶT & TRIỂN KHAI / INSTALLATION REPORT",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Ngày triển khai: {{installationDate|date}}", "Contract No: {{contract.contractNo}}  |  Installation Date: {{installationDate|date}}"),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "installations",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Hạng mục", "Item"), value: "{{name}}", width: 78 },
+      { id: "status", label: localize("Trạng thái", "Status"), value: "{{status}}", width: 34, align: "center" },
+      { id: "note", label: localize("Ghi chú", "Note"), value: "{{note}}", width: 62 }
+    ],
+    notesText: localize("Các hạng mục triển khai được xác nhận theo trạng thái tại thời điểm lập biên bản.", "Installation items are confirmed according to their status at report time.")
+  });
+}
+
+function createAcceptanceReportLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "acceptance",
+    titleVi: "BIÊN BẢN NGHIỆM THU KỸ THUẬT",
+    titleViEn: "BIÊN BẢN NGHIỆM THU KỸ THUẬT / ACCEPTANCE REPORT",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Ngày nghiệm thu: {{acceptanceDate|date}}", "Contract No: {{contract.contractNo}}  |  Acceptance Date: {{acceptanceDate|date}}"),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "testResults",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Nội dung kiểm thử", "Test Item"), value: "{{name}}", width: 82 },
+      { id: "status", label: localize("Kết quả", "Result"), value: "{{status}}", width: 34, align: "center" },
+      { id: "note", label: localize("Ghi chú", "Note"), value: "{{note}}", width: 58 }
+    ],
+    notesText: localize("Kết quả nghiệm thu là cơ sở để hai bên xác nhận hoàn thành phạm vi kỹ thuật.", "Acceptance results are the basis for confirming completion of technical scope.")
+  });
+}
+
+function createPartialAcceptanceLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "partial-acceptance",
+    titleVi: "BIÊN BẢN NGHIỆM THU GIAI ĐOẠN",
+    titleViEn: "BIÊN BẢN NGHIỆM THU GIAI ĐOẠN / PARTIAL ACCEPTANCE",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Giá trị HĐ: {{contract.value|currency}}  |  Ngày nghiệm thu: {{acceptanceDate|date}}", "Contract No: {{contract.contractNo}}  |  Value: {{contract.value|currency}}  |  Acceptance Date: {{acceptanceDate|date}}"),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "acceptedParts",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Hạng mục nghiệm thu", "Accepted Part"), value: "{{name}}", width: 72 },
+      { id: "ratio", label: localize("Tỷ lệ", "Ratio"), value: "{{ratio}}", width: 24, align: "center" },
+      { id: "value", label: localize("Giá trị", "Value"), value: "{{value|currency}}", width: 38, align: "right" },
+      { id: "note", label: localize("Ghi chú", "Note"), value: "{{note}}", width: 40 }
+    ],
+    notesText: localize("Phạm vi nghiệm thu giai đoạn không thay thế nghiệm thu cuối cùng của toàn bộ hợp đồng.", "Partial acceptance does not replace final acceptance for the full contract.")
+  });
+}
+
+function createWarrantyCertLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "warranty",
+    titleVi: "GIẤY CHỨNG NHẬN BẢO HÀNH",
+    titleViEn: "GIẤY CHỨNG NHẬN BẢO HÀNH / WARRANTY CERTIFICATE",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Dự án: {{project.name}}  |  Hạn bảo hành: {{warrantyEndDate|date}}", "Contract No: {{contract.contractNo}}  |  Project: {{project.name}}  |  Warranty End: {{warrantyEndDate|date}}"),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "warrantyItems",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Hạng mục bảo hành", "Warranty Item"), value: "{{name}}", width: 90 },
+      { id: "period", label: localize("Thời hạn", "Period"), value: "{{period}}", width: 34, align: "center" },
+      { id: "note", label: localize("Ghi chú", "Note"), value: "{{note}}", width: 50 }
+    ],
+    notesText: localize("Thời hạn bảo hành {{warrantyPeriodMonths}} tháng kể từ {{warrantyDate|date}}.", "Warranty period is {{warrantyPeriodMonths}} months from {{warrantyDate|date}}.")
+  });
+}
+
+function createMaintenanceRecordLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "maintenance",
+    titleVi: "BIÊN BẢN BẢO TRÌ & HỖ TRỢ",
+    titleViEn: "BIÊN BẢN BẢO TRÌ & HỖ TRỢ / MAINTENANCE RECORD",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Ngày bảo trì: {{maintenanceDate|date}}  |  Kỹ thuật viên: {{technician}}", "Contract No: {{contract.contractNo}}  |  Maintenance Date: {{maintenanceDate|date}}  |  Technician: {{technician}}"),
+    subjectRows: STANDARD_CONTRACT_ROWS,
+    tableSource: "issues",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "name", label: localize("Nội dung", "Issue"), value: "{{name}}", width: 82 },
+      { id: "status", label: localize("Trạng thái", "Status"), value: "{{status}}", width: 38, align: "center" },
+      { id: "note", label: localize("Ghi chú", "Note"), value: "{{note}}", width: 54 }
+    ],
+    notesText: localize("Biên bản ghi nhận tình trạng hệ thống và các hành động bảo trì đã thực hiện.", "This record captures system status and maintenance actions performed.")
+  });
+}
+
+function createPaymentRequestLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "payment-request",
+    titleVi: "GIẤY ĐỀ NGHỊ THANH TOÁN",
+    titleViEn: "GIẤY ĐỀ NGHỊ THANH TOÁN / PAYMENT REQUEST",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Số tiền đề nghị: {{paymentAmount|currency}}  |  Lý do: {{paymentReason}}", "Contract No: {{contract.contractNo}}  |  Requested Amount: {{paymentAmount|currency}}  |  Reason: {{paymentReason}}"),
+    subjectRows: [
+      ...STANDARD_CONTRACT_ROWS,
+      { id: "bank-name", label: localize("Ngân hàng", "Bank"), value: "{{bankName}}" }
+    ],
+    tableSource: "paymentLines",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "description", label: localize("Nội dung", "Description"), value: "{{description}}", width: 96 },
+      { id: "amount", label: localize("Số tiền", "Amount"), value: "{{amount|currency}}", width: 42, align: "right" },
+      { id: "note", label: localize("Ghi chú", "Note"), value: "{{note}}", width: 36 }
+    ],
+    notesText: localize("Thông tin nhận tiền: {{bankAccountName}} - {{bankAccountNo}} - {{bankName}}.", "Beneficiary: {{bankAccountName}} - {{bankAccountNo}} - {{bankName}}."),
+    signatureLeft: localize("NGƯỜI ĐỀ NGHỊ", "REQUESTED BY"),
+    signatureRight: localize("PHÊ DUYỆT", "APPROVED BY")
+  });
+}
+
+function createPaymentReceiptLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "payment-receipt",
+    titleVi: "PHIẾU THU",
+    titleViEn: "PHIẾU THU / PAYMENT RECEIPT",
+    metaText: localize("Số hợp đồng: {{contract.contractNo}}  |  Số tiền thu: {{receiptAmount|currency}}  |  Hình thức: {{paymentMethod}}", "Contract No: {{contract.contractNo}}  |  Receipt Amount: {{receiptAmount|currency}}  |  Method: {{paymentMethod}}"),
+    subjectRows: [
+      ...STANDARD_CONTRACT_ROWS,
+      { id: "payer", label: localize("Người nộp", "Payer"), value: "{{payerName}}" }
+    ],
+    tableSource: "receiptLines",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
+      { id: "description", label: localize("Nội dung thu", "Receipt Description"), value: "{{description}}", width: 96 },
+      { id: "amount", label: localize("Số tiền", "Amount"), value: "{{amount|currency}}", width: 42, align: "right" },
+      { id: "method", label: localize("Hình thức", "Method"), value: "{{method}}", width: 36, align: "center" }
+    ],
+    notesText: localize("Lý do thu: {{receiptReason}}. Thu ngân: {{cashier}}.", "Receipt reason: {{receiptReason}}. Cashier: {{cashier}}."),
+    signatureLeft: localize("NGƯỜI NỘP TIỀN", "PAYER"),
+    signatureRight: localize("THU NGÂN", "CASHIER")
+  });
+}
+
+function createArReconciliationLayout(): DocumentTemplateLayout {
+  return createStandardDocumentLayout({
+    prefix: "ar-reconciliation",
+    titleVi: "BẢNG ĐỐI CHIẾU CÔNG NỢ",
+    titleViEn: "BẢNG ĐỐI CHIẾU CÔNG NỢ / AR RECONCILIATION",
+    metaText: localize("Ngày đối chiếu: {{reconDate|date}}  |  Kỳ: {{periodStart|date}} - {{periodEnd|date}}  |  Tổng còn lại: {{totals.outstanding|currency}}", "Reconciliation Date: {{reconDate|date}}  |  Period: {{periodStart|date}} - {{periodEnd|date}}  |  Outstanding: {{totals.outstanding|currency}}"),
+    subjectRows: STANDARD_CUSTOMER_ROWS,
+    tableSource: "lineItems",
+    tableColumns: [
+      { id: "index", label: localize("STT", "No."), value: "{{index}}", width: 10, align: "center" },
+      { id: "contract", label: localize("Số HĐ", "Contract"), value: "{{contractNo}}", width: 28 },
+      { id: "project", label: localize("Dự án", "Project"), value: "{{projectName}}", width: 44 },
+      { id: "value", label: localize("Giá trị", "Value"), value: "{{contractValue|currency}}", width: 34, align: "right" },
+      { id: "paid", label: localize("Đã thu", "Paid"), value: "{{paid|currency}}", width: 34, align: "right" },
+      { id: "outstanding", label: localize("Còn lại", "Outstanding"), value: "{{outstanding|currency}}", width: 36, align: "right" }
+    ],
+    notesText: localize("Tổng đã xuất hóa đơn: {{totals.invoiced|currency}}. Tổng đã thu: {{totals.paid|currency}}. Còn phải thu: {{totals.outstanding|currency}}.", "Invoiced: {{totals.invoiced|currency}}. Paid: {{totals.paid|currency}}. Outstanding: {{totals.outstanding|currency}}.")
+  });
+}
+
 const DEFAULT_LAYOUTS: Record<DocumentType, DocumentTemplateLayout> = {
   QUOTATION: createQuotationLayout(),
   CONTRACT: createContractLayout(),
-  PROPOSAL: createQuotationLayout(),
-  SURVEY_REPORT: createQuotationLayout(),
-  CONTRACT_ADDENDUM: createCompactContractLayout(),
-  NDA: createCompactContractLayout(),
-  DELIVERY_NOTE: createCompactContractLayout(),
-  DOC_HANDOVER: createCompactContractLayout(),
-  INSTALLATION_REPORT: createCompactContractLayout(),
-  ACCEPTANCE_REPORT: createCompactContractLayout(),
-  PARTIAL_ACCEPTANCE: createCompactContractLayout(),
-  WARRANTY_CERT: createCompactContractLayout(),
-  MAINTENANCE_RECORD: createCompactContractLayout(),
-  PAYMENT_REQUEST: createCompactContractLayout(),
-  PAYMENT_RECEIPT: createCompactContractLayout(),
-  AR_RECONCILIATION: createCompactContractLayout()
+  PROPOSAL: createProposalLayout(),
+  SURVEY_REPORT: createSurveyReportLayout(),
+  CONTRACT_ADDENDUM: createContractAddendumLayout(),
+  NDA: createNdaLayout(),
+  DELIVERY_NOTE: createDeliveryNoteLayout(),
+  DOC_HANDOVER: createDocHandoverLayout(),
+  INSTALLATION_REPORT: createInstallationReportLayout(),
+  ACCEPTANCE_REPORT: createAcceptanceReportLayout(),
+  PARTIAL_ACCEPTANCE: createPartialAcceptanceLayout(),
+  WARRANTY_CERT: createWarrantyCertLayout(),
+  MAINTENANCE_RECORD: createMaintenanceRecordLayout(),
+  PAYMENT_REQUEST: createPaymentRequestLayout(),
+  PAYMENT_RECEIPT: createPaymentReceiptLayout(),
+  AR_RECONCILIATION: createArReconciliationLayout()
 };
+
+const SAMPLE_COMPANY = {
+  name: "CÔNG TY TNHH AHSO",
+  taxId: "0316896939",
+  address: "39/15 Đường Cao Bá Quát, TP.HCM",
+  phone: "0901 951 351",
+  email: "ahso@ahso.vn",
+  website: "https://ahso.vn",
+  representative: "Ngô Văn Hùng",
+  representativeTitle: "Giám đốc",
+  bankName: "Vietcombank",
+  bankAccount: "0071001988666",
+  bankAccountNo: "0071001988666",
+  bankAccountName: "CONG TY TNHH AHSO",
+  bankBranch: "Chi nhánh TP.HCM"
+};
+
+const SAMPLE_CUSTOMER = {
+  name: "DNP Water",
+  taxCode: "0100100101",
+  address: "Hà Nội",
+  phone: "02432001111",
+  email: "projects@dnpwater.vn"
+};
+
+const SAMPLE_CONTACT = {
+  name: "Trần Thu Hà",
+  title: "Giám đốc dự án",
+  phone: "0909123123",
+  email: "ha.tran@dnpwater.vn"
+};
+
+const SAMPLE_PROJECT = {
+  name: "Dự án điều khiển tự động hóa nhà máy",
+  estimatedValue: 1450000000
+};
+
+const SAMPLE_CONTRACT = {
+  contractNo: "HD-2026-003",
+  signDate: "2026-04-18T00:00:00.000Z",
+  startDate: "2026-04-20T00:00:00.000Z",
+  endDate: "2026-07-20T00:00:00.000Z",
+  value: 1320000000,
+  notes: "Hợp đồng triển khai theo 3 giai đoạn."
+};
+
+const SAMPLE_LINKED_QUOTE_ITEMS = [
+  { name: "Máy chủ Edge Controller", quantity: 2, unit: "Cái", unitPrice: 210000000, total: 420000000 },
+  { name: "Tủ điện điều khiển trung tâm", quantity: 2, unit: "Cái", unitPrice: 270000000, total: 540000000 },
+  { name: "Dịch vụ triển khai và đào tạo", quantity: 1, unit: "Gói", unitPrice: 360000000, total: 360000000 }
+];
+
+const SAMPLE_POLICIES = {
+  paymentTerms: "40% ký hợp đồng, 40% bàn giao, 20% sau nghiệm thu.",
+  warranty: "Bảo hành 12 tháng, phản hồi sự cố trong 4 giờ làm việc.",
+  service: "Bao gồm khảo sát chi tiết, lắp đặt, chạy thử, đào tạo vận hành và hỗ trợ từ xa sau bàn giao."
+};
+
+function createBaseSampleContext() {
+  return {
+    company: SAMPLE_COMPANY,
+    logo: null,
+    customer: SAMPLE_CUSTOMER,
+    primaryContact: SAMPLE_CONTACT,
+    project: SAMPLE_PROJECT,
+    contract: SAMPLE_CONTRACT,
+    policies: SAMPLE_POLICIES,
+    generatedAt: "2026-05-15T08:00:00.000Z"
+  };
+}
 
 const DEFAULT_SAMPLE_DATA: Record<DocumentType, Record<string, unknown>> = {
   QUOTATION: {
-    company: {
-      name: "CÔNG TY TNHH AHSO",
-      taxId: "0316896939",
-      address: "39/15 Đường Cao Bá Quát, TP.HCM",
-      phone: "0901 951 351",
-      email: "ahso@ahso.vn",
-      website: "https://ahso.vn"
-    },
-    logo: null,
-    customer: {
-      name: "DNP Water",
-      address: "Hà Nội",
-      phone: "02432001111",
-      email: "projects@dnpwater.vn"
-    },
-    primaryContact: {
-      name: "Nguyễn Văn Minh"
-    },
+    ...createBaseSampleContext(),
     project: {
       name: "Nâng cấp hệ thống PLC trạm bơm"
     },
@@ -1706,143 +2253,350 @@ const DEFAULT_SAMPLE_DATA: Record<DocumentType, Record<string, unknown>> = {
       subtotal: 980000000,
       taxAmount: 98000000,
       total: 1078000000,
-      terms:
-        "Thanh toán 50% khi ký PO, 40% khi bàn giao, 10% sau nghiệm thu.",
-      deliveryTerms:
-        "Triển khai trong 30 ngày kể từ ngày xác nhận báo giá và chốt mặt bằng."
+      terms: "Thanh toán 50% khi ký PO, 40% khi bàn giao, 10% sau nghiệm thu.",
+      deliveryTerms: "Triển khai trong 30 ngày kể từ ngày xác nhận báo giá và chốt mặt bằng."
     },
     items: [
-      {
-        name: "Tủ điều khiển PLC",
-        quantity: 2,
-        unitPrice: 220000000,
-        total: 440000000
-      },
-      {
-        name: "Biến tần trung thế",
-        quantity: 4,
-        unitPrice: 95000000,
-        total: 380000000
-      },
-      {
-        name: "Dịch vụ lập trình & commissioning",
-        quantity: 1,
-        unitPrice: 160000000,
-        total: 160000000
-      }
-    ],
-    policies: {
-      paymentTerms:
-        "Thanh toán 50% khi ký PO, 40% khi bàn giao, 10% sau nghiệm thu.",
-      service: "AHSO hỗ trợ vận hành từ xa trong 60 ngày đầu."
-    }
+      { name: "Tủ điều khiển PLC", quantity: 2, unitPrice: 220000000, total: 440000000 },
+      { name: "Biến tần trung thế", quantity: 4, unitPrice: 95000000, total: 380000000 },
+      { name: "Dịch vụ lập trình & commissioning", quantity: 1, unitPrice: 160000000, total: 160000000 }
+    ]
   },
   CONTRACT: {
-    company: {
-      name: "CÔNG TY TNHH AHSO",
-      taxId: "0316896939",
-      address: "39/15 Đường Cao Bá Quát, TP.HCM",
-      phone: "0901 951 351",
-      email: "ahso@ahso.vn",
-      website: "https://ahso.vn",
-      representative: "Ngô Văn Hùng",
-      representativeTitle: "Giám đốc",
-      bankName: "Vietcombank",
-      bankAccount: "0071001988666",
-      bankAccountName: "CONG TY TNHH AHSO",
-      bankBranch: "Chi nhánh TP.HCM"
-    },
-    logo: null,
-    customer: {
-      name: "DNP Water",
-      taxCode: "0100100101",
-      address: "Hà Nội",
-      phone: "02432001111",
-      email: "projects@dnpwater.vn"
-    },
-    primaryContact: {
-      name: "Trần Thu Hà",
-      title: "Giám đốc dự án",
-      phone: "0909123123",
-      email: "ha.tran@dnpwater.vn"
-    },
-    project: {
-      name: "Dự án điều khiển tự động hóa nhà máy"
-    },
-    contract: {
-      contractNo: "HD-2026-003",
-      signDate: "2026-04-18T00:00:00.000Z",
-      startDate: "2026-04-20T00:00:00.000Z",
-      endDate: "2026-07-20T00:00:00.000Z",
-      value: 1320000000,
-      notes: "Hợp đồng triển khai theo 3 giai đoạn."
-    },
+    ...createBaseSampleContext(),
     linkedQuote: {
-      items: [
-        {
-          name: "Máy chủ Edge Controller",
-          quantity: 2,
-          unitPrice: 210000000,
-          total: 420000000
-        },
-        {
-          name: "Tủ điện điều khiển trung tâm",
-          quantity: 2,
-          unitPrice: 270000000,
-          total: 540000000
-        },
-        {
-          name: "Dịch vụ triển khai và đào tạo",
-          quantity: 1,
-          unitPrice: 360000000,
-          total: 360000000
-        }
-      ]
+      subtotal: 1200000000,
+      taxRate: 10,
+      taxAmount: 120000000,
+      total: 1320000000,
+      items: SAMPLE_LINKED_QUOTE_ITEMS
     },
     milestones: [
-      {
-        name: "Khởi động dự án",
-        dueDate: "2026-04-25T00:00:00.000Z",
-        status: "IN_PROGRESS"
-      },
-      {
-        name: "Bàn giao phần cứng",
-        dueDate: "2026-05-25T00:00:00.000Z",
-        status: "PENDING"
-      }
-    ],
-    policies: {
-      paymentTerms: "40% ký hợp đồng, 40% bàn giao, 20% sau nghiệm thu.",
-      warranty: "Bảo hành 12 tháng, phản hồi sự cố trong 4 giờ làm việc.",
-      service: "Bao gồm khảo sát chi tiết, lắp đặt, chạy thử, đào tạo vận hành và hỗ trợ từ xa sau bàn giao."
-    }
+      { name: "Khởi động dự án", dueDate: "2026-04-25T00:00:00.000Z", status: "IN_PROGRESS", paymentAmount: 528000000 },
+      { name: "Bàn giao phần cứng", dueDate: "2026-05-25T00:00:00.000Z", status: "PENDING", paymentAmount: 528000000 },
+      { name: "Nghiệm thu cuối", dueDate: "2026-07-20T00:00:00.000Z", status: "PENDING", paymentAmount: 264000000 }
+    ]
   },
-  PROPOSAL: {},
-  SURVEY_REPORT: {},
-  CONTRACT_ADDENDUM: {},
-  NDA: {},
-  DELIVERY_NOTE: {},
-  DOC_HANDOVER: {},
-  INSTALLATION_REPORT: {},
-  ACCEPTANCE_REPORT: {},
-  PARTIAL_ACCEPTANCE: {},
-  WARRANTY_CERT: {},
-  MAINTENANCE_RECORD: {},
-  PAYMENT_REQUEST: {},
-  PAYMENT_RECEIPT: {},
-  AR_RECONCILIATION: {}
+  PROPOSAL: {
+    ...createBaseSampleContext(),
+    title: "ĐỀ XUẤT DỰ ÁN / PROJECT PROPOSAL",
+    linkedQuote: { quoteNo: "BG-2026-002", total: 1078000000 },
+    milestones: [
+      { name: "Khảo sát & thiết kế giải pháp", dueDate: "2026-05-20T00:00:00.000Z", status: "PLANNED", paymentAmount: 180000000 },
+      { name: "Cung cấp thiết bị chính", dueDate: "2026-06-15T00:00:00.000Z", status: "PLANNED", paymentAmount: 780000000 },
+      { name: "Commissioning & đào tạo", dueDate: "2026-07-10T00:00:00.000Z", status: "PLANNED", paymentAmount: 490000000 }
+    ]
+  },
+  SURVEY_REPORT: {
+    ...createBaseSampleContext(),
+    title: "BÁO CÁO KHẢO SÁT / SURVEY REPORT",
+    surveyorName: "Nguyễn Văn Kỹ Thuật",
+    surveyDate: "2026-05-15T08:00:00.000Z",
+    surveyActivity: { type: "SURVEY", scheduledAt: "2026-05-15T08:00:00.000Z" },
+    findings: [
+      { title: "Tủ điều khiển hiện hữu", description: "Thiết bị vận hành ổn định nhưng thiếu dự phòng nguồn và giám sát từ xa." },
+      { title: "Hạ tầng mạng công nghiệp", description: "Cần bổ sung switch công nghiệp và phân vùng mạng OT/IT." },
+      { title: "Không gian lắp đặt", description: "Khu vực tủ điện đủ diện tích, cần bổ sung máng cáp và tiếp địa." }
+    ]
+  },
+  CONTRACT_ADDENDUM: {
+    ...createBaseSampleContext(),
+    title: "PHỤ LỤC HỢP ĐỒNG / CONTRACT ADDENDUM",
+    addendumDate: "2026-05-15T08:00:00.000Z",
+    modifications: [
+      { content: "Gia hạn thời gian thực hiện hợp đồng thêm 30 ngày." },
+      { content: "Bổ sung hạng mục đào tạo vận hành nâng cao cho đội kỹ thuật khách hàng." },
+      { content: "Điều chỉnh lịch thanh toán đợt cuối sau nghiệm thu FAT/SAT." }
+    ]
+  },
+  NDA: {
+    ...createBaseSampleContext(),
+    title: "THỎA THUẬN BẢO MẬT / NON-DISCLOSURE AGREEMENT",
+    ndaDate: "2026-05-15T08:00:00.000Z",
+    confidentialScopes: [
+      { scope: "Tài liệu kỹ thuật", description: "Bản vẽ, sơ đồ hệ thống, cấu hình thiết bị và thông số vận hành." },
+      { scope: "Thông tin thương mại", description: "Báo giá, chi phí, điều khoản thanh toán và chiến lược triển khai." },
+      { scope: "Dữ liệu vận hành", description: "Log hệ thống, dữ liệu sản xuất và thông tin người dùng nội bộ." }
+    ]
+  },
+  DELIVERY_NOTE: {
+    ...createBaseSampleContext(),
+    title: "BIÊN BẢN GIAO HÀNG / DELIVERY NOTE",
+    deliveredItems: [
+      { name: "Máy chủ Edge Controller", quantity: 2, unit: "Cái" },
+      { name: "Tủ điện điều khiển trung tâm", quantity: 2, unit: "Cái" },
+      { name: "Switch công nghiệp 8 port", quantity: 4, unit: "Cái" }
+    ],
+    deliveryDate: "2026-05-15T08:00:00.000Z"
+  },
+  DOC_HANDOVER: {
+    ...createBaseSampleContext(),
+    title: "BIÊN BẢN BÀN GIAO TÀI LIỆU / DOCUMENT HANDOVER",
+    handedOverDocs: [
+      { name: "Tài liệu hướng dẫn vận hành", format: "PDF + bản in", note: "01 bộ tiếng Việt" },
+      { name: "Sơ đồ kiến trúc hệ thống", format: "PDF", note: "Bản cập nhật sau triển khai" },
+      { name: "Biên bản nghiệm thu kỹ thuật", format: "Bản gốc", note: "02 bản có ký đóng dấu" }
+    ],
+    handoverDate: "2026-05-16T08:00:00.000Z"
+  },
+  INSTALLATION_REPORT: {
+    ...createBaseSampleContext(),
+    title: "BIÊN BẢN CÀI ĐẶT & TRIỂN KHAI / INSTALLATION REPORT",
+    installations: [
+      { name: "Lắp đặt máy chủ Edge Controller", status: "Hoàn thành", note: "Đã cấu hình IP và kiểm tra nguồn dự phòng." },
+      { name: "Đấu nối tủ điều khiển trung tâm", status: "Hoàn thành", note: "Đã kiểm tra tín hiệu I/O." },
+      { name: "Kết nối dashboard giám sát", status: "Hoàn thành", note: "Đã test truy cập từ phòng điều khiển." }
+    ],
+    installationDate: "2026-05-17T08:00:00.000Z"
+  },
+  ACCEPTANCE_REPORT: {
+    ...createBaseSampleContext(),
+    title: "BIÊN BẢN NGHIỆM THU KỸ THUẬT / UAT REPORT",
+    testResults: [
+      { name: "Kiểm thử tín hiệu PLC", status: "Đạt", note: "Tín hiệu ổn định trong 4 giờ chạy thử." },
+      { name: "Kiểm thử cảnh báo dashboard", status: "Đạt", note: "Cảnh báo hiển thị đúng ngưỡng." },
+      { name: "Kiểm thử báo cáo vận hành", status: "Đạt", note: "Xuất PDF thành công." }
+    ],
+    acceptanceDate: "2026-05-18T08:00:00.000Z"
+  },
+  PARTIAL_ACCEPTANCE: {
+    ...createBaseSampleContext(),
+    title: "BIÊN BẢN NGHIỆM THU GIAI ĐOẠN / PARTIAL ACCEPTANCE REPORT",
+    acceptedParts: [
+      { name: "Cung cấp thiết bị chính", ratio: "40%", value: 528000000, note: "Đã bàn giao đủ số lượng." },
+      { name: "Lắp đặt tại hiện trường", ratio: "30%", value: 396000000, note: "Đã hoàn tất đấu nối." }
+    ],
+    acceptanceDate: "2026-05-19T08:00:00.000Z"
+  },
+  WARRANTY_CERT: {
+    ...createBaseSampleContext(),
+    title: "GIẤY CHỨNG NHẬN BẢO HÀNH / WARRANTY CERTIFICATE",
+    warrantyDate: "2026-05-20T08:00:00.000Z",
+    warrantyPeriodMonths: 12,
+    warrantyEndDate: "2027-05-20T08:00:00.000Z",
+    warrantyItems: [
+      { name: "Máy chủ Edge Controller", period: "12 tháng", note: "Bảo hành phần cứng theo serial." },
+      { name: "Tủ điện điều khiển trung tâm", period: "12 tháng", note: "Bao gồm module điều khiển và phụ kiện." }
+    ]
+  },
+  MAINTENANCE_RECORD: {
+    ...createBaseSampleContext(),
+    title: "BIÊN BẢN BẢO TRÌ & HỖ TRỢ / MAINTENANCE RECORD",
+    issues: [
+      { name: "Kiểm tra CPU/RAM máy chủ", status: "Ổn định", note: "CPU < 40%, RAM < 60%." },
+      { name: "Backup dữ liệu định kỳ", status: "Hoàn thành", note: "Đã sao lưu lên storage dự phòng." },
+      { name: "Cập nhật bản vá bảo mật", status: "Hoàn thành", note: "Đã cập nhật bản vá tháng 05/2026." }
+    ],
+    maintenanceDate: "2026-05-21T08:00:00.000Z",
+    technician: "Nguyễn Văn Kỹ Thuật"
+  },
+  PAYMENT_REQUEST: {
+    ...createBaseSampleContext(),
+    title: "GIẤY ĐỀ NGHỊ THANH TOÁN / PAYMENT REQUEST",
+    requestDate: "2026-05-22T08:00:00.000Z",
+    paymentAmount: 396000000,
+    paymentReason: "Thanh toán tạm ứng đợt 1 theo hợp đồng (30%)",
+    bankName: "Ngân hàng TMCP Ngoại thương Việt Nam (Vietcombank)",
+    bankAccountNo: "0071001988666",
+    bankAccountName: "CONG TY TNHH AHSO",
+    paymentLines: [
+      { description: "Tạm ứng đợt 1 theo hợp đồng", amount: 396000000, note: "30% giá trị hợp đồng" }
+    ]
+  },
+  PAYMENT_RECEIPT: {
+    ...createBaseSampleContext(),
+    title: "PHIẾU THU / PAYMENT RECEIPT",
+    receiptDate: "2026-05-23T08:00:00.000Z",
+    receiptAmount: 396000000,
+    paymentMethod: "Chuyển khoản",
+    receiptReason: "Thu tiền tạm ứng HĐ số HD-2026-003",
+    cashier: "Nguyễn Thu Ngân",
+    payerName: "Trần Thu Hà",
+    receiptLines: [
+      { description: "Thu tạm ứng đợt 1", amount: 396000000, method: "Chuyển khoản" }
+    ]
+  },
+  AR_RECONCILIATION: {
+    ...createBaseSampleContext(),
+    title: "BẢNG ĐỐI CHIẾU CÔNG NỢ / AR RECONCILIATION STATEMENT",
+    reconDate: "2026-05-24T08:00:00.000Z",
+    periodStart: "2026-01-01T00:00:00.000Z",
+    periodEnd: "2026-05-24T08:00:00.000Z",
+    lineItems: [
+      { contractNo: "HD-2026-003", projectName: "Dự án điều khiển tự động hóa nhà máy", contractValue: 1320000000, invoiced: 924000000, paid: 396000000, outstanding: 528000000 },
+      { contractNo: "HD-2026-001", projectName: "Nâng cấp SCADA tuyến bơm", contractValue: 680000000, invoiced: 680000000, paid: 520000000, outstanding: 160000000 }
+    ],
+    totals: {
+      contractValue: 2000000000,
+      invoiced: 1604000000,
+      paid: 916000000,
+      outstanding: 688000000
+    }
+  }
+};
+
+const PROPOSAL_TOKENS: TemplateTokenGroup[] = [
+  ...QUOTATION_TOKENS,
+  {
+    id: "proposal",
+    label: "Đề xuất",
+    tokens: [
+      { key: "project.estimatedValue", label: "Giá trị dự kiến", description: "Giá trị dự kiến của dự án." },
+      { key: "linkedQuote.total", label: "Tổng báo giá liên kết", description: "Tổng giá trị báo giá liên quan." },
+      { key: "milestones", label: "Danh sách mốc", description: "Nguồn bảng mốc triển khai." },
+      { key: "milestones[].paymentAmount", label: "Giá trị mốc", description: "Giá trị thanh toán theo mốc." }
+    ]
+  }
+];
+
+const SURVEY_REPORT_TOKENS: TemplateTokenGroup[] = [
+  CONTRACT_TOKENS[0],
+  CONTRACT_TOKENS[2],
+  {
+    id: "survey",
+    label: "Khảo sát",
+    tokens: [
+      { key: "surveyActivity", label: "Hoạt động khảo sát", description: "Hoạt động khảo sát liên quan." },
+      { key: "surveyorName", label: "Người khảo sát", description: "Tên người thực hiện khảo sát." },
+      { key: "surveyDate", label: "Ngày khảo sát", description: "Ngày thực hiện khảo sát." },
+      { key: "findings", label: "Danh sách phát hiện", description: "Nguồn bảng phát hiện khảo sát." },
+      { key: "findings[].title", label: "Tiêu đề phát hiện", description: "Tên phát hiện khảo sát." },
+      { key: "findings[].description", label: "Mô tả phát hiện", description: "Mô tả chi tiết phát hiện." }
+    ]
+  }
+];
+
+const OPERATIONAL_DOC_TOKENS: TemplateTokenGroup[] = [
+  CONTRACT_TOKENS[0],
+  CONTRACT_TOKENS[1],
+  CONTRACT_TOKENS[2],
+  {
+    id: "operational",
+    label: "Vận hành",
+    tokens: [
+      { key: "deliveryDate", label: "Ngày giao hàng", description: "Ngày lập biên bản giao hàng." },
+      { key: "deliveredItems", label: "Hàng đã giao", description: "Nguồn bảng hàng hóa bàn giao." },
+      { key: "handedOverDocs", label: "Tài liệu bàn giao", description: "Nguồn bảng tài liệu bàn giao." },
+      { key: "installations", label: "Hạng mục triển khai", description: "Nguồn bảng cài đặt/triển khai." },
+      { key: "testResults", label: "Kết quả nghiệm thu", description: "Nguồn bảng kiểm thử/nghiệm thu." },
+      { key: "acceptedParts", label: "Hạng mục nghiệm thu giai đoạn", description: "Nguồn bảng nghiệm thu giai đoạn." },
+      { key: "warrantyDate", label: "Ngày bảo hành", description: "Ngày bắt đầu bảo hành." },
+      { key: "warrantyPeriodMonths", label: "Thời hạn bảo hành", description: "Số tháng bảo hành." },
+      { key: "warrantyEndDate", label: "Ngày hết hạn bảo hành", description: "Ngày kết thúc bảo hành." },
+      { key: "issues", label: "Nội dung bảo trì", description: "Nguồn bảng nội dung bảo trì." },
+      { key: "maintenanceDate", label: "Ngày bảo trì", description: "Ngày lập biên bản bảo trì." },
+      { key: "technician", label: "Kỹ thuật viên", description: "Người phụ trách bảo trì." }
+    ]
+  }
+];
+
+const PAYMENT_TOKENS: TemplateTokenGroup[] = [
+  CONTRACT_TOKENS[0],
+  CONTRACT_TOKENS[1],
+  CONTRACT_TOKENS[2],
+  {
+    id: "payment",
+    label: "Thanh toán",
+    tokens: [
+      { key: "requestDate", label: "Ngày đề nghị", description: "Ngày lập giấy đề nghị thanh toán." },
+      { key: "paymentAmount", label: "Số tiền đề nghị", description: "Số tiền đề nghị thanh toán." },
+      { key: "paymentReason", label: "Lý do thanh toán", description: "Lý do đề nghị thanh toán." },
+      { key: "bankName", label: "Ngân hàng", description: "Tên ngân hàng nhận tiền." },
+      { key: "bankAccountNo", label: "Số tài khoản", description: "Số tài khoản nhận tiền." },
+      { key: "bankAccountName", label: "Tên tài khoản", description: "Tên chủ tài khoản nhận tiền." },
+      { key: "receiptDate", label: "Ngày thu", description: "Ngày lập phiếu thu." },
+      { key: "receiptAmount", label: "Số tiền thu", description: "Số tiền đã thu." },
+      { key: "paymentMethod", label: "Hình thức thanh toán", description: "Tiền mặt/chuyển khoản." },
+      { key: "receiptReason", label: "Lý do thu", description: "Nội dung thu tiền." },
+      { key: "cashier", label: "Thu ngân", description: "Người ghi nhận phiếu thu." },
+      { key: "payerName", label: "Người nộp", description: "Người nộp tiền." }
+    ]
+  }
+];
+
+const AR_RECONCILIATION_TOKENS: TemplateTokenGroup[] = [
+  CONTRACT_TOKENS[0],
+  QUOTATION_TOKENS[2],
+  {
+    id: "ar-reconciliation",
+    label: "Công nợ",
+    tokens: [
+      { key: "reconDate", label: "Ngày đối chiếu", description: "Ngày lập bảng đối chiếu." },
+      { key: "periodStart", label: "Từ ngày", description: "Ngày bắt đầu kỳ đối chiếu." },
+      { key: "periodEnd", label: "Đến ngày", description: "Ngày kết thúc kỳ đối chiếu." },
+      { key: "lineItems", label: "Dòng công nợ", description: "Nguồn bảng công nợ." },
+      { key: "lineItems[].contractNo", label: "Số hợp đồng", description: "Số hợp đồng từng dòng." },
+      { key: "lineItems[].projectName", label: "Tên dự án", description: "Tên dự án từng dòng." },
+      { key: "lineItems[].contractValue", label: "Giá trị hợp đồng", description: "Giá trị hợp đồng từng dòng." },
+      { key: "lineItems[].invoiced", label: "Đã xuất hóa đơn", description: "Số tiền đã xuất hóa đơn." },
+      { key: "lineItems[].paid", label: "Đã thanh toán", description: "Số tiền đã thanh toán." },
+      { key: "lineItems[].outstanding", label: "Còn phải thu", description: "Số tiền còn phải thu." },
+      { key: "totals.contractValue", label: "Tổng giá trị hợp đồng", description: "Tổng giá trị hợp đồng." },
+      { key: "totals.invoiced", label: "Tổng đã xuất hóa đơn", description: "Tổng đã xuất hóa đơn." },
+      { key: "totals.paid", label: "Tổng đã thu", description: "Tổng đã thanh toán." },
+      { key: "totals.outstanding", label: "Tổng còn phải thu", description: "Tổng công nợ còn lại." }
+    ]
+  }
+];
+
+const NDA_TOKENS: TemplateTokenGroup[] = [
+  CONTRACT_TOKENS[0],
+  QUOTATION_TOKENS[2],
+  {
+    id: "nda",
+    label: "NDA",
+    tokens: [
+      { key: "ndaDate", label: "Ngày NDA", description: "Ngày hiệu lực thỏa thuận bảo mật." },
+      { key: "confidentialScopes", label: "Phạm vi bảo mật", description: "Nguồn bảng phạm vi bảo mật." },
+      { key: "confidentialScopes[].scope", label: "Tên phạm vi", description: "Tên phạm vi cần bảo mật." },
+      { key: "confidentialScopes[].description", label: "Mô tả phạm vi", description: "Mô tả thông tin bảo mật." }
+    ]
+  }
+];
+
+const ADDENDUM_TOKENS: TemplateTokenGroup[] = [
+  CONTRACT_TOKENS[0],
+  CONTRACT_TOKENS[1],
+  CONTRACT_TOKENS[2],
+  {
+    id: "addendum",
+    label: "Phụ lục",
+    tokens: [
+      { key: "addendumDate", label: "Ngày phụ lục", description: "Ngày lập phụ lục hợp đồng." },
+      { key: "modifications", label: "Nội dung điều chỉnh", description: "Nguồn bảng nội dung điều chỉnh." },
+      { key: "modifications[].content", label: "Dòng điều chỉnh", description: "Nội dung từng thay đổi trong phụ lục." }
+    ]
+  }
+];
+
+const TOKEN_GROUPS_MAP: Record<DocumentType, TemplateTokenGroup[]> = {
+  QUOTATION: QUOTATION_TOKENS,
+  CONTRACT: CONTRACT_TOKENS,
+  PROPOSAL: PROPOSAL_TOKENS,
+  SURVEY_REPORT: SURVEY_REPORT_TOKENS,
+  CONTRACT_ADDENDUM: ADDENDUM_TOKENS,
+  NDA: NDA_TOKENS,
+  DELIVERY_NOTE: OPERATIONAL_DOC_TOKENS,
+  DOC_HANDOVER: OPERATIONAL_DOC_TOKENS,
+  INSTALLATION_REPORT: OPERATIONAL_DOC_TOKENS,
+  ACCEPTANCE_REPORT: OPERATIONAL_DOC_TOKENS,
+  PARTIAL_ACCEPTANCE: OPERATIONAL_DOC_TOKENS,
+  WARRANTY_CERT: OPERATIONAL_DOC_TOKENS,
+  MAINTENANCE_RECORD: OPERATIONAL_DOC_TOKENS,
+  PAYMENT_REQUEST: PAYMENT_TOKENS,
+  PAYMENT_RECEIPT: PAYMENT_TOKENS,
+  AR_RECONCILIATION: AR_RECONCILIATION_TOKENS
 };
 
 export function buildDocumentTemplateCatalog(type: DocumentType): TemplateCatalog {
   const entry = getTemplateEntry(type);
-  const tokenGroups = type === "CONTRACT" ? CONTRACT_TOKENS : QUOTATION_TOKENS;
 
   return {
     type,
     label: entry.label,
     defaultLayout: cloneLayout(DEFAULT_LAYOUTS[type]),
     boxLibrary: createDefaultBoxLibrary(),
-    tokenGroups,
+    tokenGroups: TOKEN_GROUPS_MAP[type] ?? QUOTATION_TOKENS,
     sampleData: DEFAULT_SAMPLE_DATA[type] ?? {}
   };
 }

@@ -43,8 +43,15 @@ export function usePushNotifications() {
       return;
     }
 
-    setIsSupported("serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
-    setPermission(Notification.permission);
+    const notificationAvailable = "Notification" in window;
+    setIsSupported("serviceWorker" in navigator && "PushManager" in window && notificationAvailable);
+    if (notificationAvailable) {
+      try {
+        setPermission((window as { Notification?: { permission: NotificationPermission } }).Notification?.permission ?? "default");
+      } catch {
+        // Notification API partially available but not accessible — treat as default
+      }
+    }
     setHasCheckedSupport(true);
   }, []);
 
@@ -91,7 +98,11 @@ export function usePushNotifications() {
 
     try {
       const registration = await navigator.serviceWorker.register("/service-worker.js");
-      const nextPermission = permission === "granted" ? "granted" : await Notification.requestPermission();
+      const NotificationAPI = (window as { Notification?: typeof Notification }).Notification;
+      if (!NotificationAPI) {
+        throw new Error("Trình duyệt này không hỗ trợ push notification.");
+      }
+      const nextPermission = permission === "granted" ? "granted" : await NotificationAPI.requestPermission();
       setPermission(nextPermission);
 
       if (nextPermission !== "granted") {

@@ -19,7 +19,14 @@ const brandFont = localFont({
 export const metadata: Metadata = {
   title: "AHSO CRM",
   description: "CRM quản lý vòng đời bán hàng kỹ thuật công nghiệp cho AHSO",
-  manifest: "/manifest.json"
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" }
+    ],
+    apple: "/apple-touch-icon.png"
+  }
 };
 
 export const viewport: Viewport = {

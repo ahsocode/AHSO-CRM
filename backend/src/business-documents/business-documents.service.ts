@@ -123,10 +123,12 @@ export class BusinessDocumentsService {
 
     return {
       items: documents.map((document) => this.mapDocument(document)),
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     };
   }
 

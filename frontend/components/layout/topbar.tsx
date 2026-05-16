@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -70,7 +70,9 @@ export function Topbar({
   lastRealtimeEvent: RealtimeEvent | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const sessionsQuery = useSessions();
+  const isSubPage = pathname.split("/").filter(Boolean).length > 1;
   const terminateSessionMutation = useTerminateSession();
   const { error: showError, success } = useToast();
   const currentSessionId = getSessionId();
@@ -89,6 +91,18 @@ export function Topbar({
 
   return (
     <header className="sticky top-0 z-30 flex min-h-14 items-center gap-4 border-b border-border-light bg-white/92 px-4 shadow-[0_1px_8px_rgba(0,59,90,0.05)] backdrop-blur-xl print:hidden md:px-6">
+      {isSubPage ? (
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-text-secondary transition hover:bg-bg-subtle hover:text-primary"
+          aria-label="Quay lại"
+        >
+          <AppIcon name="chevron-down" className="h-4 w-4 rotate-90" />
+          <span className="hidden text-[13px] font-medium sm:inline">Quay lại</span>
+        </button>
+      ) : null}
+
       <div className="hidden shrink-0 items-center gap-2 md:flex">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">{context.area}</span>
         <AppIcon name="chevron-down" className="h-3 w-3 -rotate-90 text-text-muted" />

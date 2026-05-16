@@ -124,7 +124,7 @@ export function ContractAcceptancePreviewClient({ contractId }: { contractId: st
                       className="h-full w-full object-contain p-2"
                     />
                   ) : (
-                    <span className="font-heading text-xl font-extrabold text-primary">A</span>
+                    <img src="/crm-logo.png" alt="AHSO CRM" className="h-full w-full object-contain" />
                   )}
                 </div>
                 <div>

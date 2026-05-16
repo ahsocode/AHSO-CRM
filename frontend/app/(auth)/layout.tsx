@@ -41,7 +41,7 @@ export default function AuthLayout({
                       className="h-full w-full object-contain p-2"
                     />
                   ) : (
-                    <span className="font-heading text-base font-extrabold tracking-[0.18em] text-white">AHSO</span>
+                    <img src="/crm-logo.png" alt="AHSO CRM" className="h-full w-full object-contain" />
                   )}
                 </div>
                 <div>

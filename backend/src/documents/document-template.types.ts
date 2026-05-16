@@ -1,7 +1,24 @@
 import { DocumentTemplateStatus, DocumentType } from "@prisma/client";
 import type { TemplateRuntimeStatus } from "./template-registry";
 
-export const TEMPLATE_EDITOR_TYPES: DocumentType[] = ["QUOTATION", "CONTRACT"];
+export const TEMPLATE_EDITOR_TYPES: DocumentType[] = [
+  "QUOTATION",
+  "PROPOSAL",
+  "SURVEY_REPORT",
+  "CONTRACT",
+  "CONTRACT_ADDENDUM",
+  "NDA",
+  "DELIVERY_NOTE",
+  "DOC_HANDOVER",
+  "INSTALLATION_REPORT",
+  "ACCEPTANCE_REPORT",
+  "PARTIAL_ACCEPTANCE",
+  "WARRANTY_CERT",
+  "MAINTENANCE_RECORD",
+  "PAYMENT_REQUEST",
+  "PAYMENT_RECEIPT",
+  "AR_RECONCILIATION"
+];
 
 export const A4_PAGE_WIDTH_MM = 210;
 export const A4_PAGE_HEIGHT_MM = 297;

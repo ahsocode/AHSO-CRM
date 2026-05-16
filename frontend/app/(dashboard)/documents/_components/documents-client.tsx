@@ -32,6 +32,9 @@ export function DocumentsClient() {
     status: status || undefined
   });
 
+  // isPending is consistent between SSR and client (isLoading would mismatch)
+  const isLoading = documentsQuery.isPending;
+
   const canReset = search.length > 0 || type.length > 0 || status.length > 0;
 
   return (
@@ -65,7 +68,7 @@ export function DocumentsClient() {
       <DocumentTable
         errorMessage={getApiErrorMessage(documentsQuery.error, "Không thể tải danh sách tài liệu.")}
         isError={documentsQuery.isError}
-        isLoading={documentsQuery.isLoading}
+        isLoading={isLoading}
         items={documentsQuery.data?.items ?? []}
         meta={
           documentsQuery.data

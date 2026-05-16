@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
@@ -12,10 +12,12 @@ import { BusinessDocumentsService } from "./business-documents.service";
 import {
   BusinessDocumentFileDto,
   CreateBusinessDocumentDto,
+  ListBusinessDocumentsDto,
   SupersedeBusinessDocumentDto,
   UpdateBusinessDocumentDto,
   businessDocumentFileSchema,
   createBusinessDocumentSchema,
+  listBusinessDocumentsSchema,
   supersedeBusinessDocumentSchema,
   updateBusinessDocumentSchema
 } from "./dto/business-document.dto";
@@ -26,6 +28,16 @@ import {
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class BusinessDocumentsController {
   constructor(private readonly businessDocumentsService: BusinessDocumentsService) {}
+
+  @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/business-documents" })
+  @Get()
+  findAll(
+    @Query(new ZodValidationPipe(listBusinessDocumentsSchema)) query: ListBusinessDocumentsDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.businessDocumentsService.findAll(query, user);
+  }
 
   @RequirePermissions("documents.create")
   @ApiOperation({ summary: "POST /api/business-documents" })

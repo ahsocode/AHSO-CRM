@@ -1,9 +1,9 @@
 "use client";
 
-import { QueryClient, useMutation, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiClient } from "@/lib/api-client";
-import { ApiResponse, BusinessDocument, BusinessDocumentCreateInput } from "@/lib/types";
+import { ApiResponse, BusinessDocument, BusinessDocumentCreateInput, BusinessDocumentSource, BusinessDocumentStatus, BusinessDocumentType } from "@/lib/types";
 
 export function useCreateBusinessDocument(projectId: string) {
   const queryClient = useQueryClient();
@@ -131,6 +131,66 @@ export function useArchiveBusinessDocument(projectId: string) {
       toast({
         title: "Lỗi",
         description: error instanceof Error ? error.message : "Không thể lưu trữ tài liệu.",
+        variant: "destructive"
+      });
+    }
+  });
+}
+
+export interface BusinessDocumentListItem {
+  items: BusinessDocument[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export function useBusinessDocuments(filters: {
+  page?: number;
+  limit?: number;
+  type?: BusinessDocumentType;
+  status?: BusinessDocumentStatus;
+  source?: BusinessDocumentSource;
+  customerId?: string;
+  projectId?: string;
+  search?: string;
+}) {
+  return useQuery({
+    queryKey: ["business-documents", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") params.set(key, String(value));
+      });
+      const response = await apiClient.get<ApiResponse<BusinessDocument[]>>(
+        `/business-documents?${params.toString()}`
+      );
+      const meta = response.data.meta;
+      return {
+        items: response.data.data,
+        total: meta?.total ?? 0,
+        page: meta?.page ?? 1,
+        limit: meta?.limit ?? 20,
+        totalPages: meta?.totalPages ?? 1
+      } satisfies BusinessDocumentListItem;
+    }
+  });
+}
+
+export function useDeleteBusinessDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/business-documents/${id}`);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["business-documents"] });
+      toast("Đã xóa tài liệu.");
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xóa tài liệu.",
         variant: "destructive"
       });
     }

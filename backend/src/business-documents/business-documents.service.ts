@@ -6,6 +6,7 @@ import { UploadService } from "../upload/upload.service";
 import {
   BusinessDocumentFileDto,
   CreateBusinessDocumentDto,
+  ListBusinessDocumentsDto,
   SupersedeBusinessDocumentDto,
   UpdateBusinessDocumentDto
 } from "./dto/business-document.dto";
@@ -75,6 +76,59 @@ export class BusinessDocumentsService {
     private readonly prisma: PrismaService,
     private readonly uploadService: UploadService
   ) {}
+
+  async findAll(query: ListBusinessDocumentsDto, user: JwtUser) {
+    const { page, limit, type, status, source, customerId, projectId, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.BusinessDocumentWhereInput = {
+      AND: [
+        {
+          OR: [
+            { project: this.projectAccessWhere(user) },
+            { quote: { project: this.projectAccessWhere(user) } },
+            { contract: { project: this.projectAccessWhere(user) } },
+            { payment: { contract: { project: this.projectAccessWhere(user) } } },
+            { customer: this.customerAccessWhere(user) }
+          ]
+        },
+        ...(type ? [{ type }] : []),
+        ...(status ? [{ status }] : []),
+        ...(source ? [{ source }] : []),
+        ...(customerId ? [{ customerId }] : []),
+        ...(projectId ? [{ projectId }] : []),
+        ...(search
+          ? [
+              {
+                OR: [
+                  { title: { contains: search, mode: "insensitive" as const } },
+                  { documentNo: { contains: search, mode: "insensitive" as const } }
+                ]
+              }
+            ]
+          : [])
+      ]
+    };
+
+    const [documents, total] = await Promise.all([
+      this.prisma.businessDocument.findMany({
+        where,
+        include: businessDocumentInclude,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit
+      }),
+      this.prisma.businessDocument.count({ where })
+    ]);
+
+    return {
+      items: documents.map((document) => this.mapDocument(document)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    };
+  }
 
   async create(dto: CreateBusinessDocumentDto, user: JwtUser) {
     const link = await this.resolveBusinessLink(dto, user);

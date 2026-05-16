@@ -88,7 +88,19 @@ export const supersedeBusinessDocumentSchema = z.object({
   reason: optionalString(1000)
 });
 
+export const listBusinessDocumentsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  type: businessDocumentTypeSchema.optional(),
+  status: businessDocumentStatusSchema.optional(),
+  source: businessDocumentSourceSchema.optional(),
+  customerId: optionalString(80),
+  projectId: optionalString(80),
+  search: optionalString(200)
+});
+
 export type CreateBusinessDocumentDto = z.infer<typeof createBusinessDocumentSchema>;
 export type UpdateBusinessDocumentDto = z.infer<typeof updateBusinessDocumentSchema>;
 export type BusinessDocumentFileDto = z.infer<typeof businessDocumentFileSchema>;
 export type SupersedeBusinessDocumentDto = z.infer<typeof supersedeBusinessDocumentSchema>;
+export type ListBusinessDocumentsDto = z.infer<typeof listBusinessDocumentsSchema>;

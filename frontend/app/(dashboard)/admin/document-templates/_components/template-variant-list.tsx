@@ -190,12 +190,12 @@ export function TemplateVariantList({
               )}
               onClick={() => onSelectType(item.type)}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-text-primary">{item.label}</p>
-                  <p className="text-xs text-text-muted">{item.type}</p>
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-text-primary">{item.label}</p>
+                  <p className="truncate text-xs text-text-muted">{item.type}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                   <Badge variant={item.runtimeStatus === "production" ? "success" : "warning"}>
                     {item.runtimeStatus === "production" ? "Production" : "Beta"}
                   </Badge>
@@ -217,10 +217,10 @@ export function TemplateVariantList({
                   key={item.type}
                   className="rounded-2xl border border-border/70 bg-bg-hover/40 px-3 py-2.5"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-text-primary">{item.label}</p>
-                      <p className="text-xs text-text-muted">{item.type}</p>
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-text-primary">{item.label}</p>
+                      <p className="truncate text-xs text-text-muted">{item.type}</p>
                     </div>
                     <Badge variant="warning">Beta</Badge>
                   </div>

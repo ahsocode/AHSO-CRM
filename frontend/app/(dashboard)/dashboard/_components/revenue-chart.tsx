@@ -33,7 +33,7 @@ export function RevenueChart({
           <LoadingSkeleton className="h-[280px] w-full" />
         ) : (
           <div className="space-y-3">
-            <div className="h-[280px]">
+            <div className="h-[200px] md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data}>
                   <CartesianGrid strokeDasharray="4 4" stroke="rgba(213,216,220,0.5)" vertical={false} />

@@ -65,69 +65,71 @@ export function CustomerFilters({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="min-w-[180px]">
-            <span className="sr-only">Trạng thái</span>
-            <Select
-              value={status}
-              onChange={(event) => onStatusChange(event.target.value as CustomerStatus | "")}
-              className="h-9 rounded-full text-[12.5px]"
-            >
-              <option value="">Trạng thái: Tất cả</option>
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  Trạng thái: {option.label}
-                </option>
-              ))}
-            </Select>
-          </label>
-
-          <label className="min-w-[170px]">
-            <span className="sr-only">Ngành hàng</span>
-            <div className="relative">
-              <Input
-                value={industry}
-                onChange={(event) => onIndustryChange(event.target.value)}
+        <div className="overflow-x-auto pb-1">
+          <div className="flex min-w-max flex-nowrap items-center gap-2">
+            <label className="min-w-[180px]">
+              <span className="sr-only">Trạng thái</span>
+              <Select
+                value={status}
+                onChange={(event) => onStatusChange(event.target.value as CustomerStatus | "")}
                 className="h-9 rounded-full text-[12.5px]"
-                placeholder="Ngành: Tất cả"
-              />
-            </div>
-          </label>
+              >
+                <option value="">Trạng thái: Tất cả</option>
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    Trạng thái: {option.label}
+                  </option>
+                ))}
+              </Select>
+            </label>
 
-          <label className="min-w-[180px]">
-            <span className="sr-only">Phụ trách</span>
-            <Select
-              value={assignedToId}
-              onChange={(event) => onAssignedToIdChange(event.target.value)}
-              disabled={usersUnavailable}
-              className="h-9 rounded-full text-[12.5px]"
+            <label className="min-w-[170px]">
+              <span className="sr-only">Ngành hàng</span>
+              <div className="relative">
+                <Input
+                  value={industry}
+                  onChange={(event) => onIndustryChange(event.target.value)}
+                  className="h-9 rounded-full text-[12.5px]"
+                  placeholder="Ngành: Tất cả"
+                />
+              </div>
+            </label>
+
+            <label className="min-w-[180px]">
+              <span className="sr-only">Phụ trách</span>
+              <Select
+                value={assignedToId}
+                onChange={(event) => onAssignedToIdChange(event.target.value)}
+                disabled={usersUnavailable}
+                className="h-9 rounded-full text-[12.5px]"
+              >
+                <option value="">Phụ trách: Tất cả</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    Phụ trách: {user.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+
+            <button
+              type="button"
+              className={cn("v2-chip", vipFilter === "vip" && "border-accent bg-accent-bg text-accent")}
+              onClick={() => onVipFilterChange(vipFilter === "vip" ? "all" : "vip")}
             >
-              <option value="">Phụ trách: Tất cả</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  Phụ trách: {user.name}
-                </option>
-              ))}
-            </Select>
-          </label>
+              ★ VIP
+            </button>
 
-          <button
-            type="button"
-            className={cn("v2-chip", vipFilter === "vip" && "border-accent bg-accent-bg text-accent")}
-            onClick={() => onVipFilterChange(vipFilter === "vip" ? "all" : "vip")}
-          >
-            ★ VIP
-          </button>
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden text-xs text-text-muted md:inline">
-              {usersUnavailable
-                ? "Bộ lọc nhân sự không khả dụng."
-                : "Danh sách cập nhật theo dữ liệu customers/contacts."}
-            </span>
-            <Button variant="ghost" onClick={onReset} disabled={!canReset}>
-              Xóa bộ lọc
-            </Button>
+            <div className="flex items-center gap-3 pl-2">
+              <span className="hidden text-xs text-text-muted md:inline">
+                {usersUnavailable
+                  ? "Bộ lọc nhân sự không khả dụng."
+                  : "Danh sách cập nhật theo dữ liệu customers/contacts."}
+              </span>
+              <Button variant="ghost" onClick={onReset} disabled={!canReset}>
+                Xóa bộ lọc
+              </Button>
+            </div>
           </div>
         </div>
 

@@ -25,7 +25,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  minimumScale: 1
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false
 };
 
 export default function RootLayout({
@@ -39,6 +41,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#1a5276" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="AHSO CRM" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className={brandFont.variable}>
         <AppProviders>{children}</AppProviders>

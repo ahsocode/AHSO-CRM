@@ -121,17 +121,19 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
         title={customer.name}
         description="Hồ sơ khách hàng dành cho bàn giao vận hành: thông tin doanh nghiệp, người phụ trách, liên hệ, dự án và hoạt động gần nhất."
         action={
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href={`/customers/${customerId}/edit`} className={cn(buttonVariants({ variant: "primary" }))}>
-              Chỉnh sửa
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <Link href={`/customers/${customerId}/edit`} className={cn(buttonVariants({ variant: "primary" }), "gap-2 min-h-[44px]")}>
+              <AppIcon name="settings" className="h-4 w-4" />
+              <span className="hidden sm:inline">Chỉnh sửa</span>
             </Link>
             <DocumentActions 
               entityType="customer" 
               entityId={customerId} 
               customerLanguage={customer.language ?? "vi"} 
             />
-            <Link href="/customers" className={cn(buttonVariants({ variant: "outline" }))}>
-              Quay lại danh sách
+            <Link href="/customers" className={cn(buttonVariants({ variant: "outline" }), "gap-2 min-h-[44px]")}>
+              <AppIcon name="arrow-left" className="h-4 w-4" />
+              <span className="hidden sm:inline">Quay lại danh sách</span>
             </Link>
           </div>
         }

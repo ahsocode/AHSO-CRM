@@ -155,10 +155,10 @@ export function DocumentActions({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="min-h-[44px] gap-2">
             <AppIcon name="description" className="h-4 w-4" />
-            <span>Tạo tài liệu</span>
-            <AppIcon name="plus" className="h-3 w-3 opacity-50" />
+            <span className="hidden sm:inline">Tạo tài liệu</span>
+            <AppIcon name="plus" className="hidden h-3 w-3 opacity-50 sm:block" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">

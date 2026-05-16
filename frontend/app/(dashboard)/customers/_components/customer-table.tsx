@@ -128,56 +128,38 @@ export function CustomerTable({
       </CardHeader>
 
       <CardContent className="space-y-4 bg-white p-4 md:p-0">
-        <div className="grid gap-4 md:hidden">
+        <div className="grid gap-3 lg:hidden">
           {items.map((customer) => (
-            <article key={customer.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="mb-3">
-                    <Checkbox checked={selectedIds.includes(customer.id)} onCheckedChange={() => onToggleSelect(customer.id)} />
+            <div key={customer.id} className="rounded-2xl border border-border/60 bg-white/80">
+              <div className="flex items-center gap-3 p-3">
+                <Checkbox checked={selectedIds.includes(customer.id)} onCheckedChange={() => onToggleSelect(customer.id)} />
+                <Link href={`/customers/${customer.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                  <AvatarInitials
+                    name={customer.name}
+                    className="h-10 w-10 shrink-0 rounded-full bg-primary-bg text-sm text-primary"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-text-primary">{customer.name}</p>
+                      {customer.isVip ? <Badge variant="warning">VIP</Badge> : null}
+                    </div>
+                    <p className="truncate text-xs text-text-secondary">
+                      {customer.primaryContact?.phone ??
+                        customer.primaryContact?.email ??
+                        customer.taxCode ??
+                        customer.industry ??
+                        "Chưa có liên hệ"}
+                    </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/customers/${customer.id}`}
-                      className="font-heading text-lg font-bold text-text-primary hover:text-primary"
-                    >
-                      {customer.name}
-                    </Link>
-                    <StatusBadge status={customer.status} />
-                    {customer.isVip ? <Badge variant="warning">VIP</Badge> : null}
-                  </div>
-                  <p className="mt-1 text-sm text-text-secondary">
-                    {customer.industry ?? "Chưa gắn ngành"} · {customer.taxCode ?? "Chưa có MST"}
-                  </p>
-                </div>
-                <Link href={`/customers/${customer.id}`} className="text-primary">
-                  <AppIcon name="arrow-right" className="h-5 w-5" />
+                  <StatusBadge status={customer.status} />
+                  <AppIcon name="arrow-right" className="h-4 w-4 shrink-0 text-text-muted" />
                 </Link>
               </div>
-
-              <div className="mt-4 grid gap-3 text-sm text-text-secondary">
-                <div className="flex items-start gap-3">
-                  <AvatarInitials name={customer.assignedTo.name} className="h-10 w-10 rounded-full text-xs" />
-                  <div>
-                    <p className="font-semibold text-text-primary">{customer.assignedTo.name}</p>
-                    <p>{getRoleLabelByName(customer.assignedTo.role)}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="font-semibold text-text-primary">Liên hệ chính</p>
-                  <p>{customer.primaryContact?.name ?? "Chưa gắn liên hệ chính"}</p>
-                  {customer.primaryContact?.phone ? <p>{customer.primaryContact.phone}</p> : null}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>{customer.projectCount} dự án</span>
-                  <span>{formatRelativeTime(customer.updatedAt)}</span>
-                </div>
-              </div>
-            </article>
+            </div>
           ))}
         </div>
 
-        <div className="hidden overflow-x-auto md:block">
+        <div className="hidden overflow-x-auto lg:block">
           <table className="min-w-full border-collapse">
             <thead>
               <tr className="v2-table-head">

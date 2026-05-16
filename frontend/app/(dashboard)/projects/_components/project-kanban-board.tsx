@@ -119,6 +119,9 @@ export function ProjectKanbanBoard({
           {meta?.total ?? totalItems} dự án trong tập lọc hiện tại. Có thể kéo thả card giữa các cột hoặc dùng select làm fallback.
         </p>
       </div>
+      <p className="mb-2 text-center text-xs text-text-muted md:hidden">
+        Vuốt ngang để xem thêm cột →
+      </p>
 
       <div className="overflow-x-auto pb-2">
         <div className="flex min-w-max gap-4">
@@ -180,10 +183,10 @@ export function ProjectKanbanBoard({
                 </p>
               </CardHeader>
 
-              <CardContent className="flex-1 space-y-2 px-0 pt-1">
+              <CardContent className="min-h-[120px] flex-1 space-y-2 px-0 pt-1">
                 {column.items.length === 0 ? (
                   <div
-                    className={`rounded-2xl border border-dashed p-4 text-sm transition ${
+                    className={`min-h-[120px] rounded-2xl border border-dashed p-4 text-sm transition ${
                       dragOverStatus === column.key
                         ? "border-primary/45 bg-primary/10 text-primary"
                         : "border-border/60 bg-bg-hover/50 text-text-secondary"
@@ -253,7 +256,7 @@ export function ProjectKanbanBoard({
                           <span>{project.progressPercent}% tiến độ</span>
                           <span>{project.expectedEndDate ? formatDate(project.expectedEndDate) : "Chưa có hạn"}</span>
                         </div>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border/40">
                           <div className="h-full rounded-full" style={{ width: `${project.progressPercent}%`, backgroundColor: STAGE_COLORS[project.status] }} />
                         </div>
                       </div>
@@ -276,6 +279,7 @@ export function ProjectKanbanBoard({
                           <Select
                             disabled={isUpdating && updatingProjectId === project.id}
                             value={project.status}
+                            className="min-h-[44px]"
                             onChange={(event) => {
                               const nextStatus = event.target.value as ProjectStatus;
 
@@ -296,12 +300,12 @@ export function ProjectKanbanBoard({
 
                         <div className="grid grid-cols-2 gap-2">
                           <Link href={`/projects/${project.id}`} className="contents">
-                            <Button type="button" variant="outline">
+                            <Button type="button" variant="outline" className="min-h-[44px] min-w-[44px]">
                               Chi tiết
                             </Button>
                           </Link>
                           <Link href={`/projects/${project.id}/edit`} className="contents">
-                            <Button type="button" variant="ghost">
+                            <Button type="button" variant="ghost" className="min-h-[44px] min-w-[44px]">
                               Sửa
                             </Button>
                           </Link>

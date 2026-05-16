@@ -13,7 +13,7 @@ export function KpiCards({
 }) {
   if (isLoading || !data) {
     return (
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
         {Array.from({ length: 4 }, (_, index) => (
           <Card key={index}>
             <CardHeader className="px-5 py-4">
@@ -57,7 +57,7 @@ export function KpiCards({
   ];
 
   return (
-    <div className="grid gap-4 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 xl:gap-4">
       {cards.map((card) => (
         <V2MetricCard
           key={card.label}

@@ -83,7 +83,7 @@ export default function LoginPage() {
                   className="h-full w-full object-contain p-2"
                 />
               ) : (
-                <span className="font-heading text-sm font-extrabold tracking-[0.18em] text-primary">AHSO</span>
+                <img src="/crm-logo.png" alt="AHSO CRM" className="h-full w-full object-contain" />
               )}
             </div>
             <div className="min-w-0">

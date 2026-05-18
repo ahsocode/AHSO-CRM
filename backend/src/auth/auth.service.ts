@@ -6,11 +6,17 @@ import type { Prisma, User } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
 import { EmailService } from "../email/email.service";
+import { encrypt } from "../common/utils/crypto.util";
+import { ImapService } from "../mailbox/imap.service";
+import { MailboxSyncService } from "../mailbox/mailbox-sync.service";
 import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { AuthTokens, JwtUser, PasswordResetTokenPayload } from "./auth.types";
+
+const AHSO_MAIL_DOMAIN = "@ahso.vn";
+const AHSO_IMAP_HOST = "mail.ahso.vn";
 
 interface AuthRequestMeta {
   ip?: string | null;
@@ -35,42 +41,54 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
     private readonly auditService: AuditService,
-    private readonly websocketGateway: WebsocketGateway
+    private readonly websocketGateway: WebsocketGateway,
+    private readonly imapService: ImapService,
+    private readonly mailboxSyncService: MailboxSyncService
   ) {}
 
   async login(dto: LoginDto, meta?: AuthRequestMeta) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        email: dto.email
-      },
-      include: {
-        role: {
-          include: {
-            permissions: true
+    const email = dto.email.toLowerCase().trim();
+    const isAhsoEmail = email.endsWith(AHSO_MAIL_DOMAIN);
+
+    let user: AuthUserWithRole | null = null;
+
+    if (isAhsoEmail) {
+      // Primary: authenticate via iRedMail IMAP
+      const imapValid = await this.imapService.verifyCredentials(email, dto.password, AHSO_IMAP_HOST);
+
+      if (imapValid) {
+        user = await this.findOrCreateAhsoUser(email, dto.password);
+        // Auto-connect mailbox in the background
+        void this.autoConnectMailbox(user.id, email, dto.password);
+      } else {
+        // Fallback: bcrypt for seeded/admin accounts without iRedMail account
+        user = await this.findUserByEmail(email);
+        if (user) {
+          const bcryptValid = await bcrypt.compare(dto.password, user.password);
+          if (!bcryptValid) {
+            user = null;
           }
         }
       }
-    });
-
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
+    } else {
+      user = await this.findUserByEmail(email);
+      if (user) {
+        const bcryptValid = await bcrypt.compare(dto.password, user.password);
+        if (!bcryptValid) {
+          user = null;
+        }
+      }
     }
 
-    const passwordMatches = await bcrypt.compare(dto.password, user.password);
-
-    if (!passwordMatches) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException("Email hoặc mật khẩu không đúng");
     }
 
     const payload = this.buildPayload(user);
     const tokens = await this.issueTokens(payload);
 
-    // Single-device enforcement: kick existing sessions before creating the new one.
-    // Emit via WebSocket BEFORE deleting so connected sockets can still be addressed.
     this.websocketGateway.publishSessionInvalidated(user.id);
-    await this.prisma.userSession.deleteMany({
-      where: { userId: user.id }
-    });
+    await this.prisma.userSession.deleteMany({ where: { userId: user.id } });
     const session = await this.createSession(user.id, tokens.refreshToken, meta);
 
     await this.auditService.recordLogin({
@@ -84,6 +102,77 @@ export class AuthService {
       sessionId: session.id,
       user: this.serializeUser(user)
     };
+  }
+
+  private async findUserByEmail(email: string): Promise<AuthUserWithRole | null> {
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: { role: { include: { permissions: true } } }
+    });
+  }
+
+  private async findOrCreateAhsoUser(email: string, plainPassword: string): Promise<AuthUserWithRole> {
+    const existing = await this.findUserByEmail(email);
+    if (existing) {
+      return existing;
+    }
+
+    // First login: auto-create CRM user with STAFF role
+    const staffRole = await this.prisma.userRole.findFirst({ where: { name: "STAFF" } });
+    if (!staffRole) {
+      throw new UnauthorizedException("Không tìm thấy role mặc định, vui lòng liên hệ Admin");
+    }
+
+    const name = this.nameFromEmail(email);
+    const hashedPassword = await bcrypt.hash(plainPassword, 12);
+
+    const created = await this.prisma.user.create({
+      data: { email, name, password: hashedPassword, roleId: staffRole.id, isActive: true },
+      include: { role: { include: { permissions: true } } }
+    });
+
+    return created;
+  }
+
+  private async autoConnectMailbox(userId: string, email: string, plainPassword: string) {
+    try {
+      const encrypted = encrypt(plainPassword);
+      const existing = await this.prisma.emailAccount.findUnique({ where: { userId } });
+
+      if (!existing) {
+        const account = await this.prisma.emailAccount.create({
+          data: {
+            userId,
+            email,
+            imapHost: AHSO_IMAP_HOST,
+            imapPort: 993,
+            imapSecure: true,
+            smtpHost: AHSO_IMAP_HOST,
+            smtpPort: 587,
+            password: encrypted,
+            isActive: true
+          }
+        });
+        void this.mailboxSyncService.syncAccount(account.id);
+        this.mailboxSyncService.startIdleWatch(account.id);
+      } else if (existing.password !== encrypted) {
+        // Password changed on iRedMail — update stored copy
+        await this.prisma.emailAccount.update({
+          where: { id: existing.id },
+          data: { password: encrypted, isActive: true }
+        });
+      }
+    } catch {
+      // Non-fatal: mailbox setup failure must not block login
+    }
+  }
+
+  private nameFromEmail(email: string): string {
+    const prefix = email.split("@")[0] ?? email;
+    return prefix
+      .split(/[._-]/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
   }
 
   async refresh(refreshToken: string, meta?: AuthRequestMeta) {

@@ -61,6 +61,25 @@ export class ImapService implements OnModuleDestroy {
     client.close();
   }
 
+  async verifyCredentials(email: string, password: string, host = "mail.ahso.vn"): Promise<boolean> {
+    const client = new ImapFlow({
+      host,
+      port: 993,
+      secure: true,
+      auth: { user: email, pass: password },
+      logger: false,
+      connectionTimeout: 8000
+    });
+
+    try {
+      await client.connect();
+      await client.logout();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async onModuleDestroy() {
     await Promise.allSettled(
       Array.from(this.connections.values()).map((client) => client.logout().catch(() => client.close()))

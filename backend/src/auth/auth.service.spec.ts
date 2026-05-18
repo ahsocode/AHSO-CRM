@@ -92,13 +92,18 @@ describe("AuthService", () => {
       publishSessionInvalidated: jest.fn()
     };
 
+    const imapService = { verifyCredentials: jest.fn().mockResolvedValue(false) };
+    const mailboxSyncService = { syncAccount: jest.fn(), startIdleWatch: jest.fn() };
+
     service = new AuthService(
       prisma as unknown as PrismaService,
       jwtService as unknown as JwtService,
       configService as unknown as ConfigService,
       emailService as unknown as EmailService,
       auditService as unknown as AuditService,
-      websocketGateway as unknown as import("../websocket/websocket.gateway").WebsocketGateway
+      websocketGateway as unknown as import("../websocket/websocket.gateway").WebsocketGateway,
+      imapService as unknown as import("../mailbox/imap.service").ImapService,
+      mailboxSyncService as unknown as import("../mailbox/mailbox-sync.service").MailboxSyncService
     );
   });
 

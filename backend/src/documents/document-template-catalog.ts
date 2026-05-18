@@ -280,6 +280,8 @@ const QUOTATION_TOKENS: TemplateTokenGroup[] = [
     tokens: [
       { key: "items", label: "Danh sách hạng mục", description: "Nguồn dữ liệu cho bảng line items." },
       { key: "items[].name", label: "Tên hạng mục", description: "Tên dòng hàng." },
+      { key: "items[].description", label: "Mô tả hạng mục", description: "Mô tả chi tiết nội dung dòng hàng." },
+      { key: "items[].unit", label: "Đơn vị tính", description: "Đơn vị đo lường (cái, bộ, m, set, ...)." },
       { key: "items[].quantity", label: "Số lượng", description: "Số lượng từng dòng." },
       { key: "items[].unitPrice", label: "Đơn giá", description: "Đơn giá từng dòng." },
       { key: "items[].total", label: "Thành tiền", description: "Thành tiền từng dòng." }
@@ -336,9 +338,12 @@ const CONTRACT_TOKENS: TemplateTokenGroup[] = [
     tokens: [
       { key: "milestones", label: "Danh sách milestone", description: "Toàn bộ milestone của hợp đồng." },
       { key: "milestones[].name", label: "Tên milestone", description: "Tên từng giai đoạn triển khai." },
+      { key: "milestones[].description", label: "Mô tả milestone", description: "Mô tả chi tiết nội dung giai đoạn." },
       { key: "milestones[].dueDate", label: "Hạn milestone", description: "Ngày đến hạn từng milestone." },
+      { key: "milestones[].completedAt", label: "Ngày hoàn tất", description: "Ngày milestone được đánh dấu hoàn tất." },
       { key: "milestones[].status", label: "Trạng thái milestone", description: "Trạng thái milestone." },
       { key: "milestones[].paymentAmount", label: "Giá trị thanh toán milestone", description: "Giá trị gắn với milestone." },
+      { key: "milestones[].notes", label: "Ghi chú milestone", description: "Ghi chú thêm về giai đoạn triển khai." },
       { key: "policies.paymentTerms", label: "Chính sách thanh toán", description: "Điều khoản mặc định từ settings." },
       { key: "policies.warranty", label: "Bảo hành", description: "Chính sách bảo hành." },
       { key: "policies.service", label: "Dịch vụ triển khai", description: "Cam kết triển khai và hỗ trợ." }
@@ -2444,7 +2449,13 @@ const PROPOSAL_TOKENS: TemplateTokenGroup[] = [
       { key: "project.estimatedValue", label: "Giá trị dự kiến", description: "Giá trị dự kiến của dự án." },
       { key: "linkedQuote.total", label: "Tổng báo giá liên kết", description: "Tổng giá trị báo giá liên quan." },
       { key: "milestones", label: "Danh sách mốc", description: "Nguồn bảng mốc triển khai." },
-      { key: "milestones[].paymentAmount", label: "Giá trị mốc", description: "Giá trị thanh toán theo mốc." }
+      { key: "milestones[].name", label: "Tên mốc", description: "Tên giai đoạn triển khai." },
+      { key: "milestones[].description", label: "Mô tả mốc", description: "Mô tả chi tiết nội dung giai đoạn." },
+      { key: "milestones[].dueDate", label: "Hạn mốc", description: "Ngày đến hạn từng mốc." },
+      { key: "milestones[].completedAt", label: "Ngày hoàn tất mốc", description: "Ngày mốc được hoàn tất." },
+      { key: "milestones[].status", label: "Trạng thái mốc", description: "Trạng thái milestone." },
+      { key: "milestones[].paymentAmount", label: "Giá trị mốc", description: "Giá trị thanh toán theo mốc." },
+      { key: "milestones[].notes", label: "Ghi chú mốc", description: "Ghi chú thêm về giai đoạn." }
     ]
   }
 ];

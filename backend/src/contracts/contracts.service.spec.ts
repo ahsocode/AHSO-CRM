@@ -36,6 +36,9 @@ describe("ContractsService", () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+    payment: {
+      create: jest.Mock;
+    };
   };
   let uploadService: {
     deleteFile: jest.Mock;
@@ -61,6 +64,9 @@ describe("ContractsService", () => {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn()
+      },
+      payment: {
+        create: jest.fn()
       }
     };
 
@@ -291,13 +297,13 @@ describe("ContractsService", () => {
   });
 
   it("creates a payment when the new total does not exceed contract value", async () => {
-    prisma.contract.findFirst.mockResolvedValue({
+    tx.contract.findFirst.mockResolvedValue({
       id: "contract-1",
       projectId: "project-1",
       value: 10_000_000,
       payments: [{ amount: 3_000_000 }]
     });
-    prisma.payment.create.mockResolvedValue({
+    tx.payment.create.mockResolvedValue({
       id: "payment-1",
       amount: 2_000_000,
       paidAt: new Date("2026-04-25T00:00:00.000Z"),
@@ -345,7 +351,7 @@ describe("ContractsService", () => {
       method: "Chuyển khoản"
     });
 
-    expect(prisma.payment.create).toHaveBeenCalledWith({
+    expect(tx.payment.create).toHaveBeenCalledWith({
       data: {
         amount: 2_000_000,
         paidAt: new Date("2026-04-25T00:00:00.000Z"),
@@ -366,7 +372,7 @@ describe("ContractsService", () => {
   });
 
   it("rejects payment creation when it would overpay the contract", async () => {
-    prisma.contract.findFirst.mockResolvedValue({
+    tx.contract.findFirst.mockResolvedValue({
       id: "contract-1",
       projectId: "project-1",
       value: 10_000_000,
@@ -386,7 +392,7 @@ describe("ContractsService", () => {
       new BadRequestException("Tổng thanh toán (11.000.000 VND) không được vượt giá trị hợp đồng (10.000.000 VND)")
     );
 
-    expect(prisma.payment.create).not.toHaveBeenCalled();
+    expect(tx.payment.create).not.toHaveBeenCalled();
     expect(domainEvents.emit).not.toHaveBeenCalledWith("payment.received", expect.anything());
   });
 });

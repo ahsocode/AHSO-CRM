@@ -90,6 +90,7 @@ describe("DashboardService", () => {
     expect(prisma.contract.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
+          deletedAt: null,
           status: {
             in: ["ACTIVE", "SUSPENDED", "COMPLETED"]
           }

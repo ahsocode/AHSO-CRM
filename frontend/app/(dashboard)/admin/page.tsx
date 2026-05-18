@@ -46,6 +46,12 @@ const ADMIN_CARDS = [
     title: "Email Accounts",
     description: "Tạo mailbox iRedMail cho nhân sự và theo dõi trạng thái kết nối IMAP.",
     icon: "mail" as const
+  },
+  {
+    href: "/admin/backup" as Route,
+    title: "Backup & Restore",
+    description: "Sao lưu toàn bộ hệ thống lên Google Drive và khôi phục khi cần.",
+    icon: "cloud-upload" as const
   }
 ];
 

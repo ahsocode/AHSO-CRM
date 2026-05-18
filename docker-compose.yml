@@ -30,6 +30,7 @@ services:
       start_period: 5s
 
   backend:
+    image: ahso-crm-backend:latest
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -55,6 +56,7 @@ services:
       start_period: 30s
 
   frontend:
+    image: ahso-crm-frontend:latest
     build:
       context: ./frontend
       dockerfile: Dockerfile

@@ -121,21 +121,21 @@ jobs:
         with:
           context: ./backend
           load: true
-          tags: ahso-crm-backend:ci
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,scope=backend,mode=max
+          tags: ahso-crm-backend:latest
+          cache-from: type=gha,scope=e2e-backend
+          cache-to: type=gha,scope=e2e-backend,mode=max
       - name: Build frontend image (with layer cache)
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           load: true
-          tags: ahso-crm-frontend:ci
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,scope=frontend,mode=max
-      - name: Start stack (no --build, images already built above)
-        run: |
-          BACKEND_IMAGE=ahso-crm-backend:ci FRONTEND_IMAGE=ahso-crm-frontend:ci \
-          docker compose up -d postgres redis backend frontend
+          tags: ahso-crm-frontend:latest
+          cache-from: type=gha,scope=e2e-frontend
+          cache-to: type=gha,scope=e2e-frontend,mode=max
+      # Images are pre-built above with exactly the names docker-compose.yml expects,
+      # so --no-build ensures compose uses them directly without re-building
+      - name: Start stack
+        run: docker compose up -d --no-build postgres redis backend frontend
       - name: Wait for backend health
         run: |
           for i in {1..60}; do

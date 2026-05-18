@@ -26,13 +26,33 @@ async function bootstrap() {
   // Global API prefix — all routes served under /api/*
   app.setGlobalPrefix("api");
 
-  // Security headers. Frontend runs on a different origin/port in dev and CI,
-  // so uploaded logos/files must be embeddable across origins.
+  const isProduction = configService.get("NODE_ENV") === "production";
+  const frontendUrl = configService.get<string>("FRONTEND_URL") ?? "http://localhost:3000";
+
+  // Security headers.
+  // crossOriginResourcePolicy is "cross-origin" so the Next.js frontend (different origin)
+  // can embed uploaded logos/files. CSP is minimal on the API server itself — the real CSP
+  // should be set on the Next.js frontend. HSTS is only enabled in production (behind TLS).
   app.use(
     helmet({
-      crossOriginResourcePolicy: {
-        policy: "cross-origin"
-      }
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "blob:"],
+          connectSrc: ["'self'", frontendUrl],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'none'"]
+        }
+      },
+      // HSTS: only in production — dev and CI run over plain HTTP
+      hsts: isProduction
+        ? { maxAge: 31_536_000, includeSubDomains: true, preload: true }
+        : false,
+      referrerPolicy: { policy: "strict-origin-when-cross-origin" }
     })
   );
 

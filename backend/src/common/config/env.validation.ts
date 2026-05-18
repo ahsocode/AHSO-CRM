@@ -46,6 +46,7 @@ const envSchema = z
     VAPID_PUBLIC_KEY: optionalString,
     VAPID_PRIVATE_KEY: optionalString,
     VAPID_SUBJECT: optionalString,
+    DEBUG_RESET: z.enum(["true", "false"]).default("false"),
     PUPPETEER_EXECUTABLE_PATH: optionalString
   })
   .superRefine((env, context) => {
@@ -56,6 +57,14 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ["FRONTEND_URL"],
         message: "FRONTEND_URL là bắt buộc trong production"
+      });
+    }
+
+    if (isProduction && env.DEBUG_RESET === "true") {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["DEBUG_RESET"],
+        message: "DEBUG_RESET không được bật trong production"
       });
     }
 

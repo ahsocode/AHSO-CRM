@@ -140,8 +140,9 @@ export function persistSession(session: AuthSession) {
   }
   clearLegacyAccessCookie();
 
+  // Access token goes to sessionStorage ONLY — never localStorage (XSS risk).
+  // User profile (non-secret) goes to localStorage for hydration after browser restart.
   const ls = safeLocalStorage();
-  ls?.setItem(ACCESS_TOKEN_KEY, normalizedSession.accessToken);
   ls?.setItem(AUTH_USER_KEY, JSON.stringify(normalizedSession.user));
 
   return normalizedSession;
@@ -153,7 +154,6 @@ export function clearSession() {
   clearLegacyClientCookies();
 
   const ls = safeLocalStorage();
-  ls?.removeItem(ACCESS_TOKEN_KEY);
   ls?.removeItem(AUTH_USER_KEY);
 }
 
@@ -177,11 +177,9 @@ export async function clearServerSession() {
 }
 
 export function getAccessToken() {
-  return (
-    getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ??
-    safeLocalStorage()?.getItem(ACCESS_TOKEN_KEY) ??
-    null
-  );
+  // sessionStorage only — no localStorage fallback to prevent XSS token theft.
+  // On browser restart the token is gone; the refresh-cookie interceptor re-issues it.
+  return getSessionStorage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
 }
 
 export function getStoredUser(): AuthUser | null {

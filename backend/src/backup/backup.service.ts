@@ -1,9 +1,27 @@
 import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { exec } from "child_process";
+import { createReadStream } from "fs";
+import { exec, execFile, spawn } from "child_process";
 import { promisify } from "util";
 
+const execFileAsync = promisify(execFile);
+
 const execAsync = promisify(exec);
+
+function spawnRestore(dumpPath: string, pg: { container: string; user: string; db: string; password: string }): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("docker", [
+      "exec", "-i",
+      "-e", `PGPASSWORD=${pg.password}`,
+      pg.container,
+      "pg_restore", "-U", pg.user, "-d", pg.db
+    ]);
+
+    createReadStream(dumpPath).pipe(child.stdin);
+    child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`pg_restore exited ${code}`))));
+    child.on("error", reject);
+  });
+}
 
 export interface BackupFile {
   name: string;
@@ -67,7 +85,6 @@ export class BackupService {
     const { container, user, db, password } = this.pg;
     const restoreDir = `/opt/backups/restore-${Date.now()}`;
     const extractedDir = filename.replace(".tar.gz", "");
-    const pgEnv = `PGPASSWORD=${password}`;
 
     try {
       this.logger.log(`Restoring from ${filename}...`);
@@ -83,15 +100,18 @@ export class BackupService {
       // Extract
       await execAsync(`cd "${restoreDir}" && tar -xzf "${filename}"`);
 
-      // Drop and recreate database
-      await execAsync(`docker exec -e ${pgEnv} ${container} psql -U ${user} -c "DROP DATABASE IF EXISTS ${db};"`);
-      await execAsync(`docker exec -e ${pgEnv} ${container} psql -U ${user} -c "CREATE DATABASE ${db};"`);
+      // Drop and recreate database — use execFile (no shell) to avoid injection
+      await execFileAsync("docker", [
+        "exec", "-e", `PGPASSWORD=${password}`, container,
+        "psql", "-U", user, "-c", `DROP DATABASE IF EXISTS ${db};`
+      ]);
+      await execFileAsync("docker", [
+        "exec", "-e", `PGPASSWORD=${password}`, container,
+        "psql", "-U", user, "-c", `CREATE DATABASE ${db};`
+      ]);
 
-      // Restore pg_dump (custom format — pipe via stdin)
-      await execAsync(
-        `cat "${restoreDir}/${extractedDir}/database.dump" | docker exec -i -e ${pgEnv} ${container} pg_restore -U ${user} -d ${db}`,
-        { timeout: 180_000, maxBuffer: 50 * 1024 * 1024 }
-      );
+      // Restore pg_dump — spawn with stdin pipe, no shell interpolation
+      await spawnRestore(`${restoreDir}/${extractedDir}/database.dump`, { container, user, db, password });
 
       // Restore uploads
       await execAsync(

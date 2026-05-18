@@ -349,8 +349,8 @@ export class MailboxService {
 
   async syncMyAccount(userId: string) {
     const account = await this.requireUserAccount(userId);
-    void this.syncService.syncAccount(account.id);
-    return { success: true, message: "Đang đồng bộ hộp thư của bạn" };
+    await this.syncService.syncAccount(account.id);
+    return { success: true, message: "Đồng bộ hoàn tất" };
   }
 
   async downloadAttachment(userId: string, attachmentId: string) {

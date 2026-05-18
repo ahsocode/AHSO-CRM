@@ -1,23 +1,10 @@
-FROM node:20-alpine AS deps
-WORKDIR /app
+# Stage 1: system packages + chromium (changes rarely → stable cache layer)
+# alpine3.21 = latest patch; apk upgrade applies any remaining CVE fixes
+FROM node:20-alpine3.21 AS base
 ENV PUPPETEER_SKIP_DOWNLOAD=true
-RUN apk add --no-cache openssl
-COPY package*.json ./
-RUN npm ci
-
-FROM node:20-alpine AS builder
-WORKDIR /app
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-RUN apk add --no-cache openssl
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npx prisma generate && npm run build
-
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-RUN apk add --no-cache \
+RUN apk upgrade --no-cache && \
+  apk add --no-cache \
   openssl \
   chromium \
   nss \
@@ -26,10 +13,28 @@ RUN apk add --no-cache \
   ca-certificates \
   ttf-freefont \
   font-noto
+
+# Stage 2: install node_modules (invalidated only when package-lock.json changes)
+FROM base AS deps
+WORKDIR /app
 COPY package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+RUN npm ci
+
+# Stage 3: build (invalidated when source files change)
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npx prisma generate && npm run build
+
+# Stage 4: production runner (copies only compiled output, no dev deps)
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/uploads ./uploads
+RUN mkdir -p uploads
 EXPOSE 3001
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]

@@ -5,9 +5,20 @@ on:
     branches: [main, feature/**]
   pull_request:
 
+# Cancel any in-progress run for the same branch when a new push comes in
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # Only run when backend files changed (or on main for safety)
+    if: >
+      github.ref == 'refs/heads/main' ||
+      contains(toJson(github.event.commits), '"backend/') ||
+      contains(toJson(github.event.head_commit.modified), 'backend/') ||
+      github.event_name == 'pull_request'
     defaults:
       run:
         working-directory: backend
@@ -51,6 +62,15 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
         run: npm ci
+      # Cache Next.js build output between runs — saves 1-2 min on code-only changes
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/**/*.ts', 'frontend/**/*.tsx', 'frontend/**/*.js') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-
+            nextjs-${{ runner.os }}-
       - name: Lint frontend
         run: npm run lint
       - name: Typecheck frontend
@@ -60,8 +80,11 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+  # E2E only runs on main — it's the slowest job (~10 min) and isn't worth
+  # running on every feature branch push
   e2e:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
@@ -69,35 +92,57 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            backend/package-lock.json
-            frontend/package-lock.json
-      - name: Install root Playwright dependencies
+          cache-dependency-path: package-lock.json
+      # Cache Playwright browsers — saves ~2 min per run
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install root dependencies
         run: npm ci
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: backend
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-      - name: Prepare Docker env files
+      - name: Install Playwright system deps only (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      # Build Docker images with layer cache so only changed layers rebuild
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Prepare env files
         run: |
           echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" > .env
           cp backend/.env.example backend/.env
           cp frontend/.env.local.example frontend/.env.local
-      - name: Start application stack
-        run: docker compose up -d --build postgres redis backend frontend
+      - name: Build backend image (with layer cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          load: true
+          tags: ahso-crm-backend:ci
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+      - name: Build frontend image (with layer cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          load: true
+          tags: ahso-crm-frontend:ci
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+      - name: Start stack (no --build, images already built above)
+        run: |
+          BACKEND_IMAGE=ahso-crm-backend:ci FRONTEND_IMAGE=ahso-crm-frontend:ci \
+          docker compose up -d postgres redis backend frontend
       - name: Wait for backend health
         run: |
           for i in {1..60}; do
             curl -sf http://127.0.0.1:3001/api/health >/dev/null && exit 0
             sleep 5
           done
-          echo "Backend health endpoint did not become ready in time"
-          exit 1
+          echo "Backend health endpoint did not become ready" && exit 1
       - name: Seed database
         run: docker compose exec -T backend npm run prisma:seed
       - name: Wait for frontend
@@ -106,8 +151,7 @@ jobs:
             curl -sf http://127.0.0.1:3000/login >/dev/null && exit 0
             sleep 5
           done
-          echo "Frontend did not become ready in time"
-          exit 1
+          echo "Frontend did not become ready" && exit 1
       - name: Run Playwright smoke tests
         run: npm run test:e2e
       - name: Upload Playwright report

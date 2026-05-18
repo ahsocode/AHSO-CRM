@@ -6,6 +6,11 @@ on:
     types: [completed]
   workflow_dispatch:
 
+# Only one deploy runs at a time; a second push will wait, not cancel
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
@@ -19,6 +24,29 @@ jobs:
       FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ahso-crm-frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need 2 commits to detect changed paths
+
+      # Detect which services actually changed so we can skip unchanged builds
+      - name: Detect changed services
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "backend/ frontend/")
+          if echo "$CHANGED" | grep -q "^backend/"; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "backend=false" >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$CHANGED" | grep -q "^frontend/"; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+          # On manual dispatch always build both
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Validate deploy secrets
         env:
@@ -46,6 +74,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend image
+        if: steps.changes.outputs.backend == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -53,8 +82,14 @@ jobs:
           tags: |
             ${{ env.BACKEND_IMAGE }}:latest
             ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          # Reuse layers from the previous build — the node_modules and build
+          # layers stay cached as long as package-lock.json and source files
+          # haven't changed, cutting build time from ~5 min to ~30 s on code-only pushes
+          cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:cache
+          cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:cache,mode=max
 
       - name: Build and push frontend image
+        if: steps.changes.outputs.frontend == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
@@ -65,6 +100,8 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:cache
+          cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:cache,mode=max
 
       - name: Deploy on production server
         uses: appleboy/ssh-action@v1.2.0

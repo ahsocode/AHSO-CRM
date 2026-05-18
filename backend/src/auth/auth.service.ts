@@ -136,7 +136,6 @@ export class AuthService {
 
   private async autoConnectMailbox(userId: string, email: string, plainPassword: string) {
     try {
-      const encrypted = encrypt(plainPassword);
       const existing = await this.prisma.emailAccount.findUnique({ where: { userId } });
 
       if (!existing) {
@@ -149,18 +148,33 @@ export class AuthService {
             imapSecure: true,
             smtpHost: AHSO_IMAP_HOST,
             smtpPort: 587,
-            password: encrypted,
+            password: encrypt(plainPassword),
             isActive: true
           }
         });
         void this.mailboxSyncService.syncAccount(account.id);
         this.mailboxSyncService.startIdleWatch(account.id);
-      } else if (existing.password !== encrypted) {
-        // Password changed on iRedMail — update stored copy
+        return;
+      }
+
+      // Detect password change: decrypt stored and compare to plaintext
+      let storedPassword: string | null = null;
+      try {
+        const { decrypt } = await import("../common/utils/crypto.util");
+        storedPassword = decrypt(existing.password);
+      } catch {
+        storedPassword = null;
+      }
+
+      if (storedPassword !== plainPassword) {
+        // iRedMail password changed — update and restart IMAP connection
         await this.prisma.emailAccount.update({
           where: { id: existing.id },
-          data: { password: encrypted, isActive: true }
+          data: { password: encrypt(plainPassword), isActive: true }
         });
+        this.imapService.closeConnection(existing.id);
+        void this.mailboxSyncService.syncAccount(existing.id);
+        this.mailboxSyncService.startIdleWatch(existing.id);
       }
     } catch {
       // Non-fatal: mailbox setup failure must not block login

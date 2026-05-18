@@ -444,13 +444,13 @@ function FolderPanel({ folders, activeFolder, isLoading, isSyncing, onSelect, on
 
 // ─── Message list ──────────────────────────────────────────────────────────
 
-function MessageList({ messages, selectedIds, selectedMessageId, isLoading, search, total, onSearch, onSelect, onToggleSelect, onSelectAll, onBulkAction, onLoadMore }: {
+function MessageList({ messages, selectedIds, selectedMessageId, isLoading, isError, search, total, onSearch, onSelect, onToggleSelect, onSelectAll, onBulkAction, onLoadMore, onRetry }: {
   messages: EmailMessage[]; selectedIds: Set<string>; selectedMessageId: string | null;
-  isLoading: boolean; search: string; total: number;
+  isLoading: boolean; isError: boolean; search: string; total: number;
   onSearch: (v: string) => void; onSelect: (id: string) => void;
   onToggleSelect: (id: string) => void; onSelectAll: () => void;
   onBulkAction: (action: "markRead" | "markUnread" | "star" | "unstar" | "delete") => void;
-  onLoadMore: () => void;
+  onLoadMore: () => void; onRetry: () => void;
 }) {
   const allSelected = messages.length > 0 && messages.every((m) => selectedIds.has(m.id));
 
@@ -483,6 +483,17 @@ function MessageList({ messages, selectedIds, selectedMessageId, isLoading, sear
 
         {isLoading
           ? Array.from({ length: 6 }).map((_, i) => <LoadingSkeleton key={i} className="h-20 w-full" />)
+          : isError
+            ? (
+              <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+                <p className="text-sm font-medium text-danger">Không tải được email</p>
+                <p className="text-xs text-text-muted">Lỗi kết nối hoặc server timeout. Thử lại ngay.</p>
+                <button type="button" onClick={onRetry}
+                  className="flex items-center gap-1.5 rounded-xl border border-border/50 px-3 py-1.5 text-sm text-text-secondary hover:bg-bg-hover">
+                  <RotateCcw size={13} /> Thử lại
+                </button>
+              </div>
+            )
           : messages.length > 0
             ? messages.map((msg) => (
               <div key={msg.id} className={cn(
@@ -743,6 +754,7 @@ export default function MailboxPage() {
           selectedIds={selectedIds}
           selectedMessageId={selectedMessageId}
           isLoading={messagesQuery.isFetching && allMessages.length === 0}
+          isError={messagesQuery.isError}
           search={search}
           total={total}
           onSearch={(v) => setSearch(v)}
@@ -751,6 +763,7 @@ export default function MailboxPage() {
           onSelectAll={handleSelectAll}
           onBulkAction={handleBulkAction}
           onLoadMore={() => setPage((p) => p + 1)}
+          onRetry={() => messagesQuery.refetch()}
         />
         <MessageViewer
           message={messageQuery.data}

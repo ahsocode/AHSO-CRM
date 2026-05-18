@@ -149,7 +149,7 @@ export default function BackupPage() {
           <div className="flex flex-col items-center justify-center gap-2 py-16 text-text-muted">
             <AppIcon name="cloud-upload" className="h-10 w-10 opacity-30" />
             <p className="text-sm">Chưa có bản sao lưu nào.</p>
-            <p className="text-xs">Nhấn "Tạo bản sao lưu ngay" để tạo bản đầu tiên.</p>
+            <p className="text-xs">Nhấn &ldquo;Tạo bản sao lưu ngay&rdquo; để tạo bản đầu tiên.</p>
           </div>
         ) : (
           <div className="divide-y divide-border-light">

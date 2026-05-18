@@ -137,6 +137,7 @@ model EmailAccount {
   smtpHost   String         @default("mail.ahso.vn")
   smtpPort   Int            @default(587)
   password   String
+  signature  String         @default("")
   lastSyncAt DateTime?
   isActive   Boolean        @default(false)
   createdAt  DateTime       @default(now())
@@ -164,6 +165,7 @@ model EmailMessage {
   isRead         Boolean           @default(false)
   isStarred      Boolean           @default(false)
   isDraft        Boolean           @default(false)
+  draftId        String?           @unique
   hasAttachments Boolean           @default(false)
   size           Int               @default(0)
   receivedAt     DateTime

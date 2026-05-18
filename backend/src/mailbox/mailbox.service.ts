@@ -1,15 +1,21 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import { EmailAccount, Prisma } from "@prisma/client";
 import nodemailer from "nodemailer";
 import { JwtUser, isAdmin } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { decrypt, encrypt } from "../common/utils/crypto.util";
 import { UploadService } from "../upload/upload.service";
+import { BulkActionDto } from "./dto/bulk-action.dto";
 import { CreateEmailAccountDto } from "./dto/create-email-account.dto";
+import { SaveDraftDto } from "./dto/draft.dto";
 import { GetMessagesDto } from "./dto/get-messages.dto";
 import { ReplyDto } from "./dto/reply.dto";
 import { SendEmailDto } from "./dto/send-email.dto";
 import { SetupPasswordDto } from "./dto/setup-password.dto";
+import { UpdateSignatureDto } from "./dto/update-signature.dto";
 import { ImapService } from "./imap.service";
 import { MailboxSyncService } from "./mailbox-sync.service";
 import { FolderInfo, MailboxAddress } from "./mailbox.types";
@@ -248,15 +254,20 @@ export class MailboxService {
       }
     });
 
-    const sent = await transporter.sendMail({
+    const attachmentPayloads = await this.resolveAttachments(dto.attachments);
+
+    const mailOptions = {
       from: account.email,
       to: dto.to.join(", "),
       cc: dto.cc.join(", ") || undefined,
       bcc: dto.bcc.join(", ") || undefined,
       subject: dto.subject,
       html: dto.bodyHtml,
-      text: bodyText
-    });
+      text: bodyText,
+      ...(attachmentPayloads.length > 0 && { attachments: attachmentPayloads })
+    };
+
+    const sent = await transporter.sendMail(mailOptions as Parameters<typeof transporter.sendMail>[0]);
 
     const client = await this.imapService.getOrCreateConnection(account);
     const raw = this.buildRawEmail(account.email, dto, bodyText, sent.messageId);
@@ -447,6 +458,151 @@ export class MailboxService {
     ].filter((header): header is string => Boolean(header));
 
     return `${headers.join("\r\n")}\r\n\r\n${dto.bodyHtml || bodyText}`;
+  }
+
+  // ─── Signature ────────────────────────────────────────────────────────────
+
+  async getSignature(userId: string) {
+    const account = await this.prisma.emailAccount.findUnique({ where: { userId }, select: { signature: true } });
+    return { signature: account?.signature ?? "" };
+  }
+
+  async updateSignature(userId: string, dto: UpdateSignatureDto) {
+    await this.prisma.emailAccount.update({ where: { userId }, data: { signature: dto.signature } });
+    return { success: true };
+  }
+
+  // ─── Drafts ───────────────────────────────────────────────────────────────
+
+  async saveDraft(userId: string, dto: SaveDraftDto) {
+    const account = await this.requireUserAccount(userId);
+    const draftId = dto.draftId ?? randomUUID();
+    const bodyText = this.stripHtml(dto.bodyHtml);
+
+    await this.prisma.emailMessage.upsert({
+      where: { draftId },
+      update: {
+        toAddresses: this.toJsonAddresses(dto.to),
+        ccAddresses: this.toJsonAddresses(dto.cc),
+        bccAddresses: this.toJsonAddresses(dto.bcc),
+        subject: dto.subject || null,
+        bodyHtml: dto.bodyHtml,
+        bodyText,
+        snippet: bodyText.slice(0, 200),
+        receivedAt: new Date()
+      },
+      create: {
+        accountId: account.id,
+        uid: Date.now(),
+        folder: "Drafts",
+        draftId,
+        isDraft: true,
+        fromEmail: account.email,
+        toAddresses: this.toJsonAddresses(dto.to),
+        ccAddresses: this.toJsonAddresses(dto.cc),
+        bccAddresses: this.toJsonAddresses(dto.bcc),
+        subject: dto.subject || null,
+        bodyHtml: dto.bodyHtml,
+        bodyText,
+        snippet: bodyText.slice(0, 200),
+        isRead: true,
+        size: Buffer.byteLength(dto.bodyHtml),
+        receivedAt: new Date()
+      }
+    });
+
+    return { draftId };
+  }
+
+  async deleteDraft(userId: string, draftId: string) {
+    const account = await this.requireUserAccount(userId);
+    await this.prisma.emailMessage.deleteMany({ where: { draftId, accountId: account.id } });
+    return { success: true };
+  }
+
+  // ─── Contacts autocomplete ────────────────────────────────────────────────
+
+  async searchContacts(userId: string, query: string) {
+    const q = query.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+
+    const [contacts, users] = await Promise.all([
+      this.prisma.contact.findMany({
+        where: { email: { contains: q, mode: "insensitive" } },
+        select: { name: true, email: true },
+        take: 8
+      }),
+      this.prisma.user.findMany({
+        where: { email: { contains: q, mode: "insensitive" }, isActive: true },
+        select: { name: true, email: true },
+        take: 5
+      })
+    ]);
+
+    const seen = new Set<string>();
+    return [...contacts, ...users]
+      .filter((item) => {
+        if (!item.email || seen.has(item.email)) return false;
+        seen.add(item.email);
+        return true;
+      })
+      .map((item) => ({ name: item.name, email: item.email! }));
+  }
+
+  // ─── Bulk actions ─────────────────────────────────────────────────────────
+
+  async bulkAction(userId: string, dto: BulkActionDto) {
+    const account = await this.requireUserAccount(userId);
+    const where: Prisma.EmailMessageWhereInput = { id: { in: dto.ids }, accountId: account.id };
+
+    switch (dto.action) {
+      case "markRead":
+        await this.prisma.emailMessage.updateMany({ where, data: { isRead: true } });
+        break;
+      case "markUnread":
+        await this.prisma.emailMessage.updateMany({ where, data: { isRead: false } });
+        break;
+      case "star":
+        await this.prisma.emailMessage.updateMany({ where, data: { isStarred: true } });
+        break;
+      case "unstar":
+        await this.prisma.emailMessage.updateMany({ where, data: { isStarred: false } });
+        break;
+      case "delete":
+        await this.prisma.emailMessage.deleteMany({ where });
+        break;
+    }
+
+    return { success: true, affected: dto.ids.length };
+  }
+
+  // ─── Attachment upload ────────────────────────────────────────────────────
+
+  async uploadAttachmentFile(userId: string, file: Express.Multer.File) {
+    await this.requireUserAccount(userId);
+    const saved = await this.uploadService.saveFile(file, "email-attachments");
+    return { path: saved.url, filename: file.originalname, size: file.size, mimeType: file.mimetype };
+  }
+
+  private async resolveAttachments(paths: string[]) {
+    if (!paths.length) return [];
+
+    const uploadRoot = process.env.UPLOAD_DIR ?? "./uploads";
+    const results: { filename: string; content: Buffer; contentType: string }[] = [];
+
+    for (const p of paths) {
+      try {
+        const relative = p.startsWith("/uploads/") ? p.slice("/uploads/".length) : p;
+        const abs = resolve(join(uploadRoot, relative));
+        const content = await readFile(abs);
+        const filename = relative.split("/").pop() ?? "attachment";
+        results.push({ filename, content, contentType: "application/octet-stream" });
+      } catch {
+        // skip unreadable files
+      }
+    }
+
+    return results;
   }
 
   private stripHtml(html: string) {

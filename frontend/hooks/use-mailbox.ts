@@ -234,3 +234,92 @@ export function useBulkCreateEmailAccounts() {
     }
   });
 }
+
+export function useMailboxSignature() {
+  return useQuery({
+    queryKey: ["mailbox", "signature"],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<{ signature: string }>>("/mailbox/signature");
+      return response.data.data?.signature ?? "";
+    },
+    retry: 0
+  });
+}
+
+export function useUpdateSignature() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (signature: string) => {
+      const response = await apiClient.patch<ApiResponse<ActionResponse>>("/mailbox/signature", { signature });
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["mailbox", "signature"] });
+    }
+  });
+}
+
+export function useSaveDraft() {
+  return useMutation({
+    mutationFn: async (payload: { draftId?: string; to: string[]; cc: string[]; bcc: string[]; subject: string; bodyHtml: string }) => {
+      const response = await apiClient.post<ApiResponse<{ draftId: string }>>("/mailbox/draft", payload);
+      return response.data.data;
+    }
+  });
+}
+
+export function useDeleteDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (draftId: string) => {
+      const response = await apiClient.delete<ApiResponse<ActionResponse>>(`/mailbox/draft/${draftId}`);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["mailbox"] });
+    }
+  });
+}
+
+export function useContactsAutocomplete(query: string) {
+  return useQuery({
+    queryKey: ["mailbox", "contacts-autocomplete", query],
+    enabled: query.length >= 2,
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<{ name: string; email: string }[]>>(
+        "/mailbox/contacts/autocomplete",
+        { params: { q: query } }
+      );
+      return response.data.data ?? [];
+    },
+    staleTime: 30_000
+  });
+}
+
+export function useBulkMailboxAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { ids: string[]; action: "markRead" | "markUnread" | "star" | "unstar" | "delete" }) => {
+      const response = await apiClient.post<ApiResponse<ActionResponse>>("/mailbox/messages/bulk", payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["mailbox"] });
+    }
+  });
+}
+
+export function useUploadAttachment() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await apiClient.post<ApiResponse<{ path: string; filename: string; size: number; mimeType: string }>>(
+        "/mailbox/upload-attachment",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      return response.data.data;
+    }
+  });
+}

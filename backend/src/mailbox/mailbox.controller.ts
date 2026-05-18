@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import { JwtUser } from "../auth/auth.types";
@@ -7,12 +8,15 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { BulkActionDto, bulkActionSchema } from "./dto/bulk-action.dto";
 import { CreateEmailAccountDto, createEmailAccountSchema } from "./dto/create-email-account.dto";
+import { SaveDraftDto, saveDraftSchema } from "./dto/draft.dto";
 import { GetMessagesDto, getMessagesSchema } from "./dto/get-messages.dto";
 import { MarkReadDto, StarMessageDto, markReadSchema, starMessageSchema } from "./dto/message-actions.dto";
 import { ReplyDto, replySchema } from "./dto/reply.dto";
 import { SendEmailDto, sendEmailSchema } from "./dto/send-email.dto";
 import { SetupPasswordDto, setupPasswordSchema } from "./dto/setup-password.dto";
+import { UpdateSignatureDto, updateSignatureSchema } from "./dto/update-signature.dto";
 import { MailboxService } from "./mailbox.service";
 
 @ApiTags("mailbox")
@@ -114,6 +118,61 @@ export class MailboxController {
   @Post("sync")
   syncAll(@CurrentUser() user: JwtUser) {
     return this.mailboxService.syncAllAccounts(user);
+  }
+
+  @ApiOperation({ summary: "GET /api/mailbox/signature" })
+  @Get("signature")
+  getSignature(@CurrentUser() user: JwtUser) {
+    return this.mailboxService.getSignature(user.sub);
+  }
+
+  @ApiOperation({ summary: "PATCH /api/mailbox/signature" })
+  @Patch("signature")
+  updateSignature(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(updateSignatureSchema)) dto: UpdateSignatureDto
+  ) {
+    return this.mailboxService.updateSignature(user.sub, dto);
+  }
+
+  @ApiOperation({ summary: "POST /api/mailbox/draft" })
+  @Post("draft")
+  saveDraft(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(saveDraftSchema)) dto: SaveDraftDto
+  ) {
+    return this.mailboxService.saveDraft(user.sub, dto);
+  }
+
+  @ApiOperation({ summary: "DELETE /api/mailbox/draft/:draftId" })
+  @Delete("draft/:draftId")
+  deleteDraft(@CurrentUser() user: JwtUser, @Param("draftId") draftId: string) {
+    return this.mailboxService.deleteDraft(user.sub, draftId);
+  }
+
+  @ApiOperation({ summary: "GET /api/mailbox/contacts/autocomplete" })
+  @Get("contacts/autocomplete")
+  searchContacts(@CurrentUser() user: JwtUser, @Query("q") q = "") {
+    return this.mailboxService.searchContacts(user.sub, q);
+  }
+
+  @ApiOperation({ summary: "POST /api/mailbox/messages/bulk" })
+  @Post("messages/bulk")
+  bulkAction(
+    @CurrentUser() user: JwtUser,
+    @Body(new ZodValidationPipe(bulkActionSchema)) dto: BulkActionDto
+  ) {
+    return this.mailboxService.bulkAction(user.sub, dto);
+  }
+
+  @ApiOperation({ summary: "POST /api/mailbox/upload-attachment" })
+  @Post("upload-attachment")
+  @UseInterceptors(FileInterceptor("file"))
+  uploadAttachment(
+    @CurrentUser() user: JwtUser,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    return this.mailboxService.uploadAttachmentFile(user.sub, file);
   }
 
   @ApiOperation({ summary: "GET /api/mailbox/attachments/:id/download" })

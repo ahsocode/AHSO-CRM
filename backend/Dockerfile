@@ -32,7 +32,9 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
-COPY --from=deps /app/node_modules ./node_modules
+# Must copy node_modules from builder (not deps) because prisma generate
+# runs in builder and writes the generated client into node_modules/@prisma/client
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 RUN mkdir -p uploads

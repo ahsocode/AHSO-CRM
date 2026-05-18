@@ -612,8 +612,31 @@ export function TemplateInspector({
                   />
                 </div>
 
-                {selectedBox.content.columns.map((column) => (
+                {selectedBox.content.columns.map((column, colIndex) => (
                   <div key={column.id} className="space-y-2 rounded-xl border border-border/70 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-text-muted">Cột {colIndex + 1}</span>
+                      {editable ? (
+                        <button
+                          type="button"
+                          className="rounded px-1.5 py-0.5 text-xs text-danger hover:bg-danger-bg"
+                          onClick={() =>
+                            onUpdateBox((box) => {
+                              const current = box as TemplateLineItemsTableBox;
+                              return {
+                                ...current,
+                                content: {
+                                  ...current.content,
+                                  columns: current.content.columns.filter((c) => c.id !== column.id)
+                                }
+                              };
+                            })
+                          }
+                        >
+                          Xóa cột
+                        </button>
+                      ) : null}
+                    </div>
                     <LocalizedTextEditor
                       label="Tiêu đề cột"
                       value={column.label}
@@ -660,6 +683,36 @@ export function TemplateInspector({
                   </div>
                   </div>
                 ))}
+
+                {editable ? (
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-dashed border-border py-2 text-xs font-semibold text-text-secondary transition hover:border-primary/50 hover:text-primary"
+                    onClick={() =>
+                      onUpdateBox((box) => {
+                        const current = box as TemplateLineItemsTableBox;
+                        const newId = `col-${Date.now()}`;
+                        return {
+                          ...current,
+                          content: {
+                            ...current.content,
+                            columns: [
+                              ...current.content.columns,
+                              {
+                                id: newId,
+                                label: { vi: "Cột mới", viEn: "New Column" },
+                                value: "{{}}",
+                                align: "left" as const
+                              }
+                            ]
+                          }
+                        };
+                      })
+                    }
+                  >
+                    + Thêm cột
+                  </button>
+                ) : null}
               </div>
             ) : null}
 

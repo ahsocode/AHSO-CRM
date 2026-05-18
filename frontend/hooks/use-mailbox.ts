@@ -62,7 +62,9 @@ export function useMailboxMessages(params: MailboxMessageParams) {
       const response = await apiClient.get<{ data: EmailMessage[]; meta: MailboxMessagesResponse["meta"] }>("/mailbox/messages", { params });
       return { items: response.data.data, meta: response.data.meta } satisfies MailboxMessagesResponse;
     },
-    staleTime: 30_000,  // keep data for 30s — prevents refetch on tab focus
+    // staleTime intentionally omitted (defaults to 0) — mailbox data must always
+    // refetch on folder switch; a 30s cache caused empty INBOX when emails had
+    // only arrived after the first fetch.
     retry: 1            // retry once on network error before showing error state
   });
 }

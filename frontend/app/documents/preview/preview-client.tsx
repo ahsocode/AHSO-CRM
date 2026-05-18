@@ -77,6 +77,7 @@ export function DocumentPreviewClient({
               ref={iframeRef}
               title="document-preview"
               srcDoc={previewQuery.data}
+              sandbox="allow-same-origin allow-popups"
               className="h-[calc(100vh-180px)] w-full bg-white"
             />
           </div>

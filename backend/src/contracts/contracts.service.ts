@@ -399,35 +399,52 @@ export class ContractsService {
   }
 
   async createPayment(contractId: string, dto: CreatePaymentDto, user: JwtUser) {
-    const contract = await this.findAccessibleContractEntity(contractId, user);
-    const paidAmount = contract.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
-    const contractValue = Number(contract.value);
-    const nextPaidAmount = paidAmount + dto.amount;
+    const { payment, projectId } = await this.prisma.$transaction(async (tx) => {
+      const contract = await tx.contract.findFirst({
+        where: { id: contractId, project: this.buildAccessibleProjectWhere(user) },
+        select: {
+          id: true,
+          projectId: true,
+          value: true,
+          payments: { select: { amount: true } }
+        }
+      });
 
-    if (nextPaidAmount > contractValue) {
-      throw new BadRequestException(
-        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị hợp đồng (${this.formatNumber(contractValue)} VND)`
-      );
-    }
-
-    const payment = await this.prisma.payment.create({
-      data: {
-        amount: dto.amount,
-        paidAt: dto.paidAt,
-        method: dto.method,
-        reference: dto.reference,
-        notes: dto.notes,
-        contractId: contract.id
+      if (!contract) {
+        throw new NotFoundException("Không tìm thấy hợp đồng");
       }
+
+      const paidAmount = contract.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const contractValue = Number(contract.value);
+      const nextPaidAmount = paidAmount + dto.amount;
+
+      if (nextPaidAmount > contractValue) {
+        throw new BadRequestException(
+          `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị hợp đồng (${this.formatNumber(contractValue)} VND)`
+        );
+      }
+
+      const payment = await tx.payment.create({
+        data: {
+          amount: dto.amount,
+          paidAt: dto.paidAt,
+          method: dto.method,
+          reference: dto.reference,
+          notes: dto.notes,
+          contractId: contract.id
+        }
+      });
+
+      return { payment, projectId: contract.projectId };
     });
 
-    const context = await this.loadContractNotificationContext(contract.id);
+    const context = await this.loadContractNotificationContext(contractId);
 
     void Promise.resolve(this.domainEvents
       .emit("payment.received", {
         paymentId: payment.id,
-        contractId: contract.id,
-        projectId: contract.projectId,
+        contractId,
+        projectId,
         ownerUserId: context.project.customer.assignedTo.id,
         contractNo: context.contractNo,
         amount: Number(payment.amount),
@@ -535,6 +552,7 @@ export class ContractsService {
 
     if (isStaff(user)) {
       customerWhere.assignedToId = user.sub;
+      customerWhere.assignedTo = { isActive: true };
     }
 
     return {

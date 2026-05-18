@@ -121,7 +121,10 @@ export function useActivity(id: string) {
 export function useCreateActivity() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: ActivityInput) => apiClient.post('/activities', data),
+    mutationFn: async (data: ActivityInput) => {
+      const response = await apiClient.post<{ data: ActivityDetail }>('/activities', data);
+      return response.data.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       queryClient.invalidateQueries({ queryKey: ['calendar'] });

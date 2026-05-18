@@ -48,6 +48,7 @@ export class DashboardService {
 
     const pendingQuotes = await this.prisma.quote.findMany({
       where: {
+        deletedAt: null,
         status: {
           in: [...PENDING_QUOTE_STATUSES]
         }
@@ -56,6 +57,7 @@ export class DashboardService {
 
     const contracts = await this.prisma.contract.findMany({
       where: {
+        deletedAt: null,
         status: {
           in: [...RECEIVABLE_CONTRACT_STATUSES]
         }
@@ -116,9 +118,8 @@ export class DashboardService {
 
     const payments = await this.prisma.payment.findMany({
       where: {
-        paidAt: {
-          gte: start
-        }
+        paidAt: { gte: start },
+        contract: { deletedAt: null }
       },
       orderBy: {
         paidAt: "asc"

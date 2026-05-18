@@ -157,7 +157,7 @@ export class ActivitiesService {
   }
 
   async findOne(id: string, user: JwtUser) {
-    const activity = await this.prisma.activity.findUnique({
+    const activity = await this.prisma.activity.findFirst({
       where: { id, deletedAt: null },
       include: {
         customer: {
@@ -288,7 +288,7 @@ export class ActivitiesService {
         title: input.title ?? activity.title,
         content: input.content ?? activity.content,
         isCompleted: input.isCompleted ?? activity.isCompleted,
-        doneAt: input.isCompleted ? new Date() : activity.doneAt,
+        doneAt: input.isCompleted === true ? new Date() : input.isCompleted === false ? null : activity.doneAt,
         scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : activity.scheduledAt,
       },
       include: {

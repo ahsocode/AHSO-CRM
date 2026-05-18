@@ -466,10 +466,8 @@ export class QuotesService {
 
       if (dto.status === quote.status) {
         return {
-          id: quote.id,
-          status: quote.status,
-          sentAt: quote.sentAt,
-          acceptedAt: quote.acceptedAt
+          updatedQuote: { id: quote.id, status: quote.status, sentAt: quote.sentAt, acceptedAt: quote.acceptedAt },
+          quote
         };
       }
 

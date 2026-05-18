@@ -127,7 +127,7 @@ function EmailChipsInput({
       />
       {open && (suggestions.data?.length ?? 0) > 0 && (
         <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-xl border border-border/50 bg-white shadow-lg">
-          {suggestions.data!.map((s) => (
+          {suggestions.data?.map((s) => (
             <button
               key={s.email}
               type="button"
@@ -208,7 +208,7 @@ function ComposeWindow({ mode, replyTo, onClose }: ComposeProps) {
   const [showCc, setShowCc] = useState(mode === "replyAll" && (replyTo?.ccAddresses.length ?? 0) > 0);
   const [showBcc, setShowBcc] = useState(false);
   const [draftStatus, setDraftStatus] = useState<"" | "saving" | "saved">("");
-  const [attachedFiles, setAttachedFiles] = useState<{ file: File; path?: string; uploading: boolean }[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<{ id: string; file: File; path?: string; uploading: boolean }[]>([]);
 
   const [to, setTo] = useState<string[]>(
     mode === "reply" || mode === "replyAll" ? [replyTo?.fromEmail ?? ""] : []
@@ -232,9 +232,15 @@ function ComposeWindow({ mode, replyTo, onClose }: ComposeProps) {
 
   const [bodyHtml, setBodyHtml] = useState("");
 
+  // Always-fresh ref so the auto-save timeout reads current field values,
+  // not the stale closure captured when the timeout was scheduled.
+  const autoSaveStateRef = useRef({ to, cc, bcc, subject, saveDraft });
+  autoSaveStateRef.current = { to, cc, bcc, subject, saveDraft };
+
   const scheduleAutoSave = useCallback((html: string) => {
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
     autoSaveRef.current = setTimeout(async () => {
+      const { to, cc, bcc, subject, saveDraft } = autoSaveStateRef.current;
       if (!html && !subject && !to.length) return;
       setDraftStatus("saving");
       try {
@@ -243,7 +249,7 @@ function ComposeWindow({ mode, replyTo, onClose }: ComposeProps) {
         setDraftStatus("saved");
       } catch { setDraftStatus(""); }
     }, 30_000);
-  }, [subject, to, cc, bcc, saveDraft]);
+  }, []); // deps intentionally empty — reads fresh values from ref at fire time
 
   const handleBodyChange = (html: string) => {
     setBodyHtml(html);
@@ -254,13 +260,13 @@ function ComposeWindow({ mode, replyTo, onClose }: ComposeProps) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     for (const file of files) {
-      const index = attachedFiles.length;
-      setAttachedFiles((prev) => [...prev, { file, uploading: true }]);
+      const fileId = `${Date.now()}-${Math.random()}`;
+      setAttachedFiles((prev) => [...prev, { id: fileId, file, uploading: true }]);
       try {
         const result = await uploadAttachment.mutateAsync(file);
-        setAttachedFiles((prev) => prev.map((a, i) => i === index ? { ...a, path: result?.path, uploading: false } : a));
+        setAttachedFiles((prev) => prev.map((a) => a.id === fileId ? { ...a, path: result?.path, uploading: false } : a));
       } catch {
-        setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+        setAttachedFiles((prev) => prev.filter((a) => a.id !== fileId));
         toast({ title: "Không tải được file đính kèm", variant: "destructive" });
       }
     }
@@ -348,14 +354,14 @@ function ComposeWindow({ mode, replyTo, onClose }: ComposeProps) {
 
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-2 border-t border-border/20 px-3 py-2">
-              {attachedFiles.map((a, i) => (
-                <div key={i} className={cn("flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs", a.uploading ? "bg-bg-hover text-text-muted" : "bg-bg-subtle text-text-secondary")}>
+              {attachedFiles.map((a) => (
+                <div key={a.id} className={cn("flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs", a.uploading ? "bg-bg-hover text-text-muted" : "bg-bg-subtle text-text-secondary")}>
                   <Paperclip size={11} />
                   <span className="max-w-32 truncate">{a.file.name}</span>
                   <span className="text-text-muted">({formatSize(a.file.size)})</span>
                   {a.uploading
                     ? <span className="text-text-muted">↑</span>
-                    : <button type="button" onClick={() => setAttachedFiles((p) => p.filter((_, j) => j !== i))} className="text-text-muted hover:text-danger"><X size={10} /></button>
+                    : <button type="button" onClick={() => setAttachedFiles((p) => p.filter((f) => f.id !== a.id))} className="text-text-muted hover:text-danger"><X size={10} /></button>
                   }
                 </div>
               ))}

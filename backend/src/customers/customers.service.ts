@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { RoleValue } from "../common/constants/role.constants";
 import { PrismaService } from "../common/prisma.service";
@@ -908,7 +908,7 @@ export class CustomersService {
       select: { id: true }
     });
     if (existing) {
-      throw new ForbiddenException("Mã khách hàng đã tồn tại");
+      throw new ConflictException("Mã khách hàng đã tồn tại");
     }
   }
 
@@ -934,7 +934,7 @@ export class CustomersService {
     });
 
     if (existingCustomer) {
-      throw new ForbiddenException("Mã số thuế đã tồn tại trong hệ thống");
+      throw new ConflictException("Mã số thuế đã tồn tại trong hệ thống");
     }
   }
 

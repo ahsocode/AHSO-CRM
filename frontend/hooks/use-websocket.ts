@@ -102,6 +102,13 @@ export function useWebsocket(enabled = true) {
       setIsConnected(false);
     });
 
+    socket.on("reconnect_attempt", () => {
+      const freshToken = getAccessToken();
+      if (freshToken) {
+        socket.auth = { token: freshToken };
+      }
+    });
+
     socket.on("auth:session-invalidated", (payload?: { sessionId?: string | null }) => {
       const revokedSessionId = payload?.sessionId ?? null;
       const currentSessionId = getSessionId();

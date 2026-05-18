@@ -34,6 +34,7 @@ import { DocumentsModule } from "./documents/documents.module";
 import { SurveysModule } from "./surveys/surveys.module";
 import { BusinessDocumentsModule } from "./business-documents/business-documents.module";
 import { HealthModule } from "./health/health.module";
+import { MailboxModule } from "./mailbox/mailbox.module";
 import { validateEnv } from "./common/config/env.validation";
 
 @Module({
@@ -81,6 +82,7 @@ import { validateEnv } from "./common/config/env.validation";
     CustomFieldsModule,
     SearchModule,
     HealthModule,
+    MailboxModule,
     DocumentsModule,
     SurveysModule,
     BusinessDocumentsModule

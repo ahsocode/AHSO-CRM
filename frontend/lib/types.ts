@@ -145,6 +145,98 @@ export interface ActionResponse {
   message: string;
 }
 
+export interface MailboxAddress {
+  name?: string | null;
+  email: string;
+}
+
+export interface EmailAttachment {
+  id: string;
+  messageId: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  filePath?: string | null;
+  cid?: string | null;
+}
+
+export interface EmailAccountAdminItem {
+  id: string;
+  userId: string;
+  email: string;
+  imapHost: string;
+  imapPort: number;
+  smtpHost: string;
+  smtpPort: number;
+  isActive: boolean;
+  lastSyncAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface MailboxFolder {
+  name: string;
+  path: string;
+  delimiter: string;
+  specialUse?: string | null;
+  total: number;
+  unread: number;
+}
+
+export interface EmailMessage {
+  id: string;
+  accountId: string;
+  uid: number;
+  folder: string;
+  messageId?: string | null;
+  inReplyTo?: string | null;
+  fromName?: string | null;
+  fromEmail: string;
+  toAddresses: MailboxAddress[];
+  ccAddresses: MailboxAddress[];
+  bccAddresses: MailboxAddress[];
+  subject?: string | null;
+  bodyText?: string | null;
+  bodyHtml?: string | null;
+  snippet?: string | null;
+  isRead: boolean;
+  isStarred: boolean;
+  isDraft: boolean;
+  hasAttachments: boolean;
+  size: number;
+  receivedAt: string;
+  createdAt: string;
+  attachments?: EmailAttachment[];
+  customerId?: string | null;
+  customer?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+export interface MailboxMessagesResponse {
+  items: EmailMessage[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface MailboxMessageParams {
+  folder?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+  customerId?: string;
+}
+
 export interface ForgotPasswordResponse extends ActionResponse {
   debug?: {
     resetToken: string;

@@ -34,6 +34,10 @@ function getItemHint(href: string) {
     return "Lịch hẹn và công việc";
   }
 
+  if (href === "/mailbox") {
+    return "Email khách hàng";
+  }
+
   if (href === "/documents") {
     return "Hồ sơ & tài liệu";
   }

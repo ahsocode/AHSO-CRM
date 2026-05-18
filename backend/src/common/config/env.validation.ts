@@ -37,6 +37,7 @@ const envSchema = z
     SMTP_USER: optionalString,
     SMTP_PASS: optionalString,
     SMTP_FROM: z.string().trim().default("AHSO CRM <noreply@ahso.vn>"),
+    ENCRYPTION_KEY: optionalString,
     TWILIO_SID: optionalString,
     TWILIO_TOKEN: optionalString,
     TWILIO_FROM: optionalString,
@@ -64,6 +65,20 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ["SMTP_HOST"],
         message: "SMTP_HOST, SMTP_USER và SMTP_PASS phải được cấu hình cùng nhau"
+      });
+    }
+
+    if (!env.ENCRYPTION_KEY) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ENCRYPTION_KEY"],
+        message: "ENCRYPTION_KEY là bắt buộc để mã hóa mật khẩu email"
+      });
+    } else if (!/^([0-9a-fA-F]{64}|.{32})$/.test(env.ENCRYPTION_KEY)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ENCRYPTION_KEY"],
+        message: "ENCRYPTION_KEY phải là 32 ký tự hoặc 64 ký tự hex"
       });
     }
 

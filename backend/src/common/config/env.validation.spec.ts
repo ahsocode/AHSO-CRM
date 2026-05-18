@@ -2,7 +2,8 @@ import { validateEnv } from "./env.validation";
 
 const baseEnv = {
   DATABASE_URL: "postgresql://ahso:password@localhost:5432/ahso_crm?schema=public",
-  JWT_SECRET: "jwt-secret-with-16-chars"
+  JWT_SECRET: "jwt-secret-with-16-chars",
+  ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef"
 };
 
 describe("environment validation", () => {

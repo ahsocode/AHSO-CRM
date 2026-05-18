@@ -40,6 +40,7 @@ function getTopbarContext(pathname: string) {
   if (pathname.startsWith("/quotes")) return { area: "CRM", current: "Báo giá" };
   if (pathname.startsWith("/contracts")) return { area: "CRM", current: "Hợp đồng" };
   if (pathname.startsWith("/calendar")) return { area: "Công việc", current: "Lịch" };
+  if (pathname.startsWith("/mailbox")) return { area: "Email", current: "Mailbox" };
   if (pathname.startsWith("/reports")) return { area: "Phân tích", current: "Báo cáo" };
   if (pathname.startsWith("/admin")) return { area: "Hệ thống", current: "Quản trị" };
   if (pathname.startsWith("/users")) return { area: "Hệ thống", current: "Người dùng" };

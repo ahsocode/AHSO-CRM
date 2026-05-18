@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAiCustomerSummary } from "@/hooks/use-ai";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useCustomer } from "@/hooks/use-customers";
+import { useCustomerEmails } from "@/hooks/use-mailbox";
 import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatMonthYear, formatRelativeTime } from "@/lib/format";
 import { ActivityType, ContractStatus, Priority } from "@/lib/types";
@@ -69,6 +70,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
   const customerQuery = useCustomer(customerId);
   const customFieldsQuery = useCustomFields("customer");
   const aiSummaryMutation = useAiCustomerSummary(customerId);
+  const customerEmailsQuery = useCustomerEmails(customerId, Boolean(customerId));
 
   if (customerQuery.isLoading) {
     return (
@@ -396,6 +398,37 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
           </Card>
 
           <ContactManager contacts={customer.contacts} customerId={customerId} />
+
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Email</p>
+              <CardTitle>Email liên quan</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {customerEmailsQuery.isLoading ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, index) => <LoadingSkeleton key={index} className="h-12 w-full" />)}
+                </div>
+              ) : customerEmailsQuery.data && customerEmailsQuery.data.length > 0 ? (
+                <div className="space-y-2">
+                  {customerEmailsQuery.data.slice(0, 8).map((email) => (
+                    <Link
+                      key={email.id}
+                      href={`/mailbox?message=${email.id}`}
+                      className="block rounded-2xl border border-border/60 bg-white/80 p-3 hover:bg-bg-hover"
+                    >
+                      <p className="truncate text-sm font-semibold text-text-primary">{email.subject ?? "(Không tiêu đề)"}</p>
+                      <p className="mt-1 truncate text-xs text-text-muted">
+                        {email.fromName || email.fromEmail} · {formatDate(email.receivedAt)}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="Chưa có email liên quan" description="Email sẽ tự liên kết khi From/To/CC khớp với contact email của khách hàng." />
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

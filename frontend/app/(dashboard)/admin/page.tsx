@@ -40,6 +40,12 @@ const ADMIN_CARDS = [
     title: "Document Templates",
     description: "Chỉnh layout tài liệu bằng canvas drag-drop A4, quản lý variant draft/published và kích hoạt đúng mẫu runtime.",
     icon: "description" as const
+  },
+  {
+    href: "/admin/email-accounts" as Route,
+    title: "Email Accounts",
+    description: "Tạo mailbox iRedMail cho nhân sự và theo dõi trạng thái kết nối IMAP.",
+    icon: "mail" as const
   }
 ];
 

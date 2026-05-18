@@ -84,6 +84,18 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.server.to(`user:${userId}`).emit("auth:session-invalidated", { sessionId: sessionId ?? null });
   }
 
+  publishMailboxNewMessage(
+    userId: string,
+    payload: {
+      id: string;
+      fromName?: string | null;
+      fromEmail: string;
+      subject?: string | null;
+    }
+  ) {
+    this.server.to(`user:${userId}`).emit("mailbox:new-message", payload);
+  }
+
   @SubscribeMessage("ping")
   ping(@ConnectedSocket() client: SocketWithUser, @MessageBody() payload?: unknown) {
     return {

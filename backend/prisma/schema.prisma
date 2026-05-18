@@ -35,6 +35,7 @@ model User {
   projectHandoversTo      ProjectHandover[] @relation("ProjectHandoverToUser")
   documentTemplateVariantsCreated  DocumentTemplateVariant[] @relation("DocumentTemplateCreatedBy")
   documentTemplateVariantsApproved DocumentTemplateVariant[] @relation("DocumentTemplateApprovedBy")
+  emailAccount     EmailAccount?
 }
 
 model UserSession {
@@ -118,10 +119,74 @@ model Customer {
   documents    Document[]
   businessDocuments BusinessDocument[]
   surveys      Survey[]
+  emails       EmailMessage[]
 
   @@index([deletedAt])
   @@index([assignedToId, deletedAt])
   @@index([status, deletedAt])
+}
+
+model EmailAccount {
+  id         String         @id @default(cuid())
+  userId     String         @unique
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email      String
+  imapHost   String         @default("mail.ahso.vn")
+  imapPort   Int            @default(993)
+  imapSecure Boolean        @default(true)
+  smtpHost   String         @default("mail.ahso.vn")
+  smtpPort   Int            @default(587)
+  password   String
+  lastSyncAt DateTime?
+  isActive   Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  messages   EmailMessage[]
+}
+
+model EmailMessage {
+  id             String            @id @default(cuid())
+  accountId      String
+  account        EmailAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  uid            Int
+  folder         String
+  messageId      String?
+  inReplyTo      String?
+  fromName       String?
+  fromEmail      String
+  toAddresses    Json
+  ccAddresses    Json              @default("[]")
+  bccAddresses   Json              @default("[]")
+  subject        String?
+  bodyText       String?
+  bodyHtml       String?
+  snippet        String?
+  isRead         Boolean           @default(false)
+  isStarred      Boolean           @default(false)
+  isDraft        Boolean           @default(false)
+  hasAttachments Boolean           @default(false)
+  size           Int               @default(0)
+  receivedAt     DateTime
+  createdAt      DateTime          @default(now())
+  attachments    EmailAttachment[]
+  customerId     String?
+  customer       Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([accountId, uid, folder])
+  @@index([accountId, folder, receivedAt(sort: Desc)])
+  @@index([customerId])
+  @@index([fromEmail])
+}
+
+model EmailAttachment {
+  id        String       @id @default(cuid())
+  messageId String
+  message   EmailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  filename  String
+  mimeType  String
+  size      Int
+  filePath  String?
+  cid       String?
 }
 
 enum CustomerStatus {

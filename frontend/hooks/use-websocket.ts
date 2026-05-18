@@ -151,6 +151,18 @@ export function useWebsocket(enabled = true) {
       }
     });
 
+    socket.on(
+      "mailbox:new-message",
+      (payload: { id: string; fromName?: string | null; fromEmail: string; subject?: string | null }) => {
+        void queryClient.invalidateQueries({ queryKey: ["mailbox", "messages"] });
+        void queryClient.invalidateQueries({ queryKey: ["mailbox", "folders"] });
+        toast({
+          title: "Email mới",
+          description: `${payload.fromName || payload.fromEmail}: ${payload.subject || "(Không tiêu đề)"}`
+        });
+      }
+    );
+
     return () => {
       socket.disconnect();
     };

@@ -39,9 +39,12 @@ async function bootstrap() {
   // Keep HTTP and Socket.IO CORS in sync. Defaults include localhost and
   // 127.0.0.1 because Playwright and browsers may hit either host in dev/CI.
   app.enableCors(buildCorsOptions(configService));
-  app.use(["/uploads/documents", "/uploads/business-documents", "/uploads/surveys"], (_request: Request, response: Response) => {
-    response.status(404).send("Không tìm thấy tài liệu.");
-  });
+  app.use(
+    ["/uploads/documents", "/uploads/business-documents", "/uploads/surveys", "/uploads/email-attachments"],
+    (_request: Request, response: Response) => {
+      response.status(404).send("Không tìm thấy tài liệu.");
+    }
+  );
   app.useStaticAssets(join(__dirname, "..", "uploads"), {
     prefix: "/uploads/"
   });

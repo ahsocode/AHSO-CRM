@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import {
   ActionResponse,
@@ -50,6 +50,7 @@ export function useMailboxFolders() {
       const response = await apiClient.get<ApiResponse<MailboxFolder[]>>("/mailbox/folders");
       return response.data.data;
     },
+    staleTime: 60_000,  // folder list rarely changes — avoid refetch on every focus
     retry: 0
   });
 }
@@ -61,6 +62,8 @@ export function useMailboxMessages(params: MailboxMessageParams) {
       const response = await apiClient.get<{ data: EmailMessage[]; meta: MailboxMessagesResponse["meta"] }>("/mailbox/messages", { params });
       return { items: response.data.data, meta: response.data.meta } satisfies MailboxMessagesResponse;
     },
+    staleTime: 30_000,        // keep data for 30s — prevents refetch on tab focus
+    placeholderData: keepPreviousData,  // show old data while new page/folder loads
     retry: 0
   });
 }

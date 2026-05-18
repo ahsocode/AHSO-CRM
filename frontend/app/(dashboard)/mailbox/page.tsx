@@ -672,17 +672,23 @@ export default function MailboxPage() {
   const bulkAction = useBulkMailboxAction();
 
   const folders = foldersQuery.data ?? [];
-  const pageItems = messagesQuery.data?.items ?? [];
   const total = messagesQuery.data?.meta.total ?? 0;
 
-  // Accumulate pages
+  // Accumulate pages — depend on the actual data object (stable ref), not the
+  // derived `pageItems ?? []` fallback which creates a new array on every render
+  // when data is undefined and causes a spurious empty-state flash.
   useEffect(() => {
-    if (page === 1) setAllMessages(pageItems);
-    else setAllMessages((prev) => {
-      const ids = new Set(prev.map((m) => m.id));
-      return [...prev, ...pageItems.filter((m) => !ids.has(m.id))];
-    });
-  }, [pageItems, page]);
+    const items = messagesQuery.data?.items;
+    if (!items) return;                   // still loading — don't overwrite state
+    if (page === 1) {
+      setAllMessages(items);
+    } else {
+      setAllMessages((prev) => {
+        const ids = new Set(prev.map((m) => m.id));
+        return [...prev, ...items.filter((m) => !ids.has(m.id))];
+      });
+    }
+  }, [messagesQuery.data, page]);
 
   // Reset on folder/search change
   useEffect(() => { setPage(1); setAllMessages([]); setSelectedIds(new Set()); }, [folder, search]);
@@ -736,7 +742,7 @@ export default function MailboxPage() {
           messages={allMessages}
           selectedIds={selectedIds}
           selectedMessageId={selectedMessageId}
-          isLoading={messagesQuery.isLoading && page === 1}
+          isLoading={messagesQuery.isFetching && allMessages.length === 0}
           search={search}
           total={total}
           onSearch={(v) => setSearch(v)}

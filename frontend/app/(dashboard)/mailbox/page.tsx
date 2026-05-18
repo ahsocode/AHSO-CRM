@@ -396,7 +396,7 @@ function FolderPanel({ folders, activeFolder, isLoading, isSyncing, onSelect, on
   onSelect: (f: string) => void; onCompose: () => void; onSync: () => void; onSignature: () => void;
 }) {
   return (
-    <aside className="flex flex-col gap-3 border-b border-border/30 p-3 md:border-b-0 md:border-r">
+    <aside className="flex h-full flex-col gap-3 overflow-hidden border-b border-border/30 p-3 md:border-b-0 md:border-r">
       <Button type="button" onClick={onCompose} className="w-full gap-2">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
@@ -455,7 +455,7 @@ function MessageList({ messages, selectedIds, selectedMessageId, isLoading, sear
   const allSelected = messages.length > 0 && messages.every((m) => selectedIds.has(m.id));
 
   return (
-    <section className="flex flex-col gap-2 border-b border-border/30 p-3 md:border-b-0 md:border-r">
+    <section className="flex h-full flex-col gap-2 overflow-hidden border-b border-border/30 p-3 md:border-b-0 md:border-r">
       <input
         className="w-full rounded-xl border border-border/40 bg-bg-subtle px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
         placeholder="Tìm kiếm..."
@@ -473,7 +473,7 @@ function MessageList({ messages, selectedIds, selectedMessageId, isLoading, sear
         </div>
       )}
 
-      <div className="flex-1 space-y-1 overflow-auto">
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
         {messages.length > 0 && (
           <div className="flex items-center gap-2 px-1 pb-1">
             <input type="checkbox" checked={allSelected} onChange={onSelectAll} className="h-3.5 w-3.5 rounded accent-primary" />
@@ -551,7 +551,7 @@ function MessageViewer({ message, isLoading, onReply, onReplyAll, onForward }: {
   );
 
   return (
-    <article className="flex min-h-[520px] flex-col overflow-hidden">
+    <article className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="border-b border-border/30 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex-1">
@@ -596,7 +596,7 @@ function MessageViewer({ message, isLoading, onReply, onReplyAll, onForward }: {
         </div>
       </header>
 
-      <div className="flex-1 overflow-auto p-5">
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {safeHtml
           ? <iframe
               title="Email content"
@@ -721,7 +721,7 @@ export default function MailboxPage() {
     <div className="space-y-5">
       <PageHeader eyebrow="Email" title="Hộp thư AHSO" description="Quản lý email iRedMail ngay trong CRM, tự động liên kết với khách hàng theo contact email." />
 
-      <div className="grid min-h-[680px] overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_14px_35px_rgba(15,23,42,0.06)] md:grid-cols-[200px_360px_minmax(0,1fr)]">
+      <div className="grid h-[calc(100vh-220px)] min-h-[560px] overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_14px_35px_rgba(15,23,42,0.06)] md:grid-cols-[200px_360px_minmax(0,1fr)]">
         <FolderPanel
           folders={folders}
           activeFolder={folder}

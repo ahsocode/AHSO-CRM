@@ -1,6 +1,6 @@
 import axios, { AxiosHeaders, type AxiosRequestConfig, type AxiosResponse, type InternalAxiosRequestConfig } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ACCESS_TOKEN_KEY } from "./constants";
+import { ACCESS_TOKEN_KEY, AUTH_USER_KEY } from "./constants";
 import type { AuthSession } from "./types";
 
 const nextSession: AuthSession = {
@@ -123,7 +123,7 @@ describe("apiClient", () => {
     // already belong to another tab that just succeeded — calling logout would destroy its session.
     expect(fetch).not.toHaveBeenCalled();
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
-    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
+    expect(window.localStorage.getItem(AUTH_USER_KEY)).toBeNull();
     expect(window.location.href).toBe("/login");
   });
 });

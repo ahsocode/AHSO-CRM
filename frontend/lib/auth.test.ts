@@ -37,13 +37,12 @@ describe("auth helpers", () => {
     });
   });
 
-  it("persists access token in both session storage and local storage for cross-tab sharing", () => {
+  it("persists access token in session storage only (not localStorage)", () => {
     persistSession(session);
 
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBe("access-token");
-    // Token is also written to localStorage so other tabs can read it without triggering
-    // a second refresh (which would fail due to refresh-token rotation).
-    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBe("access-token");
+    // Token must NOT be written to localStorage — XSS scripts can read localStorage
+    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
     expect(getAccessToken()).toBe("access-token");
     expect(getStoredUser()).toMatchObject({
       id: "user-1",
@@ -54,18 +53,19 @@ describe("auth helpers", () => {
     });
   });
 
-  it("reads access token from local storage when session storage is empty", () => {
+  it("returns null when only localStorage has the token (no sessionStorage fallback)", () => {
     window.localStorage.setItem(ACCESS_TOKEN_KEY, "cross-tab-token");
 
-    expect(getAccessToken()).toBe("cross-tab-token");
+    // Security: localStorage fallback removed — token must come from sessionStorage only
+    expect(getAccessToken()).toBeNull();
   });
 
-  it("clears current session storage and legacy persisted state", () => {
+  it("clears session storage and user profile from local storage", () => {
     persistSession(session);
     clearSession();
 
     expect(window.sessionStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
-    expect(window.localStorage.getItem(ACCESS_TOKEN_KEY)).toBeNull();
+    // Access token was never written to localStorage, but clearSession must not leave user profile
     expect(window.localStorage.getItem(AUTH_USER_KEY)).toBeNull();
   });
 

@@ -685,12 +685,14 @@ export default function MailboxPage() {
   const folders = foldersQuery.data ?? [];
   const total = messagesQuery.data?.meta.total ?? 0;
 
-  // Accumulate pages — depend on the actual data object (stable ref), not the
-  // derived `pageItems ?? []` fallback which creates a new array on every render
-  // when data is undefined and causes a spurious empty-state flash.
+  // Accumulate pages — depend on dataUpdatedAt (not messagesQuery.data) so this
+  // effect fires after EVERY successful fetch, even when TanStack Query's structural
+  // sharing returns the same object reference (i.e. same emails, no new mail). Using
+  // messagesQuery.data caused the effect to silently skip when the refetch returned
+  // identical data, leaving allMessages=[] after the reset effect wiped it.
   useEffect(() => {
     const items = messagesQuery.data?.items;
-    if (!items) return;                   // still loading — don't overwrite state
+    if (!items) return;
     if (page === 1) {
       setAllMessages(items);
     } else {
@@ -699,7 +701,7 @@ export default function MailboxPage() {
         return [...prev, ...items.filter((m) => !ids.has(m.id))];
       });
     }
-  }, [messagesQuery.data, page]);
+  }, [messagesQuery.dataUpdatedAt, page]);
 
   // Reset on folder/search change
   useEffect(() => { setPage(1); setAllMessages([]); setSelectedIds(new Set()); }, [folder, search]);

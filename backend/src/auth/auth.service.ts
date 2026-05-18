@@ -217,16 +217,30 @@ export class AuthService {
       where: { id: sessionId }
     });
 
+    // Notify the specific session to log out. Pass sessionId so the
+    // device that triggered the revocation can ignore the event.
+    this.websocketGateway.publishSessionInvalidated(userId, sessionId);
+
     return { success: true };
   }
 
   async revokeAllOtherSessions(userId: string, currentSessionId: string) {
+    const revoked = await this.prisma.userSession.findMany({
+      where: { userId, id: { not: currentSessionId } },
+      select: { id: true }
+    });
+
     await this.prisma.userSession.deleteMany({
       where: {
         userId,
         id: { not: currentSessionId }
       }
     });
+
+    // Notify each revoked session individually so the current session is not affected.
+    for (const s of revoked) {
+      this.websocketGateway.publishSessionInvalidated(userId, s.id);
+    }
 
     return { success: true };
   }

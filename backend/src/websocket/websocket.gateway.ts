@@ -80,8 +80,8 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     this.server.to("admin").emit("domain-event", envelope);
   }
 
-  publishSessionInvalidated(userId: string) {
-    this.server.to(`user:${userId}`).emit("auth:session-invalidated");
+  publishSessionInvalidated(userId: string, sessionId?: string) {
+    this.server.to(`user:${userId}`).emit("auth:session-invalidated", { sessionId: sessionId ?? null });
   }
 
   @SubscribeMessage("ping")

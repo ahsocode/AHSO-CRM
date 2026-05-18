@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io, Socket } from "socket.io-client";
-import { getAccessToken } from "@/lib/auth";
+import { getAccessToken, getSessionId } from "@/lib/auth";
 import { useAuthStore } from "@/hooks/use-auth";
 import { BACKEND_URL } from "@/lib/constants";
 import { RealtimeEvent } from "@/lib/types";
@@ -102,11 +102,19 @@ export function useWebsocket(enabled = true) {
       setIsConnected(false);
     });
 
-    socket.on("auth:session-invalidated", () => {
+    socket.on("auth:session-invalidated", (payload?: { sessionId?: string | null }) => {
+      const revokedSessionId = payload?.sessionId ?? null;
+      const currentSessionId = getSessionId();
+
+      // If the event targets a specific session and it's not ours, ignore it.
+      if (revokedSessionId && currentSessionId && revokedSessionId !== currentSessionId) {
+        return;
+      }
+
       socket.disconnect();
       toast({
-        title: "Đăng xuất",
-        description: "Tài khoản của bạn đã đăng nhập ở thiết bị khác.",
+        title: "Phiên đăng nhập kết thúc",
+        description: "Thiết bị này đã bị đăng xuất từ xa.",
         variant: "destructive"
       });
       setTimeout(() => {

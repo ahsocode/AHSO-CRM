@@ -58,8 +58,8 @@ export function useMailboxMessages(params: MailboxMessageParams) {
   return useQuery({
     queryKey: ["mailbox", "messages", params],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<MailboxMessagesResponse>>("/mailbox/messages", { params });
-      return response.data.data;
+      const response = await apiClient.get<{ data: EmailMessage[]; meta: MailboxMessagesResponse["meta"] }>("/mailbox/messages", { params });
+      return { items: response.data.data, meta: response.data.meta } satisfies MailboxMessagesResponse;
     },
     retry: 0
   });

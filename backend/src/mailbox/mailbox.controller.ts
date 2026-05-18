@@ -138,6 +138,13 @@ export class AdminEmailAccountsController {
   constructor(private readonly mailboxService: MailboxService) {}
 
   @RequirePermissions("settings.edit")
+  @ApiOperation({ summary: "POST /api/admin/email-accounts/bulk-create" })
+  @Post("bulk-create")
+  bulkCreate(@Query("imapHost") imapHost = "mail.ahso.vn", @Query("smtpHost") smtpHost = "mail.ahso.vn") {
+    return this.mailboxService.bulkCreateAccounts(imapHost, smtpHost);
+  }
+
+  @RequirePermissions("settings.edit")
   @ApiOperation({ summary: "POST /api/admin/email-accounts" })
   @Post()
   create(@Body(new ZodValidationPipe(createEmailAccountSchema)) dto: CreateEmailAccountDto) {

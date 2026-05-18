@@ -80,6 +80,37 @@ export class MailboxService {
     });
   }
 
+  async bulkCreateAccounts(imapHost: string, smtpHost: string) {
+    const users = await this.prisma.user.findMany({
+      where: { isActive: true, emailAccount: null },
+      select: { id: true, email: true }
+    });
+
+    if (users.length === 0) {
+      return { created: 0, message: "Tất cả người dùng đã có tài khoản email" };
+    }
+
+    await this.prisma.emailAccount.createMany({
+      data: users.map((user) => ({
+        userId: user.id,
+        email: user.email,
+        imapHost,
+        imapPort: 993,
+        imapSecure: true,
+        smtpHost,
+        smtpPort: 587,
+        password: encrypt(""),
+        isActive: false
+      })),
+      skipDuplicates: true
+    });
+
+    return {
+      created: users.length,
+      message: `Đã tạo ${users.length} tài khoản email. Mỗi nhân viên cần vào Settings → Email để nhập mật khẩu iRedMail của mình.`
+    };
+  }
+
   listAccounts() {
     return this.prisma.emailAccount.findMany({
       select: {

@@ -217,3 +217,20 @@ export function useDeleteEmailAccount() {
     }
   });
 }
+
+export function useBulkCreateEmailAccounts() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ imapHost, smtpHost }: { imapHost: string; smtpHost: string }) => {
+      const response = await apiClient.post<ApiResponse<{ created: number; message: string }>>(
+        "/admin/email-accounts/bulk-create",
+        null,
+        { params: { imapHost, smtpHost } }
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "email-accounts"] });
+    }
+  });
+}

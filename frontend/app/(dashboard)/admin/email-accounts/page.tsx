@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useAdminEmailAccounts, useCreateEmailAccount, useDeleteEmailAccount } from "@/hooks/use-mailbox";
+import { useAdminEmailAccounts, useBulkCreateEmailAccounts, useCreateEmailAccount, useDeleteEmailAccount } from "@/hooks/use-mailbox";
 import { useUsers } from "@/hooks/use-users";
 import { toast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -19,10 +19,20 @@ export default function AdminEmailAccountsPage() {
   const usersQuery = useUsers();
   const createMutation = useCreateEmailAccount();
   const deleteMutation = useDeleteEmailAccount();
+  const bulkCreateMutation = useBulkCreateEmailAccounts();
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [imapHost, setImapHost] = useState("mail.ahso.vn");
   const [smtpHost, setSmtpHost] = useState("mail.ahso.vn");
+
+  const handleBulkCreate = async () => {
+    try {
+      const result = await bulkCreateMutation.mutateAsync({ imapHost, smtpHost });
+      toast({ title: result.message });
+    } catch (error) {
+      toast({ title: "Không tạo được tài khoản hàng loạt", description: getApiErrorMessage(error), variant: "destructive" });
+    }
+  };
 
   const handleCreate = async () => {
     try {
@@ -47,9 +57,29 @@ export default function AdminEmailAccountsPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="Admin" title="Tài khoản email" description="Admin tạo cấu hình email, nhân sự tự nhập mật khẩu IMAP trong phần Settings." />
 
+      <Card className="border border-white/70 bg-primary-bg/40">
+        <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-text-primary">Tạo nhanh cho toàn bộ nhân viên</p>
+            <p className="mt-0.5 text-sm text-text-secondary">
+              Tự động tạo tài khoản email dựa trên email CRM của từng người. Nhân viên chỉ cần vào{" "}
+              <span className="font-medium text-primary">Settings → Email</span> để nhập mật khẩu iRedMail của mình.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={handleBulkCreate}
+            disabled={bulkCreateMutation.isPending}
+            className="shrink-0"
+          >
+            {bulkCreateMutation.isPending ? "Đang tạo..." : "Tạo tất cả"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thêm mailbox</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thêm thủ công</p>
           <CardTitle>Cấu hình tài khoản iRedMail</CardTitle>
         </CardHeader>
         <CardContent>

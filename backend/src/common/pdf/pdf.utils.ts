@@ -53,8 +53,7 @@ async function getBrowser(configService: ConfigService): Promise<Browser> {
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--single-process"
+          "--disable-gpu"
         ]
       })
       .then((b) => {
@@ -81,7 +80,9 @@ export async function renderPdfBuffer(html: string, configService: ConfigService
   const page = await browser.newPage();
 
   try {
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    // "load" is sufficient — templates use inline CSS; "networkidle0" blocks
+    // indefinitely in CI when external resources (fonts, CDN) are unreachable.
+    await page.setContent(html, { waitUntil: "load", timeout: 30_000 });
     // No margin here — CSS @page rules in each template are the source of truth.
     // HBS templates use base.css (@page { margin: 20mm 18mm 22mm 22mm }).
     // Schema templates override with @page { margin: 0 } so 210×297 mm divs

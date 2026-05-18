@@ -145,22 +145,43 @@ export class MailboxService {
 
   async getFolders(userId: string): Promise<FolderInfo[]> {
     const account = await this.requireUserAccount(userId);
-    const client = await this.imapService.getOrCreateConnection(account);
-    const folders = await client.list();
 
-    return Promise.all(
-      folders.map(async (folder) => {
-        const status = await client.status(folder.path, { messages: true, unseen: true }).catch(() => null);
-        return {
-          name: folder.path.split(folder.delimiter).pop() ?? folder.path,
-          path: folder.path,
-          delimiter: folder.delimiter,
-          specialUse: folder.specialUse ?? null,
-          total: status?.messages ?? 0,
-          unread: status?.unseen ?? 0
-        };
-      })
-    );
+    const rows = await this.prisma.emailMessage.groupBy({
+      by: ["folder"],
+      where: { accountId: account.id },
+      _count: { _all: true }
+    });
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const unreadRows = await this.prisma.emailMessage.groupBy({
+      by: ["folder"],
+      where: { accountId: account.id, isRead: false },
+      _count: { _all: true }
+    });
+
+    const unreadMap = new Map(unreadRows.map((r) => [r.folder, r._count._all]));
+
+    const FOLDER_ORDER = ["INBOX", "Sent", "Drafts", "Trash", "Spam", "Junk"];
+    return rows
+      .map((r) => ({
+        name: r.folder.split("/").pop() ?? r.folder,
+        path: r.folder,
+        delimiter: "/",
+        specialUse: null,
+        total: r._count._all,
+        unread: unreadMap.get(r.folder) ?? 0
+      }))
+      .sort((a, b) => {
+        const ai = FOLDER_ORDER.indexOf(a.path);
+        const bi = FOLDER_ORDER.indexOf(b.path);
+        if (ai !== -1 && bi !== -1) return ai - bi;
+        if (ai !== -1) return -1;
+        if (bi !== -1) return 1;
+        return a.path.localeCompare(b.path);
+      });
   }
 
   async getMessages(userId: string, query: GetMessagesDto) {

@@ -140,7 +140,7 @@ export class AdminEmailAccountsController {
   @RequirePermissions("settings.edit")
   @ApiOperation({ summary: "POST /api/admin/email-accounts/bulk-create" })
   @Post("bulk-create")
-  bulkCreate(@Query("imapHost") imapHost = "mail.ahso.vn", @Query("smtpHost") smtpHost = "mail.ahso.vn") {
+  bulkCreate(@Query("imapHost") imapHost = "mail90168.maychuemail.com", @Query("smtpHost") smtpHost = "mail90168.maychuemail.com") {
     return this.mailboxService.bulkCreateAccounts(imapHost, smtpHost);
   }
 

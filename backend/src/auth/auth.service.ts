@@ -16,7 +16,7 @@ import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { AuthTokens, JwtUser, PasswordResetTokenPayload } from "./auth.types";
 
 const AHSO_MAIL_DOMAIN = "@ahso.vn";
-const AHSO_IMAP_HOST = "mail.ahso.vn";
+const AHSO_IMAP_HOST = "mail90168.maychuemail.com";
 
 interface AuthRequestMeta {
   ip?: string | null;

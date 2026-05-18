@@ -24,29 +24,6 @@ jobs:
       FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ahso-crm-frontend
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2  # Need 2 commits to detect changed paths
-
-      # Detect which services actually changed so we can skip unchanged builds
-      - name: Detect changed services
-        id: changes
-        run: |
-          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "backend/ frontend/")
-          if echo "$CHANGED" | grep -q "^backend/"; then
-            echo "backend=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "backend=false" >> "$GITHUB_OUTPUT"
-          fi
-          if echo "$CHANGED" | grep -q "^frontend/"; then
-            echo "frontend=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "frontend=false" >> "$GITHUB_OUTPUT"
-          fi
-          # On manual dispatch always build both
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "backend=true" >> "$GITHUB_OUTPUT"
-            echo "frontend=true" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Validate deploy secrets
         env:
@@ -74,7 +51,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend image
-        if: steps.changes.outputs.backend == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -89,7 +65,6 @@ jobs:
           cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:cache,mode=max
 
       - name: Build and push frontend image
-        if: steps.changes.outputs.frontend == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./frontend

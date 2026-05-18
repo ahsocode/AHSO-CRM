@@ -1,6 +1,6 @@
 # AHSO CRM
 
-Self-hosted B2B sales management system for technical/industrial projects.
+Self-hosted B2B sales CRM for technical and industrial project businesses. Manages the full lifecycle from lead to payment: customers → projects → quotes → contracts → documents → analytics.
 
 **Production:** https://crm.ahso.vn
 
@@ -10,66 +10,109 @@ Self-hosted B2B sales management system for technical/industrial projects.
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14 App Router, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, Zustand, React Hook Form + Zod |
-| Backend | NestJS 10, Prisma 5, PostgreSQL 16, Redis 7, JWT auth, Zod validation, Puppeteer |
-| Deployment | Docker Compose, GitHub Actions CI/CD, GHCR |
+| **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query v5, Zustand, React Hook Form + Zod, Recharts, Nivo |
+| **Backend** | NestJS 10, Prisma 5, PostgreSQL 16, Redis 7, Socket.io, Puppeteer, Handlebars |
+| **Auth** | JWT (15 min access + 7 day refresh HttpOnly cookie), bcrypt, session tracking |
+| **AI** | Anthropic Claude (activity summaries, follow-up suggestions, win probability forecast) |
+| **Notifications** | WebSocket real-time + in-app DB + Web Push (VAPID) |
+| **Integrations** | SMTP email, Twilio SMS, outbound webhooks, Sentry |
+| **Deployment** | Docker Compose, GitHub Actions CI/CD, GHCR |
 
 ---
 
 ## Features
 
-- **Customers** — CRUD, contacts, soft delete, customer stats
-- **Projects** — 7-stage kanban (Survey → Proposal → Negotiation → Active → Delivery → Closing → Closed), drag-drop
-- **Quotes** — line items, PDF generation, versioning, 5-status workflow (Draft → Sent → Accepted/Rejected/Expired)
-- **Contracts** — milestones, payment logging, file attachments, acceptance PDF
-- **Activities** — 7 types (Call, Email, Meeting, Survey, Demo, Note, Follow-up), calendar integration
-- **Calendar** — week/month views, drag-to-reschedule, date range filters
-- **Dashboard** — KPI cards, 6-month revenue chart, pipeline overview, today's tasks
-- **Reports** — revenue trends, status breakdowns, top customers
-- **Admin** — company info/logo, policies, roles & permissions matrix, user management
-- **RBAC** — granular `resource.action` permissions, 3 system roles (ADMIN, MANAGER, STAFF) + custom roles
+### CRM Core
+- **Customers** — Full lifecycle (Lead → Prospect → Active → Inactive), staff assignment, contact management, bulk import/export, merge duplicates, soft delete + recovery, custom fields
+- **Projects** — 7-stage pipeline (Survey → Quoting → Negotiating → Won/Lost → Delivering → Completed), 360° overview, project handover documentation
+- **Quotes** — Line items with units and descriptions, PDF generation, version control, 5-status workflow (Draft → Sent → Accepted / Rejected / Expired), duplicate and send by email
+- **Contracts** — Milestones with payment amounts, payment recording, acceptance report PDF, file attachments
+- **Activities** — 7 types (Call, Email, Meeting, Survey, Demo, Note, Follow-up), soft delete + restore, calendar integration
+- **Surveys** — Site survey records with typed notes (technical, commercial, constraint, risk, decision), photo/video attachments with area tags
+
+### Documents
+- **Template Editor** — Visual layout editor for 16 document types (quotation, proposal, contract, delivery note, acceptance report, warranty, etc.)
+- **Template Versioning** — Draft → Review → Production approval workflow for document variants
+- **PDF Generation** — Puppeteer/Chromium rendering from Handlebars templates, bilingual (vi/vi-en)
+- **Business Documents** — Document filing system for RFQ, PO, signed contracts, invoices, delivery notes with parent/child lineage
+
+### Analytics & Reporting
+- **Dashboard** — KPI cards, 6-month revenue chart, pipeline distribution, today's tasks, real-time activity feed
+- **Reports** — Revenue trend, status breakdown, top customers, customer journey, activity heatmap, sales funnel, cohort analysis
+- **Custom Report Builder** — Dynamic query builder with saved templates and Excel export
+
+### Admin
+- **RBAC** — Granular `resource.action` permissions (e.g. `quotes.create`, `contracts.edit`), 3 locked system roles (ADMIN, MANAGER, STAFF) + unlimited custom roles
+- **User Management** — Create users, assign roles
+- **Company Settings** — Name, address, tax ID, logo upload
+- **Document Templates** — Full template editor with token catalog and approval workflow
+- **Custom Fields** — Add dynamic fields to any resource
+- **System Policies** — Password rules, data retention, terms and privacy
+
+### Platform
+- **Real-time** — WebSocket (Socket.io) for live data updates across all clients
+- **Notifications** — In-app bell (persistent + real-time), Web Push to mobile
+- **Session Management** — View active sessions across devices, revoke individual sessions (target device is logged out in real-time via WebSocket)
+- **Webhooks** — Outbound HTTP webhooks on domain events with delivery logs
+- **Search** — Global full-text search across customers, projects, quotes, contracts, activities
+- **AI Insights** — Customer activity summaries, suggested follow-ups, email drafting, project win probability, pipeline revenue forecast (requires `ANTHROPIC_API_KEY`)
+- **Email** — Transactional email via SMTP (password reset, quote delivery)
+- **SMS** — Activity alerts via Twilio (optional)
 
 ---
 
-## Local Development
+## Quick Start (Docker)
 
 ### Prerequisites
-
-- Node.js 20+
 - Docker + Docker Compose
+- Node.js 20+ (for running tests locally)
 
-### Start with Docker (recommended)
+### Run locally
 
 ```bash
-# 1. Copy env files
+# 1. Clone and copy env files
+git clone https://github.com/ahsocode/AHSO-CRM.git && cd AHSO-CRM
 cp .env.example .env
 cp backend/.env.example backend/.env
 cp frontend/.env.local.example frontend/.env.local
 
-# 2. Edit backend/.env — at minimum set POSTGRES_PASSWORD and JWT_SECRET
+# 2. Set a strong JWT_SECRET in backend/.env (min 16 chars)
 
-# 3. Start all services
+# 3. Start all services (postgres, redis, backend, frontend)
 docker compose up -d --build
 
-# 4. Seed test data
+# 4. Apply migrations and seed test data
 docker compose exec -T backend npm run prisma:seed
 
 # 5. Verify
 curl http://localhost:3001/api/health
 ```
 
-URLs:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001/api
-- Swagger UI: http://localhost:3001/api/docs (requires `SWAGGER_ENABLED=true` in `backend/.env`)
+| URL | Description |
+|---|---|
+| `http://localhost:3000` | Frontend |
+| `http://localhost:3001/api` | Backend API |
+| `http://localhost:3001/api/docs` | Swagger UI (enable with `SWAGGER_ENABLED=true`) |
 
-### Start without Docker
+### Test accounts
+
+```
+admin@ahso.vn   / AHSO123!   ← Full access
+manager@ahso.vn / AHSO123!   ← Read all, no delete
+staff@ahso.vn   / AHSO123!   ← Assigned records only
+```
+
+---
+
+## Development (without Docker)
 
 ```bash
-# Install dependencies
-npm install
+# Install all dependencies
 cd backend && npm install
 cd ../frontend && npm install
+
+# Start PostgreSQL and Redis (Docker only for infra)
+docker compose up -d postgres redis
 
 # Apply migrations + seed
 cd backend && npm run prisma:deploy && npm run prisma:seed
@@ -79,47 +122,117 @@ cd backend && npm run start:dev   # port 3001
 cd frontend && npm run dev         # port 3000
 ```
 
-### Test Accounts
+---
 
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+```env
+# Required
+DATABASE_URL=postgresql://ahso:password@localhost:5432/ahso_crm
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=<32+ random chars>
+
+# Recommended for production
+JWT_RESET_SECRET=<different 32+ random chars>
+FRONTEND_URL=https://crm.ahso.vn
+CORS_ORIGIN=https://crm.ahso.vn
+NODE_ENV=production
+
+# Token TTLs (optional — defaults shown)
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+JWT_RESET_EXPIRES_IN=15m
+
+# Rate limiting (optional)
+THROTTLE_TTL=60
+THROTTLE_LIMIT=100
+
+# Optional — enable Swagger UI at /api/docs
+SWAGGER_ENABLED=false
+
+# Optional — AI features (gracefully disabled if absent)
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=claude-sonnet-4-20250514
+
+# Optional — Email (all-or-nothing; required for password reset + quote sending)
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=AHSO CRM <noreply@ahso.vn>
+
+# Optional — SMS via Twilio (all-or-nothing)
+TWILIO_SID=
+TWILIO_TOKEN=
+TWILIO_FROM=
+
+# Optional — Web Push (all-or-nothing)
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:admin@ahso.vn
+
+# Optional — Error tracking
+SENTRY_DSN=
+
+# Optional — dev helpers
+DEBUG_RESET=false       # include reset token in forgot-password response
+LOG_LEVEL=info          # error | warn | info | debug | verbose
+UPLOAD_DIR=./uploads
 ```
-admin@ahso.vn    / AHSO123!
-manager@ahso.vn  / AHSO123!
-staff@ahso.vn    / AHSO123!
+
+### Frontend (`frontend/.env.local`)
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_APP_NAME=AHSO CRM
 ```
+
+> **Note:** `NEXT_PUBLIC_API_URL` is baked into the Next.js bundle at build time. In production, pass it as a Docker build arg via the `PROD_PUBLIC_API_URL` GitHub Actions secret.
 
 ---
 
 ## Production Deployment
 
-Production uses pre-built Docker images from GHCR via `docker-compose.prod.yml`.
-
-### First-time server setup
+Uses pre-built Docker images from GHCR via `docker-compose.prod.yml`.
 
 ```bash
-# 1. Copy env templates to server
+# First-time setup
 cp .env.production.example .env.production.local
 cp backend/.env.production.example backend/.env.production.local
-cp frontend/.env.production.example frontend/.env.production.local
 
-# 2. Fill in real values (see Environment Variables below)
-
-# 3. Pull images and start
+# Pull and start
 docker compose --env-file .env.production.local -f docker-compose.prod.yml pull
 docker compose --env-file .env.production.local -f docker-compose.prod.yml up -d
 ```
 
-Prisma migrations are applied automatically at backend startup via `prisma migrate deploy`.
+Prisma migrations run automatically at backend startup via `prisma migrate deploy`.
+
+### Nginx reverse proxy
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name crm.ahso.vn;
+
+    location /api      { proxy_pass http://127.0.0.1:3001; }
+    location /uploads  { proxy_pass http://127.0.0.1:3001; }
+    location /events   { proxy_pass http://127.0.0.1:3001; proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; }
+    location /         { proxy_pass http://127.0.0.1:3000; }
+}
+```
 
 ### CI/CD (GitHub Actions)
 
 Push to `main` triggers:
-1. Backend: lint → typecheck → unit tests → build → push Docker image to GHCR
-2. Frontend: lint → typecheck → unit tests → build → push Docker image to GHCR
+1. Backend: lint → typecheck → unit tests → Docker build → push to GHCR
+2. Frontend: lint → typecheck → unit tests → Docker build → push to GHCR
 3. Deploy: SSH to VPS → pull new images → `docker compose up -d`
 
 Required GitHub Actions secrets:
 
-| Secret | Description |
+| Secret | Purpose |
 |---|---|
 | `PROD_HOST` | VPS IP or hostname |
 | `PROD_USER` | SSH user |
@@ -127,90 +240,22 @@ Required GitHub Actions secrets:
 | `PROD_APP_DIR` | App directory on server |
 | `PROD_PUBLIC_API_URL` | Backend URL baked into frontend image at build time |
 
-Optional: `SLACK_WEBHOOK_URL` for deploy notifications.
-
-### Nginx reverse proxy
-
-The production compose binds backend to `127.0.0.1:3001` and frontend to `127.0.0.1:3000`. Use Nginx to terminate TLS:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name crm.ahso.vn;
-
-    location /api     { proxy_pass http://127.0.0.1:3001; }
-    location /uploads { proxy_pass http://127.0.0.1:3001; }
-    location /        { proxy_pass http://127.0.0.1:3000; }
-}
-```
-
 ---
 
-## Environment Variables
-
-### Root (`.env.production.local`)
-
-```env
-POSTGRES_DB=ahso_crm
-POSTGRES_USER=ahso
-POSTGRES_PASSWORD=<strong-password>
-BACKEND_IMAGE=ghcr.io/ahsocode/ahso-crm-backend:latest
-FRONTEND_IMAGE=ghcr.io/ahsocode/ahso-crm-frontend:latest
-BACKEND_BIND=127.0.0.1:3001
-FRONTEND_BIND=127.0.0.1:3000
-UPLOADS_DIR=./backend/uploads
-```
-
-### Backend (`backend/.env.production.local`)
-
-```env
-NODE_ENV=production
-PORT=3001
-JWT_SECRET=<32+ random chars>
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-JWT_RESET_SECRET=<different 32+ random chars>
-FRONTEND_URL=https://crm.ahso.vn
-CORS_ORIGIN=https://crm.ahso.vn
-SWAGGER_ENABLED=false
-THROTTLE_TTL=60
-THROTTLE_LIMIT=100
-
-# Optional — AI suggestions
-ANTHROPIC_API_KEY=
-
-# Optional — Email (required for password reset and quote sending)
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=AHSO CRM <noreply@ahso.vn>
-```
-
-### Frontend (`frontend/.env.production.local`)
-
-```env
-NEXT_PUBLIC_API_URL=https://crm.ahso.vn
-NEXT_PUBLIC_APP_NAME=AHSO CRM
-```
-
-> `NEXT_PUBLIC_API_URL` is baked into the Next.js bundle at **image build time** via the `PROD_PUBLIC_API_URL` GitHub Actions secret.
-
----
-
-## Useful Commands
+## Commands
 
 ### Backend
 
 ```bash
 cd backend
-npm run start:dev        # dev server with hot reload (port 3001)
+npm run start:dev        # hot-reload dev server (port 3001)
 npm run build            # production build
 npm run typecheck        # tsc --noEmit
 npm run lint             # ESLint
-npm test                 # Jest unit tests (--runInBand)
+npm test                 # Jest unit tests (sequential, --runInBand)
+npm run test:cov         # Jest with coverage report
 npm run prisma:generate  # regenerate Prisma client after schema change
-npm run prisma:migrate   # create + apply new dev migration
+npm run prisma:migrate   # create + apply a new dev migration
 npm run prisma:deploy    # apply pending migrations (production)
 npm run prisma:seed      # seed test accounts and sample data
 ```
@@ -219,17 +264,18 @@ npm run prisma:seed      # seed test accounts and sample data
 
 ```bash
 cd frontend
-npm run dev              # dev server (port 3000)
+npm run dev              # Next.js dev server (port 3000)
 npm run build            # production build
 npm run typecheck        # tsc --noEmit
 npm run lint             # next lint
 npm run test:unit        # Vitest
 ```
 
-### E2E (root)
+### E2E
 
 ```bash
-npm run test:e2e         # Playwright (requires full stack running with seeded DB)
+# from repo root — requires full stack running with seeded DB
+npm run test:e2e
 ```
 
 ---
@@ -238,55 +284,97 @@ npm run test:e2e         # Playwright (requires full stack running with seeded D
 
 ```
 AHSO-CRM/
-├── backend/                 NestJS API + Prisma
-│   ├── prisma/              Schema, migrations, seed
-│   ├── src/
-│   │   ├── auth/            JWT auth, refresh tokens, password reset
-│   │   ├── users/           User CRUD + role assignment
-│   │   ├── customers/       Customer + contact management
-│   │   ├── projects/        Project kanban + timeline
-│   │   ├── quotes/          Quote workflow + PDF
-│   │   ├── contracts/       Contract + milestones + payments + PDF
-│   │   ├── activities/      Activity log + calendar
-│   │   ├── dashboard/       KPI aggregation
-│   │   ├── reports/         Revenue analytics
-│   │   ├── calendar/        Calendar event queries
-│   │   ├── settings/        Company info + policies
-│   │   ├── roles/           Role CRUD
-│   │   ├── permissions/     Permission matrix
-│   │   ├── upload/          File + logo upload
-│   │   ├── documents/       PDF template runtime
-│   │   ├── notifications/   In-app notifications
-│   │   └── common/          Guards, pipes, interceptors, filters
-│   └── uploads/             Uploaded files — persisted via Docker volume
-├── frontend/                Next.js 14 App Router
+├── backend/
+│   ├── prisma/                  Schema, migrations, seed
+│   └── src/
+│       ├── auth/                JWT auth, sessions, password reset
+│       ├── users/               User CRUD + role assignment
+│       ├── roles/               Role CRUD (system roles read-only)
+│       ├── permissions/         Permission catalog
+│       ├── customers/           CRM customers (bulk import/export/merge)
+│       ├── contacts/            Customer contacts
+│       ├── projects/            Project pipeline + 360° view
+│       ├── quotes/              Quote workflow + PDF
+│       ├── contracts/           Contract + milestones + payments + PDF
+│       ├── activities/          Activity log + soft delete
+│       ├── surveys/             Site surveys with media
+│       ├── calendar/            Calendar event queries
+│       ├── dashboard/           KPI aggregation
+│       ├── reports/             Analytics + custom report builder
+│       ├── search/              Global full-text search
+│       ├── documents/           Template editor + PDF rendering (16 types)
+│       ├── business-documents/  Document filing with lineage
+│       ├── notifications/       In-app notification persistence
+│       ├── push/                Web push (VAPID)
+│       ├── settings/            Company info + system policies
+│       ├── custom-fields/       Dynamic fields per resource
+│       ├── upload/              File + avatar + logo uploads
+│       ├── ai/                  Anthropic Claude integrations
+│       ├── email/               SMTP transactional email
+│       ├── sms/                 Twilio SMS
+│       ├── webhooks/            Outbound webhooks + delivery logs
+│       ├── audit/               Login audit log
+│       ├── websocket/           Socket.io gateway
+│       ├── domain-events/       Internal event bus → WS + notifications + webhooks + push
+│       └── common/              Guards, pipes, interceptors, filters, Prisma service
+├── frontend/
 │   ├── app/
-│   │   ├── (auth)/          Login, forgot-password, reset-password
-│   │   └── (dashboard)/     All CRM pages
-│   ├── components/          Shared UI components
-│   ├── hooks/               TanStack Query hooks (use-*.ts)
-│   └── lib/                 API client, types, utils, formatters
-├── e2e/                     Playwright smoke tests
-├── docs/                    Architecture reference
-├── scripts/                 Deploy and utility scripts
-├── docker-compose.yml       Local development stack
-├── docker-compose.prod.yml  Production stack (pre-built images from GHCR)
-└── .github/workflows/       CI + deploy pipelines
+│   │   ├── (auth)/              Login, forgot-password, reset-password
+│   │   └── (dashboard)/         All CRM pages (customers, projects, quotes,
+│   │                            contracts, activities, calendar, documents,
+│   │                            reports, notifications, users, admin/*)
+│   ├── components/              Shared UI components
+│   ├── hooks/                   TanStack Query + Zustand hooks (use-*.ts)
+│   └── lib/                     API client, types, formatters, constants
+├── e2e/                         Playwright smoke tests
+├── docs/                        Architecture reference
+├── scripts/                     Deploy and utility scripts
+├── docker-compose.yml           Local development stack
+├── docker-compose.prod.yml      Production stack (GHCR images)
+└── .github/workflows/           CI + deploy pipelines
 ```
 
 ---
 
 ## Auth Flow
 
-1. `POST /api/auth/login` → returns `accessToken` (JWT, 15 min) + sets `ahso_refresh_token` **HttpOnly cookie** (7 days)
-2. Frontend stores `accessToken` in `sessionStorage`; Zustand hydrates user profile from `localStorage`
-3. On 401, `apiClient` auto-calls `POST /api/auth/refresh` via the HttpOnly cookie, retries the original request
-4. `POST /api/auth/logout` → deletes session from DB + clears cookie
+```
+POST /api/auth/login
+  → accessToken (JWT, 15 min) stored in sessionStorage
+  → ahso_refresh_token (7 day) stored as HttpOnly cookie
+
+On 401:
+  apiClient → POST /api/auth/refresh (cookie auto-sent)
+  → new accessToken + rotated cookie
+  → retry original request
+
+Remote session revocation:
+  Device A calls DELETE /api/auth/sessions/:id
+  → DB session deleted
+  → WebSocket emits auth:session-invalidated with sessionId
+  → Device B receives event, matches its own sessionId, logs out immediately
+```
+
+---
+
+## E2E Test Coverage
+
+| Spec | Scenarios |
+|---|---|
+| `auth.spec.ts` | Login, logout, password reset, session refresh |
+| `customers.spec.ts` | List, bulk export, soft delete, restore |
+| `projects.spec.ts` | List, kanban, 360 view, business documents, search |
+| `quotes.spec.ts` | List, PDF preview, export |
+| `contracts.spec.ts` | Create, milestones |
+| `calendar.spec.ts` | Date range, view switching |
+| `activities.spec.ts` | Create, filter |
+| `dashboard.spec.ts` | KPI cards, charts |
+| `admin.spec.ts` | Admin panel, roles, document templates |
+| `security.spec.ts` | RBAC enforcement, permission boundaries |
 
 ---
 
 ## Documentation
 
 - [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) — detailed architecture reference
-- [CHANGELOG.md](CHANGELOG.md) — version history
-- [CLAUDE.md](CLAUDE.md) — AI assistant coding instructions
+- [CLAUDE.md](CLAUDE.md) — AI assistant coding instructions (for contributors using Claude Code)

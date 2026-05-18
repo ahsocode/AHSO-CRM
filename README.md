@@ -15,7 +15,8 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 | **Auth** | JWT (15 min access + 7 day refresh HttpOnly cookie), bcrypt, session tracking |
 | **AI** | Anthropic Claude (activity summaries, follow-up suggestions, win probability forecast) |
 | **Notifications** | WebSocket real-time + in-app DB + Web Push (VAPID) |
-| **Integrations** | SMTP email, Twilio SMS, outbound webhooks, Sentry |
+| **Email** | iRedMail IMAP/SMTP (self-hosted), AES-256-GCM encrypted credentials, IDLE real-time sync |
+| **Integrations** | SMTP transactional email, Twilio SMS, outbound webhooks, Sentry |
 | **Deployment** | Docker Compose, GitHub Actions CI/CD, GHCR |
 
 ---
@@ -41,6 +42,13 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 - **Reports** — Revenue trend, status breakdown, top customers, customer journey, activity heatmap, sales funnel, cohort analysis
 - **Custom Report Builder** — Dynamic query builder with saved templates and Excel export
 
+### Mailbox
+- **iRedMail integration** — Self-hosted email server at `mail.ahso.vn` is the single source of truth for `@ahso.vn` accounts. Logging into CRM with an `@ahso.vn` email authenticates against the IMAP server (port 993 SSL) — no separate CRM password needed. New iRedMail accounts can log in immediately without admin action.
+- **Auto account creation** — First successful IMAP login auto-creates the CRM user (STAFF role). Subsequent logins detect iRedMail password changes and update stored credentials automatically.
+- **IMAP client** — Each user's mailbox is accessible inside CRM: folder navigation, read/compose/reply, message threading, star and mark-read, IMAP IDLE for real-time new-message notifications.
+- **Email ↔ CRM linking** — Incoming emails are automatically linked to matching customers and projects by sender/recipient domain matching.
+- **Encrypted credentials** — IMAP passwords are stored with AES-256-GCM encryption (not bcrypt — must be decryptable for IMAP auth). Requires `ENCRYPTION_KEY` env variable.
+
 ### Admin
 - **RBAC** — Granular `resource.action` permissions (e.g. `quotes.create`, `contracts.edit`), 3 locked system roles (ADMIN, MANAGER, STAFF) + unlimited custom roles
 - **User Management** — Create users, assign roles
@@ -48,6 +56,7 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 - **Document Templates** — Full template editor with token catalog and approval workflow
 - **Custom Fields** — Add dynamic fields to any resource
 - **System Policies** — Password rules, data retention, terms and privacy
+- **Backup & Restore** — One-click backup to Google Drive via rclone (database dump + uploads + env config), list and restore any backup from the admin UI. Automated daily backup at 2:00 AM via cron, auto-purge files older than 30 days.
 
 ### Platform
 - **Real-time** — WebSocket (Socket.io) for live data updates across all clients
@@ -173,6 +182,15 @@ VAPID_PUBLIC_KEY=
 VAPID_PRIVATE_KEY=
 VAPID_SUBJECT=mailto:admin@ahso.vn
 
+# Required — AES-256-GCM key for IMAP password encryption (generate with: openssl rand -hex 32)
+ENCRYPTION_KEY=
+
+# Optional — iRedMail / Mailbox
+IMAP_HOST=mail.ahso.vn                # iRedMail IMAP host for @ahso.vn authentication
+
+# Optional — Backup & Restore (requires rclone configured on server)
+POSTGRES_CONTAINER=ahso-crm-postgres-1  # Docker container name for pg_dump/pg_restore
+
 # Optional — Error tracking
 SENTRY_DSN=
 
@@ -239,6 +257,52 @@ Required GitHub Actions secrets:
 | `PROD_SSH_KEY` | Private SSH key |
 | `PROD_APP_DIR` | App directory on server |
 | `PROD_PUBLIC_API_URL` | Backend URL baked into frontend image at build time |
+
+---
+
+## Backup & Restore
+
+Backups are stored on Google Drive via [rclone](https://rclone.org). Each backup is a `.tar.gz` archive containing: a PostgreSQL custom-format dump, the `uploads/` directory, and `.env.production.local`.
+
+### One-time rclone setup (on VPS)
+
+```bash
+# Install rclone
+curl https://rclone.org/install.sh | sudo bash
+
+# Configure Google Drive remote named "AHSO-CRM-Backup"
+rclone config
+# → New remote → name: AHSO-CRM-Backup → type: drive → follow OAuth flow
+
+# Test connection
+rclone lsd AHSO-CRM-Backup:
+
+# Install backup script
+curl -o /opt/backup-ahso-crm.sh https://raw.githubusercontent.com/ahsocode/AHSO-CRM/main/scripts/backup.sh
+chmod +x /opt/backup-ahso-crm.sh
+
+# Schedule daily at 2:00 AM
+(crontab -l 2>/dev/null; echo "0 2 * * * /opt/backup-ahso-crm.sh >> /var/log/ahso-backup.log 2>&1") | crontab -
+```
+
+### Restore from backup
+
+Backups can be restored from the **Admin → Backup & Restore** page in the CRM UI, or manually:
+
+```bash
+# Download a specific backup
+rclone copy "AHSO-CRM-Backup:AHSO-CRM-Backups/ahso-crm-YYYY-MM-DD_HH-MM.tar.gz" /opt/backups/restore/
+cd /opt/backups/restore && tar -xzf ahso-crm-*.tar.gz
+
+# Restore database
+cat database.dump | docker exec -i -e PGPASSWORD=<pass> ahso-crm-postgres-1 pg_restore -U ahso -d ahso_crm
+
+# Restore uploads
+cp -r uploads/. /opt/AHSO-CRM/backend/uploads/
+
+# Restart services
+cd /opt/AHSO-CRM && docker compose -f docker-compose.prod.yml --env-file .env.production.local up -d
+```
 
 ---
 
@@ -313,6 +377,8 @@ AHSO-CRM/
 │       ├── email/               SMTP transactional email
 │       ├── sms/                 Twilio SMS
 │       ├── webhooks/            Outbound webhooks + delivery logs
+│       ├── mailbox/             iRedMail IMAP client (auth, sync, IDLE, send/reply)
+│       ├── backup/              Backup & Restore via rclone → Google Drive
 │       ├── audit/               Login audit log
 │       ├── websocket/           Socket.io gateway
 │       ├── domain-events/       Internal event bus → WS + notifications + webhooks + push

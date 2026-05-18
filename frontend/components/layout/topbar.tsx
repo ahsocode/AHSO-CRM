@@ -259,6 +259,15 @@ export function Topbar({
 
             <DropdownMenuSeparator />
 
+            <DropdownMenuItem asChild>
+              <a href="/settings/email" className="cursor-pointer">
+                <AppIcon name="mail" className="mr-2 h-4 w-4" />
+                Kết nối email
+              </a>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
             <DropdownMenuItem
               className="cursor-pointer text-destructive focus:text-destructive"
               onClick={() => void onLogout()}

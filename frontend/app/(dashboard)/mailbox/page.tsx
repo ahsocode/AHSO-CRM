@@ -691,11 +691,17 @@ export default function MailboxPage() {
   const folders = foldersQuery.data ?? [];
   const total = messagesQuery.data?.meta.total ?? 0;
 
+  // Reset on folder/search change — MUST be defined before the accumulate effect.
+  // React runs effects in definition order. When switching folders, if TanStack Query
+  // has cached data for the new folder, both effects fire in the same render:
+  // reset must run first (clear stale list), then accumulate runs second (populate
+  // with cached data). If accumulate ran first it would be wiped by reset, leaving
+  // allMessages=[] until the background refetch completes.
+  useEffect(() => { setPage(1); setAllMessages([]); setSelectedIds(new Set()); }, [folder, search]);
+
   // Accumulate pages — depend on dataUpdatedAt (not messagesQuery.data) so this
   // effect fires after EVERY successful fetch, even when TanStack Query's structural
-  // sharing returns the same object reference (i.e. same emails, no new mail). Using
-  // messagesQuery.data caused the effect to silently skip when the refetch returned
-  // identical data, leaving allMessages=[] after the reset effect wiped it.
+  // sharing returns the same object reference (i.e. same emails, no new mail).
   useEffect(() => {
     const items = messagesQuery.data?.items;
     if (!items) return;
@@ -708,9 +714,6 @@ export default function MailboxPage() {
       });
     }
   }, [messagesQuery.dataUpdatedAt, page]);
-
-  // Reset on folder/search change
-  useEffect(() => { setPage(1); setAllMessages([]); setSelectedIds(new Set()); }, [folder, search]);
 
   useEffect(() => {
     const id = searchParams.get("message");

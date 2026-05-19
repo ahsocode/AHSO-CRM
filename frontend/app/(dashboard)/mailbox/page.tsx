@@ -35,6 +35,7 @@ import { RichTextEditor } from "./_components/rich-text-editor";
 import {
   ChevronDown,
   Maximize2,
+  ChevronLeft,
   Minimize2,
   Paperclip,
   RefreshCw,
@@ -303,10 +304,13 @@ function ComposeWindow({ mode, replyTo, onClose }: ComposeProps) {
 
   return (
     <div className={cn(
-      "fixed z-50 flex flex-col overflow-hidden rounded-t-2xl border border-white/70 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.25)]",
-      maximized ? "inset-4 rounded-2xl"
-        : minimized ? "bottom-0 right-6 h-11 w-[500px]"
-          : "bottom-0 right-6 h-[580px] w-[580px]"
+      "fixed z-50 flex flex-col overflow-hidden border border-white/70 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.25)]",
+      // Mobile: always full-screen (ignore maximized/minimized on mobile)
+      "inset-0 rounded-none",
+      // Desktop: corner overlay
+      maximized ? "md:inset-4 md:rounded-2xl"
+        : minimized ? "md:inset-auto md:bottom-0 md:right-6 md:h-11 md:w-[500px] md:rounded-t-2xl"
+          : "md:inset-auto md:bottom-0 md:right-6 md:h-[580px] md:w-[580px] md:rounded-t-2xl"
     )}>
       <div
         className="flex cursor-pointer items-center justify-between bg-[var(--color-primary)] px-4 py-2.5"
@@ -680,6 +684,8 @@ export default function MailboxPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [compose, setCompose] = useState<{ mode: ComposeMode; replyTo?: EmailMessage } | null>(null);
   const [showSignatureEditor, setShowSignatureEditor] = useState(false);
+  // Mobile: which panel is active (desktop always shows all 3 side-by-side)
+  const [mobilePanel, setMobilePanel] = useState<"folders" | "messages" | "viewer">("folders");
 
   const LIMIT = 50;
   const foldersQuery = useMailboxFolders();
@@ -750,39 +756,60 @@ export default function MailboxPage() {
       <PageHeader eyebrow="Email" title="Hộp thư AHSO" description="Quản lý email iRedMail ngay trong CRM, tự động liên kết với khách hàng theo contact email." />
 
       <div className="grid h-[calc(100vh-220px)] min-h-[560px] overflow-hidden rounded-[28px] border border-white/70 bg-white/90 shadow-[0_14px_35px_rgba(15,23,42,0.06)] md:grid-cols-[200px_360px_minmax(0,1fr)]">
-        <FolderPanel
-          folders={folders}
-          activeFolder={folder}
-          isLoading={foldersQuery.isLoading}
-          isSyncing={syncMutation.isPending}
-          onSelect={(f) => { setFolder(f); setSelectedMessageId(null); }}
-          onCompose={() => openCompose("new")}
-          onSync={() => { setPage(1); syncMutation.mutate(); }}
-          onSignature={() => setShowSignatureEditor(true)}
-        />
-        <MessageList
-          messages={allMessages}
-          selectedIds={selectedIds}
-          selectedMessageId={selectedMessageId}
-          isLoading={messagesQuery.isFetching && allMessages.length === 0}
-          isError={messagesQuery.isError}
-          search={search}
-          total={total}
-          onSearch={(v) => setSearch(v)}
-          onSelect={setSelectedMessageId}
-          onToggleSelect={handleToggleSelect}
-          onSelectAll={handleSelectAll}
-          onBulkAction={handleBulkAction}
-          onLoadMore={() => setPage((p) => p + 1)}
-          onRetry={() => messagesQuery.refetch()}
-        />
-        <MessageViewer
-          message={messageQuery.data}
-          isLoading={messageQuery.isLoading}
-          onReply={() => messageQuery.data && openCompose("reply", messageQuery.data)}
-          onReplyAll={() => messageQuery.data && openCompose("replyAll", messageQuery.data)}
-          onForward={() => messageQuery.data && openCompose("forward", messageQuery.data)}
-        />
+        {/* Folder panel — always visible on desktop; visible on mobile only when mobilePanel="folders" */}
+        <div className={cn("min-h-0", mobilePanel === "folders" ? "flex flex-col" : "hidden md:flex md:flex-col")}>
+          <FolderPanel
+            folders={folders}
+            activeFolder={folder}
+            isLoading={foldersQuery.isLoading}
+            isSyncing={syncMutation.isPending}
+            onSelect={(f) => { setFolder(f); setSelectedMessageId(null); setMobilePanel("messages"); }}
+            onCompose={() => openCompose("new")}
+            onSync={() => { setPage(1); syncMutation.mutate(); }}
+            onSignature={() => setShowSignatureEditor(true)}
+          />
+        </div>
+
+        {/* Message list — always visible on desktop; visible on mobile only when mobilePanel="messages" */}
+        <div className={cn("min-h-0 flex-col", mobilePanel === "messages" ? "flex" : "hidden md:flex")}>
+          {/* Mobile back button */}
+          <button type="button" onClick={() => setMobilePanel("folders")}
+            className="flex items-center gap-1.5 border-b border-border/30 px-3 py-2.5 text-sm font-medium text-text-secondary hover:text-primary md:hidden">
+            <ChevronLeft size={15} /> Thư mục
+          </button>
+          <MessageList
+            messages={allMessages}
+            selectedIds={selectedIds}
+            selectedMessageId={selectedMessageId}
+            isLoading={messagesQuery.isFetching && allMessages.length === 0}
+            isError={messagesQuery.isError}
+            search={search}
+            total={total}
+            onSearch={(v) => setSearch(v)}
+            onSelect={(id) => { setSelectedMessageId(id); setMobilePanel("viewer"); }}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
+            onBulkAction={handleBulkAction}
+            onLoadMore={() => setPage((p) => p + 1)}
+            onRetry={() => messagesQuery.refetch()}
+          />
+        </div>
+
+        {/* Message viewer — always visible on desktop; visible on mobile only when mobilePanel="viewer" */}
+        <div className={cn("min-h-0 flex-col", mobilePanel === "viewer" ? "flex" : "hidden md:flex")}>
+          {/* Mobile back button */}
+          <button type="button" onClick={() => setMobilePanel("messages")}
+            className="flex items-center gap-1.5 border-b border-border/30 px-3 py-2.5 text-sm font-medium text-text-secondary hover:text-primary md:hidden">
+            <ChevronLeft size={15} /> Danh sách thư
+          </button>
+          <MessageViewer
+            message={messageQuery.data}
+            isLoading={messageQuery.isLoading}
+            onReply={() => messageQuery.data && openCompose("reply", messageQuery.data)}
+            onReplyAll={() => messageQuery.data && openCompose("replyAll", messageQuery.data)}
+            onForward={() => messageQuery.data && openCompose("forward", messageQuery.data)}
+          />
+        </div>
       </div>
 
       {compose && (

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -124,7 +125,13 @@ function EmailChipsInput({
           else if (e.key === "Backspace" && !draft && chips.length) onRemove(chips[chips.length - 1]);
           else if (e.key === "Escape") setOpen(false);
         }}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onBlur={() => {
+          // flushSync commits the pending email synchronously so that handleSend
+          // sees the updated `to` array when it runs immediately after (on mobile,
+          // tapping Send fires blur then click in quick succession).
+          if (draft.trim()) flushSync(() => commit());
+          setTimeout(() => setOpen(false), 150);
+        }}
       />
       {open && (suggestions.data?.length ?? 0) > 0 && (
         <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-xl border border-border/50 bg-white shadow-lg">

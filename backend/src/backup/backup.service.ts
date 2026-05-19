@@ -31,7 +31,9 @@ export interface BackupFile {
 }
 
 const FILENAME_RE = /^ahso-crm-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.tar\.gz$/;
-const RCLONE_REMOTE = "AHSO-CRM-Backup:AHSO-CRM-Backups";
+// Override via RCLONE_REMOTE env var in .env.production.local if your rclone
+// remote is named differently (e.g. "gdrive:AHSO-CRM-Backups").
+const DEFAULT_RCLONE_REMOTE = "AHSO-CRM-Backup:AHSO-CRM-Backups";
 const BACKUP_SCRIPT = "/opt/backup-ahso-crm.sh";
 const APP_DIR = "/opt/AHSO-CRM";
 
@@ -48,6 +50,10 @@ export class BackupService {
 
   constructor(private readonly config: ConfigService) {}
 
+  private get rcloneRemote(): string {
+    return this.config.get<string>("RCLONE_REMOTE") ?? DEFAULT_RCLONE_REMOTE;
+  }
+
   private get pg() {
     return {
       container: this.config.get<string>("POSTGRES_CONTAINER") ?? "ahso-crm-postgres-1",
@@ -59,14 +65,14 @@ export class BackupService {
 
   async listBackups(): Promise<BackupFile[]> {
     try {
-      const { stdout } = await execAsync(`rclone lsjson "${RCLONE_REMOTE}/"`);
+      const { stdout } = await execAsync(`rclone lsjson "${this.rcloneRemote}/"`);
       const files: Array<{ Name: string; Size: number; ModTime: string }> = JSON.parse(stdout || "[]");
       return files
         .filter((f) => FILENAME_RE.test(f.Name))
         .sort((a, b) => b.ModTime.localeCompare(a.ModTime))
         .map((f) => ({ name: f.Name, size: f.Size, modTime: f.ModTime, sizeHuman: humanSize(f.Size) }));
     } catch (err) {
-      this.logger.warn(`listBackups failed: ${String(err)}`);
+      this.logger.error(`listBackups failed (remote: ${this.rcloneRemote}): ${String(err)}`);
       return [];
     }
   }
@@ -92,7 +98,7 @@ export class BackupService {
       await execAsync(`mkdir -p "${restoreDir}"`);
 
       // Download from Google Drive
-      await execAsync(`rclone copy "${RCLONE_REMOTE}/${filename}" "${restoreDir}/"`, {
+      await execAsync(`rclone copy "${this.rcloneRemote}/${filename}" "${restoreDir}/"`, {
         timeout: 120_000,
         maxBuffer: 10 * 1024 * 1024
       });
@@ -128,6 +134,6 @@ export class BackupService {
     if (!FILENAME_RE.test(filename)) {
       throw new BadRequestException("Tên file không hợp lệ.");
     }
-    await execAsync(`rclone deletefile "${RCLONE_REMOTE}/${filename}"`);
+    await execAsync(`rclone deletefile "${this.rcloneRemote}/${filename}"`);
   }
 }

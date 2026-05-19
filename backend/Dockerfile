@@ -1,3 +1,7 @@
+# Pull rclone and docker CLI binaries for the backup/restore feature
+FROM rclone/rclone:latest AS rclone-src
+FROM docker:27-cli AS docker-cli-src
+
 # Stage 1: system packages + chromium (changes rarely → stable cache layer)
 # alpine3.21 = latest patch; apk upgrade applies any remaining CVE fixes
 FROM node:20-alpine3.21 AS base
@@ -37,6 +41,9 @@ COPY package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+# rclone for backup listing/restore; docker CLI for pg_restore via docker exec
+COPY --from=rclone-src /usr/local/bin/rclone /usr/local/bin/rclone
+COPY --from=docker-cli-src /usr/local/bin/docker /usr/local/bin/docker
 RUN mkdir -p uploads
 EXPOSE 3001
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]

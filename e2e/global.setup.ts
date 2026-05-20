@@ -34,20 +34,23 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error(`Login API failed (${loginRes.status()}): ${await loginRes.text()}`);
   }
 
-  const body = await loginRes.json() as { data: { accessToken: string } };
+  const body = await loginRes.json() as { data: { accessToken: string; user: Record<string, unknown> } };
   const accessToken = body.data.accessToken;
+  const user = body.data.user;
 
   // The ahso_refresh_token cookie is now in the browser context (set by the
   // API response above). Navigate to the dashboard so the middleware allows it.
   await page.goto(`${baseURL}/dashboard`);
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
 
-  // Persist the access token in both sessionStorage and localStorage so tests
-  // can restore it without triggering a refresh round-trip.
-  await page.evaluate((token: string) => {
+  // Persist the access token and user profile so tests can restore the full
+  // auth state (including role) without a refresh round-trip. The user profile
+  // is required by the admin layout's isAdmin check (reads ahso_auth_user).
+  await page.evaluate(({ token, userData }: { token: string; userData: Record<string, unknown> }) => {
     window.sessionStorage.setItem("ahso_access_token", token);
     window.localStorage.setItem("ahso_e2e_access_token", token);
-  }, accessToken);
+    window.localStorage.setItem("ahso_auth_user", JSON.stringify(userData));
+  }, { token: accessToken, userData: user });
 
   await page.context().storageState({ path: STORAGE_STATE_PATH });
 

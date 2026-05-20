@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { login } from "./helpers";
 
-const API_URL = process.env.E2E_API_URL ?? "http://127.0.0.1:3001/api";
+const API_URL = process.env.E2E_API_URL ?? "http://localhost:3001/api";
 
 test("inventory receipt confirmation increases warehouse stock", async ({ page, request }) => {
   await login(page);
@@ -14,8 +14,8 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
   try {
     const warehouseListResponse = await request.get(`${API_URL}/warehouses`, { headers });
     expect(warehouseListResponse.ok()).toBeTruthy();
-    const warehouseList = unwrap(await warehouseListResponse.json()) as { items: unknown[] };
-    expect(Array.isArray(warehouseList.items)).toBe(true);
+    const warehouseList = unwrap(await warehouseListResponse.json());
+    expect(Array.isArray(warehouseList)).toBe(true);
 
     const warehouseResponse = await request.post(`${API_URL}/warehouses`, {
       headers,
@@ -80,10 +80,8 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
       }
     });
     expect(balancesResponse.ok()).toBeTruthy();
-    const balances = unwrap(await balancesResponse.json()) as {
-      items: Array<{ materialId: string; warehouseId: string; quantity: number }>;
-    };
-    expect(balances.items.some((item) =>
+    const balances = unwrap(await balancesResponse.json()) as Array<{ materialId: string; warehouseId: string; quantity: number }>;
+    expect(balances.some((item) =>
       item.materialId === materialId &&
       item.warehouseId === warehouseId &&
       item.quantity >= 7

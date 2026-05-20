@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { login } from "./helpers";
 
-const API_URL = process.env.E2E_API_URL ?? "http://127.0.0.1:3001/api";
+const API_URL = process.env.E2E_API_URL ?? "http://localhost:3001/api";
 
 test("supplier CRUD API smoke flow", async ({ page, request }) => {
   await login(page);
@@ -33,8 +33,8 @@ test("supplier CRUD API smoke flow", async ({ page, request }) => {
       params: { search: `E2E-SUP-${suffix}` }
     });
     expect(listResponse.ok()).toBeTruthy();
-    const list = unwrap(await listResponse.json()) as { items: Array<{ id: string }> };
-    expect(list.items.some((supplier) => supplier.id === supplierId)).toBe(true);
+    const list = unwrap(await listResponse.json()) as Array<{ id: string }>;
+    expect(list.some((supplier) => supplier.id === supplierId)).toBe(true);
 
     const detailResponse = await request.get(`${API_URL}/suppliers/${supplierId}`, { headers });
     expect(detailResponse.ok()).toBeTruthy();

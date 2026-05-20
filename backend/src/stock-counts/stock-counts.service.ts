@@ -78,24 +78,20 @@ export class StockCountsService {
     return this.prisma.$transaction(async (tx) => {
       const countNo = await this.generateNextCountNo(tx);
 
-      // Build items with systemQuantity and diff
-      const itemsWithSystem = await Promise.all(
-        dto.items.map(async (item) => {
-          const balance = await tx.stockBalance.findUnique({
-            where: {
-              warehouseId_materialId: {
-                warehouseId: dto.warehouseId,
-                materialId: item.materialId,
-              },
-            },
-            select: { quantity: true },
-          });
-          const systemQuantity = balance ? new Decimal(balance.quantity) : new Decimal(0);
-          const actualQuantity = new Decimal(item.actualQuantity);
-          const diff = actualQuantity.minus(systemQuantity);
-          return { materialId: item.materialId, actualQuantity, systemQuantity, diff };
-        })
-      );
+      // Batch-load balances to avoid N+1
+      const materialIds = dto.items.map((i) => i.materialId);
+      const balances = await tx.stockBalance.findMany({
+        where: { warehouseId: dto.warehouseId, materialId: { in: materialIds } },
+        select: { materialId: true, quantity: true },
+      });
+      const balanceMap = new Map(balances.map((b) => [b.materialId, b.quantity]));
+
+      const itemsWithSystem = dto.items.map((item) => {
+        const qty = balanceMap.get(item.materialId);
+        const systemQuantity = qty !== undefined ? new Decimal(qty) : new Decimal(0);
+        const actualQuantity = new Decimal(item.actualQuantity);
+        return { materialId: item.materialId, actualQuantity, systemQuantity, diff: actualQuantity.minus(systemQuantity) };
+      });
 
       return tx.stockCount.create({
         data: {
@@ -122,27 +118,33 @@ export class StockCountsService {
     return this.prisma.$transaction(async (tx) => {
       const count = await tx.stockCount.findFirst({
         where: { id, status: "DRAFT", deletedAt: null },
+        include: { items: { select: { materialId: true, systemQuantity: true } } },
       });
       if (!count) throw new NotFoundException("Không tìm thấy phiếu kiểm kho hoặc phiếu không ở trạng thái nháp");
 
-      // Build items with systemQuantity and diff
-      const itemsWithSystem = await Promise.all(
-        dto.items.map(async (item) => {
-          const balance = await tx.stockBalance.findUnique({
-            where: {
-              warehouseId_materialId: {
-                warehouseId: dto.warehouseId,
-                materialId: item.materialId,
-              },
-            },
-            select: { quantity: true },
-          });
-          const systemQuantity = balance ? new Decimal(balance.quantity) : new Decimal(0);
-          const actualQuantity = new Decimal(item.actualQuantity);
-          const diff = actualQuantity.minus(systemQuantity);
-          return { materialId: item.materialId, actualQuantity, systemQuantity, diff };
-        })
-      );
+      // Preserve systemQuantity from when the count was created — re-fetching from balance
+      // would silently change it if other receipts/issues ran between create and update.
+      const existingSystemMap = new Map(count.items.map((i) => [i.materialId, i.systemQuantity]));
+
+      // For new items added during edit, fetch balance in batch
+      const newMaterialIds = dto.items
+        .map((i) => i.materialId)
+        .filter((mid) => !existingSystemMap.has(mid));
+
+      if (newMaterialIds.length > 0) {
+        const newBalances = await tx.stockBalance.findMany({
+          where: { warehouseId: dto.warehouseId, materialId: { in: newMaterialIds } },
+          select: { materialId: true, quantity: true },
+        });
+        for (const b of newBalances) existingSystemMap.set(b.materialId, b.quantity);
+      }
+
+      const itemsWithSystem = dto.items.map((item) => {
+        const sysQty = existingSystemMap.get(item.materialId);
+        const systemQuantity = sysQty !== undefined ? new Decimal(sysQty) : new Decimal(0);
+        const actualQuantity = new Decimal(item.actualQuantity);
+        return { materialId: item.materialId, actualQuantity, systemQuantity, diff: actualQuantity.minus(systemQuantity) };
+      });
 
       return tx.stockCount.update({
         where: { id },
@@ -228,6 +230,7 @@ export class StockCountsService {
   }
 
   private async generateNextCountNo(tx: Prisma.TransactionClient): Promise<string> {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('stock_count_number'))`;
     const year = new Date().getFullYear();
     const prefix = `KK-${year}-`;
     const latest = await tx.stockCount.findFirst({

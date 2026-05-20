@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtUser } from "../auth/auth.types";
 import { AiProviderRegistry } from "../ai/providers/ai-provider-registry.service";
@@ -84,6 +85,7 @@ export class AiCredentialsController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get("oauth/callback")
   @ApiOperation({ summary: "OAuth callback cho AI provider" })
   handleCallback(@Query(new ZodValidationPipe(oauthCallbackSchema, "query")) query: OAuthCallbackDto) {

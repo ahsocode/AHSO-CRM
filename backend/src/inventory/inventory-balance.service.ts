@@ -63,13 +63,15 @@ export class InventoryBalanceService {
       where: { materialId },
       select: { quantity: true },
     });
-    const currentTotalStock = balances.reduce((sum, balance) => sum.plus(balance.quantity), new Decimal(0));
+    // adjustBalance already ran — totalAfter includes newQty, so pre-existing = totalAfter - newQty
+    const totalAfter = balances.reduce((sum, b) => sum.plus(b.quantity), new Decimal(0));
+    const stockBefore = totalAfter.minus(decimalNewQty);
     const newAvg =
-      currentTotalStock.plus(decimalNewQty).greaterThan(0)
-        ? currentTotalStock
+      totalAfter.greaterThan(0)
+        ? stockBefore
             .mul(currentCost)
             .plus(decimalNewQty.mul(decimalNewUnitPrice))
-            .div(currentTotalStock.plus(decimalNewQty))
+            .div(totalAfter)
             .toDecimalPlaces(0)
         : decimalNewUnitPrice;
 
@@ -89,26 +91,15 @@ export class InventoryBalanceService {
     if (filters.warehouseId) where.warehouseId = filters.warehouseId;
     if (filters.materialId) where.materialId = filters.materialId;
 
-    const [rawItems, total] = await this.prisma.$transaction([
-      this.prisma.stockBalance.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { updatedAt: "desc" },
-        include: {
-          warehouse: { select: { id: true, name: true, code: true } },
-          material: {
-            select: { id: true, name: true, code: true, unit: true, minStock: true, costPrice: true },
-          },
-        },
-      }),
-      this.prisma.stockBalance.count({ where }),
-    ]);
+    const include = {
+      warehouse: { select: { id: true, name: true, code: true } },
+      material: { select: { id: true, name: true, code: true, unit: true, minStock: true, costPrice: true } },
+    } as const;
 
-    const items = rawItems.map((b) => ({
-      id: b.id,
-      warehouseId: b.warehouseId,
-      warehouse: b.warehouse,
+    type BalanceRow = Prisma.StockBalanceGetPayload<{ include: typeof include }>;
+
+    const mapBalance = (b: BalanceRow) => ({
+      id: b.id, warehouseId: b.warehouseId, warehouse: b.warehouse,
       materialId: b.materialId,
       material: {
         ...b.material,
@@ -116,23 +107,27 @@ export class InventoryBalanceService {
         costPrice: Number(b.material.costPrice),
       },
       quantity: Number(b.quantity),
-      isLowStock:
-        b.material.minStock !== null
-          ? Number(b.quantity) < Number(b.material.minStock)
-          : false,
+      isLowStock: b.material.minStock !== null ? Number(b.quantity) < Number(b.material.minStock) : false,
       updatedAt: b.updatedAt,
-    }));
+    });
 
-    const filteredItems = filters.lowStockOnly ? items.filter((i) => i.isLowStock) : items;
+    if (filters.lowStockOnly) {
+      const all = await this.prisma.stockBalance.findMany({ where, orderBy: { updatedAt: "desc" }, include });
+      const filtered = all.map(mapBalance).filter((i) => i.isLowStock);
+      return {
+        items: filtered.slice(skip, skip + limit),
+        meta: { total: filtered.length, page, limit, totalPages: Math.max(1, Math.ceil(filtered.length / limit)) },
+      };
+    }
+
+    const [rawItems, total] = await this.prisma.$transaction([
+      this.prisma.stockBalance.findMany({ where, skip, take: limit, orderBy: { updatedAt: "desc" }, include }),
+      this.prisma.stockBalance.count({ where }),
+    ]);
 
     return {
-      items: filteredItems,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-      },
+      items: rawItems.map(mapBalance),
+      meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
     };
   }
 

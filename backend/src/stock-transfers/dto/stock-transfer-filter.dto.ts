@@ -8,7 +8,10 @@ const emptyToUndefined = (value: unknown) => {
 };
 
 export const stockTransferFilterSchema = paginationSchema.extend({
+  // warehouseId matches either side (OR); use fromWarehouseId/toWarehouseId for exact-side filters
   warehouseId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  fromWarehouseId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  toWarehouseId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   status: z.enum(["DRAFT", "CONFIRMED", "CANCELLED"]).optional(),
   dateFrom: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
   dateTo: z.preprocess(emptyToUndefined, z.coerce.date().optional()),

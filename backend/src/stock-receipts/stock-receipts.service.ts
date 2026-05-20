@@ -208,6 +208,7 @@ export class StockReceiptsService {
   }
 
   private async generateNextReceiptNo(tx: Prisma.TransactionClient): Promise<string> {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('stock_receipt_number'))`;
     const year = new Date().getFullYear();
     const prefix = `PN-${year}-`;
     const latest = await tx.stockReceipt.findFirst({

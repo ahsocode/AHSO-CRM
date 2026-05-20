@@ -211,6 +211,7 @@ export class StockIssuesService {
   }
 
   private async generateNextIssueNo(tx: Prisma.TransactionClient): Promise<string> {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('stock_issue_number'))`;
     const year = new Date().getFullYear();
     const prefix = `PX-${year}-`;
     const latest = await tx.stockIssue.findFirst({

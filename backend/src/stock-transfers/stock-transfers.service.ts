@@ -196,7 +196,14 @@ export class StockTransfersService {
   private buildWhere(filters: StockTransferFilterDto): Prisma.StockTransferWhereInput {
     const where: Prisma.StockTransferWhereInput = { deletedAt: null };
 
-    if (filters.warehouseId) {
+    if (filters.fromWarehouseId && filters.toWarehouseId) {
+      where.fromWarehouseId = filters.fromWarehouseId;
+      where.toWarehouseId = filters.toWarehouseId;
+    } else if (filters.fromWarehouseId) {
+      where.fromWarehouseId = filters.fromWarehouseId;
+    } else if (filters.toWarehouseId) {
+      where.toWarehouseId = filters.toWarehouseId;
+    } else if (filters.warehouseId) {
       where.OR = [
         { fromWarehouseId: filters.warehouseId },
         { toWarehouseId: filters.warehouseId },
@@ -214,6 +221,7 @@ export class StockTransfersService {
   }
 
   private async generateNextTransferNo(tx: Prisma.TransactionClient): Promise<string> {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('stock_transfer_number'))`;
     const year = new Date().getFullYear();
     const prefix = `PCT-${year}-`;
     const latest = await tx.stockTransfer.findFirst({

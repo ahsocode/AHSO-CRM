@@ -17,51 +17,45 @@ export class MaterialsService {
     const skip = (page - 1) * limit;
     const where = this.buildWhere(filters);
 
-    const [rawItems, total] = await this.prisma.$transaction([
-      this.prisma.material.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          category: { select: { id: true, name: true } },
-          stockBalances: { select: { quantity: true } },
-        },
-      }),
-      this.prisma.material.count({ where }),
-    ]);
+    const include = {
+      category: { select: { id: true, name: true } },
+      stockBalances: { select: { quantity: true } },
+    } as const;
 
-    const items = rawItems.map((m) => {
+    type MaterialRow = Prisma.MaterialGetPayload<{ include: typeof include }>;
+
+    const mapItem = (m: MaterialRow) => {
       const totalStock = m.stockBalances.reduce((sum, b) => sum + Number(b.quantity), 0);
       const isLowStock = m.minStock !== null && totalStock < Number(m.minStock);
       return {
-        id: m.id,
-        code: m.code,
-        name: m.name,
-        unit: m.unit,
-        salePrice: Number(m.salePrice),
-        costPrice: Number(m.costPrice),
+        id: m.id, code: m.code, name: m.name, unit: m.unit,
+        salePrice: Number(m.salePrice), costPrice: Number(m.costPrice),
         minStock: m.minStock !== null ? Number(m.minStock) : null,
-        categoryId: m.categoryId,
-        category: m.category,
-        isActive: m.isActive,
-        totalStock,
-        isLowStock,
-        createdAt: m.createdAt,
-        updatedAt: m.updatedAt,
+        categoryId: m.categoryId, category: m.category, isActive: m.isActive,
+        totalStock, isLowStock, createdAt: m.createdAt, updatedAt: m.updatedAt,
       };
-    });
+    };
 
-    const filteredItems = filters.lowStockOnly ? items.filter((i) => i.isLowStock) : items;
+    // lowStockOnly requires in-app filtering — fetch all matching rows, filter, then slice
+    if (filters.lowStockOnly) {
+      const all = await this.prisma.material.findMany({
+        where, orderBy: { createdAt: "desc" }, include,
+      });
+      const filtered = all.map(mapItem).filter((m) => m.isLowStock);
+      return {
+        items: filtered.slice(skip, skip + limit),
+        meta: { total: filtered.length, page, limit, totalPages: Math.max(1, Math.ceil(filtered.length / limit)) },
+      };
+    }
+
+    const [rawItems, total] = await this.prisma.$transaction([
+      this.prisma.material.findMany({ where, skip, take: limit, orderBy: { createdAt: "desc" }, include }),
+      this.prisma.material.count({ where }),
+    ]);
 
     return {
-      items: filteredItems,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-      },
+      items: rawItems.map(mapItem),
+      meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
     };
   }
 

@@ -162,7 +162,9 @@ jobs:
 
             print_disk_usage "before cleanup"
             if [ -n "${PROD_GHCR_TOKEN:-}" ]; then
-              echo "$PROD_GHCR_TOKEN" | docker login ghcr.io -u "${PROD_GHCR_USERNAME:-${{ github.actor }}}" --password-stdin
+              echo "[deploy] Logging in to ghcr.io..."
+              echo "$PROD_GHCR_TOKEN" | docker login ghcr.io -u "${PROD_GHCR_USERNAME:-${{ github.actor }}}" --password-stdin || true
+              echo "[deploy] Docker login step done (exit ignored — pull will verify auth)."
             fi
             echo "[deploy] Ensuring backend secrets are set..."
             ensure_generated_backend_secret "JWT_REFRESH_SECRET"

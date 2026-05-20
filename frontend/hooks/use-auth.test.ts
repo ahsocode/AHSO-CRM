@@ -1,6 +1,7 @@
 import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AUTH_USER_KEY, ACCESS_TOKEN_KEY } from "@/lib/constants";
+import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "./use-auth";
 
 const session = {
@@ -62,7 +63,7 @@ describe("useAuthStore", () => {
         meta: null
       }
     });
-    const getSpy = vi.spyOn(axios, "get").mockResolvedValue({
+    const getSpy = vi.spyOn(apiClient, "get").mockResolvedValue({
       data: {
         data: {},
         meta: null

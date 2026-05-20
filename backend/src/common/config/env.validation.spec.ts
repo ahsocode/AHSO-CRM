@@ -44,15 +44,17 @@ describe("environment validation", () => {
     ).toThrow(/FRONTEND_URL/);
   });
 
-  it("requires a 64-character hex ENCRYPTION_KEY in production", () => {
-    expect(() =>
+  it("accepts both 32-char and 64-char hex ENCRYPTION_KEY in production", () => {
+    // 32-char key (backward compatible with existing encrypted data on server)
+    expect(
       validateEnv({
         ...baseEnv,
         NODE_ENV: "production",
         FRONTEND_URL: "https://crm.ahso.vn"
-      })
-    ).toThrow(/ENCRYPTION_KEY/);
+      }).ENCRYPTION_KEY
+    ).toBe(baseEnv.ENCRYPTION_KEY);
 
+    // 64-char hex key (preferred for new deployments)
     expect(
       validateEnv({
         ...baseEnv,

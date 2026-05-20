@@ -233,7 +233,7 @@ export default function AdminAiProvidersPage() {
 }
 
 function supportsOAuth(provider: AiProviderName, authMode: string) {
-  return provider === "gemini" || authMode === "oauth";
+  return provider === "gemini" || provider === "anthropic" || authMode === "oauth";
 }
 
 function isOAuthSuccessMessage(data: unknown): data is { type: "OAUTH_SUCCESS"; provider: AiProviderName } {

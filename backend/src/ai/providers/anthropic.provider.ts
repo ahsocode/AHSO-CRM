@@ -24,7 +24,7 @@ export class AnthropicProvider implements AiTextProvider {
   }
 
   getAuthMode(): AiAuthMode {
-    return "api_key";
+    return this.configService.get<string>("AI_AUTH_MODE") === "oauth" ? "oauth" : "api_key";
   }
 
   async generateText(request: AiTextRequest) {

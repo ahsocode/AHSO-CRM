@@ -160,6 +160,8 @@ jobs:
               echo "$PROD_GHCR_TOKEN" | docker login ghcr.io -u "${PROD_GHCR_USERNAME:-${{ github.actor }}}" --password-stdin
             fi
             ensure_generated_backend_secret "JWT_REFRESH_SECRET"
+            ensure_generated_backend_secret "JWT_RESET_SECRET"
+            ensure_generated_backend_secret "ENCRYPTION_KEY"
             ./scripts/check-deploy-readiness.sh
             cleanup_docker_space
             if ! $COMPOSE pull backend frontend; then

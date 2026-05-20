@@ -120,6 +120,16 @@ jobs:
               cleanup_docker_space
               $COMPOSE pull backend frontend
             fi
+            # Apply pending Prisma migrations before bringing up the new containers.
+            # --no-deps prevents accidentally re-creating postgres/redis; they are
+            # already running from previous deploys or started implicitly by compose.
+            echo "[deploy] Starting postgres/redis if not already running..."
+            $COMPOSE up -d postgres redis
+            echo "[deploy] Waiting for postgres to be ready..."
+            timeout 90 bash -c "until $COMPOSE exec -T postgres pg_isready -U \${POSTGRES_USER:-ahso} -d \${POSTGRES_DB:-ahso_crm} 2>/dev/null; do sleep 3; done"
+            echo "[deploy] Running Prisma migrations..."
+            $COMPOSE run --rm --no-deps backend npm run prisma:deploy
+
             $COMPOSE up -d --remove-orphans --wait --timeout 120
             $COMPOSE ps
             cleanup_docker_space

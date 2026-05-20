@@ -70,6 +70,7 @@ assert_not_placeholder "$BACKEND_ENV" "JWT_SECRET"
 assert_not_placeholder "$BACKEND_ENV" "JWT_RESET_SECRET"
 assert_not_placeholder "$BACKEND_ENV" "FRONTEND_URL"
 assert_not_placeholder "$BACKEND_ENV" "CORS_ORIGIN"
+assert_not_placeholder "$BACKEND_ENV" "ENCRYPTION_KEY"
 assert_not_placeholder "$FRONTEND_ENV" "NEXT_PUBLIC_API_URL"
 
 [[ "$(read_env_value "$BACKEND_ENV" "NODE_ENV")" == "production" ]] || fail "NODE_ENV trong $BACKEND_ENV phải là production"

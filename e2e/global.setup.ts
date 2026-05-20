@@ -10,7 +10,7 @@ export default async function globalSetup(config: FullConfig) {
   const baseURL =
     process.env.E2E_BASE_URL ??
     config.projects.find((project) => project.name === "authenticated-smoke")?.use?.baseURL?.toString() ??
-    "http://127.0.0.1:3000";
+    "http://localhost:3000";
 
   mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
 

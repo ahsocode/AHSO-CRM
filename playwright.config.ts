@@ -13,7 +13,7 @@ export default defineConfig({
       name: "auth-guest",
       testMatch: /(auth|security)\.spec\.ts/,
       use: {
-        baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
+        baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
         headless: true,
         trace: "retain-on-failure"
       }
@@ -22,7 +22,7 @@ export default defineConfig({
       name: "authenticated-smoke",
       testIgnore: /(auth|security)\.spec\.ts/,
       use: {
-        baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
+        baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
         headless: true,
         trace: "retain-on-failure",
         storageState: "e2e/.auth/admin.json"

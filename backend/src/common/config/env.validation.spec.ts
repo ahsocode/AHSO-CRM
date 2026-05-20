@@ -2,7 +2,8 @@ import { validateEnv } from "./env.validation";
 
 const baseEnv = {
   DATABASE_URL: "postgresql://ahso:password@localhost:5432/ahso_crm?schema=public",
-  JWT_SECRET: "jwt-secret-with-16-chars",
+  JWT_SECRET: "jwt-secret-with-at-least-32-characters",
+  JWT_REFRESH_SECRET: "refresh-secret-with-at-least-32-chars",
   ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef"
 };
 
@@ -19,7 +20,18 @@ describe("environment validation", () => {
 
   it("rejects missing required production database and JWT settings", () => {
     expect(() => validateEnv({})).toThrow(/DATABASE_URL/);
-    expect(() => validateEnv({ DATABASE_URL: baseEnv.DATABASE_URL, JWT_SECRET: "short" })).toThrow(/JWT_SECRET/);
+    expect(() => validateEnv({
+      DATABASE_URL: baseEnv.DATABASE_URL,
+      JWT_SECRET: "short",
+      JWT_REFRESH_SECRET: baseEnv.JWT_REFRESH_SECRET,
+      ENCRYPTION_KEY: baseEnv.ENCRYPTION_KEY
+    })).toThrow(/JWT_SECRET/);
+    expect(() => validateEnv({
+      DATABASE_URL: baseEnv.DATABASE_URL,
+      JWT_SECRET: baseEnv.JWT_SECRET,
+      JWT_REFRESH_SECRET: "short",
+      ENCRYPTION_KEY: baseEnv.ENCRYPTION_KEY
+    })).toThrow(/JWT_REFRESH_SECRET/);
   });
 
   it("requires FRONTEND_URL in production", () => {

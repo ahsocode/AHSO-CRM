@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
@@ -146,14 +147,14 @@ export class StockTransfersService {
 
       // First pass: validate stock for all items
       for (const item of transfer.items) {
-        const qty = Number(item.quantity);
+        const qty = new Decimal(item.quantity);
         await this.inventoryBalance.ensureSufficientStock(tx, transfer.fromWarehouseId, item.materialId, qty);
       }
 
       // Second pass: adjust balances
       for (const item of transfer.items) {
-        const qty = Number(item.quantity);
-        await this.inventoryBalance.adjustBalance(tx, transfer.fromWarehouseId, item.materialId, -qty);
+        const qty = new Decimal(item.quantity);
+        await this.inventoryBalance.adjustBalance(tx, transfer.fromWarehouseId, item.materialId, qty.negated());
         await this.inventoryBalance.adjustBalance(tx, transfer.toWarehouseId, item.materialId, qty);
       }
 

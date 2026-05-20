@@ -16,7 +16,8 @@ import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { AuthTokens, JwtUser, PasswordResetTokenPayload } from "./auth.types";
 
 const AHSO_MAIL_DOMAIN = "@ahso.vn";
-const AHSO_IMAP_HOST = "mail90168.maychuemail.com";
+const DEFAULT_AHSO_IMAP_HOST = "mail90168.maychuemail.com";
+const MAX_ACTIVE_SESSIONS = 5;
 
 interface AuthRequestMeta {
   ip?: string | null;
@@ -51,10 +52,11 @@ export class AuthService {
     const isAhsoEmail = email.endsWith(AHSO_MAIL_DOMAIN);
 
     let user: AuthUserWithRole | null = null;
+    const ahsoImapHost = this.getAhsoImapHost();
 
     if (isAhsoEmail) {
       // Primary: authenticate via iRedMail IMAP
-      const imapValid = await this.imapService.verifyCredentials(email, dto.password, AHSO_IMAP_HOST);
+      const imapValid = await this.imapService.verifyCredentials(email, dto.password, ahsoImapHost);
 
       if (imapValid) {
         user = await this.findOrCreateAhsoUser(email, dto.password);
@@ -87,8 +89,7 @@ export class AuthService {
     const payload = this.buildPayload(user);
     const tokens = await this.issueTokens(payload);
 
-    this.websocketGateway.publishSessionInvalidated(user.id);
-    await this.prisma.userSession.deleteMany({ where: { userId: user.id } });
+    await this.pruneOldSessions(user.id);
     const session = await this.createSession(user.id, tokens.refreshToken, meta);
 
     await this.auditService.recordLogin({
@@ -143,10 +144,10 @@ export class AuthService {
           data: {
             userId,
             email,
-            imapHost: AHSO_IMAP_HOST,
+            imapHost: this.getAhsoImapHost(),
             imapPort: 993,
             imapSecure: true,
-            smtpHost: AHSO_IMAP_HOST,
+            smtpHost: this.getAhsoImapHost(),
             smtpPort: 587,
             password: encrypt(plainPassword),
             isActive: true
@@ -367,13 +368,14 @@ export class AuthService {
   }
 
   private async issueTokens(payload: JwtUser): Promise<AuthTokens> {
+    const refreshSecret = this.configService.get<string>("JWT_REFRESH_SECRET");
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>("JWT_SECRET"),
         expiresIn: this.configService.get<string>("JWT_EXPIRES_IN") ?? "15m"
       }),
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>("JWT_SECRET"),
+        secret: refreshSecret,
         expiresIn: this.configService.get<string>("JWT_REFRESH_EXPIRES_IN") ?? "7d"
       })
     ]);
@@ -413,6 +415,31 @@ export class AuthService {
     });
   }
 
+  private async pruneOldSessions(userId: string) {
+    const sessions = await this.prisma.userSession.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      select: { id: true }
+    });
+
+    if (sessions.length < MAX_ACTIVE_SESSIONS) {
+      return;
+    }
+
+    const sessionsToDelete = sessions.slice(0, sessions.length - (MAX_ACTIVE_SESSIONS - 1));
+    await this.prisma.userSession.deleteMany({
+      where: {
+        id: {
+          in: sessionsToDelete.map((session) => session.id)
+        }
+      }
+    });
+
+    for (const session of sessionsToDelete) {
+      this.websocketGateway.publishSessionInvalidated(userId, session.id);
+    }
+  }
+
   private parseDeviceName(userAgent: string): string {
     if (/Mobile|Android|iPhone|iPad/i.test(userAgent)) {
       if (/iPhone/i.test(userAgent)) return "iPhone";
@@ -436,7 +463,7 @@ export class AuthService {
 
     try {
       payload = await this.jwtService.verifyAsync<JwtUser>(refreshToken, {
-        secret: this.configService.get<string>("JWT_SECRET")
+        secret: this.configService.get<string>("JWT_REFRESH_SECRET")
       });
     } catch {
       throw new UnauthorizedException("Refresh token không hợp lệ");
@@ -500,6 +527,10 @@ export class AuthService {
       this.configService.get<string>("JWT_SECRET");
 
     return `${resetSecret}:${passwordHash}`;
+  }
+
+  private getAhsoImapHost() {
+    return this.configService.get<string>("AHSO_IMAP_HOST") ?? DEFAULT_AHSO_IMAP_HOST;
   }
 
   private decodePasswordResetToken(token: string) {

@@ -160,7 +160,7 @@ export class AuthController {
       // requests while allowing the cookie through on safe top-level GETs.
       sameSite: "lax" as const,
       secure: nodeEnv === "production",
-      path: "/api/auth"
+      path: "/"
     };
   }
 }

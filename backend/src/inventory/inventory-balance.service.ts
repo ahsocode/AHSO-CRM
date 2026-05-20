@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { PrismaService } from "../common/prisma.service";
 import { InventoryBalanceFilterDto } from "./dto/inventory-balance-filter.dto";
 
@@ -11,12 +12,13 @@ export class InventoryBalanceService {
     tx: Prisma.TransactionClient,
     warehouseId: string,
     materialId: string,
-    delta: number
+    delta: Decimal.Value
   ): Promise<void> {
+    const decimalDelta = new Decimal(delta);
     await tx.stockBalance.upsert({
       where: { warehouseId_materialId: { warehouseId, materialId } },
-      create: { warehouseId, materialId, quantity: delta },
-      update: { quantity: { increment: delta } },
+      create: { warehouseId, materialId, quantity: decimalDelta },
+      update: { quantity: { increment: decimalDelta } },
     });
   }
 
@@ -24,19 +26,20 @@ export class InventoryBalanceService {
     tx: Prisma.TransactionClient,
     warehouseId: string,
     materialId: string,
-    quantity: number
+    quantity: Decimal.Value
   ): Promise<void> {
+    const requiredQuantity = new Decimal(quantity);
     const balance = await tx.stockBalance.findUnique({
       where: { warehouseId_materialId: { warehouseId, materialId } },
     });
-    const current = balance ? Number(balance.quantity) : 0;
-    if (current < quantity) {
+    const current = balance ? new Decimal(balance.quantity) : new Decimal(0);
+    if (current.lessThan(requiredQuantity)) {
       const mat = await tx.material.findUnique({
         where: { id: materialId },
         select: { name: true },
       });
       throw new BadRequestException(
-        `Không đủ tồn kho cho vật tư "${mat?.name ?? materialId}". Tồn kho: ${current}, yêu cầu: ${quantity}`
+        `Không đủ tồn kho cho vật tư "${mat?.name ?? materialId}". Tồn kho: ${current.toString()}, yêu cầu: ${requiredQuantity.toString()}`
       );
     }
   }
@@ -44,28 +47,31 @@ export class InventoryBalanceService {
   async updateAverageCostPrice(
     tx: Prisma.TransactionClient,
     materialId: string,
-    newQty: number,
-    newUnitPrice: number
+    newQty: Decimal.Value,
+    newUnitPrice: Decimal.Value
   ): Promise<void> {
+    const decimalNewQty = new Decimal(newQty);
+    const decimalNewUnitPrice = new Decimal(newUnitPrice);
     const material = await tx.material.findUnique({
       where: { id: materialId },
       select: { costPrice: true },
     });
     if (!material) return;
 
-    const currentCost = Number(material.costPrice);
+    const currentCost = new Decimal(material.costPrice);
     const balances = await tx.stockBalance.findMany({
       where: { materialId },
       select: { quantity: true },
     });
-    const currentTotalStock = balances.reduce((s, b) => s + Number(b.quantity), 0);
+    const currentTotalStock = balances.reduce((sum, balance) => sum.plus(balance.quantity), new Decimal(0));
     const newAvg =
-      currentTotalStock + newQty > 0
-        ? Math.round(
-            (currentTotalStock * currentCost + newQty * newUnitPrice) /
-              (currentTotalStock + newQty)
-          )
-        : newUnitPrice;
+      currentTotalStock.plus(decimalNewQty).greaterThan(0)
+        ? currentTotalStock
+            .mul(currentCost)
+            .plus(decimalNewQty.mul(decimalNewUnitPrice))
+            .div(currentTotalStock.plus(decimalNewQty))
+            .toDecimalPlaces(0)
+        : decimalNewUnitPrice;
 
     await tx.material.update({
       where: { id: materialId },

@@ -34,6 +34,7 @@ describe("AuthService", () => {
     };
     userSession: {
       deleteMany: jest.Mock;
+      findMany: jest.Mock;
       create: jest.Mock;
       delete: jest.Mock;
     };
@@ -62,6 +63,7 @@ describe("AuthService", () => {
       },
       userSession: {
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue({ id: "session-1" }),
         delete: jest.fn().mockResolvedValue({ id: "session-1" })
       }
@@ -75,6 +77,7 @@ describe("AuthService", () => {
       NODE_ENV: "development",
       FRONTEND_URL: "http://localhost:3000",
       JWT_SECRET: "jwt-secret",
+      JWT_REFRESH_SECRET: "refresh-secret",
       JWT_RESET_SECRET: "reset-secret",
       JWT_RESET_EXPIRES_IN: "15m"
     };

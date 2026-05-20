@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
@@ -82,10 +83,7 @@ export class StockReceiptsService {
   async create(dto: CreateStockReceiptDto, user: JwtUser) {
     return this.prisma.$transaction(async (tx) => {
       const receiptNo = await this.generateNextReceiptNo(tx);
-      const totalAmount = dto.items.reduce(
-        (sum, item) => sum + Math.round(item.quantity * item.unitPrice),
-        0
-      );
+      const totalAmount = this.calculateTotalAmount(dto.items);
 
       const receipt = await tx.stockReceipt.create({
         data: {
@@ -99,9 +97,9 @@ export class StockReceiptsService {
           items: {
             create: dto.items.map((item) => ({
               materialId: item.materialId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: Math.round(item.quantity * item.unitPrice),
+              quantity: new Decimal(item.quantity),
+              unitPrice: new Decimal(item.unitPrice),
+              total: this.calculateLineTotal(item.quantity, item.unitPrice),
             })),
           },
         },
@@ -119,10 +117,7 @@ export class StockReceiptsService {
       });
       if (!receipt) throw new NotFoundException("Không tìm thấy phiếu nhập hoặc phiếu không ở trạng thái nháp");
 
-      const totalAmount = dto.items.reduce(
-        (sum, item) => sum + Math.round(item.quantity * item.unitPrice),
-        0
-      );
+      const totalAmount = this.calculateTotalAmount(dto.items);
 
       return tx.stockReceipt.update({
         where: { id },
@@ -136,9 +131,9 @@ export class StockReceiptsService {
             deleteMany: {},
             create: dto.items.map((item) => ({
               materialId: item.materialId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: Math.round(item.quantity * item.unitPrice),
+              quantity: new Decimal(item.quantity),
+              unitPrice: new Decimal(item.unitPrice),
+              total: this.calculateLineTotal(item.quantity, item.unitPrice),
             })),
           },
         },
@@ -156,8 +151,8 @@ export class StockReceiptsService {
       if (!receipt) throw new NotFoundException("Không tìm thấy phiếu nhập hoặc phiếu không ở trạng thái nháp");
 
       for (const item of receipt.items) {
-        const qty = Number(item.quantity);
-        const price = Number(item.unitPrice);
+        const qty = new Decimal(item.quantity);
+        const price = new Decimal(item.unitPrice);
         await this.inventoryBalance.adjustBalance(tx, receipt.warehouseId, item.materialId, qty);
         await this.inventoryBalance.updateAverageCostPrice(tx, item.materialId, qty, price);
       }
@@ -223,5 +218,16 @@ export class StockReceiptsService {
     const seq = latest?.receiptNo.split("-").at(-1);
     const next = seq ? Number.parseInt(seq, 10) + 1 : 1;
     return `${prefix}${String(next).padStart(3, "0")}`;
+  }
+
+  private calculateLineTotal(quantity: number, unitPrice: number) {
+    return new Decimal(quantity).mul(unitPrice).toDecimalPlaces(0);
+  }
+
+  private calculateTotalAmount(items: Array<{ quantity: number; unitPrice: number }>) {
+    return items.reduce(
+      (sum, item) => sum.plus(this.calculateLineTotal(item.quantity, item.unitPrice)),
+      new Decimal(0)
+    );
   }
 }

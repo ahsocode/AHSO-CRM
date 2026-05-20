@@ -4,6 +4,8 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AiModule } from "./ai/ai.module";
+import { AiCredentialsModule } from "./ai-credentials/ai-credentials.module";
+import { AgentsModule } from "./agents/agents.module";
 import { AuditModule } from "./audit/audit.module";
 import { CommonModule } from "./common/common.module";
 import { EmailModule } from "./email/email.module";
@@ -63,7 +65,9 @@ import { StockCountsModule } from "./stock-counts/stock-counts.module";
       ]
     }),
     CommonModule,
+    AiCredentialsModule,
     AiModule,
+    AgentsModule,
     AuditModule,
     AuthModule,
     UsersModule,

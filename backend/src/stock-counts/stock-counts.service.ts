@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
@@ -89,9 +90,10 @@ export class StockCountsService {
             },
             select: { quantity: true },
           });
-          const systemQuantity = balance ? Number(balance.quantity) : 0;
-          const diff = item.actualQuantity - systemQuantity;
-          return { materialId: item.materialId, actualQuantity: item.actualQuantity, systemQuantity, diff };
+          const systemQuantity = balance ? new Decimal(balance.quantity) : new Decimal(0);
+          const actualQuantity = new Decimal(item.actualQuantity);
+          const diff = actualQuantity.minus(systemQuantity);
+          return { materialId: item.materialId, actualQuantity, systemQuantity, diff };
         })
       );
 
@@ -135,9 +137,10 @@ export class StockCountsService {
             },
             select: { quantity: true },
           });
-          const systemQuantity = balance ? Number(balance.quantity) : 0;
-          const diff = item.actualQuantity - systemQuantity;
-          return { materialId: item.materialId, actualQuantity: item.actualQuantity, systemQuantity, diff };
+          const systemQuantity = balance ? new Decimal(balance.quantity) : new Decimal(0);
+          const actualQuantity = new Decimal(item.actualQuantity);
+          const diff = actualQuantity.minus(systemQuantity);
+          return { materialId: item.materialId, actualQuantity, systemQuantity, diff };
         })
       );
 
@@ -171,7 +174,7 @@ export class StockCountsService {
       if (!count) throw new NotFoundException("Không tìm thấy phiếu kiểm kho hoặc phiếu không ở trạng thái nháp");
 
       for (const item of count.items) {
-        const diff = Number(item.diff);
+        const diff = new Decimal(item.diff);
         await this.inventoryBalance.adjustBalance(tx, count.warehouseId, item.materialId, diff);
       }
 

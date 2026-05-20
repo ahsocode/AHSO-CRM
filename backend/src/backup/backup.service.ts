@@ -8,13 +8,24 @@ const execFileAsync = promisify(execFile);
 
 const execAsync = promisify(exec);
 
-function spawnRestore(dumpPath: string, pg: { container: string; user: string; db: string; password: string }): Promise<void> {
+const PGPASS_FILE = "/tmp/ahso-crm.pgpass";
+
+function writeContainerStdin(args: string[], input: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("docker", args);
+    child.stdin.end(input);
+    child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`docker exited ${code}`))));
+    child.on("error", reject);
+  });
+}
+
+function spawnRestore(dumpPath: string, pg: { container: string; user: string; db: string }): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn("docker", [
       "exec", "-i",
-      "-e", `PGPASSWORD=${pg.password}`,
       pg.container,
-      "pg_restore", "-U", pg.user, "-d", pg.db
+      "sh", "-c", `PGPASSFILE=${PGPASS_FILE} pg_restore -U "$1" -d "$2"`,
+      "sh", pg.user, pg.db
     ]);
 
     createReadStream(dumpPath).pipe(child.stdin);
@@ -36,6 +47,7 @@ const FILENAME_RE = /^ahso-crm-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}\.tar\.gz$/;
 const DEFAULT_RCLONE_REMOTE = "AHSO-CRM-Backup:AHSO-CRM-Backups";
 const BACKUP_SCRIPT = "/opt/backup-ahso-crm.sh";
 const APP_DIR = "/opt/AHSO-CRM";
+const SAFE_IDENTIFIER_RE = /^[A-Za-z0-9_]+$/;
 
 function humanSize(bytes: number): string {
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
@@ -105,19 +117,23 @@ export class BackupService {
 
       // Extract
       await execAsync(`cd "${restoreDir}" && tar -xzf "${filename}"`);
+      await this.createPgpass(container, user, db, password);
 
       // Drop and recreate database — use execFile (no shell) to avoid injection
+      this.assertSafePgIdentifier(db);
       await execFileAsync("docker", [
-        "exec", "-e", `PGPASSWORD=${password}`, container,
-        "psql", "-U", user, "-c", `DROP DATABASE IF EXISTS ${db};`
+        "exec", container,
+        "sh", "-c", `PGPASSFILE=${PGPASS_FILE} psql -U "$1" -d postgres -c 'DROP DATABASE IF EXISTS "${db}";'`,
+        "sh", user
       ]);
       await execFileAsync("docker", [
-        "exec", "-e", `PGPASSWORD=${password}`, container,
-        "psql", "-U", user, "-c", `CREATE DATABASE ${db};`
+        "exec", container,
+        "sh", "-c", `PGPASSFILE=${PGPASS_FILE} psql -U "$1" -d postgres -c 'CREATE DATABASE "${db}";'`,
+        "sh", user
       ]);
 
       // Restore pg_dump — spawn with stdin pipe, no shell interpolation
-      await spawnRestore(`${restoreDir}/${extractedDir}/database.dump`, { container, user, db, password });
+      await spawnRestore(`${restoreDir}/${extractedDir}/database.dump`, { container, user, db });
 
       // Restore uploads
       await execAsync(
@@ -126,6 +142,7 @@ export class BackupService {
 
       this.logger.log("Restore complete.");
     } finally {
+      await this.removePgpass(this.pg.container).catch(() => {});
       await execAsync(`rm -rf "${restoreDir}"`).catch(() => {});
     }
   }
@@ -135,5 +152,24 @@ export class BackupService {
       throw new BadRequestException("Tên file không hợp lệ.");
     }
     await execAsync(`rclone deletefile "${this.rcloneRemote}/${filename}"`);
+  }
+
+  private async createPgpass(container: string, user: string, db: string, password: string) {
+    const escapedPassword = password.replace(/\\/g, "\\\\").replace(/:/g, "\\:");
+    const pgpass = `*:*:*:${user}:${escapedPassword}\n`;
+    await writeContainerStdin([
+      "exec", "-i", container,
+      "sh", "-c", `umask 077 && cat > ${PGPASS_FILE}`
+    ], pgpass);
+  }
+
+  private async removePgpass(container: string) {
+    await execFileAsync("docker", ["exec", container, "rm", "-f", PGPASS_FILE]);
+  }
+
+  private assertSafePgIdentifier(identifier: string) {
+    if (!SAFE_IDENTIFIER_RE.test(identifier)) {
+      throw new BadRequestException("Tên database không hợp lệ.");
+    }
   }
 }

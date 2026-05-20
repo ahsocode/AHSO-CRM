@@ -78,9 +78,6 @@ services:
       # and `rclone copy` for downloading backups. Mount the host rclone config
       # read-only. Path override: set RCLONE_CONFIG_DIR in .env.production.local.
       - ${RCLONE_CONFIG_DIR:-/root/.config/rclone}:/root/.config/rclone:ro
-      # Docker socket: allows backup.service to call `docker exec postgres psql`
-      # for drop/recreate DB during restore.
-      - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       resources:
         limits:
@@ -91,6 +88,29 @@ services:
       timeout: 5s
       retries: 10
       start_period: 45s
+
+  backup:
+    image: ${BACKUP_IMAGE:-ghcr.io/ahsocode/ahso-crm-backend:latest}
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.production.local
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-ahso}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ahso_crm}?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      NODE_OPTIONS: "--max-old-space-size=256"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ${UPLOADS_DIR:-./backend/uploads}:/app/uploads
+      - ${RCLONE_CONFIG_DIR:-/root/.config/rclone}:/root/.config/rclone:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["sh", "-c", "sleep infinity"]
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/ahsocode/ahso-crm-frontend:latest}

@@ -39,7 +39,7 @@ describe("AuthController", () => {
     controller = new AuthController(authService as unknown as AuthService, configService as unknown as ConfigService);
   });
 
-  it("sets a persistent refresh cookie on login (maxAge=7d, sameSite=lax, path=/api/auth)", async () => {
+  it("sets a persistent refresh cookie on login (maxAge=7d, sameSite=lax, path=/)", async () => {
     const response = createResponse();
     authService.login.mockResolvedValue({
       accessToken: "access-token",
@@ -70,7 +70,7 @@ describe("AuthController", () => {
         httpOnly: true,
         sameSite: "lax",
         secure: false,
-        path: "/api/auth",
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000
       })
     );
@@ -125,7 +125,7 @@ describe("AuthController", () => {
         httpOnly: true,
         sameSite: "lax",
         secure: false,
-        path: "/api/auth"
+        path: "/"
       })
     );
   });

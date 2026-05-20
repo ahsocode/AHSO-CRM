@@ -14,6 +14,8 @@ interface CachedPermissionEntry {
 export class PermissionsGuard implements CanActivate {
   private static readonly cache = new Map<string, CachedPermissionEntry>();
   private static readonly ttlMs = 60_000;
+  private static readonly maxCacheEntries = 1000;
+  private static readonly pruneCacheEntries = 200;
 
   constructor(
     private readonly reflector: Reflector,
@@ -112,7 +114,23 @@ export class PermissionsGuard implements CanActivate {
       roleName,
       expiresAt: Date.now() + PermissionsGuard.ttlMs
     });
+    this.pruneCacheIfNeeded();
 
     return permissions;
+  }
+
+  private pruneCacheIfNeeded() {
+    if (PermissionsGuard.cache.size <= PermissionsGuard.maxCacheEntries) {
+      return;
+    }
+
+    const keys = PermissionsGuard.cache.keys();
+    for (let index = 0; index < PermissionsGuard.pruneCacheEntries; index += 1) {
+      const next = keys.next();
+      if (next.done) {
+        break;
+      }
+      PermissionsGuard.cache.delete(next.value);
+    }
   }
 }

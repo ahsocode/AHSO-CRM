@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/layout/page-header";
+import { AppIcon } from "@/components/shared/app-icon";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,7 @@ import {
   useAiProviders,
   useAiUsage,
   useDisconnectAiProvider,
+  useInitiateOAuth,
   useTestAiProvider,
   useUpsertAiApiKey
 } from "@/hooks/use-ai";
@@ -26,12 +29,31 @@ const PROVIDER_LABELS: Record<AiProviderName, string> = {
 };
 
 export default function AdminAiProvidersPage() {
+  const queryClient = useQueryClient();
   const providersQuery = useAiProviders();
   const usageQuery = useAiUsage(7);
   const saveMutation = useUpsertAiApiKey();
   const testMutation = useTestAiProvider();
   const disconnectMutation = useDisconnectAiProvider();
+  const oauthMutation = useInitiateOAuth();
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const handleOAuthMessage = (event: MessageEvent<unknown>) => {
+      if (event.origin !== window.location.origin || !isOAuthSuccessMessage(event.data)) {
+        return;
+      }
+
+      toast({
+        title: "Đã kết nối OAuth thành công",
+        description: `Provider ${PROVIDER_LABELS[event.data.provider] ?? event.data.provider} đã sẵn sàng.`
+      });
+      void queryClient.invalidateQueries({ queryKey: ["ai"] });
+    };
+
+    window.addEventListener("message", handleOAuthMessage);
+    return () => window.removeEventListener("message", handleOAuthMessage);
+  }, [queryClient]);
 
   const saveApiKey = async (provider: AiProviderName) => {
     try {
@@ -58,6 +80,24 @@ export default function AdminAiProvidersPage() {
       toast({ title: "Đã ngắt kết nối provider" });
     } catch (error) {
       toast({ title: "Không ngắt được provider", description: getApiErrorMessage(error), variant: "destructive" });
+    }
+  };
+
+  const connectOAuth = async (provider: AiProviderName) => {
+    try {
+      const redirectUri = `${window.location.origin}/admin/ai-providers/callback`;
+      const result = await oauthMutation.mutateAsync({ provider, redirectUri });
+      const popup = window.open(result.authorizeUrl, "oauth_popup", "width=600,height=700");
+
+      if (!popup) {
+        toast({
+          title: "Không mở được cửa sổ OAuth",
+          description: "Trình duyệt đang chặn popup. Hãy cho phép popup rồi thử lại.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({ title: "Không khởi tạo được OAuth", description: getApiErrorMessage(error), variant: "destructive" });
     }
   };
 
@@ -119,6 +159,18 @@ export default function AdminAiProvidersPage() {
                     >
                       Lưu khóa API
                     </Button>
+                    {supportsOAuth(provider.provider, provider.authMode) ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => connectOAuth(provider.provider)}
+                        disabled={oauthMutation.isPending}
+                      >
+                        <AppIcon name="refresh" className="mr-1.5 h-3.5 w-3.5" />
+                        Kết nối OAuth
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       size="sm"
@@ -172,6 +224,22 @@ export default function AdminAiProvidersPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function supportsOAuth(provider: AiProviderName, authMode: string) {
+  return provider === "gemini" || authMode === "oauth";
+}
+
+function isOAuthSuccessMessage(data: unknown): data is { type: "OAUTH_SUCCESS"; provider: AiProviderName } {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+
+  const candidate = data as { type?: unknown; provider?: unknown };
+  return (
+    candidate.type === "OAUTH_SUCCESS" &&
+    (candidate.provider === "anthropic" || candidate.provider === "openai" || candidate.provider === "gemini")
   );
 }
 

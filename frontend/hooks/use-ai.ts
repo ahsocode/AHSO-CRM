@@ -80,6 +80,11 @@ export interface TestAiProviderResult {
   message: string;
 }
 
+export interface InitiateOAuthResult {
+  authorizeUrl: string;
+  state: string;
+}
+
 export interface AgentItem {
   id: string;
   name: string;
@@ -116,6 +121,15 @@ export interface AgentRunResult {
   }>;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  toolCalls?: AgentRunResult["toolCalls"];
+  status?: "SUCCESS" | "ERROR";
+  timestamp: Date;
+}
+
 export function useAiProviders() {
   return useQuery({
     queryKey: ["ai", "providers"],
@@ -135,6 +149,23 @@ export function useAiUsage(days = 7) {
       return response.data.data;
     },
     retry: 0
+  });
+}
+
+export function useInitiateOAuth() {
+  return useMutation({
+    mutationFn: async ({ provider, redirectUri }: { provider: AiProviderName; redirectUri: string }) => {
+      const response = await apiClient.post<ApiResponse<InitiateOAuthResult | { authorizeUrl: string }>>(
+        `/ai-credentials/${provider}/oauth/authorize`,
+        { redirectUri }
+      );
+      const result = response.data.data;
+      const state = "state" in result ? result.state : new URL(result.authorizeUrl).searchParams.get("state") ?? "";
+      return {
+        authorizeUrl: result.authorizeUrl,
+        state
+      };
+    }
   });
 }
 

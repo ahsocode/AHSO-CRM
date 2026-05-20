@@ -1,12 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import Anthropic from "@anthropic-ai/sdk";
 import type { Prisma, ProjectStatus } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { DraftEmailDto } from "./dto/draft-email.dto";
+import { AiProviderRegistry } from "./providers/ai-provider-registry.service";
 
-const MODEL = "claude-sonnet-4-20250514";
 const SUMMARY_ACTIVITY_LIMIT = 12;
 const PROJECT_FORECAST_WEIGHTS: Record<ProjectStatus, number> = {
   SURVEY: 0.15,
@@ -20,12 +18,65 @@ const PROJECT_FORECAST_WEIGHTS: Record<ProjectStatus, number> = {
 
 @Injectable()
 export class AiService {
-  private client?: Anthropic;
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly configService: ConfigService
+    private readonly aiProviderRegistry: AiProviderRegistry
   ) {}
+
+  async getProviderStatus() {
+    return {
+      activeProvider: this.aiProviderRegistry.getActiveProviderName(),
+      providers: await this.aiProviderRegistry.getStatus()
+    };
+  }
+
+  async getUsageSummary(days = 7) {
+    const safeDays = Math.max(1, Math.min(days, 30));
+    const since = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000);
+    const logs = await this.prisma.aiUsageLog.findMany({
+      where: {
+        createdAt: {
+          gte: since
+        }
+      },
+      orderBy: {
+        createdAt: "asc"
+      }
+    });
+
+    const byProvider = new Map<string, {
+      provider: string;
+      requestCount: number;
+      errorCount: number;
+      totalTokens: number;
+      totalDurationMs: number;
+    }>();
+
+    for (const log of logs) {
+      const row = byProvider.get(log.provider) ?? {
+        provider: log.provider,
+        requestCount: 0,
+        errorCount: 0,
+        totalTokens: 0,
+        totalDurationMs: 0
+      };
+      row.requestCount += 1;
+      row.errorCount += log.status === "ERROR" ? 1 : 0;
+      row.totalTokens += log.totalTokens ?? 0;
+      row.totalDurationMs += log.durationMs;
+      byProvider.set(log.provider, row);
+    }
+
+    return {
+      days: safeDays,
+      totalRequests: logs.length,
+      totalErrors: logs.filter((log) => log.status === "ERROR").length,
+      byProvider: Array.from(byProvider.values()).map((row) => ({
+        ...row,
+        averageDurationMs: row.requestCount > 0 ? Math.round(row.totalDurationMs / row.requestCount) : 0
+      }))
+    };
+  }
 
   async summarizeActivities(customerId: string, user: JwtUser) {
     const customer = await this.prisma.customer.findFirst({
@@ -97,7 +148,9 @@ export class AiService {
       };
     }
 
-    const summary = await this.generateText(
+    const summaryResult = await this.generateText(
+      "customer_summary",
+      user.sub,
       "Bạn là trợ lý bán hàng B2B cho AHSO CRM. Luôn trả lời bằng tiếng Việt, ngắn gọn, chuyên nghiệp, tối đa 500 từ.",
       `
 Khách hàng: ${customer.name}
@@ -130,7 +183,8 @@ Hãy tóm tắt:
 
     return {
       customerId,
-      summary
+      summary: summaryResult.text,
+      aiMeta: summaryResult.meta
     };
   }
 
@@ -181,7 +235,9 @@ Hãy tóm tắt:
       throw new NotFoundException("Không tìm thấy khách hàng để đề xuất follow-up");
     }
 
-    const suggestion = await this.generateText(
+    const suggestionResult = await this.generateText(
+      "follow_up_suggestion",
+      user.sub,
       "Bạn là chuyên gia account management B2B cho AHSO CRM. Luôn trả lời bằng tiếng Việt, súc tích, thực dụng.",
       `
 Khách hàng: ${customer.name}
@@ -214,7 +270,8 @@ Hãy đề xuất bước tiếp theo phù hợp nhất trong 48 giờ tới. B�
 
     return {
       customerId,
-      suggestion
+      suggestion: suggestionResult.text,
+      aiMeta: suggestionResult.meta
     };
   }
 
@@ -292,7 +349,9 @@ Hãy đề xuất bước tiếp theo phù hợp nhất trong 48 giờ tới. B�
     }
 
     const fallback = this.buildEmailFallback(context, customer?.name, project?.name, emailPurpose);
-    const raw = await this.generateText(
+    const rawResult = await this.generateText(
+      "draft_email",
+      user.sub,
       "Bạn là trợ lý soạn email bán hàng B2B cho AHSO CRM. Luôn viết bằng tiếng Việt, lịch sự, rõ ràng, thực dụng. Chỉ trả về JSON hợp lệ với 2 khóa: subject, body.",
       `
 Ngữ cảnh:
@@ -312,11 +371,12 @@ Yêu cầu:
 `,
       JSON.stringify(fallback)
     );
-    const parsed = safeParseJson<{ subject?: string; body?: string }>(raw);
+    const parsed = safeParseJson<{ subject?: string; body?: string }>(rawResult.text);
 
     return {
       subject: parsed?.subject?.trim() || fallback.subject,
       body: parsed?.body?.trim() || fallback.body,
+      aiMeta: rawResult.meta,
       context: {
         customer,
         project,
@@ -370,7 +430,9 @@ Yêu cầu:
     const estimatedValue = Number(project.estimatedValue ?? project.quotes[0]?.total ?? project.contract?.value ?? 0);
     const forecastedRevenue = Math.round(estimatedValue * weight);
     const fallbackReasoning = `Dự án ${project.code} đang ở giai đoạn ${project.status}, xác suất thắng quy đổi khoảng ${probabilityPercent}%. Doanh thu kỳ vọng được tính từ giá trị dự kiến nhân trọng số theo stage hiện tại.`;
-    const reasoning = await this.generateText(
+    const reasoningResult = await this.generateText(
+      "project_forecast",
+      user.sub,
       "Bạn là trợ lý phân tích pipeline B2B cho AHSO CRM. Trả lời bằng tiếng Việt, ngắn gọn, thực dụng, tối đa 120 từ.",
       `
 Dự án: ${project.code} - ${project.name}
@@ -391,11 +453,12 @@ Hãy giải thích ngắn gọn vì sao forecast này hợp lý và đề xuất
       projectId: project.id,
       probabilityPercent,
       forecastedRevenue,
-      reasoning
+      reasoning: reasoningResult.text,
+      aiMeta: reasoningResult.meta
     };
   }
 
-  async forecastRevenue(months = 3) {
+  async forecastRevenue(months = 3, user?: JwtUser) {
     const safeMonths = Math.max(1, Math.min(months, 12));
     const now = new Date();
     const endWindow = new Date(now.getFullYear(), now.getMonth() + safeMonths, 0, 23, 59, 59, 999);
@@ -450,7 +513,9 @@ Hãy giải thích ngắn gọn vì sao forecast này hợp lý và đề xuất
 
     const totalPipelineValue = forecastByMonth.reduce((sum, month) => sum + month.projectedValue, 0);
     const weightedForecast = forecastByMonth.reduce((sum, month) => sum + month.weightedValue, 0);
-    const narrative = await this.generateText(
+    const narrativeResult = await this.generateText(
+      "revenue_forecast",
+      user?.sub ?? null,
       "Bạn là trợ lý phân tích doanh thu B2B cho ban điều hành AHSO. Trả lời bằng tiếng Việt, ngắn gọn, ưu tiên nhận định vận hành thực tế.",
       `
 Dự báo trong ${safeMonths} tháng tới.
@@ -478,7 +543,8 @@ Hãy viết:
       totalPipelineValue,
       weightedForecast,
       forecastByMonth,
-      narrative
+      narrative: narrativeResult.text,
+      aiMeta: narrativeResult.meta
     };
   }
 
@@ -547,53 +613,81 @@ Hãy viết:
     return { subject, body };
   }
 
-  private getClient() {
-    if (this.client) {
-      return this.client;
-    }
-
-    const apiKey = this.configService.get<string>("ANTHROPIC_API_KEY");
-    if (!apiKey) {
-      return null;
-    }
-
-    this.client = new Anthropic({
-      apiKey
-    });
-
-    return this.client;
-  }
-
-  private async generateText(system: string, prompt: string, fallback: string) {
-    const client = this.getClient();
-    if (!client) {
-      return fallback;
-    }
-
+  private async generateText(feature: string, userId: string | null, system: string, prompt: string, fallback: string) {
+    const startedAt = Date.now();
     try {
-      const response = await client.messages.create({
-        model: MODEL,
+      const result = await this.aiProviderRegistry.generateTextResult({
         system,
-        max_tokens: 900,
-        temperature: 0.3,
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
+        prompt,
+        maxTokens: 900,
+        temperature: 0.3
       });
 
-      const text = response.content
-        .filter((item): item is Anthropic.TextBlock => item.type === "text")
-        .map((item) => item.text.trim())
-        .filter(Boolean)
-        .join("\n");
+      if (!result) {
+        return {
+          text: fallback,
+          meta: {
+            provider: null,
+            model: null,
+            durationMs: Date.now() - startedAt,
+            finishReason: "fallback"
+          }
+        };
+      }
 
-      return text || fallback;
-    } catch {
-      return fallback;
+      await this.recordUsage({
+        provider: result.provider,
+        model: result.model,
+        userId,
+        feature,
+        durationMs: result.durationMs,
+        status: "SUCCESS"
+      });
+
+      return {
+        text: result.text,
+        meta: {
+          provider: result.provider,
+          model: result.model,
+          durationMs: result.durationMs,
+          finishReason: result.finishReason ?? "stop"
+        }
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI provider không khả dụng";
+      await this.recordUsage({
+        provider: this.aiProviderRegistry.getActiveProviderName() ?? "unknown",
+        model: "unknown",
+        userId,
+        feature,
+        durationMs: Date.now() - startedAt,
+        status: "ERROR",
+        errorCode: message.slice(0, 120)
+      });
+      throw error;
     }
+  }
+
+  private async recordUsage(input: {
+    provider: string;
+    model: string;
+    userId: string | null;
+    feature: string;
+    durationMs: number;
+    status: string;
+    errorCode?: string;
+  }) {
+    await this.prisma.aiUsageLog.create({
+      data: {
+        provider: input.provider,
+        model: input.model,
+        userId: input.userId,
+        feature: input.feature,
+        durationMs: input.durationMs,
+        status: input.status,
+        errorCode: input.errorCode
+      }
+    }).catch(() => undefined);
   }
 }
 

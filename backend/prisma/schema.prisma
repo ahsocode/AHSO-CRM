@@ -41,6 +41,9 @@ model User {
   createdIssues     StockIssue[]     @relation("IssueCreatedBy")
   createdTransfers  StockTransfer[]  @relation("TransferCreatedBy")
   createdCounts     StockCount[]     @relation("CountCreatedBy")
+  aiUsageLogs       AiUsageLog[]
+  agentsCreated     Agent[]          @relation("AgentCreatedBy")
+  agentRuns         AgentRun[]
 }
 
 model UserSession {
@@ -1070,6 +1073,7 @@ model AiProviderCredential {
   id            String    @id @default(cuid())
   provider      String    @unique
   authMode      String
+  modelOverride String?
   accessToken   String?
   refreshToken  String?
   tokenType     String?
@@ -1095,4 +1099,91 @@ model AiOAuthState {
   createdAt   DateTime  @default(now())
 
   @@index([provider, expiresAt])
+}
+
+model AiUsageLog {
+  id               String   @id @default(cuid())
+  provider         String
+  model            String
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  feature          String
+  promptTokens     Int?
+  completionTokens Int?
+  totalTokens      Int?
+  estimatedCost    Decimal? @db.Decimal(12, 6)
+  durationMs       Int
+  status           String
+  errorCode        String?
+  createdAt        DateTime @default(now())
+
+  @@index([provider, createdAt])
+  @@index([userId, createdAt])
+  @@index([feature, createdAt])
+  @@index([status, createdAt])
+}
+
+model Agent {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  systemPrompt String
+  provider     String?
+  model        String?
+  enabledTools String[]
+  isActive     Boolean    @default(true)
+  createdById  String
+  createdBy    User       @relation("AgentCreatedBy", fields: [createdById], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  runs         AgentRun[]
+
+  @@index([isActive, createdAt])
+  @@index([createdById])
+}
+
+model AgentRun {
+  id         String          @id @default(cuid())
+  agentId    String
+  agent      Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User            @relation(fields: [userId], references: [id])
+  status     String
+  input      String
+  output     String?
+  error      String?
+  durationMs Int?
+  createdAt  DateTime        @default(now())
+  messages   AgentMessage[]
+  toolCalls  AgentToolCall[]
+
+  @@index([agentId, createdAt])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AgentMessage {
+  id        String   @id @default(cuid())
+  runId     String
+  run       AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([runId, createdAt])
+}
+
+model AgentToolCall {
+  id         String   @id @default(cuid())
+  runId      String
+  run        AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  toolName   String
+  inputJson  Json
+  outputJson Json?
+  status     String
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  @@index([runId, createdAt])
+  @@index([toolName, createdAt])
 }

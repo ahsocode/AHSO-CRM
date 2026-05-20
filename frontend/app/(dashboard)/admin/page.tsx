@@ -48,6 +48,18 @@ const ADMIN_CARDS = [
     icon: "mail" as const
   },
   {
+    href: "/admin/ai-providers" as Route,
+    title: "AI Providers",
+    description: "Cấu hình GPT, Anthropic, Gemini và theo dõi usage AI trong hệ thống.",
+    icon: "analytics" as const
+  },
+  {
+    href: "/admin/agents" as Route,
+    title: "AI Agents",
+    description: "Tạo agent, giới hạn tool được phép và quản lý prompt vận hành.",
+    icon: "settings" as const
+  },
+  {
     href: "/admin/backup" as Route,
     title: "Backup & Restore",
     description: "Sao lưu toàn bộ hệ thống lên Google Drive và khôi phục khi cần.",

@@ -20,6 +20,20 @@ import { ForecastRevenueDto, forecastRevenueSchema } from "./dto/forecast-revenu
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
+  @Get("providers")
+  @Roles(ROLE_VALUES[0])
+  @ApiOperation({ summary: "Kiểm tra trạng thái cấu hình các AI provider" })
+  getProviders() {
+    return this.aiService.getProviderStatus();
+  }
+
+  @Get("usage")
+  @Roles(ROLE_VALUES[0])
+  @ApiOperation({ summary: "Tổng hợp usage AI gần đây" })
+  getUsage(@Query("days") days?: string) {
+    return this.aiService.getUsageSummary(days ? Number(days) : 7);
+  }
+
   @Post("summarize/:customerId")
   @Roles(ROLE_VALUES[0], ROLE_VALUES[1])
   @ApiOperation({ summary: "Tóm tắt lịch sử tương tác của khách hàng bằng AI" })
@@ -59,8 +73,9 @@ export class AiController {
   @Roles(ROLE_VALUES[0], ROLE_VALUES[1])
   @ApiOperation({ summary: "Dự báo doanh thu pipeline bằng AI" })
   forecastRevenue(
-    @Query(new ZodValidationPipe(forecastRevenueSchema, "query")) query: ForecastRevenueDto
+    @Query(new ZodValidationPipe(forecastRevenueSchema, "query")) query: ForecastRevenueDto,
+    @CurrentUser() user: JwtUser
   ) {
-    return this.aiService.forecastRevenue(query.months);
+    return this.aiService.forecastRevenue(query.months, user);
   }
 }

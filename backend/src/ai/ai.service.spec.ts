@@ -1,10 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { ConfigService } from "@nestjs/config";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { AiService } from "./ai.service";
-
-jest.mock("@anthropic-ai/sdk");
+import { AiProviderRegistry } from "./providers/ai-provider-registry.service";
 
 describe("AiService", () => {
   let service: AiService;
@@ -16,9 +13,14 @@ describe("AiService", () => {
       findMany: jest.Mock;
       findFirst: jest.Mock;
     };
+    aiUsageLog: {
+      create: jest.Mock;
+    };
   };
-  let configService: {
-    get: jest.Mock;
+  let aiProviderRegistry: {
+    generateTextResult: jest.Mock;
+    getActiveProviderName: jest.Mock;
+    getStatus: jest.Mock;
   };
   const managerUser: JwtUser = {
     sub: "manager-1",
@@ -36,37 +38,40 @@ describe("AiService", () => {
       project: {
         findMany: jest.fn(),
         findFirst: jest.fn()
+      },
+      aiUsageLog: {
+        create: jest.fn().mockResolvedValue({})
       }
     };
-    configService = {
-      get: jest.fn((key: string) => {
-        if (key === "ANTHROPIC_API_KEY") {
-          return "test-key";
+    aiProviderRegistry = {
+      generateTextResult: jest.fn().mockResolvedValue({
+        text: JSON.stringify({
+          subject: "Chốt lịch họp dự án",
+          body: "Kính gửi anh/chị,\nAHSO xin đề nghị chốt lịch họp..."
+        }),
+        provider: "anthropic",
+        model: "claude-sonnet-4-20250514",
+        durationMs: 123
+      }),
+      getActiveProviderName: jest.fn().mockReturnValue("anthropic"),
+      getStatus: jest.fn().mockResolvedValue([
+        {
+          provider: "anthropic",
+          configured: true,
+          model: "claude-sonnet-4-20250514",
+          authMode: "api_key",
+          status: "ACTIVE",
+          lastError: null,
+          expiresAt: null,
+          hasRefreshToken: false,
+          source: "env"
         }
-
-        return undefined;
-      })
+      ])
     };
-
-    (Anthropic as unknown as jest.Mock).mockImplementation(() => ({
-      messages: {
-        create: jest.fn().mockResolvedValue({
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                subject: "Chốt lịch họp dự án",
-                body: "Kính gửi anh/chị,\nAHSO xin đề nghị chốt lịch họp..."
-              })
-            }
-          ]
-        })
-      }
-    }));
 
     service = new AiService(
       prisma as unknown as PrismaService,
-      configService as unknown as ConfigService
+      aiProviderRegistry as unknown as AiProviderRegistry
     );
   });
 
@@ -112,6 +117,25 @@ describe("AiService", () => {
     ).resolves.toMatchObject({
       subject: "Chốt lịch họp dự án",
       body: expect.stringContaining("AHSO xin đề nghị")
+    });
+  });
+
+  it("exposes provider status without leaking credentials", async () => {
+    await expect(service.getProviderStatus()).resolves.toEqual({
+      activeProvider: "anthropic",
+      providers: [
+        {
+          provider: "anthropic",
+          configured: true,
+          model: "claude-sonnet-4-20250514",
+          authMode: "api_key",
+          status: "ACTIVE",
+          lastError: null,
+          expiresAt: null,
+          hasRefreshToken: false,
+          source: "env"
+        }
+      ]
     });
   });
 });

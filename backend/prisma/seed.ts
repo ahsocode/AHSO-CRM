@@ -514,6 +514,9 @@ async function main() {
     { id: "perm_inventory_create", resource: "inventory", action: "create" },
     { id: "perm_inventory_edit", resource: "inventory", action: "edit" },
     { id: "perm_inventory_delete", resource: "inventory", action: "delete" },
+    { id: "perm_ai_use", resource: "ai", action: "use" },
+    { id: "perm_ai_manage_agents", resource: "ai", action: "manage_agents" },
+    { id: "perm_ai_view_usage", resource: "ai", action: "view_usage" },
   ];
 
   for (const perm of inventoryPermissions) {
@@ -526,7 +529,7 @@ async function main() {
 
   // ADMIN: all 12 new permissions
   const allNewPerms = await prisma.permission.findMany({
-    where: { resource: { in: ["suppliers", "materials", "inventory"] } },
+    where: { resource: { in: ["suppliers", "materials", "inventory", "ai"] } },
   });
 
   await prisma.userRole.update({
@@ -535,7 +538,10 @@ async function main() {
   });
 
   // MANAGER: view+create+edit for all 3 resources
-  const managerPerms = allNewPerms.filter((p) => ["view", "create", "edit"].includes(p.action));
+  const managerPerms = allNewPerms.filter((p) =>
+    ["view", "create", "edit"].includes(p.action) ||
+    (p.resource === "ai" && ["use", "view_usage"].includes(p.action))
+  );
   await prisma.userRole.update({
     where: { id: managerRole.id },
     data: { permissions: { connect: managerPerms.map((p) => ({ id: p.id })) } },
@@ -545,7 +551,8 @@ async function main() {
   const staffPerms = allNewPerms.filter(
     (p) =>
       (p.resource === "inventory" && ["view", "create"].includes(p.action)) ||
-      ((p.resource === "materials" || p.resource === "suppliers") && p.action === "view")
+      ((p.resource === "materials" || p.resource === "suppliers") && p.action === "view") ||
+      (p.resource === "ai" && p.action === "use")
   );
   await prisma.userRole.update({
     where: { id: staffRole.id },

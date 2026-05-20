@@ -150,13 +150,17 @@ jobs:
 
             ensure_generated_backend_secret() {
               local key="$1"
+              local min_len="${2:-0}"
               local current_value
               current_value="$(read_env_from_file "$BACKEND_ENV_FILE" "$key")"
               if [ -n "$current_value" ] && [[ "$current_value" != *"replace-with"* && "$current_value" != *"change-me"* ]]; then
-                return
+                if [ "$min_len" -eq 0 ] || [ "${#current_value}" -ge "$min_len" ]; then
+                  return
+                fi
+                echo "[deploy] $key in $BACKEND_ENV_FILE is shorter than required $min_len chars; regenerating."
+              else
+                echo "[deploy] $key is missing or placeholder in $BACKEND_ENV_FILE; generating a persistent value."
               fi
-
-              echo "[deploy] $key is missing or placeholder in $BACKEND_ENV_FILE; generating a persistent value."
               upsert_env_value "$BACKEND_ENV_FILE" "$key" "$(openssl rand -hex 32)"
             }
 
@@ -167,7 +171,8 @@ jobs:
               echo "[deploy] Docker login step done (exit ignored — pull will verify auth)."
             fi
             echo "[deploy] Ensuring backend secrets are set..."
-            ensure_generated_backend_secret "JWT_REFRESH_SECRET"
+            ensure_generated_backend_secret "JWT_SECRET" 32
+            ensure_generated_backend_secret "JWT_REFRESH_SECRET" 32
             ensure_generated_backend_secret "JWT_RESET_SECRET"
             ensure_generated_backend_secret "ENCRYPTION_KEY"
             echo "[deploy] Running deploy readiness check..."

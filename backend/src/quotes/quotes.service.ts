@@ -833,6 +833,7 @@ export class QuotesService {
   }
 
   private async generateNextQuoteNo(tx: Prisma.TransactionClient) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('quote_number'))`;
     const year = new Date().getFullYear();
     const prefix = `BG-${year}-`;
     const latestQuote = await tx.quote.findFirst({

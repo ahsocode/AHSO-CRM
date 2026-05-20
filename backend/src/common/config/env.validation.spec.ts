@@ -6,6 +6,7 @@ const baseEnv = {
   JWT_REFRESH_SECRET: "refresh-secret-with-at-least-32-chars",
   ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef"
 };
+const productionEncryptionKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 describe("environment validation", () => {
   it("accepts the minimum development configuration and applies defaults", () => {
@@ -41,6 +42,25 @@ describe("environment validation", () => {
         NODE_ENV: "production"
       })
     ).toThrow(/FRONTEND_URL/);
+  });
+
+  it("requires a 64-character hex ENCRYPTION_KEY in production", () => {
+    expect(() =>
+      validateEnv({
+        ...baseEnv,
+        NODE_ENV: "production",
+        FRONTEND_URL: "https://crm.ahso.vn"
+      })
+    ).toThrow(/ENCRYPTION_KEY/);
+
+    expect(
+      validateEnv({
+        ...baseEnv,
+        NODE_ENV: "production",
+        FRONTEND_URL: "https://crm.ahso.vn",
+        ENCRYPTION_KEY: productionEncryptionKey
+      }).ENCRYPTION_KEY
+    ).toBe(productionEncryptionKey);
   });
 
   it("rejects partial external integration credentials", () => {

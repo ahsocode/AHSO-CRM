@@ -2,6 +2,7 @@ import { UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
+import { createHash } from "crypto";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
 import { EmailService } from "../email/email.service";
@@ -35,7 +36,9 @@ describe("AuthService", () => {
     userSession: {
       deleteMany: jest.Mock;
       findMany: jest.Mock;
+      findUnique: jest.Mock;
       create: jest.Mock;
+      update: jest.Mock;
       delete: jest.Mock;
     };
   };
@@ -64,7 +67,9 @@ describe("AuthService", () => {
       userSession: {
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn(),
         create: jest.fn().mockResolvedValue({ id: "session-1" }),
+        update: jest.fn(),
         delete: jest.fn().mockResolvedValue({ id: "session-1" })
       }
     };
@@ -213,5 +218,71 @@ describe("AuthService", () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("refreshes by tokenHash lookup and compares exactly one stored refresh token", async () => {
+    const hashMock = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
+    const compareMock = bcrypt.compare as jest.MockedFunction<typeof bcrypt.compare>;
+    const refreshToken = "refresh-token";
+    const nextRefreshToken = "next-refresh-token";
+    const tokenHash = createHash("sha256").update(refreshToken).digest("hex");
+    const nextTokenHash = createHash("sha256").update(nextRefreshToken).digest("hex");
+    const session = {
+      id: "session-1",
+      userId: activeUser.id,
+      refreshToken: "stored-refresh-hash",
+      ipAddress: "127.0.0.1",
+      userAgent: "Chrome",
+      user: {
+        ...activeUser,
+        role: {
+          id: "role-admin",
+          name: "ADMIN",
+          permissions: []
+        }
+      }
+    };
+    jwtService.verifyAsync.mockResolvedValue({ sub: activeUser.id, email: activeUser.email });
+    jwtService.signAsync
+      .mockResolvedValueOnce("next-access-token")
+      .mockResolvedValueOnce(nextRefreshToken);
+    hashMock.mockResolvedValue("next-refresh-hash" as never);
+    compareMock.mockResolvedValue(true as never);
+    prisma.userSession.findUnique.mockResolvedValue(session);
+    prisma.userSession.update.mockResolvedValue({ id: session.id });
+
+    await expect(service.refresh(refreshToken, { ip: "10.0.0.1", userAgent: "Safari" }))
+      .resolves.toMatchObject({
+        accessToken: "next-access-token",
+        refreshToken: nextRefreshToken,
+        sessionId: session.id
+      });
+
+    expect(prisma.userSession.findUnique).toHaveBeenCalledWith({
+      where: { tokenHash },
+      include: {
+        user: {
+          include: {
+            role: {
+              include: {
+                permissions: true
+              }
+            }
+          }
+        }
+      }
+    });
+    expect(compareMock).toHaveBeenCalledTimes(1);
+    expect(compareMock).toHaveBeenCalledWith(refreshToken, "stored-refresh-hash");
+    expect(prisma.userSession.update).toHaveBeenCalledWith({
+      where: { id: session.id },
+      data: {
+        refreshToken: "next-refresh-hash",
+        tokenHash: nextTokenHash,
+        lastActiveAt: expect.any(Date),
+        ipAddress: "10.0.0.1",
+        userAgent: "Safari"
+      }
+    });
   });
 });

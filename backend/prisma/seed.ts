@@ -2,6 +2,7 @@ import { PrismaClient, ActivityType, ContractStatus, CustomerStatus, Priority, P
 import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
+const BCRYPT_ROUNDS = 12;
 
 function monthOffset(months: number, day = 10) {
   const date = new Date();
@@ -34,7 +35,7 @@ async function main() {
   await prisma.customer.deleteMany();
   await prisma.user.deleteMany();
 
-  const hashedPassword = await bcrypt.hash("AHSO123!", 10);
+  const hashedPassword = await bcrypt.hash("AHSO123!", BCRYPT_ROUNDS);
   const [adminRole, managerRole, staffRole] = await Promise.all([
     prisma.userRole.findUniqueOrThrow({ where: { id: "role_admin" } }),
     prisma.userRole.findUniqueOrThrow({ where: { id: "role_manager" } }),

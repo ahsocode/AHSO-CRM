@@ -6,31 +6,7 @@ export function normalizeBackendUrl(value: string) {
   return value.trim().replace(/\/+$/, "").replace(/\/api$/i, "");
 }
 
-const DEFAULT_BACKEND_URL = normalizeBackendUrl(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001");
-
-function resolveBackendUrl() {
-  if (typeof window === "undefined") {
-    return DEFAULT_BACKEND_URL;
-  }
-
-  try {
-    const configuredUrl = new URL(DEFAULT_BACKEND_URL);
-    const currentHostname = window.location.hostname;
-    const isLoopbackHost =
-      configuredUrl.hostname === "localhost" ||
-      configuredUrl.hostname === "127.0.0.1";
-
-    if (isLoopbackHost && currentHostname && currentHostname !== configuredUrl.hostname) {
-      configuredUrl.hostname = currentHostname;
-    }
-
-    return normalizeBackendUrl(configuredUrl.toString());
-  } catch {
-    return DEFAULT_BACKEND_URL;
-  }
-}
-
-export const BACKEND_URL = resolveBackendUrl();
+export const BACKEND_URL = normalizeBackendUrl(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001");
 export const API_URL = `${BACKEND_URL}/api`;
 export const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
 

@@ -15,6 +15,7 @@ interface PrismaMock {
     create: jest.Mock;
     findUnique: jest.Mock;
     update: jest.Mock;
+    updateMany: jest.Mock;
   };
   customer: {
     findMany: jest.Mock;
@@ -145,6 +146,25 @@ describe("AgentsService", () => {
       }
     });
   });
+
+  it("onModuleInit marks old RUNNING runs as ERROR", async () => {
+    prisma.agentRun.updateMany.mockResolvedValue({ count: 2 });
+
+    await expect(service.onModuleInit()).resolves.toBeUndefined();
+
+    expect(prisma.agentRun.updateMany).toHaveBeenCalledWith({
+      where: {
+        status: "RUNNING",
+        createdAt: {
+          lt: expect.any(Date)
+        }
+      },
+      data: {
+        status: "ERROR",
+        error: "Timed out — reset on server restart"
+      }
+    });
+  });
 });
 
 function createPrismaMock(): PrismaMock {
@@ -158,7 +178,8 @@ function createPrismaMock(): PrismaMock {
     agentRun: {
       create: jest.fn(),
       findUnique: jest.fn(),
-      update: jest.fn()
+      update: jest.fn(),
+      updateMany: jest.fn()
     },
     customer: {
       findMany: jest.fn(),

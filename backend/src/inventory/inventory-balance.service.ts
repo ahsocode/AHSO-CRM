@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { PrismaService } from "../common/prisma.service";
 import { InventoryBalanceFilterDto } from "./dto/inventory-balance-filter.dto";
@@ -112,11 +112,77 @@ export class InventoryBalanceService {
     });
 
     if (filters.lowStockOnly) {
-      const all = await this.prisma.stockBalance.findMany({ where, orderBy: { updatedAt: "desc" }, include });
-      const filtered = all.map(mapBalance).filter((i) => i.isLowStock);
+      const filterSql = Prisma.sql`
+        WHERE m."minStock" IS NOT NULL
+          AND sb."quantity" < m."minStock"
+          ${filters.warehouseId ? Prisma.sql`AND sb."warehouseId" = ${filters.warehouseId}` : Prisma.empty}
+          ${filters.materialId ? Prisma.sql`AND sb."materialId" = ${filters.materialId}` : Prisma.empty}
+      `;
+      type LowStockRow = {
+        id: string;
+        warehouseId: string;
+        materialId: string;
+        quantity: Decimal;
+        updatedAt: Date;
+        warehouseCode: string;
+        warehouseName: string;
+        materialCode: string;
+        materialName: string;
+        materialUnit: string;
+        minStock: Decimal;
+        costPrice: Decimal;
+      };
+      const [rows, countRows] = await this.prisma.$transaction([
+        this.prisma.$queryRaw<LowStockRow[]>`
+          SELECT
+            sb.id,
+            sb."warehouseId",
+            sb."materialId",
+            sb."quantity",
+            sb."updatedAt",
+            w.code AS "warehouseCode",
+            w.name AS "warehouseName",
+            m.code AS "materialCode",
+            m.name AS "materialName",
+            m.unit AS "materialUnit",
+            m."minStock",
+            m."costPrice"
+          FROM "StockBalance" sb
+          JOIN "Material" m ON m.id = sb."materialId"
+          JOIN "Warehouse" w ON w.id = sb."warehouseId"
+          ${filterSql}
+          ORDER BY sb."updatedAt" DESC
+          OFFSET ${skip}
+          LIMIT ${limit}
+        `,
+        this.prisma.$queryRaw<Array<{ count: bigint }>>`
+          SELECT COUNT(*)::bigint AS count
+          FROM "StockBalance" sb
+          JOIN "Material" m ON m.id = sb."materialId"
+          JOIN "Warehouse" w ON w.id = sb."warehouseId"
+          ${filterSql}
+        `
+      ]);
+      const total = Number(countRows[0]?.count ?? 0);
       return {
-        items: filtered.slice(skip, skip + limit),
-        meta: { total: filtered.length, page, limit, totalPages: Math.max(1, Math.ceil(filtered.length / limit)) },
+        items: rows.map((row) => ({
+          id: row.id,
+          warehouseId: row.warehouseId,
+          warehouse: { id: row.warehouseId, name: row.warehouseName, code: row.warehouseCode },
+          materialId: row.materialId,
+          material: {
+            id: row.materialId,
+            name: row.materialName,
+            code: row.materialCode,
+            unit: row.materialUnit,
+            minStock: Number(row.minStock),
+            costPrice: Number(row.costPrice),
+          },
+          quantity: Number(row.quantity),
+          isLowStock: true,
+          updatedAt: row.updatedAt,
+        })),
+        meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
       };
     }
 

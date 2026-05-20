@@ -2,10 +2,14 @@ import { ConfigService } from "@nestjs/config";
 import type { BackupService } from "./backup.service";
 
 type ExecCallback = (error: Error | null, stdout: unknown, stderr: string) => void;
+type ExecFileCallback = (error: Error | null, stdout: string, stderr: string) => void;
 
 const execMock = jest.fn();
 const execFileMock = jest.fn();
 const spawnMock = jest.fn();
+const writeFileMock = jest.fn();
+const chmodMock = jest.fn();
+const rmMock = jest.fn();
 
 jest.mock("child_process", () => ({
   exec: (...args: unknown[]) => execMock(...args),
@@ -13,11 +17,23 @@ jest.mock("child_process", () => ({
   spawn: (...args: unknown[]) => spawnMock(...args)
 }));
 
+jest.mock("fs/promises", () => ({
+  writeFile: (...args: unknown[]) => writeFileMock(...args),
+  chmod: (...args: unknown[]) => chmodMock(...args),
+  rm: (...args: unknown[]) => rmMock(...args)
+}));
+
 describe("BackupService", () => {
   beforeEach(() => {
     execMock.mockReset();
     execFileMock.mockReset();
     spawnMock.mockReset();
+    writeFileMock.mockReset();
+    chmodMock.mockReset();
+    rmMock.mockReset();
+    writeFileMock.mockResolvedValue(undefined);
+    chmodMock.mockResolvedValue(undefined);
+    rmMock.mockResolvedValue(undefined);
   });
 
   it("listBackups returns valid backup files sorted newest first", async () => {
@@ -89,7 +105,40 @@ describe("BackupService", () => {
     await expect(createService().createBackup()).resolves.toBeUndefined();
   });
 
-  it.todo("restoreBackup streams pg_restore through docker and writes a temporary .pgpass file");
+  it("restoreBackup uses local psql and pg_restore clients without docker", async () => {
+    const { EventEmitter } = await import("events");
+    execMock.mockImplementation((_command: string, ...args: unknown[]) => {
+      const callback = args.find((arg): arg is ExecCallback => typeof arg === "function");
+      callback?.(null, "", "");
+    });
+    execFileMock.mockImplementation((_command: string, _args: string[], _options: unknown, callback: ExecFileCallback) => {
+      callback(null, "", "");
+    });
+    spawnMock.mockImplementation((command: string, args: string[]) => {
+      const child = new EventEmitter();
+      process.nextTick(() => child.emit("close", 0));
+      expect(command).toBe("pg_restore");
+      expect(args).toEqual(expect.arrayContaining(["-h", "postgres", "-U", "ahso", "-d", "ahso_crm"]));
+      return child;
+    });
+
+    await expect(createService().restoreBackup("ahso-crm-2026-05-19_08-30.tar.gz")).resolves.toBeUndefined();
+
+    expect(writeFileMock).toHaveBeenCalledWith(
+      "/tmp/ahso-crm.pgpass",
+      "*:*:*:ahso:\n",
+      { mode: 0o600 }
+    );
+    expect(chmodMock).toHaveBeenCalledWith("/tmp/ahso-crm.pgpass", 0o600);
+    expect(execFileMock.mock.calls[0]?.slice(0, 3)).toEqual([
+      "psql",
+      ["-h", "postgres", "-U", "ahso", "-d", "postgres", "-c", 'DROP DATABASE IF EXISTS "ahso_crm";'],
+      expect.objectContaining({ env: expect.objectContaining({ PGPASSFILE: "/tmp/ahso-crm.pgpass" }) })
+    ]);
+    expect(execFileMock).not.toHaveBeenCalledWith("docker", expect.anything());
+    expect(spawnMock).not.toHaveBeenCalledWith("docker", expect.anything());
+    expect(rmMock).toHaveBeenCalledWith("/tmp/ahso-crm.pgpass", { force: true });
+  });
 });
 
 function createService() {

@@ -105,7 +105,6 @@ services:
     volumes:
       - ${UPLOADS_DIR:-./backend/uploads}:/app/uploads
       - ${RCLONE_CONFIG_DIR:-/root/.config/rclone}:/root/.config/rclone:ro
-      - /var/run/docker.sock:/var/run/docker.sock
     command: ["sh", "-c", "sleep infinity"]
     deploy:
       resources:

@@ -20,6 +20,8 @@ import {
 } from "./dto/survey.dto";
 import { SurveysService } from "./surveys.service";
 
+const FILE_UPLOAD_OPTIONS = { limits: { fileSize: 10 * 1024 * 1024 } };
+
 @ApiTags("surveys")
 @Controller("surveys")
 @ApiBearerAuth("bearer")
@@ -51,7 +53,7 @@ export class SurveysController {
   @RequirePermissions("surveys.edit")
   @ApiOperation({ summary: "POST /api/surveys/:id/media" })
   @Post(":id/media")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
   addMedia(
     @Param("id") id: string,
     @UploadedFile() file: Express.Multer.File,

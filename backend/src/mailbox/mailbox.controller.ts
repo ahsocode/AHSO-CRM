@@ -19,6 +19,8 @@ import { SetupPasswordDto, setupPasswordSchema } from "./dto/setup-password.dto"
 import { UpdateSignatureDto, updateSignatureSchema } from "./dto/update-signature.dto";
 import { MailboxService } from "./mailbox.service";
 
+const FILE_UPLOAD_OPTIONS = { limits: { fileSize: 10 * 1024 * 1024 } };
+
 @ApiTags("mailbox")
 @Controller("mailbox")
 @ApiBearerAuth("bearer")
@@ -167,7 +169,7 @@ export class MailboxController {
 
   @ApiOperation({ summary: "POST /api/mailbox/upload-attachment" })
   @Post("upload-attachment")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
   uploadAttachment(
     @CurrentUser() user: JwtUser,
     @UploadedFile() file: Express.Multer.File

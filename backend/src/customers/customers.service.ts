@@ -971,8 +971,21 @@ export class CustomersService {
   }
 
   async findDuplicates() {
+    const duplicateGroups = await this.prisma.$queryRaw<Array<{ ids: string[] }>>`
+      SELECT array_agg(id ORDER BY "createdAt") AS ids
+      FROM "Customer"
+      WHERE "deletedAt" IS NULL
+      GROUP BY lower(regexp_replace(trim("name"), '[[:space:]]+', ' ', 'g'))
+      HAVING COUNT(*) > 1
+    `;
+    const ids = duplicateGroups.flatMap((group) => group.ids);
+
+    if (ids.length === 0) {
+      return [];
+    }
+
     const customers = await this.prisma.customer.findMany({
-      where: { deletedAt: null },
+      where: { id: { in: ids }, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -989,17 +1002,15 @@ export class CustomersService {
       },
       orderBy: { createdAt: "asc" }
     });
+    const customerById = new Map(customers.map((customer) => [customer.id, customer]));
 
-    const groups = new Map<string, typeof customers>();
-    for (const customer of customers) {
-      const key = this.normalizeForDedup(customer.name);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(customer);
-    }
-
-    return Array.from(groups.values())
-      .filter((group) => group.length >= 2)
-      .map((group) => ({ customers: group }));
+    return duplicateGroups
+      .map((group) => ({
+        customers: group.ids
+          .map((id) => customerById.get(id))
+          .filter((customer): customer is (typeof customers)[number] => Boolean(customer))
+      }))
+      .filter((group) => group.customers.length >= 2);
   }
 
   async merge(primaryId: string, duplicateIds: string[]) {
@@ -1055,15 +1066,6 @@ export class CustomersService {
     });
 
     return { success: true };
-  }
-
-  private normalizeForDedup(name: string): string {
-    return name
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "")
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, " ");
   }
 
   private mapProjectProgress(status: string) {

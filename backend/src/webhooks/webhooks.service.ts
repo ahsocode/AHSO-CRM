@@ -26,7 +26,7 @@ export class WebhooksService {
         events: input.events,
         isActive: input.isActive ?? true,
         secret: randomBytes(32).toString("hex"),
-        createdBy
+        createdById: createdBy
       }
     });
   }
@@ -197,4 +197,3 @@ export class WebhooksService {
     });
   }
 }
-

@@ -566,7 +566,7 @@ export class BusinessDocumentsService {
       throw new BadRequestException("Không có tài liệu được tải lên");
     }
 
-    if (!this.uploadService.validateFileType(file.mimetype)) {
+    if (!this.uploadService.validateFileType(file)) {
       throw new BadRequestException("Tài liệu chỉ chấp nhận PDF, PNG, JPG, XLSX hoặc DOCX");
     }
 

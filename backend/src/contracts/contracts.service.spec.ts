@@ -27,6 +27,7 @@ describe("ContractsService", () => {
     };
   };
   let tx: {
+    $executeRaw: jest.Mock;
     project: {
       findFirst: jest.Mock;
       update: jest.Mock;
@@ -56,6 +57,7 @@ describe("ContractsService", () => {
 
   beforeEach(() => {
     tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
       project: {
         findFirst: jest.fn(),
         update: jest.fn()

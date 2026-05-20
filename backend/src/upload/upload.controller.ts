@@ -17,6 +17,8 @@ import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { UploadService } from "./upload.service";
 
+const FILE_UPLOAD_OPTIONS = { limits: { fileSize: 10 * 1024 * 1024 } };
+
 @ApiTags("upload")
 @Controller("upload")
 @ApiBearerAuth("bearer")
@@ -29,7 +31,7 @@ export class UploadController {
 
   @ApiOperation({ summary: "POST /api/upload" })
   @Post()
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
   async upload(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: JwtUser
@@ -42,7 +44,7 @@ export class UploadController {
 
   @ApiOperation({ summary: "POST /api/upload/file" })
   @Post("file")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: JwtUser
@@ -55,7 +57,7 @@ export class UploadController {
 
   @ApiOperation({ summary: "POST /api/upload/avatar" })
   @Post("avatar")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
   async uploadAvatar(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: JwtUser
@@ -63,7 +65,7 @@ export class UploadController {
     void user;
     this.ensureFilePresent(file);
 
-    if (!this.uploadService.validateAvatarType(file.mimetype)) {
+    if (!this.uploadService.validateAvatarType(file)) {
       throw new BadRequestException("Avatar chỉ chấp nhận PNG, JPG hoặc WEBP");
     }
 
@@ -78,7 +80,7 @@ export class UploadController {
   @Post("logo")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
   async uploadLogo(
     @UploadedFile() file: Express.Multer.File,
     @CurrentUser() user: JwtUser
@@ -86,7 +88,7 @@ export class UploadController {
     this.ensureFilePresent(file);
     void user;
 
-    if (!this.uploadService.validateLogoType(file.mimetype)) {
+    if (!this.uploadService.validateLogoType(file)) {
       throw new BadRequestException("Logo chỉ chấp nhận PNG, JPG, SVG hoặc WEBP");
     }
 
@@ -146,7 +148,7 @@ export class UploadController {
   }
 
   private ensureAllowedFile(file: Express.Multer.File) {
-    if (!this.uploadService.validateFileType(file.mimetype)) {
+    if (!this.uploadService.validateFileType(file)) {
       throw new BadRequestException("Tệp chỉ chấp nhận PDF, PNG, JPG, XLSX hoặc DOCX");
     }
 

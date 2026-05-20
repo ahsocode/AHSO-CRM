@@ -8,48 +8,50 @@ datasource db {
 }
 
 model User {
-  id                String     @id @default(cuid())
-  email             String     @unique
-  name              String
-  password          String
-  role              UserRole   @relation(fields: [roleId], references: [id])
-  roleId            String
-  avatarUrl         String?
-  isActive          Boolean    @default(true)
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
-  sessions          UserSession[]
-  assignedCustomers Customer[] @relation("AssignedTo")
-  createdQuotes     Quote[]
-  activities        Activity[]
-  notifications     Notification[]
-  pushSubscriptions PushSubscription[]
-  reportTemplates   ReportTemplate[]
-  documents         Document[]
-  businessDocuments BusinessDocument[] @relation("BusinessDocumentCreatedBy")
-  surveysCreated    Survey[]           @relation("SurveyCreatedBy")
-  surveyMedia        SurveyMedia[]      @relation("SurveyMediaUploadedBy")
-  surveyNotes        SurveyNote[]       @relation("SurveyNoteCreatedBy")
-  projectHandoversCreated ProjectHandover[] @relation("ProjectHandoverCreatedBy")
-  projectHandoversFrom    ProjectHandover[] @relation("ProjectHandoverFromUser")
-  projectHandoversTo      ProjectHandover[] @relation("ProjectHandoverToUser")
+  id                               String                    @id @default(cuid())
+  email                            String                    @unique
+  name                             String
+  password                         String
+  role                             UserRole                  @relation(fields: [roleId], references: [id])
+  roleId                           String
+  avatarUrl                        String?
+  isActive                         Boolean                   @default(true)
+  createdAt                        DateTime                  @default(now())
+  updatedAt                        DateTime                  @updatedAt
+  sessions                         UserSession[]
+  assignedCustomers                Customer[]                @relation("AssignedTo")
+  createdQuotes                    Quote[]
+  activities                       Activity[]
+  notifications                    Notification[]
+  pushSubscriptions                PushSubscription[]
+  reportTemplates                  ReportTemplate[]
+  documents                        Document[]
+  businessDocuments                BusinessDocument[]        @relation("BusinessDocumentCreatedBy")
+  surveysCreated                   Survey[]                  @relation("SurveyCreatedBy")
+  surveyMedia                      SurveyMedia[]             @relation("SurveyMediaUploadedBy")
+  surveyNotes                      SurveyNote[]              @relation("SurveyNoteCreatedBy")
+  projectHandoversCreated          ProjectHandover[]         @relation("ProjectHandoverCreatedBy")
+  projectHandoversFrom             ProjectHandover[]         @relation("ProjectHandoverFromUser")
+  projectHandoversTo               ProjectHandover[]         @relation("ProjectHandoverToUser")
   documentTemplateVariantsCreated  DocumentTemplateVariant[] @relation("DocumentTemplateCreatedBy")
   documentTemplateVariantsApproved DocumentTemplateVariant[] @relation("DocumentTemplateApprovedBy")
-  emailAccount     EmailAccount?
-  managedWarehouses Warehouse[]      @relation("WarehouseManager")
-  createdReceipts   StockReceipt[]   @relation("ReceiptCreatedBy")
-  createdIssues     StockIssue[]     @relation("IssueCreatedBy")
-  createdTransfers  StockTransfer[]  @relation("TransferCreatedBy")
-  createdCounts     StockCount[]     @relation("CountCreatedBy")
-  aiUsageLogs       AiUsageLog[]
-  agentsCreated     Agent[]          @relation("AgentCreatedBy")
-  agentRuns         AgentRun[]
+  emailAccount                     EmailAccount?
+  managedWarehouses                Warehouse[]               @relation("WarehouseManager")
+  createdReceipts                  StockReceipt[]            @relation("ReceiptCreatedBy")
+  createdIssues                    StockIssue[]              @relation("IssueCreatedBy")
+  createdTransfers                 StockTransfer[]           @relation("TransferCreatedBy")
+  createdCounts                    StockCount[]              @relation("CountCreatedBy")
+  aiUsageLogs                      AiUsageLog[]
+  agentsCreated                    Agent[]                   @relation("AgentCreatedBy")
+  agentRuns                        AgentRun[]
+  webhooksCreated                  Webhook[]                 @relation("WebhookCreatedBy")
 }
 
 model UserSession {
   id           String   @id @default(cuid())
   userId       String
   refreshToken String
+  tokenHash    String?  @unique
   deviceName   String?
   ipAddress    String?
   userAgent    String?
@@ -74,11 +76,11 @@ model UserRole {
 }
 
 model Permission {
-  id         String     @id @default(cuid())
-  resource   String     // "activities", "customers", "projects", "quotes", "contracts", "payments", "settings", "users"
-  action     String     // "view", "create", "edit", "delete"
-  roles      UserRole[]
-  createdAt  DateTime   @default(now())
+  id        String     @id @default(cuid())
+  resource  String // "activities", "customers", "projects", "quotes", "contracts", "payments", "settings", "users"
+  action    String // "view", "create", "edit", "delete"
+  roles     UserRole[]
+  createdAt DateTime   @default(now())
 
   @@unique([resource, action])
   @@index([resource])
@@ -86,14 +88,14 @@ model Permission {
 
 model Setting {
   key         String   @id @unique
-  value       String   // JSON-stringified values
+  value       String // JSON-stringified values
   description String?
   updatedAt   DateTime @updatedAt
 }
 
 model Logo {
   id         String   @id @default(cuid())
-  url        String   // URL to /uploads or CDN
+  url        String // URL to /uploads or CDN
   filename   String
   uploadedAt DateTime @default(now())
 
@@ -101,33 +103,33 @@ model Logo {
 }
 
 model Customer {
-  id           String         @id @default(cuid())
-  name         String
-  shortName    String?
-  code         String?        @unique
-  language     String         @default("vi")
-  taxCode      String?        @unique
-  industry     String?
-  address      String?
-  website      String?
-  phone        String?
-  email        String?
-  source       String?
-  notes        String?
-  status       CustomerStatus @default(LEAD)
-  isVip        Boolean        @default(false)
-  deletedAt    DateTime?
-  assignedTo   User           @relation("AssignedTo", fields: [assignedToId], references: [id])
-  assignedToId String
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  contacts     Contact[]
-  projects     Project[]
-  activities   Activity[]
-  documents    Document[]
+  id                String             @id @default(cuid())
+  name              String
+  shortName         String?
+  code              String?            @unique
+  language          String             @default("vi")
+  taxCode           String?            @unique
+  industry          String?
+  address           String?
+  website           String?
+  phone             String?
+  email             String?
+  source            String?
+  notes             String?
+  status            CustomerStatus     @default(LEAD)
+  isVip             Boolean            @default(false)
+  deletedAt         DateTime?
+  assignedTo        User               @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedToId      String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  contacts          Contact[]
+  projects          Project[]
+  activities        Activity[]
+  documents         Document[]
   businessDocuments BusinessDocument[]
-  surveys      Survey[]
-  emails       EmailMessage[]
+  surveys           Survey[]
+  emails            EmailMessage[]
 
   @@index([deletedAt])
   @@index([assignedToId, deletedAt])
@@ -222,31 +224,31 @@ model Contact {
 }
 
 model Project {
-  id              String        @id @default(cuid())
-  code            String        @unique @default(cuid())
-  name            String
-  description     String?
-  status          ProjectStatus @default(SURVEY)
-  priority        Priority      @default(NORMAL)
-  estimatedValue  Decimal?      @db.Decimal(15, 0)
-  startDate       DateTime?
-  expectedEndDate DateTime?
-  notes           String?
-  deletedAt       DateTime?
-  customer        Customer      @relation(fields: [customerId], references: [id])
-  customerId      String
-  contact         Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  contactId       String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  quotes          Quote[]
-  contract        Contract?
-  activities      Activity[]
-  milestones      Milestone[]
+  id                String             @id @default(cuid())
+  code              String             @unique @default(cuid())
+  name              String
+  description       String?
+  status            ProjectStatus      @default(SURVEY)
+  priority          Priority           @default(NORMAL)
+  estimatedValue    Decimal?           @db.Decimal(15, 0)
+  startDate         DateTime?
+  expectedEndDate   DateTime?
+  notes             String?
+  deletedAt         DateTime?
+  customer          Customer           @relation(fields: [customerId], references: [id])
+  customerId        String
+  contact           Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId         String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  quotes            Quote[]
+  contract          Contract?
+  activities        Activity[]
+  milestones        Milestone[]
   businessDocuments BusinessDocument[]
-  surveys         Survey[]
-  handovers       ProjectHandover[]
-  stockIssues     StockIssue[]
+  surveys           Survey[]
+  handovers         ProjectHandover[]
+  stockIssues       StockIssue[]
 
   @@index([customerId, deletedAt])
   @@index([status, deletedAt])
@@ -269,28 +271,28 @@ enum Priority {
 }
 
 model Quote {
-  id            String      @id @default(cuid())
-  quoteNo       String      @unique
-  version       Int         @default(1)
-  status        QuoteStatus @default(DRAFT)
-  validUntil    DateTime?
-  subtotal      Decimal     @default(0) @db.Decimal(15, 0)
-  taxRate       Decimal     @default(10) @db.Decimal(5, 2)
-  taxAmount     Decimal     @default(0) @db.Decimal(15, 0)
-  total         Decimal     @default(0) @db.Decimal(15, 0)
-  terms         String?
-  deliveryTerms String?
-  internalNote  String?
-  sentAt        DateTime?
-  acceptedAt    DateTime?
-  project       Project     @relation(fields: [projectId], references: [id])
-  projectId     String
-  createdBy     User        @relation(fields: [createdById], references: [id])
-  createdById   String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?
-  items         QuoteItem[]
+  id                String             @id @default(cuid())
+  quoteNo           String             @unique
+  version           Int                @default(1)
+  status            QuoteStatus        @default(DRAFT)
+  validUntil        DateTime?
+  subtotal          Decimal            @default(0) @db.Decimal(15, 0)
+  taxRate           Decimal            @default(10) @db.Decimal(5, 2)
+  taxAmount         Decimal            @default(0) @db.Decimal(15, 0)
+  total             Decimal            @default(0) @db.Decimal(15, 0)
+  terms             String?
+  deliveryTerms     String?
+  internalNote      String?
+  sentAt            DateTime?
+  acceptedAt        DateTime?
+  project           Project            @relation(fields: [projectId], references: [id])
+  projectId         String
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  createdById       String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
+  items             QuoteItem[]
   businessDocuments BusinessDocument[]
 
   @@index([projectId, deletedAt])
@@ -325,22 +327,22 @@ enum QuoteStatus {
 }
 
 model Contract {
-  id         String         @id @default(cuid())
-  contractNo String         @unique
-  signDate   DateTime?
-  startDate  DateTime?
-  endDate    DateTime?
-  value      Decimal        @db.Decimal(15, 0)
-  status     ContractStatus @default(ACTIVE)
-  fileUrl    String?
-  notes      String?
-  project    Project        @relation(fields: [projectId], references: [id])
-  projectId  String         @unique
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  deletedAt  DateTime?
-  milestones Milestone[]
-  payments   Payment[]
+  id                String             @id @default(cuid())
+  contractNo        String             @unique
+  signDate          DateTime?
+  startDate         DateTime?
+  endDate           DateTime?
+  value             Decimal            @db.Decimal(15, 0)
+  status            ContractStatus     @default(ACTIVE)
+  fileUrl           String?
+  notes             String?
+  project           Project            @relation(fields: [projectId], references: [id])
+  projectId         String             @unique
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
+  milestones        Milestone[]
+  payments          Payment[]
   businessDocuments BusinessDocument[]
 
   @@index([projectId, deletedAt])
@@ -378,16 +380,16 @@ enum MilestoneStatus {
 }
 
 model Payment {
-  id         String   @id @default(cuid())
-  amount     Decimal  @db.Decimal(15, 0)
-  paidAt     DateTime
-  method     String?
-  reference  String?
-  notes      String?
-  contract   Contract @relation(fields: [contractId], references: [id])
-  contractId String
+  id                String             @id @default(cuid())
+  amount            Decimal            @db.Decimal(15, 0)
+  paidAt            DateTime
+  method            String?
+  reference         String?
+  notes             String?
+  contract          Contract           @relation(fields: [contractId], references: [id])
+  contractId        String
   businessDocuments BusinessDocument[]
-  createdAt  DateTime @default(now())
+  createdAt         DateTime           @default(now())
 }
 
 model Activity {
@@ -407,7 +409,7 @@ model Activity {
   userId        String
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  deletedAt     DateTime?    // soft delete
+  deletedAt     DateTime? // soft delete
 
   @@index([deletedAt])
 }
@@ -597,30 +599,31 @@ model ProjectHandover {
 }
 
 model Webhook {
-  id         String       @id @default(cuid())
-  url        String
-  events     String[]
-  secret     String
-  isActive   Boolean      @default(true)
-  createdBy  String
-  createdAt  DateTime     @default(now())
-  lastFired  DateTime?
-  failCount  Int          @default(0)
-  logs       WebhookLog[]
+  id          String       @id @default(cuid())
+  url         String
+  events      String[]
+  secret      String
+  isActive    Boolean      @default(true)
+  createdById String?
+  createdBy   User?        @relation("WebhookCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+  lastFired   DateTime?
+  failCount   Int          @default(0)
+  logs        WebhookLog[]
 
-  @@index([createdBy, createdAt])
+  @@index([createdById, createdAt])
   @@index([isActive])
 }
 
 model WebhookLog {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   webhookId  String
   event      String
   payload    Json
   response   String?
   statusCode Int?
-  firedAt    DateTime  @default(now())
-  webhook    Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  firedAt    DateTime @default(now())
+  webhook    Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
 
   @@index([webhookId, firedAt])
   @@index([event, firedAt])
@@ -670,16 +673,16 @@ model PushSubscription {
 }
 
 model CustomField {
-  id        String   @id @default(cuid())
+  id        String             @id @default(cuid())
   resource  String
   name      String
   label     String
   type      String
   options   Json?
-  required  Boolean  @default(false)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  required  Boolean            @default(false)
+  order     Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   values    CustomFieldValue[]
 
   @@unique([resource, name])
@@ -688,12 +691,12 @@ model CustomField {
 
 model CustomFieldValue {
   id         String      @id @default(cuid())
-  fieldId     String
-  resourceId  String
-  value       String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  field       CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  fieldId    String
+  resourceId String
+  value      String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  field      CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
 
   @@unique([fieldId, resourceId])
   @@index([resourceId])
@@ -716,23 +719,23 @@ model ReportTemplate {
 }
 
 model DocumentTemplateVariant {
-  id              String                 @id @default(cuid())
-  type            DocumentType
-  name            String
-  status          DocumentTemplateStatus @default(DRAFT)
-  isActive        Boolean                @default(false)
-  layoutJson      Json
-  version         Int                    @default(1)
-  createdById     String
-  approvedById    String?
-  approvedAt      DateTime?
+  id               String                    @id @default(cuid())
+  type             DocumentType
+  name             String
+  status           DocumentTemplateStatus    @default(DRAFT)
+  isActive         Boolean                   @default(false)
+  layoutJson       Json
+  version          Int                       @default(1)
+  createdById      String
+  approvedById     String?
+  approvedAt       DateTime?
   basedOnVariantId String?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  createdBy       User                   @relation("DocumentTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  approvedBy      User?                  @relation("DocumentTemplateApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-  basedOnVariant  DocumentTemplateVariant? @relation("DocumentTemplateVariantFork", fields: [basedOnVariantId], references: [id], onDelete: SetNull)
-  derivedVariants DocumentTemplateVariant[] @relation("DocumentTemplateVariantFork")
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  createdBy        User                      @relation("DocumentTemplateCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  approvedBy       User?                     @relation("DocumentTemplateApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  basedOnVariant   DocumentTemplateVariant?  @relation("DocumentTemplateVariantFork", fields: [basedOnVariantId], references: [id], onDelete: SetNull)
+  derivedVariants  DocumentTemplateVariant[] @relation("DocumentTemplateVariantFork")
 
   @@index([type, status, createdAt])
   @@index([type, isActive])
@@ -757,20 +760,20 @@ enum ActivityType {
 }
 
 model Document {
-  id          String       @id @default(cuid())
-  type        DocumentType
-  number      String       @unique
-  version     Int          @default(1)
-  language    String       @default("vi")
-  entityType  String
-  entityId    String
-  customerId  String?
-  pdfPath     String?
-  renderedAt  DateTime?
-  createdAt   DateTime     @default(now())
-  createdById String
-  createdBy   User         @relation(fields: [createdById], references: [id])
-  customer    Customer?    @relation(fields: [customerId], references: [id])
+  id                String             @id @default(cuid())
+  type              DocumentType
+  number            String             @unique
+  version           Int                @default(1)
+  language          String             @default("vi")
+  entityType        String
+  entityId          String
+  customerId        String?
+  pdfPath           String?
+  renderedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  createdById       String
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  customer          Customer?          @relation(fields: [customerId], references: [id])
   businessDocuments BusinessDocument[]
 
   @@index([entityType, entityId])
@@ -1025,12 +1028,12 @@ model StockTransfer {
 }
 
 model StockTransferItem {
-  id          String        @id @default(cuid())
-  transferId  String
-  transfer    StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
-  materialId  String
-  material    Material      @relation(fields: [materialId], references: [id])
-  quantity    Decimal       @db.Decimal(15, 3)
+  id         String        @id @default(cuid())
+  transferId String
+  transfer   StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  materialId String
+  material   Material      @relation(fields: [materialId], references: [id])
+  quantity   Decimal       @db.Decimal(15, 3)
 
   @@index([transferId])
   @@index([materialId])
@@ -1083,7 +1086,7 @@ model AiProviderCredential {
   expiresAt     DateTime?
   status        String    @default("ACTIVE")
   connectedById String?
-  lastError      String?
+  lastError     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

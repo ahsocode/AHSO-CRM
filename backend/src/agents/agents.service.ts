@@ -1,9 +1,17 @@
-import { ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+  ServiceUnavailableException
+} from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, hasPermission, isAdmin, isStaff } from "../auth/auth.types";
 import { AiProviderRegistry } from "../ai/providers/ai-provider-registry.service";
 import { PrismaService } from "../common/prisma.service";
 import { AgentTool, CreateAgentDto, RunAgentDto, UpdateAgentDto } from "./dto/agent.dto";
+
+const AGENT_RUN_TIMEOUT_MS = 60_000;
 
 export interface ToolResult {
   toolName: AgentTool;
@@ -14,11 +22,26 @@ export interface ToolResult {
 }
 
 @Injectable()
-export class AgentsService {
+export class AgentsService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly aiProviderRegistry: AiProviderRegistry
   ) {}
+
+  async onModuleInit() {
+    await this.prisma.agentRun.updateMany({
+      where: {
+        status: "RUNNING",
+        createdAt: {
+          lt: new Date(Date.now() - 30 * 60 * 1000)
+        }
+      },
+      data: {
+        status: "ERROR",
+        error: "Timed out — reset on server restart"
+      }
+    });
+  }
 
   list() {
     return this.prisma.agent.findMany({
@@ -96,7 +119,7 @@ export class AgentsService {
       const contextText = toolResults
         .map((result) => `Tool ${result.toolName}: ${JSON.stringify(result.outputJson)}`)
         .join("\n");
-      const result = await this.aiProviderRegistry.generateTextResult({
+      const result = await this.withTimeout(this.aiProviderRegistry.generateTextResult({
         system: agent.systemPrompt,
         prompt: [
           `Yêu cầu người dùng: ${dto.input}`,
@@ -106,7 +129,7 @@ export class AgentsService {
         ].filter(Boolean).join("\n\n"),
         maxTokens: 1200,
         temperature: 0.3
-      }, agent.provider as "anthropic" | "openai" | "gemini" | null);
+      }, agent.provider as "anthropic" | "openai" | "gemini" | null), AGENT_RUN_TIMEOUT_MS);
       if (!result) {
         throw new ServiceUnavailableException("AI provider chưa được cấu hình. Vui lòng kiểm tra trong Admin.");
       }
@@ -314,6 +337,24 @@ export class AgentsService {
         customer: { select: { name: true } }
       },
       take: 5
+    });
+  }
+
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new ServiceUnavailableException("AI provider phản hồi quá lâu, vui lòng thử lại."));
+      }, timeoutMs);
+
+      promise
+        .then((value) => {
+          clearTimeout(timeout);
+          resolve(value);
+        })
+        .catch((error: unknown) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
     });
   }
 }

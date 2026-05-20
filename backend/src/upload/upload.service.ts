@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { randomUUID } from "crypto";
 import { mkdir, readFile, rm, stat, writeFile } from "fs/promises";
@@ -19,6 +19,7 @@ export class UploadService {
   readonly maxLogoSize = 5 * 1024 * 1024;
   readonly maxAvatarSize = 5 * 1024 * 1024;
   readonly maxFileSize = 10 * 1024 * 1024;
+  private readonly dangerousExtensions = new Set([".html", ".htm", ".php", ".exe", ".sh"]);
 
   private readonly extensionMap: Record<string, string> = {
     "application/pdf": ".pdf",
@@ -32,20 +33,20 @@ export class UploadService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  validateLogoType(mimeType: string) {
-    return this.logoMimeTypes.includes(mimeType as (typeof this.logoMimeTypes)[number]);
+  validateLogoType(fileOrMimeType: Express.Multer.File | string) {
+    return this.validateDeclaredType(fileOrMimeType, this.logoMimeTypes);
   }
 
-  validateFileType(mimeType: string) {
-    return this.fileMimeTypes.includes(mimeType as (typeof this.fileMimeTypes)[number]);
+  validateFileType(fileOrMimeType: Express.Multer.File | string) {
+    return this.validateDeclaredType(fileOrMimeType, this.fileMimeTypes);
   }
 
   validateLogoSize(size: number) {
     return size <= this.maxLogoSize;
   }
 
-  validateAvatarType(mimeType: string) {
-    return this.avatarMimeTypes.includes(mimeType as (typeof this.avatarMimeTypes)[number]);
+  validateAvatarType(fileOrMimeType: Express.Multer.File | string) {
+    return this.validateDeclaredType(fileOrMimeType, this.avatarMimeTypes);
   }
 
   validateAvatarSize(size: number) {
@@ -206,5 +207,66 @@ export class UploadService {
   private resolveMimeType(extension: string) {
     const match = Object.entries(this.extensionMap).find(([, mappedExtension]) => mappedExtension === extension);
     return match?.[0] ?? "application/octet-stream";
+  }
+
+  private validateDeclaredType(
+    fileOrMimeType: Express.Multer.File | string,
+    allowedMimeTypes: readonly string[]
+  ) {
+    const mimeType = typeof fileOrMimeType === "string" ? fileOrMimeType : fileOrMimeType.mimetype;
+    if (!allowedMimeTypes.includes(mimeType)) {
+      return false;
+    }
+
+    if (typeof fileOrMimeType === "string") {
+      return true;
+    }
+
+    this.assertSafeExtension(fileOrMimeType.originalname);
+    this.assertMagicBytesMatch(fileOrMimeType.buffer, mimeType);
+    return true;
+  }
+
+  private assertSafeExtension(originalName: string) {
+    const extension = extname(originalName).trim().toLowerCase();
+    if (this.dangerousExtensions.has(extension)) {
+      throw new BadRequestException("Định dạng tệp không được phép tải lên");
+    }
+  }
+
+  private assertMagicBytesMatch(buffer: Buffer, mimeType: string) {
+    if (mimeType === "image/jpeg" && !this.isJpeg(buffer)) {
+      throw new BadRequestException("Nội dung tệp JPG không hợp lệ");
+    }
+    if (mimeType === "image/png" && !this.isPng(buffer)) {
+      throw new BadRequestException("Nội dung tệp PNG không hợp lệ");
+    }
+    if (mimeType === "application/pdf" && !this.isPdf(buffer)) {
+      throw new BadRequestException("Nội dung tệp PDF không hợp lệ");
+    }
+  }
+
+  private isJpeg(buffer: Buffer) {
+    return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  }
+
+  private isPng(buffer: Buffer) {
+    return (
+      buffer.length >= 4 &&
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47
+    );
+  }
+
+  private isPdf(buffer: Buffer) {
+    return (
+      buffer.length >= 4 &&
+      buffer[0] === 0x25 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x44 &&
+      buffer[3] === 0x46
+    );
   }
 }

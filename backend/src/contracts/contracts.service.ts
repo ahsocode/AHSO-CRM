@@ -797,6 +797,7 @@ export class ContractsService {
   }
 
   private async generateNextContractNo(tx: Prisma.TransactionClient) {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('contract_number'))`;
     const year = new Date().getFullYear();
     const prefix = `HD-${year}-`;
     const latestContract = await tx.contract.findFirst({

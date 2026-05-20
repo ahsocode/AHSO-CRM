@@ -113,7 +113,13 @@ const envSchema = z
         path: ["ENCRYPTION_KEY"],
         message: "ENCRYPTION_KEY là bắt buộc để mã hóa mật khẩu email"
       });
-    } else if (!/^([0-9a-fA-F]{64}|.{32})$/.test(env.ENCRYPTION_KEY)) {
+    } else if (isProduction && !/^[0-9a-fA-F]{64}$/.test(env.ENCRYPTION_KEY)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ENCRYPTION_KEY"],
+        message: "ENCRYPTION_KEY trong production phải là chuỗi hex 64 ký tự"
+      });
+    } else if (!isProduction && !/^([0-9a-fA-F]{64}|.{32})$/.test(env.ENCRYPTION_KEY)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["ENCRYPTION_KEY"],

@@ -22,6 +22,8 @@ import {
   updateBusinessDocumentSchema
 } from "./dto/business-document.dto";
 
+const FILE_UPLOAD_OPTIONS = { limits: { fileSize: 10 * 1024 * 1024 } };
+
 @ApiTags("business-documents")
 @Controller("business-documents")
 @ApiBearerAuth("bearer")
@@ -77,7 +79,7 @@ export class BusinessDocumentsController {
   @RequirePermissions("documents.create")
   @ApiOperation({ summary: "POST /api/business-documents/:id/file" })
   @Post(":id/file")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
   uploadFile(
     @Param("id") id: string,
     @UploadedFile() file: Express.Multer.File,

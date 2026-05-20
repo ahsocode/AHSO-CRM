@@ -337,16 +337,21 @@ export class AiCredentialsService {
       return parsedRedirectUri.toString();
     }
 
+    const isAllowedCallbackPath = parsedRedirectUri.pathname === "/admin/ai-providers/callback";
     const frontendUrl = this.configService.get<string>("FRONTEND_URL");
     if (frontendUrl) {
       const frontendOrigin = new URL(frontendUrl).origin;
-      if (parsedRedirectUri.origin === frontendOrigin) {
+      if (parsedRedirectUri.origin === frontendOrigin && isAllowedCallbackPath) {
         return parsedRedirectUri.toString();
       }
     }
 
     const isDevelopment = this.configService.get<string>("NODE_ENV") !== "production";
-    if (isDevelopment && ["localhost", "127.0.0.1"].includes(parsedRedirectUri.hostname)) {
+    if (
+      isDevelopment &&
+      isAllowedCallbackPath &&
+      ["localhost", "127.0.0.1"].includes(parsedRedirectUri.hostname)
+    ) {
       return parsedRedirectUri.toString();
     }
 

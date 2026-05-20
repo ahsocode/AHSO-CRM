@@ -8,6 +8,7 @@ import {
   hasPermission as authHasPermission,
   persistSession
 } from "@/lib/auth";
+import { apiClient } from "@/lib/api-client";
 import { API_URL } from "@/lib/constants";
 import { ActionResponse, ApiResponse, AuthSession, AuthUser, ForgotPasswordResponse } from "@/lib/types";
 
@@ -54,8 +55,8 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const session = persistSession(response.data.data);
 
     void Promise.allSettled([
-      axios.get(`${API_URL}/settings/company`),
-      axios.get(`${API_URL}/settings/logo`)
+      apiClient.get("/settings/company"),
+      apiClient.get("/settings/logo")
     ]);
 
     set({

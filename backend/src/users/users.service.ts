@@ -128,7 +128,12 @@ export class UsersService {
       where: {
         id
       },
-      data: dto,
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name } : {}),
+        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
+        ...(dto.roleId !== undefined ? { roleId: dto.roleId } : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {})
+      },
       include: {
         role: true
       }

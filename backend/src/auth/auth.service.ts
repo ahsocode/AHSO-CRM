@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
+import { createHash } from "crypto";
 import type { Prisma, User } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
@@ -198,10 +199,12 @@ export class AuthService {
 
     // Rotate: update existing session with new token hash
     const hashedRefreshToken = await bcrypt.hash(tokens.refreshToken, 10);
+    const tokenHash = this.hashRefreshToken(tokens.refreshToken);
     await this.prisma.userSession.update({
       where: { id: session.id },
       data: {
         refreshToken: hashedRefreshToken,
+        tokenHash,
         lastActiveAt: new Date(),
         ipAddress: meta?.ip ?? session.ipAddress,
         userAgent: meta?.userAgent ?? session.userAgent
@@ -402,12 +405,14 @@ export class AuthService {
 
   private async createSession(userId: string, refreshToken: string, meta?: AuthRequestMeta) {
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    const tokenHash = this.hashRefreshToken(refreshToken);
     const deviceName = meta?.userAgent ? this.parseDeviceName(meta.userAgent) : null;
 
     return this.prisma.userSession.create({
       data: {
         userId,
         refreshToken: hashedRefreshToken,
+        tokenHash,
         deviceName,
         ipAddress: meta?.ip ?? null,
         userAgent: meta?.userAgent ?? null
@@ -469,37 +474,31 @@ export class AuthService {
       throw new UnauthorizedException("Refresh token không hợp lệ");
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
+    const session = await this.prisma.userSession.findUnique({
+      where: { tokenHash: this.hashRefreshToken(refreshToken) },
       include: {
-        role: {
+        user: {
           include: {
-            permissions: true
+            role: {
+              include: {
+                permissions: true
+              }
+            }
           }
-        },
-        sessions: true
+        }
       }
     });
 
-    if (!user || !user.isActive || user.sessions.length === 0) {
+    if (!session || session.userId !== payload.sub || !session.user.isActive) {
       throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
     }
 
-    // Find matching session by comparing refresh token hash
-    let matchedSession: (typeof user.sessions)[0] | undefined;
-    for (const session of user.sessions) {
-      const matches = await bcrypt.compare(refreshToken, session.refreshToken);
-      if (matches) {
-        matchedSession = session;
-        break;
-      }
-    }
-
-    if (!matchedSession) {
+    const matches = await bcrypt.compare(refreshToken, session.refreshToken);
+    if (!matches) {
       throw new UnauthorizedException("Phiên đăng nhập đã hết hạn");
     }
 
-    return { payload, user, session: matchedSession };
+    return { payload, user: session.user, session };
   }
 
   private serializeUser(user: AuthUserWithRole) {
@@ -531,6 +530,10 @@ export class AuthService {
 
   private getAhsoImapHost() {
     return this.configService.get<string>("AHSO_IMAP_HOST") ?? DEFAULT_AHSO_IMAP_HOST;
+  }
+
+  private hashRefreshToken(refreshToken: string) {
+    return createHash("sha256").update(refreshToken).digest("hex");
   }
 
   private decodePasswordResetToken(token: string) {

@@ -43,17 +43,17 @@ describe("AiCredentialsService", () => {
 
     const result = await service.createAuthorizeUrl(
       "gemini",
-      "https://crm.ahso.vn/oauth/ai/callback",
+      "https://crm.ahso.vn/admin/ai-providers/callback",
       "user-1"
     );
 
     expect("state" in result).toBe(false);
     expect(result.authorizeUrl).toContain("client_id=gemini-client");
-    expect(result.authorizeUrl).toContain("redirect_uri=https%3A%2F%2Fcrm.ahso.vn%2Foauth%2Fai%2Fcallback");
+    expect(result.authorizeUrl).toContain("redirect_uri=https%3A%2F%2Fcrm.ahso.vn%2Fadmin%2Fai-providers%2Fcallback");
     expect(prisma.aiOAuthState.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         provider: "gemini",
-        redirectUri: "https://crm.ahso.vn/oauth/ai/callback",
+        redirectUri: "https://crm.ahso.vn/admin/ai-providers/callback",
         createdById: "user-1"
       })
     });

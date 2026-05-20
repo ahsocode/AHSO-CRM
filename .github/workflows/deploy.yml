@@ -109,10 +109,57 @@ jobs:
             }
 
             COMPOSE="docker compose --env-file .env.production.local -f docker-compose.prod.yml"
+            BACKEND_ENV_FILE="backend/.env.production.local"
+
+            read_env_from_file() {
+              local file="$1"
+              local key="$2"
+              grep -E "^[[:space:]]*$key=" "$file" 2>/dev/null | tail -n 1 | cut -d= -f2- | sed -E "s/^[\"']//; s/[\"']$//"
+            }
+
+            upsert_env_value() {
+              local file="$1"
+              local key="$2"
+              local value="$3"
+              if grep -Eq "^[[:space:]]*$key=" "$file"; then
+                tmp_file="$(mktemp)"
+                awk -v key="$key" -v value="$value" '
+                  BEGIN { replaced = 0 }
+                  $0 ~ "^[[:space:]]*" key "=" {
+                    print key "=\"" value "\""
+                    replaced = 1
+                    next
+                  }
+                  { print }
+                  END {
+                    if (!replaced) {
+                      print key "=\"" value "\""
+                    }
+                  }
+                ' "$file" > "$tmp_file"
+                mv "$tmp_file" "$file"
+              else
+                printf '\n%s="%s"\n' "$key" "$value" >> "$file"
+              fi
+            }
+
+            ensure_generated_backend_secret() {
+              local key="$1"
+              local current_value
+              current_value="$(read_env_from_file "$BACKEND_ENV_FILE" "$key")"
+              if [ -n "$current_value" ] && [[ "$current_value" != *"replace-with"* && "$current_value" != *"change-me"* ]]; then
+                return
+              fi
+
+              echo "[deploy] $key is missing or placeholder in $BACKEND_ENV_FILE; generating a persistent value."
+              upsert_env_value "$BACKEND_ENV_FILE" "$key" "$(openssl rand -hex 32)"
+            }
+
             print_disk_usage "before cleanup"
             if [ -n "${PROD_GHCR_TOKEN:-}" ]; then
               echo "$PROD_GHCR_TOKEN" | docker login ghcr.io -u "${PROD_GHCR_USERNAME:-${{ github.actor }}}" --password-stdin
             fi
+            ensure_generated_backend_secret "JWT_REFRESH_SECRET"
             ./scripts/check-deploy-readiness.sh
             cleanup_docker_space
             if ! $COMPOSE pull backend frontend; then
@@ -130,7 +177,12 @@ jobs:
             echo "[deploy] Running Prisma migrations..."
             $COMPOSE run --rm --no-deps backend npm run prisma:deploy
 
-            $COMPOSE up -d --remove-orphans --wait --timeout 120
+            if ! $COMPOSE up -d --remove-orphans --wait --timeout 120; then
+              echo "[deploy] docker compose failed to reach healthy state. Recent service logs:"
+              $COMPOSE ps || true
+              $COMPOSE logs --tail=200 backend frontend postgres redis || true
+              exit 1
+            fi
             $COMPOSE ps
             cleanup_docker_space
             read_env() {
@@ -140,8 +192,16 @@ jobs:
             FRONTEND_BIND="$(read_env FRONTEND_BIND)"
             BACKEND_PROBE_BIND="${BACKEND_BIND:-127.0.0.1:3001}"
             FRONTEND_PROBE_BIND="${FRONTEND_BIND:-127.0.0.1:3000}"
-            curl -fsS "http://127.0.0.1:${BACKEND_PROBE_BIND##*:}/api/health" >/dev/null
-            curl -fsS "http://127.0.0.1:${FRONTEND_PROBE_BIND##*:}/login" >/dev/null
+            if ! curl -fsS "http://127.0.0.1:${BACKEND_PROBE_BIND##*:}/api/health" >/dev/null; then
+              echo "[deploy] Backend health probe failed after compose reported healthy. Recent backend logs:"
+              $COMPOSE logs --tail=200 backend || true
+              exit 1
+            fi
+            if ! curl -fsS "http://127.0.0.1:${FRONTEND_PROBE_BIND##*:}/login" >/dev/null; then
+              echo "[deploy] Frontend probe failed after compose reported healthy. Recent frontend logs:"
+              $COMPOSE logs --tail=200 frontend || true
+              exit 1
+            fi
 
       - name: Notify Slack success
         if: success() && env.SLACK_WEBHOOK_URL != ''

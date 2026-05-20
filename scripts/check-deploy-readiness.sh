@@ -67,6 +67,7 @@ info "Kiểm tra secret/env production không còn placeholder"
 assert_not_placeholder "$ROOT_ENV" "POSTGRES_PASSWORD"
 assert_not_placeholder "$BACKEND_ENV" "NODE_ENV"
 assert_not_placeholder "$BACKEND_ENV" "JWT_SECRET"
+assert_not_placeholder "$BACKEND_ENV" "JWT_REFRESH_SECRET"
 assert_not_placeholder "$BACKEND_ENV" "JWT_RESET_SECRET"
 assert_not_placeholder "$BACKEND_ENV" "FRONTEND_URL"
 assert_not_placeholder "$BACKEND_ENV" "CORS_ORIGIN"
@@ -75,6 +76,15 @@ assert_not_placeholder "$FRONTEND_ENV" "NEXT_PUBLIC_API_URL"
 
 [[ "$(read_env_value "$BACKEND_ENV" "NODE_ENV")" == "production" ]] || fail "NODE_ENV trong $BACKEND_ENV phải là production"
 [[ "$(read_env_value "$BACKEND_ENV" "SWAGGER_ENABLED")" == "false" ]] || fail "SWAGGER_ENABLED trong $BACKEND_ENV phải là false cho production"
+
+JWT_SECRET_VALUE="$(read_env_value "$BACKEND_ENV" "JWT_SECRET")"
+JWT_REFRESH_SECRET_VALUE="$(read_env_value "$BACKEND_ENV" "JWT_REFRESH_SECRET")"
+ENCRYPTION_KEY_VALUE="$(read_env_value "$BACKEND_ENV" "ENCRYPTION_KEY")"
+
+[[ "${#JWT_SECRET_VALUE}" -ge 32 ]] || fail "JWT_SECRET trong $BACKEND_ENV phải có ít nhất 32 ký tự"
+[[ "${#JWT_REFRESH_SECRET_VALUE}" -ge 32 ]] || fail "JWT_REFRESH_SECRET trong $BACKEND_ENV phải có ít nhất 32 ký tự"
+[[ "$JWT_REFRESH_SECRET_VALUE" != "$JWT_SECRET_VALUE" ]] || fail "JWT_REFRESH_SECRET phải khác JWT_SECRET"
+[[ "$ENCRYPTION_KEY_VALUE" =~ ^([0-9a-fA-F]{64}|.{32})$ ]] || fail "ENCRYPTION_KEY trong $BACKEND_ENV phải là 32 ký tự hoặc 64 ký tự hex"
 
 if [[ -z "$(read_env_value "$BACKEND_ENV" "SMTP_HOST")" ]]; then
   warn "SMTP chưa cấu hình; các flow gửi email sẽ không hoạt động đầy đủ."

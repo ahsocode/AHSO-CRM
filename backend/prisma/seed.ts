@@ -500,6 +500,58 @@ async function main() {
     ]
   });
 
+  // Seed inventory permissions
+  const inventoryPermissions = [
+    { id: "perm_suppliers_view", resource: "suppliers", action: "view" },
+    { id: "perm_suppliers_create", resource: "suppliers", action: "create" },
+    { id: "perm_suppliers_edit", resource: "suppliers", action: "edit" },
+    { id: "perm_suppliers_delete", resource: "suppliers", action: "delete" },
+    { id: "perm_materials_view", resource: "materials", action: "view" },
+    { id: "perm_materials_create", resource: "materials", action: "create" },
+    { id: "perm_materials_edit", resource: "materials", action: "edit" },
+    { id: "perm_materials_delete", resource: "materials", action: "delete" },
+    { id: "perm_inventory_view", resource: "inventory", action: "view" },
+    { id: "perm_inventory_create", resource: "inventory", action: "create" },
+    { id: "perm_inventory_edit", resource: "inventory", action: "edit" },
+    { id: "perm_inventory_delete", resource: "inventory", action: "delete" },
+  ];
+
+  for (const perm of inventoryPermissions) {
+    await prisma.permission.upsert({
+      where: { resource_action: { resource: perm.resource, action: perm.action } },
+      create: { id: perm.id, resource: perm.resource, action: perm.action },
+      update: {},
+    });
+  }
+
+  // ADMIN: all 12 new permissions
+  const allNewPerms = await prisma.permission.findMany({
+    where: { resource: { in: ["suppliers", "materials", "inventory"] } },
+  });
+
+  await prisma.userRole.update({
+    where: { id: adminRole.id },
+    data: { permissions: { connect: allNewPerms.map((p) => ({ id: p.id })) } },
+  });
+
+  // MANAGER: view+create+edit for all 3 resources
+  const managerPerms = allNewPerms.filter((p) => ["view", "create", "edit"].includes(p.action));
+  await prisma.userRole.update({
+    where: { id: managerRole.id },
+    data: { permissions: { connect: managerPerms.map((p) => ({ id: p.id })) } },
+  });
+
+  // STAFF: view+create for inventory; view only for materials and suppliers
+  const staffPerms = allNewPerms.filter(
+    (p) =>
+      (p.resource === "inventory" && ["view", "create"].includes(p.action)) ||
+      ((p.resource === "materials" || p.resource === "suppliers") && p.action === "view")
+  );
+  await prisma.userRole.update({
+    where: { id: staffRole.id },
+    data: { permissions: { connect: staffPerms.map((p) => ({ id: p.id })) } },
+  });
+
   console.log("Seed dữ liệu AHSO CRM thành công.");
   console.log("Tài khoản đăng nhập dev:");
   console.log("- admin@ahso.vn / AHSO123!");

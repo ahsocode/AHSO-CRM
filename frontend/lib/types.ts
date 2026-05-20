@@ -1721,3 +1721,251 @@ export interface ReportCohortRow {
     retainedRate: number;
   }>;
 }
+
+// ============================================================
+// INVENTORY & MATERIALS TYPES
+// ============================================================
+
+export type StockDocStatus = "DRAFT" | "CONFIRMED" | "CANCELLED";
+
+// Suppliers
+export interface SupplierListItem {
+  id: string;
+  code: string;
+  name: string;
+  taxCode: string | null;
+  phone: string | null;
+  email: string | null;
+  contactName: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface SupplierDetail extends SupplierListItem {
+  address: string | null;
+  notes: string | null;
+  _count: { materialSuppliers: number };
+}
+export interface SupplierSelectItem {
+  id: string;
+  code: string;
+  name: string;
+}
+export interface SupplierListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Material Categories
+export interface MaterialCategoryItem {
+  id: string;
+  code: string;
+  name: string;
+  parentId: string | null;
+  _count: { materials: number };
+}
+
+// Materials
+export interface MaterialListItem {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  salePrice: number;
+  costPrice: number;
+  minStock: number | null;
+  isActive: boolean;
+  totalStock: number;
+  isLowStock: boolean;
+  category: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface MaterialDetail extends MaterialListItem {
+  description: string | null;
+  imageUrl: string | null;
+  suppliers: Array<{
+    id: string;
+    supplierId: string;
+    supplier: { id: string; name: string; code: string };
+    supplierCode: string | null;
+    costPrice: number;
+    leadTimeDays: number | null;
+    isPreferred: boolean;
+  }>;
+  stockBalances: Array<{
+    warehouseId: string;
+    warehouse: { id: string; name: string };
+    quantity: number;
+  }>;
+}
+export interface MaterialSelectItem {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  salePrice: number;
+}
+export interface MaterialListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Warehouses
+export interface WarehouseListItem {
+  id: string;
+  code: string;
+  name: string;
+  address: string | null;
+  isActive: boolean;
+  manager: { id: string; name: string } | null;
+  createdAt: string;
+}
+export interface WarehouseSelectItem {
+  id: string;
+  code: string;
+  name: string;
+}
+
+// Stock document shared line item
+export interface StockDocLineItem {
+  id: string;
+  materialId: string;
+  material: { id: string; code: string; name: string; unit: string };
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+export interface StockTransferLineItem {
+  id: string;
+  materialId: string;
+  material: { id: string; code: string; name: string; unit: string };
+  quantity: number;
+}
+export interface StockCountLineItem {
+  id: string;
+  materialId: string;
+  material: { id: string; code: string; name: string; unit: string };
+  systemQuantity: number;
+  actualQuantity: number;
+  diff: number;
+}
+
+// Stock Receipts
+export interface StockReceiptListItem {
+  id: string;
+  receiptNo: string;
+  date: string;
+  status: StockDocStatus;
+  totalAmount: number;
+  warehouse: { id: string; name: string };
+  supplier: { id: string; name: string } | null;
+  itemCount: number;
+  createdAt: string;
+}
+export interface StockReceiptDetail extends StockReceiptListItem {
+  notes: string | null;
+  confirmedAt: string | null;
+  createdBy: { id: string; name: string };
+  items: StockDocLineItem[];
+}
+export interface StockReceiptListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Stock Issues
+export interface StockIssueListItem {
+  id: string;
+  issueNo: string;
+  date: string;
+  status: StockDocStatus;
+  totalAmount: number;
+  reason: string | null;
+  warehouse: { id: string; name: string };
+  project: { id: string; code: string; name: string } | null;
+  itemCount: number;
+  createdAt: string;
+}
+export interface StockIssueDetail extends StockIssueListItem {
+  notes: string | null;
+  confirmedAt: string | null;
+  createdBy: { id: string; name: string };
+  items: StockDocLineItem[];
+}
+export interface StockIssueListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Stock Transfers
+export interface StockTransferListItem {
+  id: string;
+  transferNo: string;
+  date: string;
+  status: StockDocStatus;
+  fromWarehouse: { id: string; name: string };
+  toWarehouse: { id: string; name: string };
+  itemCount: number;
+  createdAt: string;
+}
+export interface StockTransferDetail extends StockTransferListItem {
+  notes: string | null;
+  confirmedAt: string | null;
+  createdBy: { id: string; name: string };
+  items: StockTransferLineItem[];
+}
+export interface StockTransferListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Stock Counts
+export interface StockCountListItem {
+  id: string;
+  countNo: string;
+  date: string;
+  status: StockDocStatus;
+  warehouse: { id: string; name: string };
+  itemCount: number;
+  createdAt: string;
+}
+export interface StockCountDetail extends StockCountListItem {
+  notes: string | null;
+  confirmedAt: string | null;
+  createdBy: { id: string; name: string };
+  items: StockCountLineItem[];
+}
+export interface StockCountListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Inventory balance
+export interface InventoryBalanceItem {
+  warehouseId: string;
+  warehouse: { id: string; name: string };
+  materialId: string;
+  material: { id: string; code: string; name: string; unit: string; minStock: number | null };
+  quantity: number;
+  isLowStock: boolean;
+  value: number; // quantity * costPrice
+}
+export interface InventorySummary {
+  totalValue: number;
+  lowStockCount: number;
+  draftDocsCount: number;
+  warehouseCount: number;
+}

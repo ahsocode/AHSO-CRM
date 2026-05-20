@@ -51,6 +51,7 @@ import {
   SurveyNoteType
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ProjectMaterialsTab } from "./project-materials-tab";
 
 type Project360Tab =
   | "overview"
@@ -61,7 +62,8 @@ type Project360Tab =
   | "contracts"
   | "delivery"
   | "payments"
-  | "handover";
+  | "handover"
+  | "materials";
 
 type AppIconName = ComponentProps<typeof AppIcon>["name"];
 
@@ -74,6 +76,7 @@ const TABS: Array<{ key: Project360Tab; label: string; icon: AppIconName }> = [
   { key: "contracts", label: "Hợp đồng", icon: "contract" },
   { key: "delivery", label: "Triển khai", icon: "briefcase" },
   { key: "payments", label: "Thanh toán", icon: "analytics" },
+  { key: "materials", label: "Vật tư", icon: "factory" },
   { key: "handover", label: "Ghi chú / Quyết định", icon: "history" }
 ];
 const TAB_KEYS = TABS.map((tab) => tab.key);
@@ -449,6 +452,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       {activeTab === "contracts" ? <ContractsPanel project={project} /> : null}
       {activeTab === "delivery" ? <DeliveryPanel project={project} /> : null}
       {activeTab === "payments" ? <PaymentsPanel project={project} /> : null}
+      {activeTab === "materials" ? <MaterialsPanel projectId={projectId} /> : null}
       {activeTab === "handover" ? <HandoverPanel project={project} overview={overview} /> : null}
     </div>
   );
@@ -1693,6 +1697,20 @@ function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof use
             </div>
           ))
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MaterialsPanel({ projectId }: { projectId: string }) {
+  return (
+    <Card className="border border-white/70">
+      <CardHeader className="gap-2">
+        <p className="v2-label text-primary">Vật tư</p>
+        <CardTitle>Vật tư cấp cho dự án</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ProjectMaterialsTab projectId={projectId} />
       </CardContent>
     </Card>
   );

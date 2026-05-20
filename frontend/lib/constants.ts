@@ -1,3 +1,5 @@
+import type { StockDocStatus } from "./types";
+
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "AHSO CRM";
 
 export function normalizeBackendUrl(value: string) {
@@ -76,6 +78,9 @@ export const NAV_ITEMS = [
   { href: "/calendar", label: "Lịch công tác", icon: "calendar" },
   { href: "/mailbox", label: "Mailbox", icon: "mail" },
   { href: "/documents", label: "Hồ sơ", icon: "folder" },
+  { href: "/suppliers", label: "Nhà cung cấp", icon: "truck" },
+  { href: "/materials", label: "Vật tư", icon: "inventory" },
+  { href: "/inventory", label: "Kho hàng", icon: "warehouse" },
   { href: "/reports", label: "Báo cáo", icon: "analytics" },
   { href: "/users", label: "Người dùng", icon: "briefcase" }
 ] as const;
@@ -120,3 +125,15 @@ export const ACTIVITY_TYPE_LABELS = {
   NOTE: "Ghi chú",
   FOLLOWUP: "Theo dõi"
 } as const;
+
+export const STOCK_DOC_STATUS_LABELS: Record<StockDocStatus, string> = {
+  DRAFT: "Bản nháp",
+  CONFIRMED: "Đã xác nhận",
+  CANCELLED: "Đã hủy",
+};
+
+export const STOCK_DOC_STATUS_COLORS: Record<StockDocStatus, string> = {
+  DRAFT: "text-text-secondary bg-bg-hover",
+  CONFIRMED: "text-success bg-success-bg",
+  CANCELLED: "text-danger bg-danger-bg",
+};

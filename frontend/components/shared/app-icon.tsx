@@ -33,7 +33,15 @@ type IconName =
   | "refresh"
   | "cloud-upload"
   | "restore"
-  | "delete";
+  | "delete"
+  | "close"
+  | "plus-circle"
+  | "minus-circle"
+  | "check-circle"
+  | "warning"
+  | "warehouse"
+  | "inventory"
+  | "truck";
 
 const ICONS: Record<IconName, ReactNode> = {
   dashboard: <path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z" />,
@@ -67,7 +75,15 @@ const ICONS: Record<IconName, ReactNode> = {
   refresh: <path d="M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.65 4.36A9 9 0 0 0 20.5 15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   "cloud-upload": <path d="M18 14.5A4.5 4.5 0 0 0 13.5 10H13a5 5 0 1 0-5 5.5M12 13v8M9 18l3-3 3 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   restore: <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5M12 7v5l3 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-  delete: <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  delete: <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  close: <path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "plus-circle": <path d="M12 3a9 9 0 1 0 0 18A9 9 0 0 0 12 3Zm0 6v6M9 12h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "minus-circle": <path d="M12 3a9 9 0 1 0 0 18A9 9 0 0 0 12 3ZM9 12h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "check-circle": <path d="M12 3a9 9 0 1 0 0 18A9 9 0 0 0 12 3Zm-3 9 2.5 2.5L15 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  warning: <path d="M12 2 2 22h20L12 2Zm0 7v5m0 3v1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  warehouse: <path d="M2 21V9l10-6 10 6v12M6 21V12h12v9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  inventory: <path d="M3 3h18v4H3zM3 10h18v11H3zM9 14h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  truck: <path d="M1 3h15v13H1zM16 8h4l3 4v4h-7zM5.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 };
 
 export function AppIcon({

@@ -4,6 +4,7 @@ import { APP_GUARD } from "@nestjs/core";
 import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { ScheduleModule } from "@nestjs/schedule";
 import { AiModule } from "./ai/ai.module";
+import { AiCredentialsModule } from "./ai-credentials/ai-credentials.module";
 import { AuditModule } from "./audit/audit.module";
 import { CommonModule } from "./common/common.module";
 import { EmailModule } from "./email/email.module";
@@ -37,6 +38,13 @@ import { HealthModule } from "./health/health.module";
 import { MailboxModule } from "./mailbox/mailbox.module";
 import { BackupModule } from "./backup/backup.module";
 import { validateEnv } from "./common/config/env.validation";
+import { SuppliersModule } from "./suppliers/suppliers.module";
+import { MaterialsModule } from "./materials/materials.module";
+import { InventoryModule } from "./inventory/inventory.module";
+import { StockReceiptsModule } from "./stock-receipts/stock-receipts.module";
+import { StockIssuesModule } from "./stock-issues/stock-issues.module";
+import { StockTransfersModule } from "./stock-transfers/stock-transfers.module";
+import { StockCountsModule } from "./stock-counts/stock-counts.module";
 
 @Module({
   imports: [
@@ -56,6 +64,7 @@ import { validateEnv } from "./common/config/env.validation";
       ]
     }),
     CommonModule,
+    AiCredentialsModule,
     AiModule,
     AuditModule,
     AuthModule,
@@ -87,7 +96,14 @@ import { validateEnv } from "./common/config/env.validation";
     BackupModule,
     DocumentsModule,
     SurveysModule,
-    BusinessDocumentsModule
+    BusinessDocumentsModule,
+    SuppliersModule,
+    MaterialsModule,
+    InventoryModule,
+    StockReceiptsModule,
+    StockIssuesModule,
+    StockTransfersModule,
+    StockCountsModule
   ],
   providers: [
     {

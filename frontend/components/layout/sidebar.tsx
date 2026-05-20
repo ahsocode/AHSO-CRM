@@ -42,6 +42,18 @@ function getItemHint(href: string) {
     return "Hồ sơ & tài liệu";
   }
 
+  if (href === "/suppliers") {
+    return "Nhà cung cấp vật tư";
+  }
+
+  if (href === "/materials") {
+    return "Danh mục vật tư";
+  }
+
+  if (href === "/inventory") {
+    return "Nhập / Xuất / Kiểm kê";
+  }
+
   if (href === "/reports") {
     return "Phân tích vận hành";
   }

@@ -90,7 +90,9 @@ jobs:
           envs: PROD_GHCR_USERNAME,PROD_GHCR_TOKEN
           script: |
             set -euo pipefail
+            trap 'echo "[deploy] FATAL: command failed at line $LINENO (exit $?)" >&2' ERR
             cd ${{ secrets.PROD_APP_DIR }}
+            echo "[deploy] Working directory: $(pwd)"
 
             print_disk_usage() {
               echo "[deploy] Disk usage: $1"

@@ -10,10 +10,11 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
   const suffix = Date.now();
   let warehouseId: string | null = null;
   let materialId: string | null = null;
+  let supplierId: string | null = null;
 
   try {
     const warehouseListResponse = await request.get(`${API_URL}/warehouses`, { headers });
-    expect(warehouseListResponse.ok()).toBeTruthy();
+    await expectOk(warehouseListResponse, "list warehouses");
     const warehouseList = unwrap(await warehouseListResponse.json());
     expect(Array.isArray(warehouseList)).toBe(true);
 
@@ -26,12 +27,12 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
         isActive: true
       }
     });
-    expect(warehouseResponse.ok()).toBeTruthy();
+    await expectOk(warehouseResponse, "create warehouse");
     const warehouse = unwrap(await warehouseResponse.json()) as { id: string };
     warehouseId = warehouse.id;
 
     const materialsSelectResponse = await request.get(`${API_URL}/materials/select`, { headers });
-    expect(materialsSelectResponse.ok()).toBeTruthy();
+    await expectOk(materialsSelectResponse, "list material select options");
     const materialsSelect = unwrap(await materialsSelectResponse.json());
     expect(Array.isArray(materialsSelect)).toBe(true);
 
@@ -47,14 +48,28 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
         isActive: true
       }
     });
-    expect(materialResponse.ok()).toBeTruthy();
+    await expectOk(materialResponse, "create material");
     const material = unwrap(await materialResponse.json()) as { id: string };
     materialId = material.id;
+
+    const supplierResponse = await request.post(`${API_URL}/suppliers`, {
+      headers,
+      data: {
+        code: `E2E-INV-SUP-${suffix}`,
+        name: `NCC tồn kho E2E ${suffix}`,
+        phone: "0909000000",
+        isActive: true
+      }
+    });
+    await expectOk(supplierResponse, "create inventory supplier");
+    const supplier = unwrap(await supplierResponse.json()) as { id: string };
+    supplierId = supplier.id;
 
     const receiptResponse = await request.post(`${API_URL}/stock-receipts`, {
       headers,
       data: {
         warehouseId,
+        supplierId,
         date: new Date().toISOString(),
         notes: "E2E nhập kho smoke test",
         items: [
@@ -66,11 +81,11 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
         ]
       }
     });
-    expect(receiptResponse.ok()).toBeTruthy();
+    await expectOk(receiptResponse, "create stock receipt");
     const receipt = unwrap(await receiptResponse.json()) as { id: string };
 
     const confirmResponse = await request.post(`${API_URL}/stock-receipts/${receipt.id}/confirm`, { headers });
-    expect(confirmResponse.ok()).toBeTruthy();
+    await expectOk(confirmResponse, "confirm stock receipt");
 
     const balancesResponse = await request.get(`${API_URL}/inventory/balances`, {
       headers,
@@ -79,7 +94,7 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
         materialId
       }
     });
-    expect(balancesResponse.ok()).toBeTruthy();
+    await expectOk(balancesResponse, "get inventory balances");
     const balances = unwrap(await balancesResponse.json()) as Array<{ materialId: string; warehouseId: string; quantity: number }>;
     expect(balances.some((item) =>
       item.materialId === materialId &&
@@ -89,6 +104,9 @@ test("inventory receipt confirmation increases warehouse stock", async ({ page, 
   } finally {
     if (materialId) {
       await request.delete(`${API_URL}/materials/${materialId}`, { headers }).catch(() => undefined);
+    }
+    if (supplierId) {
+      await request.delete(`${API_URL}/suppliers/${supplierId}`, { headers }).catch(() => undefined);
     }
     if (warehouseId) {
       await request.delete(`${API_URL}/warehouses/${warehouseId}`, { headers }).catch(() => undefined);
@@ -106,6 +124,15 @@ function authHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`
   };
+}
+
+async function expectOk(response: { ok(): boolean; status(): number; text(): Promise<string> }, label: string) {
+  if (response.ok()) {
+    return;
+  }
+
+  const body = await response.text();
+  throw new Error(`${label} failed (${response.status()}): ${body}`);
 }
 
 function unwrap(payload: unknown) {

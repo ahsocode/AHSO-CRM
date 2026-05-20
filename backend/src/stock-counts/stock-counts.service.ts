@@ -230,7 +230,7 @@ export class StockCountsService {
   }
 
   private async generateNextCountNo(tx: Prisma.TransactionClient): Promise<string> {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('stock_count_number'))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('stock_count_number'))`;
     const year = new Date().getFullYear();
     const prefix = `KK-${year}-`;
     const latest = await tx.stockCount.findFirst({

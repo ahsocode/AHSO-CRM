@@ -221,7 +221,7 @@ export class StockTransfersService {
   }
 
   private async generateNextTransferNo(tx: Prisma.TransactionClient): Promise<string> {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('stock_transfer_number'))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('stock_transfer_number'))`;
     const year = new Date().getFullYear();
     const prefix = `PCT-${year}-`;
     const latest = await tx.stockTransfer.findFirst({

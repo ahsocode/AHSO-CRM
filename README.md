@@ -13,7 +13,7 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 | **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui, TanStack Query v5, Zustand, React Hook Form + Zod, Recharts, Nivo |
 | **Backend** | NestJS 10, Prisma 5, PostgreSQL 16, Redis 7, Socket.io, Puppeteer, Handlebars |
 | **Auth** | JWT (15 min access + 7 day refresh HttpOnly cookie), bcrypt, session tracking |
-| **AI** | Anthropic Claude (activity summaries, follow-up suggestions, win probability forecast) |
+| **AI** | Multi-provider (Anthropic Claude, OpenAI, Gemini) — activity summaries, follow-up suggestions, win probability forecast, AI agents with CRM tool access |
 | **Notifications** | WebSocket real-time + in-app DB + Web Push (VAPID) |
 | **Email** | iRedMail IMAP/SMTP (self-hosted), AES-256-GCM encrypted credentials, IDLE real-time sync |
 | **Integrations** | SMTP transactional email, Twilio SMS, outbound webhooks, Sentry |
@@ -30,6 +30,16 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 - **Contracts** — Milestones with payment amounts, payment recording, acceptance report PDF, file attachments
 - **Activities** — 7 types (Call, Email, Meeting, Survey, Demo, Note, Follow-up), soft delete + restore, calendar integration
 - **Surveys** — Site survey records with typed notes (technical, commercial, constraint, risk, decision), photo/video attachments with area tags
+
+### Inventory & Warehouse
+- **Suppliers** — Supplier catalog with tax code, contacts, preferred supplier per material
+- **Materials** — Material catalog with categories, sale price, cost price (moving average), stock alert threshold, supplier pricing per vendor
+- **Warehouses** — Multi-warehouse management with manager assignment
+- **Stock Receipts** — `PN-YYYY-NNN` numbered inbound receipts, DRAFT → CONFIRMED workflow, increases stock balance and recalculates average cost price on confirm
+- **Stock Issues** — `PX-YYYY-NNN` outbound issues linked to projects, stock check on confirm, decreases balance
+- **Stock Transfers** — `PCT-YYYY-NNN` inter-warehouse transfers, atomic debit/credit in a single transaction
+- **Stock Counts** — `KK-YYYY-NNN` physical inventory counts, adjusts balance by diff (actual − system) on confirm
+- **Inventory Dashboard** — Total stock value, low-stock alerts, pending draft documents count
 
 ### Documents
 - **Template Editor** — Visual layout editor for 16 document types (quotation, proposal, contract, delivery note, acceptance report, warranty, etc.)
@@ -64,7 +74,9 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 - **Session Management** — View active sessions across devices, revoke individual sessions (target device is logged out in real-time via WebSocket)
 - **Webhooks** — Outbound HTTP webhooks on domain events with delivery logs
 - **Search** — Global full-text search across customers, projects, quotes, contracts, activities
-- **AI Insights** — Customer activity summaries, suggested follow-ups, email drafting, project win probability, pipeline revenue forecast (requires `ANTHROPIC_API_KEY`)
+- **AI Insights** — Customer activity summaries, suggested follow-ups, email drafting, project win probability, pipeline revenue forecast
+- **AI Agents** — Configurable agents with scoped CRM tool access (search customers, list projects, look up quotes); run ad-hoc or triggered by workflows
+- **AI Credentials** — Multi-provider credential management (Anthropic, OpenAI, Gemini) via API key or OAuth 2.0; token auto-refresh, per-provider usage tracking (7-day request count, error rate, avg latency)
 - **Email** — Transactional email via SMTP (password reset, quote delivery)
 - **SMS** — Activity alerts via Twilio (optional)
 
@@ -373,11 +385,20 @@ AHSO-CRM/
 │       ├── settings/            Company info + system policies
 │       ├── custom-fields/       Dynamic fields per resource
 │       ├── upload/              File + avatar + logo uploads
-│       ├── ai/                  Anthropic Claude integrations
+│       ├── ai/                  AI provider abstraction (Anthropic, OpenAI, Gemini)
+│       ├── ai-credentials/      Multi-provider credential management + OAuth 2.0 flow
+│       ├── agents/              Configurable AI agents with CRM tool access
 │       ├── email/               SMTP transactional email
 │       ├── sms/                 Twilio SMS
 │       ├── webhooks/            Outbound webhooks + delivery logs
 │       ├── mailbox/             iRedMail IMAP client (auth, sync, IDLE, send/reply)
+│       ├── suppliers/           Supplier catalog
+│       ├── materials/           Material catalog + categories
+│       ├── inventory/           Warehouse management + stock balances
+│       ├── stock-receipts/      Inbound stock receipts (PN)
+│       ├── stock-issues/        Outbound stock issues (PX)
+│       ├── stock-transfers/     Inter-warehouse transfers (PCT)
+│       ├── stock-counts/        Physical inventory counts (KK)
 │       ├── backup/              Backup & Restore via rclone → Google Drive
 │       ├── audit/               Login audit log
 │       ├── websocket/           Socket.io gateway
@@ -388,7 +409,8 @@ AHSO-CRM/
 │   │   ├── (auth)/              Login, forgot-password, reset-password
 │   │   └── (dashboard)/         All CRM pages (customers, projects, quotes,
 │   │                            contracts, activities, calendar, documents,
-│   │                            reports, notifications, users, admin/*)
+│   │                            reports, notifications, users, admin/*,
+│   │                            suppliers, materials, inventory/*, agents)
 │   ├── components/              Shared UI components
 │   ├── hooks/                   TanStack Query + Zustand hooks (use-*.ts)
 │   └── lib/                     API client, types, formatters, constants
@@ -436,6 +458,8 @@ Remote session revocation:
 | `activities.spec.ts` | Create, filter |
 | `dashboard.spec.ts` | KPI cards, charts |
 | `admin.spec.ts` | Admin panel, roles, document templates |
+| `suppliers.spec.ts` | Supplier CRUD API smoke flow |
+| `inventory.spec.ts` | Receipt confirm → stock balance increase |
 | `security.spec.ts` | RBAC enforcement, permission boundaries |
 
 ---

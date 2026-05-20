@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   type Control,
+  type FieldValues,
   useFieldArray,
   useWatch,
 } from "react-hook-form";
@@ -17,8 +18,7 @@ import { cn } from "@/lib/utils";
 
 export type StockDocMode = "receipt" | "issue" | "transfer" | "count";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyControl = Control<any, any>;
+type AnyControl = Control<FieldValues>;
 
 interface StockDocLineItemsProps {
   mode: StockDocMode;
@@ -160,6 +160,10 @@ export function createEmptyStockDocItem(mode: StockDocMode) {
   return { materialId: "", materialName: "", unit: "", quantity: 0, unitPrice: 0 };
 }
 
+function toInputString(value: unknown) {
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function StockDocLineItems({
@@ -170,8 +174,7 @@ export function StockDocLineItems({
   disabled,
 }: StockDocLineItemsProps) {
   const { fields, append, remove } = useFieldArray({ control, name: fieldName });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const watchedItems: any[] = useWatch({ control, name: fieldName }) ?? [];
+  const watchedItems = (useWatch({ control, name: fieldName }) ?? []) as Array<Record<string, unknown>>;
 
   const showPrice = mode === "receipt" || mode === "issue";
   const showCount = mode === "count";
@@ -233,8 +236,8 @@ export function StockDocLineItems({
             <div className="min-w-0">
               <span className="mb-1 block text-xs text-text-muted md:hidden">Vật tư</span>
               <MaterialCombobox
-                selectedId={item.materialId ?? ""}
-                displayName={item.materialName ?? ""}
+                selectedId={toInputString(item.materialId)}
+                displayName={toInputString(item.materialName)}
                 disabled={disabled}
                 onSelect={(material) => {
                   setValue(`${fieldName}.${index}.materialId`, material.id);
@@ -251,7 +254,7 @@ export function StockDocLineItems({
             <div>
               <span className="mb-1 block text-xs text-text-muted md:hidden">ĐVT</span>
               <Input
-                value={item.unit ?? ""}
+                value={toInputString(item.unit)}
                 readOnly
                 disabled
                 placeholder="—"

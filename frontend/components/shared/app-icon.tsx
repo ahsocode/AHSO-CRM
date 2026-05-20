@@ -41,7 +41,8 @@ type IconName =
   | "warning"
   | "warehouse"
   | "inventory"
-  | "truck";
+  | "truck"
+  | "smart_toy";
 
 const ICONS: Record<IconName, ReactNode> = {
   dashboard: <path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z" />,
@@ -83,7 +84,8 @@ const ICONS: Record<IconName, ReactNode> = {
   warning: <path d="M12 2 2 22h20L12 2Zm0 7v5m0 3v1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   warehouse: <path d="M2 21V9l10-6 10 6v12M6 21V12h12v9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   inventory: <path d="M3 3h18v4H3zM3 10h18v11H3zM9 14h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-  truck: <path d="M1 3h15v13H1zM16 8h4l3 4v4h-7zM5.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  truck: <path d="M1 3h15v13H1zM16 8h4l3 4v4h-7zM5.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  smart_toy: <path d="M12 3v3M8 3h8M5 9a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V9Zm-3 2v4m20-4v4M9 12h.01M15 12h.01M9 16h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 };
 
 export function AppIcon({

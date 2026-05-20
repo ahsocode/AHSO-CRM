@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, hasPermission, isAdmin, isStaff } from "../auth/auth.types";
 import { AiProviderRegistry } from "../ai/providers/ai-provider-registry.service";
@@ -107,7 +107,11 @@ export class AgentsService {
         maxTokens: 1200,
         temperature: 0.3
       }, agent.provider as "anthropic" | "openai" | "gemini" | null);
-      const output = result?.text ?? "Agent chưa tạo được phản hồi. Vui lòng kiểm tra cấu hình provider.";
+      if (!result) {
+        throw new ServiceUnavailableException("AI provider chưa được cấu hình. Vui lòng kiểm tra trong Admin.");
+      }
+
+      const output = result.text;
       const durationMs = Date.now() - startedAt;
 
       await this.prisma.agentRun.update({
@@ -184,14 +188,7 @@ export class AgentsService {
     for (const tool of tools) {
       const startedAt = Date.now();
       if (!this.canUseTool(tool, user)) {
-        results.push({
-          toolName: tool,
-          inputJson: { query: dto.input },
-          outputJson: { message: "User không có quyền dùng tool này" },
-          status: "SKIPPED",
-          durationMs: Date.now() - startedAt
-        });
-        continue;
+        throw new ForbiddenException("Bạn không có quyền dùng tool này");
       }
 
       results.push({

@@ -84,19 +84,24 @@ export default function AdminAiProvidersPage() {
   };
 
   const connectOAuth = async (provider: AiProviderName) => {
+    const popup = window.open("", "oauth_popup", "width=600,height=700");
+    if (!popup) {
+      toast({
+        title: "Không mở được cửa sổ OAuth",
+        description: "Trình duyệt đang chặn popup. Hãy cho phép popup rồi thử lại.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      popup.document.title = "Đang kết nối OAuth";
+      popup.document.body.innerHTML = "<p>Đang chuẩn bị kết nối OAuth...</p>";
       const redirectUri = `${window.location.origin}/admin/ai-providers/callback`;
       const result = await oauthMutation.mutateAsync({ provider, redirectUri });
-      const popup = window.open(result.authorizeUrl, "oauth_popup", "width=600,height=700");
-
-      if (!popup) {
-        toast({
-          title: "Không mở được cửa sổ OAuth",
-          description: "Trình duyệt đang chặn popup. Hãy cho phép popup rồi thử lại.",
-          variant: "destructive"
-        });
-      }
+      popup.location.href = result.authorizeUrl;
     } catch (error) {
+      popup.close();
       toast({ title: "Không khởi tạo được OAuth", description: getApiErrorMessage(error), variant: "destructive" });
     }
   };

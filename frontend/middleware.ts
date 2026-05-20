@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_ROUTES = new Set(["/login", "/forgot-password", "/reset-password"]);
+const PUBLIC_ROUTES = new Set([
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/admin/ai-providers/callback"
+]);
 const REFRESH_COOKIE = "ahso_refresh_token";
 
 export function middleware(request: NextRequest) {

@@ -303,7 +303,7 @@ export class DocumentLayoutRendererService {
               return `<tr>${box.content.columns
                 .map((column) => {
                   const content = this.interpolate(column.value, rowContext);
-                  return `<td style="text-align:${column.align ?? "left"}">${content}</td>`;
+                  return `<td style="text-align:${column.align ?? "left"};white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere">${content}</td>`;
                 })
                 .join("")}</tr>`;
             })
@@ -314,7 +314,10 @@ export class DocumentLayoutRendererService {
               : box.content.emptyText?.vi ?? "Chưa có dữ liệu"
           )}</td></tr>`;
 
-      return `<div class="schema-document__box" style="${style}"><table class="schema-document__table"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
+      // Table rows must expand to fit content: replace fixed height with min-height
+      // and allow overflow so rows aren't clipped.
+      const tableStyle = style.replace(/\bheight:[\d.]+mm/, `min-height:${box.height}mm`) + ";overflow:visible";
+      return `<div class="schema-document__box" style="${tableStyle}"><table class="schema-document__table"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
 
     const leftTitle =

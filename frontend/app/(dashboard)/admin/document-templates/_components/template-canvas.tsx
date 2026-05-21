@@ -143,16 +143,25 @@ function renderBoxContent(
   if (box.type === "line_items_table") {
     const source = getValueByPath(sampleData, box.content.source);
     const items = Array.isArray(source) ? source : [];
+    const widthTotal = box.content.columns.reduce((sum, column) => sum + (column.width ?? 1), 0) || 1;
+
     return (
-      <table className="w-full border-collapse text-left">
+      <table className="w-full table-fixed border-collapse text-left">
+        <colgroup>
+          {box.content.columns.map((column) => (
+            <col
+              key={column.id}
+              style={{ width: `${(((column.width ?? 1) / widthTotal) * 100).toFixed(4)}%` }}
+            />
+          ))}
+        </colgroup>
         <thead>
           <tr className="bg-slate-100">
             {box.content.columns.map((column) => (
               <th
                 key={column.id}
-                className="border border-slate-300 px-2 py-1 font-semibold"
+                className="min-w-0 overflow-hidden break-words border border-slate-300 px-1.5 py-1 font-semibold"
                 style={{
-                  width: column.width ? `${column.width * PX_PER_MM}px` : undefined,
                   textAlign: column.align ?? "left"
                 }}
               >
@@ -168,7 +177,7 @@ function renderBoxContent(
                 {box.content.columns.map((column) => (
                   <td
                     key={column.id}
-                    className="border border-slate-300 px-2 py-1 align-top"
+                    className="min-w-0 whitespace-pre-wrap break-words border border-slate-300 px-1.5 py-1 align-top"
                     style={{ textAlign: column.align ?? "left" }}
                   >
                     {interpolateTemplateString(column.value, {
@@ -229,6 +238,75 @@ function renderBoxContent(
       </div>
     </div>
   );
+}
+
+function estimateTextLines(text: string, columnWidthMm: number, fontSize: number) {
+  const availableWidthMm = Math.max(6, columnWidthMm - 3.6);
+  const averageCharWidthMm = Math.max(1.1, fontSize * 0.3528 * 0.48);
+  const charsPerLine = Math.max(4, Math.floor(availableWidthMm / averageCharWidthMm));
+
+  return text
+    .split(/\r?\n/)
+    .reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
+}
+
+function estimateLineItemsTableHeight(box: Extract<TemplateBox, { type: "line_items_table" }>, sampleData: Record<string, unknown>) {
+  const source = getValueByPath(sampleData, box.content.source);
+  const items = Array.isArray(source) ? source : [];
+  const fontSize = box.style?.fontSize ?? 9;
+  const lineHeight = box.style?.lineHeight ?? 1.35;
+  const paddingMm = box.style?.padding ?? 2;
+  const rowVerticalPaddingMm = 3.2;
+  const textLineHeightMm = fontSize * 0.3528 * lineHeight;
+  const headerHeightMm = textLineHeightMm + rowVerticalPaddingMm;
+  const widthTotal = box.content.columns.reduce((sum, column) => sum + (column.width ?? 1), 0) || 1;
+  const rowHeights = items.map((item, index) => {
+    const rowContext = {
+      ...(typeof item === "object" && item !== null ? (item as Record<string, unknown>) : {}),
+      index: index + 1
+    };
+    const maxLines = box.content.columns.reduce((lineCount, column) => {
+      const columnWidthMm = box.width * ((column.width ?? 1) / widthTotal);
+      const text = interpolateTemplateString(column.value, rowContext);
+      return Math.max(lineCount, estimateTextLines(text, columnWidthMm, fontSize));
+    }, 1);
+
+    return maxLines * textLineHeightMm + rowVerticalPaddingMm;
+  });
+
+  const bodyHeight = rowHeights.length > 0 ? rowHeights.reduce((sum, height) => sum + height, 0) : headerHeightMm;
+  return headerHeightMm + bodyHeight + paddingMm * 2;
+}
+
+function applyPresentationFlow(boxes: TemplateBox[], sampleData: Record<string, unknown>) {
+  const visibleBoxes = boxes
+    .filter((box) => box.visible !== false)
+    .sort((left, right) => left.y - right.y || left.x - right.x);
+  const offsetByBoxId = new Map<string, number>();
+  let accumulatedOffset = 0;
+
+  visibleBoxes.forEach((box) => {
+    offsetByBoxId.set(box.id, accumulatedOffset);
+
+    if (box.type !== "line_items_table") {
+      return;
+    }
+
+    const estimatedHeight = estimateLineItemsTableHeight(box, sampleData);
+    const overflow = Math.max(0, estimatedHeight - box.height);
+    if (overflow > 0) {
+      accumulatedOffset += overflow + 4;
+    }
+  });
+
+  if (accumulatedOffset === 0) {
+    return boxes;
+  }
+
+  return boxes.map((box) => {
+    const offset = offsetByBoxId.get(box.id) ?? 0;
+    return offset > 0 ? { ...box, y: box.y + offset } : box;
+  });
 }
 
 export function TemplateCanvas({
@@ -364,7 +442,7 @@ export function TemplateCanvas({
               </>
             ) : null}
 
-            {page.boxes
+            {(presentationMode ? applyPresentationFlow(page.boxes, sampleData) : page.boxes)
               .filter((box) => box.visible !== false)
               .sort((left, right) => left.zIndex - right.zIndex)
               .map((box) => {

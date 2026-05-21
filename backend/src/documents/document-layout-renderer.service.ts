@@ -144,6 +144,7 @@ export class DocumentLayoutRendererService {
 
 .schema-document__table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -155,8 +156,12 @@ export class DocumentLayoutRendererService {
 .schema-document__table th,
 .schema-document__table td {
   border: 1px solid #cbd5e1;
-  padding: 2mm 2.4mm;
+  padding: 1.6mm 1.8mm;
   vertical-align: top;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .schema-document__kv-row {
@@ -228,7 +233,7 @@ export class DocumentLayoutRendererService {
   ) {
     const pages = layout.pages
       .map((page) => {
-        const boxes = [...page.boxes]
+        const boxes = this.applyContentFlow(page.boxes, context)
           .filter((box) => box.visible !== false)
           .sort((left, right) => left.zIndex - right.zIndex)
           .map((box) => this.renderBox(box, context, language))
@@ -239,6 +244,75 @@ export class DocumentLayoutRendererService {
       .join("");
 
     return `<div class="schema-document">${pages}</div>`;
+  }
+
+  private applyContentFlow(boxes: TemplateBox[], context: Record<string, unknown>) {
+    const visibleBoxes = boxes
+      .filter((box) => box.visible !== false)
+      .sort((left, right) => left.y - right.y || left.x - right.x);
+    const offsetByBoxId = new Map<string, number>();
+    let accumulatedOffset = 0;
+
+    for (const box of visibleBoxes) {
+      offsetByBoxId.set(box.id, accumulatedOffset);
+
+      if (box.type !== "line_items_table") {
+        continue;
+      }
+
+      const estimatedHeight = this.estimateLineItemsTableHeight(box, context);
+      const overflow = Math.max(0, estimatedHeight - box.height);
+      if (overflow > 0) {
+        accumulatedOffset += overflow + 4;
+      }
+    }
+
+    if (accumulatedOffset === 0) {
+      return boxes;
+    }
+
+    return boxes.map((box) => {
+      const offset = offsetByBoxId.get(box.id) ?? 0;
+      return offset > 0 ? { ...box, y: box.y + offset } : box;
+    });
+  }
+
+  private estimateLineItemsTableHeight(box: Extract<TemplateBox, { type: "line_items_table" }>, context: Record<string, unknown>) {
+    const rows = getByPath(context, box.content.source);
+    const lineItems = Array.isArray(rows) ? rows : [];
+    const fontSizePt = box.style?.fontSize ?? 9;
+    const lineHeight = box.style?.lineHeight ?? 1.35;
+    const paddingMm = box.style?.padding ?? 2;
+    const rowVerticalPaddingMm = 3.2;
+    const textLineHeightMm = fontSizePt * 0.3528 * lineHeight;
+    const headerHeightMm = textLineHeightMm + rowVerticalPaddingMm;
+    const widthTotal = box.content.columns.reduce((sum, column) => sum + (column.width ?? 1), 0) || 1;
+    const rowHeights = lineItems.map((row, index) => {
+      const rowContext = {
+        ...(typeof row === "object" && row !== null ? (row as Record<string, unknown>) : {}),
+        index: index + 1
+      };
+      const maxLines = box.content.columns.reduce((lineCount, column) => {
+        const columnWidthMm = box.width * ((column.width ?? 1) / widthTotal);
+        const text = this.interpolate(column.value, rowContext);
+        return Math.max(lineCount, this.estimateTextLines(text, columnWidthMm, fontSizePt));
+      }, 1);
+
+      return maxLines * textLineHeightMm + rowVerticalPaddingMm;
+    });
+
+    const bodyHeight = rowHeights.length > 0 ? rowHeights.reduce((sum, height) => sum + height, 0) : headerHeightMm;
+    return headerHeightMm + bodyHeight + paddingMm * 2;
+  }
+
+  private estimateTextLines(text: string, columnWidthMm: number, fontSizePt: number) {
+    const availableWidthMm = Math.max(6, columnWidthMm - 3.6);
+    const averageCharWidthMm = Math.max(1.1, fontSizePt * 0.3528 * 0.48);
+    const charsPerLine = Math.max(4, Math.floor(availableWidthMm / averageCharWidthMm));
+
+    return text
+      .split(/\r?\n/)
+      .reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
   }
 
   interpolate(template: string, context: Record<string, unknown>) {
@@ -287,10 +361,14 @@ export class DocumentLayoutRendererService {
     if (box.type === "line_items_table") {
       const rows = getByPath(context, box.content.source);
       const lineItems = Array.isArray(rows) ? rows : [];
+      const widthTotal = box.content.columns.reduce((sum, column) => sum + (column.width ?? 1), 0) || 1;
+      const colgroup = box.content.columns
+        .map((column) => `<col style="width:${(((column.width ?? 1) / widthTotal) * 100).toFixed(4)}%" />`)
+        .join("");
       const header = box.content.columns
         .map(
           (column) =>
-            `<th style="${column.width ? `min-width:${column.width}mm;` : ""} text-align:${column.align ?? "left"}">${escapeHtml(language === "viEn" ? column.label.viEn ?? column.label.vi : column.label.vi)}</th>`
+            `<th style="text-align:${column.align ?? "left"}">${escapeHtml(language === "viEn" ? column.label.viEn ?? column.label.vi : column.label.vi)}</th>`
         )
         .join("");
       const body = lineItems.length
@@ -303,7 +381,7 @@ export class DocumentLayoutRendererService {
               return `<tr>${box.content.columns
                 .map((column) => {
                   const content = this.interpolate(column.value, rowContext);
-                  return `<td style="text-align:${column.align ?? "left"};white-space:pre-wrap;word-break:normal;overflow-wrap:break-word">${content}</td>`;
+                  return `<td style="text-align:${column.align ?? "left"}">${content}</td>`;
                 })
                 .join("")}</tr>`;
             })
@@ -314,13 +392,14 @@ export class DocumentLayoutRendererService {
               : box.content.emptyText?.vi ?? "Chưa có dữ liệu"
           )}</td></tr>`;
 
-      // Auto-scale in both X and Y: replace fixed dimensions with min-* so the box
-      // expands to fit content in either direction without clipping rows or columns.
+      // Let rows grow vertically, but keep columns inside the declared box width.
+      // Absolute-positioned document boxes cannot reflow following sections, so
+      // horizontal expansion is not allowed here; it causes clipped PDFs and
+      // severe wrapping that overlaps terms/signature blocks.
       const tableStyle = style
         .replace(/\bheight:[\d.]+mm/, `min-height:${box.height}mm`)
-        .replace(/\bwidth:[\d.]+mm/, `min-width:${box.width}mm`)
         + ";overflow:visible";
-      return `<div class="schema-document__box" style="${tableStyle}"><table class="schema-document__table"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
+      return `<div class="schema-document__box" style="${tableStyle}"><table class="schema-document__table"><colgroup>${colgroup}</colgroup><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
 
     const leftTitle =

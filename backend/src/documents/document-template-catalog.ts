@@ -515,11 +515,12 @@ function createQuotationLayout(): DocumentTemplateLayout {
       content: {
         source: "items",
         columns: [
-          { id: "stt", label: localize("STT", "No."), value: "{{index}}", width: 12, align: "center" },
-          { id: "name", label: localize("Hạng mục", "Item"), value: "{{name}}", width: 84, align: "left" },
-          { id: "qty", label: localize("SL", "Qty"), value: "{{quantity}}", width: 18, align: "center" },
-          { id: "unit", label: localize("Đơn giá", "Unit Price"), value: "{{unitPrice|currency}}", width: 34, align: "right" },
-          { id: "total", label: localize("Thành tiền", "Amount"), value: "{{total|currency}}", width: 38, align: "right" }
+          { id: "stt", label: localize("STT", "No."), value: "{{index}}", width: 10, align: "center" },
+          { id: "name", label: localize("Hạng mục", "Item"), value: "{{name}}", width: 58, align: "left" },
+          { id: "description", label: localize("Mô tả", "Description"), value: "{{description}}", width: 48, align: "left" },
+          { id: "qty", label: localize("SL", "Qty"), value: "{{quantity}}", width: 14, align: "center" },
+          { id: "unit", label: localize("Đơn giá", "Unit Price"), value: "{{unitPrice|currency}}", width: 28, align: "right" },
+          { id: "total", label: localize("Thành tiền", "Amount"), value: "{{total|currency}}", width: 28, align: "right" }
         ],
         emptyText: localize("Chưa có dòng dữ liệu", "No line items")
       }

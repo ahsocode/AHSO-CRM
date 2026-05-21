@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +21,7 @@ import type {
 type TextAlignment = "left" | "center" | "right" | "justify";
 type HorizontalPosition = "left" | "center" | "right";
 type VerticalPosition = "top" | "center" | "bottom";
+type PanelTab = "add" | "tokens" | "settings";
 
 const TEXT_ALIGNMENT_OPTIONS: Array<{
   value: TextAlignment;
@@ -66,21 +68,6 @@ interface TemplateInspectorProps {
 function numberValue(value: string) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function InspectorSection({
-  title,
-  children
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="space-y-3 rounded-2xl border border-white/70 bg-white/90 p-4">
-      <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-      {children}
-    </section>
-  );
 }
 
 function LocalizedTextEditor({
@@ -236,6 +223,15 @@ export function TemplateInspector({
   onDeleteBox,
   onAddBox
 }: TemplateInspectorProps) {
+  const [activeTab, setActiveTab] = useState<PanelTab>("add");
+
+  // Auto-switch to settings tab when a box is selected
+  useEffect(() => {
+    if (selectedBox) {
+      setActiveTab("settings");
+    }
+  }, [selectedBox?.id]);
+
   const selectedIssues = selectedBox
     ? issues.filter((issue) => issue.boxId === selectedBox.id)
     : [];
@@ -250,26 +246,60 @@ export function TemplateInspector({
   const selectedVerticalPosition: VerticalPosition = selectedBox?.style?.verticalAlign ?? "top";
   const selectedAlignment: TextAlignment = rawTextAlign ?? "left";
 
-  return (
-    <div className="space-y-4">
-      <InspectorSection title="Thư viện box">
-        <div className="grid gap-2">
-          {boxLibrary.map((item) => (
-            <Button
-              key={item.type}
-              type="button"
-              variant="outline"
-              className="justify-start"
-              onClick={() => onAddBox(item)}
-            >
-              {item.label}
-            </Button>
-          ))}
-        </div>
-      </InspectorSection>
+  const tabs: Array<{ id: PanelTab; label: string; disabled?: boolean }> = [
+    { id: "add", label: "Thêm" },
+    { id: "tokens", label: "Tokens" },
+    { id: "settings", label: "Cài đặt", disabled: !selectedBox },
+  ];
 
-      {selectedBox ? (
-        <InspectorSection title="Token catalog">
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Tab bar */}
+      <div className="flex rounded-2xl border border-white/70 bg-white/90 p-1 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            disabled={tab.disabled}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              "flex-1 rounded-xl py-2 text-xs font-semibold transition",
+              "disabled:cursor-not-allowed disabled:opacity-40",
+              activeTab === tab.id
+                ? "bg-primary text-white shadow-sm"
+                : "text-text-secondary hover:text-text-primary"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Thêm */}
+      {activeTab === "add" && (
+        <section className="space-y-3 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
+          <h3 className="text-sm font-semibold text-text-primary">Thư viện box</h3>
+          <div className="grid gap-2">
+            {boxLibrary.map((item) => (
+              <Button
+                key={item.type}
+                type="button"
+                variant="outline"
+                className="justify-start"
+                onClick={() => onAddBox(item)}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Tab: Tokens */}
+      {activeTab === "tokens" && (
+        <section className="space-y-3 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
+          <h3 className="text-sm font-semibold text-text-primary">Token catalog</h3>
+          <p className="text-xs text-text-muted">Click vào token để copy vào clipboard.</p>
           <div className="space-y-3">
             {tokenGroups.map((group) => (
               <div key={group.id} className="space-y-2">
@@ -292,484 +322,449 @@ export function TemplateInspector({
               </div>
             ))}
           </div>
-        </InspectorSection>
-      ) : null}
+        </section>
+      )}
 
-      {!selectedBox ? (
-        <div className="rounded-[20px] border border-dashed border-border bg-bg-hover/40 px-4 py-8 text-center">
-          <p className="text-sm font-medium text-text-secondary">Click vào một box trên canvas</p>
-          <p className="mt-1 text-xs text-text-muted">để chỉnh sửa thuộc tính, kích thước và style</p>
-        </div>
-      ) : (
-        <InspectorSection title="Inspector">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-text-primary">{selectedBox.id}</p>
-                <p className="text-xs text-text-muted">{selectedBox.type}</p>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={!editable}
-                onClick={onDeleteBox}
-              >
-                Xóa box
-              </Button>
+      {/* Tab: Cài đặt */}
+      {activeTab === "settings" && (
+        <>
+          {!selectedBox ? (
+            <div className="rounded-[20px] border border-dashed border-border bg-bg-hover/40 px-4 py-8 text-center">
+              <p className="text-sm font-medium text-text-secondary">Click vào một box trên canvas</p>
+              <p className="mt-1 text-xs text-text-muted">để chỉnh sửa thuộc tính, kích thước và style</p>
             </div>
+          ) : (
+            <section className="space-y-4 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
+              {/* Box header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-text-primary">{selectedBox.id}</p>
+                  <p className="text-xs text-text-muted">{selectedBox.type}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={!editable}
+                  onClick={onDeleteBox}
+                >
+                  Xóa box
+                </Button>
+              </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>X (mm)</Label>
-                <Input
-                  type="number"
-                  value={selectedBox.x}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    onUpdateBox((box) => ({ ...box, x: numberValue(event.target.value) }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Y (mm)</Label>
-                <Input
-                  type="number"
-                  value={selectedBox.y}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    onUpdateBox((box) => ({ ...box, y: numberValue(event.target.value) }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Rộng (mm)</Label>
-                <Input
-                  type="number"
-                  value={selectedBox.width}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    onUpdateBox((box) => ({ ...box, width: numberValue(event.target.value) }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Cao (mm)</Label>
-                <Input
-                  type="number"
-                  value={selectedBox.height}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    onUpdateBox((box) => ({ ...box, height: numberValue(event.target.value) }))
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Font size</Label>
-                <Input
-                  type="number"
-                  value={selectedBox.style?.fontSize ?? 10}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    onUpdateBox((box) => ({
-                      ...box,
-                      style: { ...box.style, fontSize: numberValue(event.target.value) }
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Padding</Label>
-                <Input
-                  type="number"
-                  value={selectedBox.style?.padding ?? 2}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    onUpdateBox((box) => ({
-                      ...box,
-                      style: { ...box.style, padding: numberValue(event.target.value) }
-                    }))
-                  }
-                />
-              </div>
-            </div>
-
-            {supportsPositionAlignment ? (
-              <div className="space-y-2">
-                <Label>Căn vị trí nội dung</Label>
-                <div className="inline-grid grid-cols-3 gap-1 rounded-xl border border-border bg-bg-hover p-1">
-                  {VERTICAL_POSITION_OPTIONS.map((option) => {
-                    const isActive = selectedVerticalPosition === option.value;
-
-                    return (
-                      <button
-                        key={`vertical-${option.value}`}
-                        type="button"
-                        title={option.title}
-                        aria-label={option.label}
-                        disabled={!editable}
-                        className={cn(
-                          "inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition",
-                          "hover:bg-white hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50",
-                          isActive && "bg-white text-primary shadow-sm"
-                        )}
-                        onClick={() =>
-                          onUpdateBox((box) => ({
-                            ...box,
-                            style: {
-                              ...box.style,
-                              verticalAlign: option.value
-                            }
-                          }))
-                        }
-                      >
-                        <PositionIcon axis="vertical" align={option.value} />
-                      </button>
-                    );
-                  })}
-                  {HORIZONTAL_POSITION_OPTIONS.map((option) => {
-                    const isActive = selectedHorizontalPosition === option.value;
-
-                    return (
-                      <button
-                        key={`horizontal-${option.value}`}
-                        type="button"
-                        title={option.title}
-                        aria-label={option.label}
-                        disabled={!editable}
-                        className={cn(
-                          "inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition",
-                          "hover:bg-white hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50",
-                          isActive && "bg-white text-primary shadow-sm"
-                        )}
-                        onClick={() =>
-                          onUpdateBox((box) => ({
-                            ...box,
-                            style: {
-                              ...box.style,
-                              textAlign: option.value
-                            }
-                          }))
-                        }
-                      >
-                        <PositionIcon axis="horizontal" align={option.value} />
-                      </button>
-                    );
-                  })}
+              {/* Position & size */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>X (mm)</Label>
+                  <Input
+                    type="number"
+                    value={selectedBox.x}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      onUpdateBox((box) => ({ ...box, x: numberValue(event.target.value) }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Y (mm)</Label>
+                  <Input
+                    type="number"
+                    value={selectedBox.y}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      onUpdateBox((box) => ({ ...box, y: numberValue(event.target.value) }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Rộng (mm)</Label>
+                  <Input
+                    type="number"
+                    value={selectedBox.width}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      onUpdateBox((box) => ({ ...box, width: numberValue(event.target.value) }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Cao (mm)</Label>
+                  <Input
+                    type="number"
+                    value={selectedBox.height}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      onUpdateBox((box) => ({ ...box, height: numberValue(event.target.value) }))
+                    }
+                  />
                 </div>
               </div>
-            ) : null}
 
-            {supportsValueAlignment ? (
-              <div className="space-y-2">
-                <Label>Căn giá trị trong bảng</Label>
-                <div className="inline-flex rounded-xl border border-border bg-bg-hover p-1">
-                  {TEXT_ALIGNMENT_OPTIONS.map((option) => {
-                    const isActive = selectedAlignment === option.value;
-
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        title={option.title}
-                        aria-label={option.label}
-                        disabled={!editable}
-                        className={cn(
-                          "inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition",
-                          "hover:bg-white hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50",
-                          isActive && "bg-white text-primary shadow-sm"
-                        )}
-                        onClick={() =>
-                          onUpdateBox((box) => ({
-                            ...box,
-                            style: {
-                              ...box.style,
-                              textAlign: option.value
-                            }
-                          }))
-                        }
-                      >
-                        <AlignIcon align={option.value} />
-                      </button>
-                    );
-                  })}
+              {/* Style */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>Font size</Label>
+                  <Input
+                    type="number"
+                    value={selectedBox.style?.fontSize ?? 10}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      onUpdateBox((box) => ({
+                        ...box,
+                        style: { ...box.style, fontSize: numberValue(event.target.value) }
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Padding</Label>
+                  <Input
+                    type="number"
+                    value={selectedBox.style?.padding ?? 2}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      onUpdateBox((box) => ({
+                        ...box,
+                        style: { ...box.style, padding: numberValue(event.target.value) }
+                      }))
+                    }
+                  />
                 </div>
               </div>
-            ) : null}
 
-            {selectedBox.type === "text" ? (
-              <LocalizedTextEditor
-                label="Nội dung"
-                value={selectedBox.content.text}
-                disabled={!editable}
-                onChange={(next) =>
-                  onUpdateBox((box) => {
-                    const current = box as TemplateTextBox;
-                    return {
-                      ...current,
-                      content: {
-                        text: next
-                      }
-                    };
-                  })
-                }
-              />
-            ) : null}
+              {/* Alignment controls */}
+              {supportsPositionAlignment ? (
+                <div className="space-y-2">
+                  <Label>Căn vị trí nội dung</Label>
+                  <div className="inline-grid grid-cols-3 gap-1 rounded-xl border border-border bg-bg-hover p-1">
+                    {VERTICAL_POSITION_OPTIONS.map((option) => {
+                      const isActive = selectedVerticalPosition === option.value;
+                      return (
+                        <button
+                          key={`vertical-${option.value}`}
+                          type="button"
+                          title={option.title}
+                          aria-label={option.label}
+                          disabled={!editable}
+                          className={cn(
+                            "inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition",
+                            "hover:bg-white hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50",
+                            isActive && "bg-white text-primary shadow-sm"
+                          )}
+                          onClick={() =>
+                            onUpdateBox((box) => ({
+                              ...box,
+                              style: { ...box.style, verticalAlign: option.value }
+                            }))
+                          }
+                        >
+                          <PositionIcon axis="vertical" align={option.value} />
+                        </button>
+                      );
+                    })}
+                    {HORIZONTAL_POSITION_OPTIONS.map((option) => {
+                      const isActive = selectedHorizontalPosition === option.value;
+                      return (
+                        <button
+                          key={`horizontal-${option.value}`}
+                          type="button"
+                          title={option.title}
+                          aria-label={option.label}
+                          disabled={!editable}
+                          className={cn(
+                            "inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition",
+                            "hover:bg-white hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50",
+                            isActive && "bg-white text-primary shadow-sm"
+                          )}
+                          onClick={() =>
+                            onUpdateBox((box) => ({
+                              ...box,
+                              style: { ...box.style, textAlign: option.value }
+                            }))
+                          }
+                        >
+                          <PositionIcon axis="horizontal" align={option.value} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
 
-            {selectedBox.type === "image" ? (
-              <div className="space-y-1">
-                <Label>Src token / URL</Label>
-                <Input
-                  value={selectedBox.content.src}
+              {supportsValueAlignment ? (
+                <div className="space-y-2">
+                  <Label>Căn giá trị trong bảng</Label>
+                  <div className="inline-flex rounded-xl border border-border bg-bg-hover p-1">
+                    {TEXT_ALIGNMENT_OPTIONS.map((option) => {
+                      const isActive = selectedAlignment === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          title={option.title}
+                          aria-label={option.label}
+                          disabled={!editable}
+                          className={cn(
+                            "inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary transition",
+                            "hover:bg-white hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50",
+                            isActive && "bg-white text-primary shadow-sm"
+                          )}
+                          onClick={() =>
+                            onUpdateBox((box) => ({
+                              ...box,
+                              style: { ...box.style, textAlign: option.value }
+                            }))
+                          }
+                        >
+                          <AlignIcon align={option.value} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Box-type-specific content editors */}
+              {selectedBox.type === "text" ? (
+                <LocalizedTextEditor
+                  label="Nội dung"
+                  value={selectedBox.content.text}
                   disabled={!editable}
-                  onChange={(event) =>
+                  onChange={(next) =>
                     onUpdateBox((box) => {
-                      const current = box as TemplateImageBox;
-                      return {
-                        ...current,
-                        content: {
-                          ...current.content,
-                          src: event.target.value
-                        }
-                      };
+                      const current = box as TemplateTextBox;
+                      return { ...current, content: { text: next } };
                     })
                   }
                 />
-              </div>
-            ) : null}
+              ) : null}
 
-            {selectedBox.type === "key_value_table" ? (
-              <div className="space-y-3">
-                {selectedBox.content.rows.map((row) => (
-                  <div key={row.id} className="space-y-2 rounded-xl border border-border/70 p-3">
-                    <LocalizedTextEditor
-                      label="Label"
-                      value={row.label}
-                      disabled={!editable}
-                      onChange={(next) =>
-                        onUpdateBox((box) => {
-                          const current = box as TemplateKeyValueTableBox;
-                          return {
-                            ...current,
-                            content: {
-                              ...current.content,
-                              rows: current.content.rows.map((currentRow) =>
-                                currentRow.id === row.id
-                                  ? { ...currentRow, label: next }
-                                  : currentRow
-                              )
-                            }
-                          };
-                        })
-                      }
-                    />
-                    <div className="space-y-1">
-                      <Label>Value token</Label>
-                      <Input
-                      value={row.value}
-                      disabled={!editable}
-                      onChange={(event) =>
-                        onUpdateBox((box) => {
-                          const current = box as TemplateKeyValueTableBox;
-                          return {
-                            ...current,
-                            content: {
-                              ...current.content,
-                              rows: current.content.rows.map((currentRow) =>
-                                currentRow.id === row.id
-                                  ? { ...currentRow, value: event.target.value }
-                                  : currentRow
-                              )
-                            }
-                          };
-                        })
-                      }
-                    />
-                  </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            {selectedBox.type === "line_items_table" ? (
-              <div className="space-y-3">
+              {selectedBox.type === "image" ? (
                 <div className="space-y-1">
-                  <Label>Nguồn dữ liệu</Label>
+                  <Label>Src token / URL</Label>
                   <Input
-                    value={selectedBox.content.source}
+                    value={selectedBox.content.src}
                     disabled={!editable}
                     onChange={(event) =>
                       onUpdateBox((box) => {
-                        const current = box as TemplateLineItemsTableBox;
+                        const current = box as TemplateImageBox;
                         return {
                           ...current,
-                          content: {
-                            ...current.content,
-                            source: event.target.value
-                          }
+                          content: { ...current.content, src: event.target.value }
                         };
                       })
                     }
                   />
                 </div>
+              ) : null}
 
-                {selectedBox.content.columns.map((column, colIndex) => (
-                  <div key={column.id} className="space-y-2 rounded-xl border border-border/70 p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-text-muted">Cột {colIndex + 1}</span>
-                      {editable ? (
-                        <button
-                          type="button"
-                          className="rounded px-1.5 py-0.5 text-xs text-danger hover:bg-danger-bg"
-                          onClick={() =>
+              {selectedBox.type === "key_value_table" ? (
+                <div className="space-y-3">
+                  {selectedBox.content.rows.map((row) => (
+                    <div key={row.id} className="space-y-2 rounded-xl border border-border/70 p-3">
+                      <LocalizedTextEditor
+                        label="Label"
+                        value={row.label}
+                        disabled={!editable}
+                        onChange={(next) =>
+                          onUpdateBox((box) => {
+                            const current = box as TemplateKeyValueTableBox;
+                            return {
+                              ...current,
+                              content: {
+                                ...current.content,
+                                rows: current.content.rows.map((r) =>
+                                  r.id === row.id ? { ...r, label: next } : r
+                                )
+                              }
+                            };
+                          })
+                        }
+                      />
+                      <div className="space-y-1">
+                        <Label>Value token</Label>
+                        <Input
+                          value={row.value}
+                          disabled={!editable}
+                          onChange={(event) =>
+                            onUpdateBox((box) => {
+                              const current = box as TemplateKeyValueTableBox;
+                              return {
+                                ...current,
+                                content: {
+                                  ...current.content,
+                                  rows: current.content.rows.map((r) =>
+                                    r.id === row.id ? { ...r, value: event.target.value } : r
+                                  )
+                                }
+                              };
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {selectedBox.type === "line_items_table" ? (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label>Nguồn dữ liệu</Label>
+                    <Input
+                      value={selectedBox.content.source}
+                      disabled={!editable}
+                      onChange={(event) =>
+                        onUpdateBox((box) => {
+                          const current = box as TemplateLineItemsTableBox;
+                          return {
+                            ...current,
+                            content: { ...current.content, source: event.target.value }
+                          };
+                        })
+                      }
+                    />
+                  </div>
+
+                  {selectedBox.content.columns.map((column, colIndex) => (
+                    <div key={column.id} className="space-y-2 rounded-xl border border-border/70 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold text-text-muted">Cột {colIndex + 1}</span>
+                        {editable ? (
+                          <button
+                            type="button"
+                            className="rounded px-1.5 py-0.5 text-xs text-danger hover:bg-danger-bg"
+                            onClick={() =>
+                              onUpdateBox((box) => {
+                                const current = box as TemplateLineItemsTableBox;
+                                return {
+                                  ...current,
+                                  content: {
+                                    ...current.content,
+                                    columns: current.content.columns.filter((c) => c.id !== column.id)
+                                  }
+                                };
+                              })
+                            }
+                          >
+                            Xóa cột
+                          </button>
+                        ) : null}
+                      </div>
+                      <LocalizedTextEditor
+                        label="Tiêu đề cột"
+                        value={column.label}
+                        disabled={!editable}
+                        onChange={(next) =>
+                          onUpdateBox((box) => {
+                            const current = box as TemplateLineItemsTableBox;
+                            return {
+                              ...current,
+                              content: {
+                                ...current.content,
+                                columns: current.content.columns.map((c) =>
+                                  c.id === column.id ? { ...c, label: next } : c
+                                )
+                              }
+                            };
+                          })
+                        }
+                      />
+                      <div className="space-y-1">
+                        <Label>Value token</Label>
+                        <Input
+                          value={column.value}
+                          disabled={!editable}
+                          onChange={(event) =>
                             onUpdateBox((box) => {
                               const current = box as TemplateLineItemsTableBox;
                               return {
                                 ...current,
                                 content: {
                                   ...current.content,
-                                  columns: current.content.columns.filter((c) => c.id !== column.id)
+                                  columns: current.content.columns.map((c) =>
+                                    c.id === column.id ? { ...c, value: event.target.value } : c
+                                  )
                                 }
                               };
                             })
                           }
-                        >
-                          Xóa cột
-                        </button>
-                      ) : null}
+                        />
+                      </div>
                     </div>
-                    <LocalizedTextEditor
-                      label="Tiêu đề cột"
-                      value={column.label}
-                      disabled={!editable}
-                      onChange={(next) =>
-                        onUpdateBox((box) => {
-                          const current = box as TemplateLineItemsTableBox;
-                          return {
-                            ...current,
-                            content: {
-                              ...current.content,
-                              columns: current.content.columns.map((currentColumn) =>
-                                currentColumn.id === column.id
-                                  ? { ...currentColumn, label: next }
-                                  : currentColumn
-                              )
-                            }
-                          };
-                        })
-                      }
-                    />
-                    <div className="space-y-1">
-                      <Label>Value token</Label>
-                      <Input
-                      value={column.value}
-                      disabled={!editable}
-                      onChange={(event) =>
-                        onUpdateBox((box) => {
-                          const current = box as TemplateLineItemsTableBox;
-                          return {
-                            ...current,
-                            content: {
-                              ...current.content,
-                              columns: current.content.columns.map((currentColumn) =>
-                                currentColumn.id === column.id
-                                  ? { ...currentColumn, value: event.target.value }
-                                  : currentColumn
-                              )
-                            }
-                          };
-                        })
-                      }
-                    />
-                  </div>
-                  </div>
-                ))}
+                  ))}
 
-                {editable ? (
-                  <button
-                    type="button"
-                    className="w-full rounded-xl border border-dashed border-border py-2 text-xs font-semibold text-text-secondary transition hover:border-primary/50 hover:text-primary"
-                    onClick={() =>
+                  {editable ? (
+                    <button
+                      type="button"
+                      className="w-full rounded-xl border border-dashed border-border py-2 text-xs font-semibold text-text-secondary transition hover:border-primary/50 hover:text-primary"
+                      onClick={() =>
+                        onUpdateBox((box) => {
+                          const current = box as TemplateLineItemsTableBox;
+                          const newId = `col-${Date.now()}`;
+                          return {
+                            ...current,
+                            content: {
+                              ...current.content,
+                              columns: [
+                                ...current.content.columns,
+                                {
+                                  id: newId,
+                                  label: { vi: "Cột mới", viEn: "New Column" },
+                                  value: "{{}}",
+                                  align: "left" as const
+                                }
+                              ]
+                            }
+                          };
+                        })
+                      }
+                    >
+                      + Thêm cột
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {selectedBox.type === "signature_block" ? (
+                <div className="space-y-3">
+                  <LocalizedTextEditor
+                    label="Tiêu đề bên trái"
+                    value={selectedBox.content.leftTitle}
+                    disabled={!editable}
+                    onChange={(next) =>
                       onUpdateBox((box) => {
-                        const current = box as TemplateLineItemsTableBox;
-                        const newId = `col-${Date.now()}`;
-                        return {
-                          ...current,
-                          content: {
-                            ...current.content,
-                            columns: [
-                              ...current.content.columns,
-                              {
-                                id: newId,
-                                label: { vi: "Cột mới", viEn: "New Column" },
-                                value: "{{}}",
-                                align: "left" as const
-                              }
-                            ]
-                          }
-                        };
+                        const current = box as TemplateSignatureBlockBox;
+                        return { ...current, content: { ...current.content, leftTitle: next } };
                       })
                     }
-                  >
-                    + Thêm cột
-                  </button>
-                ) : null}
-              </div>
-            ) : null}
+                  />
+                  <LocalizedTextEditor
+                    label="Tiêu đề bên phải"
+                    value={selectedBox.content.rightTitle}
+                    disabled={!editable}
+                    onChange={(next) =>
+                      onUpdateBox((box) => {
+                        const current = box as TemplateSignatureBlockBox;
+                        return { ...current, content: { ...current.content, rightTitle: next } };
+                      })
+                    }
+                  />
+                </div>
+              ) : null}
 
-            {selectedBox.type === "signature_block" ? (
-              <div className="space-y-3">
-                <LocalizedTextEditor
-                  label="Tiêu đề bên trái"
-                  value={selectedBox.content.leftTitle}
-                  disabled={!editable}
-                  onChange={(next) =>
-                    onUpdateBox((box) => {
-                      const current = box as TemplateSignatureBlockBox;
-                      return {
-                        ...current,
-                        content: {
-                          ...current.content,
-                          leftTitle: next
-                        }
-                      };
-                    })
-                  }
-                />
-                <LocalizedTextEditor
-                  label="Tiêu đề bên phải"
-                  value={selectedBox.content.rightTitle}
-                  disabled={!editable}
-                  onChange={(next) =>
-                    onUpdateBox((box) => {
-                      const current = box as TemplateSignatureBlockBox;
-                      return {
-                        ...current,
-                        content: {
-                          ...current.content,
-                          rightTitle: next
-                        }
-                      };
-                    })
-                  }
-                />
-              </div>
-            ) : null}
-
-            {selectedIssues.length > 0 ? (
-              <div className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-3">
-                <p className="text-sm font-semibold text-rose-700">Lỗi trên box này</p>
-                <ul className="space-y-1 text-sm text-rose-700">
-                  {selectedIssues.map((issue, index) => (
-                    <li key={`${issue.code}-${index}`}>{issue.message}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        </InspectorSection>
+              {selectedIssues.length > 0 ? (
+                <div className="space-y-2 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                  <p className="text-sm font-semibold text-rose-700">Lỗi trên box này</p>
+                  <ul className="space-y-1 text-sm text-rose-700">
+                    {selectedIssues.map((issue, index) => (
+                      <li key={`${issue.code}-${index}`}>{issue.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </section>
+          )}
+        </>
       )}
     </div>
   );

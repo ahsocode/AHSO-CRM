@@ -177,28 +177,35 @@ function createDefaultBoxLibrary(): TemplateBoxLibraryItem[] {
               id: "col-name",
               label: localize("Hạng mục", "Item"),
               value: "{{name}}",
-              width: 80,
+              width: 55,
+              align: "left"
+            },
+            {
+              id: "col-description",
+              label: localize("Mô tả", "Description"),
+              value: "{{description}}",
+              width: 50,
               align: "left"
             },
             {
               id: "col-qty",
               label: localize("SL", "Qty"),
               value: "{{quantity}}",
-              width: 18,
+              width: 15,
               align: "center"
             },
             {
               id: "col-unit-price",
               label: localize("Đơn giá", "Unit Price"),
               value: "{{unitPrice|currency}}",
-              width: 34,
+              width: 28,
               align: "right"
             },
             {
               id: "col-total",
               label: localize("Thành tiền", "Amount"),
               value: "{{total|currency}}",
-              width: 36,
+              width: 20,
               align: "right"
             }
           ],

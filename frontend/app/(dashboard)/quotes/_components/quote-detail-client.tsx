@@ -58,6 +58,14 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const templateVariantsQuery = useRuntimeDocumentTemplateVariants("QUOTATION");
   const duplicateQuoteMutation = useDuplicateQuote();
   const updateQuoteStatusMutation = useUpdateQuoteStatus();
+  const previewLang = quoteQuery.data?.project.customer.language === "vi-en" ? "vi-en" : "vi";
+  const previewQuery = useDocumentPreviewQuery({
+    type: "QUOTATION",
+    entityId: quoteQuery.data?.id ?? "",
+    lang: previewLang,
+    templateVariantId: selectedTemplateVariantId || undefined,
+    enabled: showPreview && Boolean(quoteQuery.data),
+  });
 
   if (quoteQuery.isLoading) {
     return (
@@ -113,14 +121,6 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const isMutating = duplicateQuoteMutation.isPending || updateQuoteStatusMutation.isPending;
   const selectedTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.id === selectedTemplateVariantId);
   const activeTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.isActive);
-  const previewLang = quote.project.customer.language === "vi-en" ? "vi-en" : "vi";
-  const previewQuery = useDocumentPreviewQuery({
-    type: "QUOTATION",
-    entityId: quote.id,
-    lang: previewLang,
-    templateVariantId: selectedTemplateVariantId || undefined,
-    enabled: showPreview,
-  });
   const selectedTemplateLabel = selectedTemplateVariant
     ? `${selectedTemplateVariant.name} · v${selectedTemplateVariant.version}`
     : activeTemplateVariant

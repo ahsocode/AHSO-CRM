@@ -16,7 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { DocumentActions } from "@/components/shared/document-actions";
 import { useAiDraftEmail } from "@/hooks/use-ai";
 import { toast } from "@/hooks/use-toast";
-import { useRuntimeDocumentTemplateVariants } from "@/hooks/use-documents";
+import { useRuntimeDocumentTemplateVariants, useDocumentPreviewQuery } from "@/hooks/use-documents";
+import { InlinePreviewOverlay } from "@/components/shared/inline-preview-overlay";
 import { useDuplicateQuote, useQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
@@ -52,6 +53,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const router = useRouter();
   const [selectedTemplateVariantId, setSelectedTemplateVariantId] = useState("");
   const [isDraftEmailOpen, setIsDraftEmailOpen] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const quoteQuery = useQuote(quoteId);
   const templateVariantsQuery = useRuntimeDocumentTemplateVariants("QUOTATION");
   const duplicateQuoteMutation = useDuplicateQuote();
@@ -111,15 +113,14 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const isMutating = duplicateQuoteMutation.isPending || updateQuoteStatusMutation.isPending;
   const selectedTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.id === selectedTemplateVariantId);
   const activeTemplateVariant = templateVariantsQuery.data?.find((variant) => variant.isActive);
-  const documentPreviewHref = {
-    pathname: "/documents/preview",
-    query: {
-      type: "QUOTATION",
-      entityId: quote.id,
-      lang: quote.project.customer.language === "vi-en" ? "vi-en" : "vi",
-      ...(selectedTemplateVariantId ? { templateVariantId: selectedTemplateVariantId } : {})
-    }
-  };
+  const previewLang = quote.project.customer.language === "vi-en" ? "vi-en" : "vi";
+  const previewQuery = useDocumentPreviewQuery({
+    type: "QUOTATION",
+    entityId: quote.id,
+    lang: previewLang,
+    templateVariantId: selectedTemplateVariantId || undefined,
+    enabled: showPreview,
+  });
   const selectedTemplateLabel = selectedTemplateVariant
     ? `${selectedTemplateVariant.name} · v${selectedTemplateVariant.version}`
     : activeTemplateVariant
@@ -128,6 +129,15 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
   return (
     <div className="space-y-8">
+      {showPreview && (
+        <InlinePreviewOverlay
+          html={previewQuery.data}
+          isLoading={previewQuery.isLoading}
+          error={previewQuery.error as Error | null}
+          title="Xem trước báo giá"
+          onClose={() => setShowPreview(false)}
+        />
+      )}
       <PageHeader
         title="Chi tiết báo giá"
         description="Quote workspace gom đầy đủ thông tin thương mại, danh mục chào giá và dữ liệu dự án/khách hàng trên một màn hình."
@@ -144,15 +154,13 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 Tạo hợp đồng
               </Link>
             ) : null}
-            <Link
-              href={documentPreviewHref}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(buttonVariants({ variant: "outline" }))}
+            <Button
+              variant="outline"
+              onClick={() => setShowPreview(true)}
             >
               <AppIcon name="preview" className="h-4 w-4" />
               Xem trước báo giá
-            </Link>
+            </Button>
             <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline" }))}>
               Chỉnh sửa
             </Link>
@@ -381,15 +389,14 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                   Soạn email AI
                 </Button>
 
-                <Link
-                  href={documentPreviewHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn(buttonVariants({ variant: "primary", size: "lg" }))}
+                <Button
+                  variant="primary"
+                  size="lg"
+                  onClick={() => setShowPreview(true)}
                 >
                   <AppIcon name="preview" className="h-4 w-4" />
                   Xem trước theo template đã chọn
-                </Link>
+                </Button>
 
                 <QuoteTemplateSelector
                   activeTemplateName={activeTemplateVariant?.name}

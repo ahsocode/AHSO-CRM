@@ -105,6 +105,32 @@ export function usePreviewDocument() {
   });
 }
 
+export function useDocumentPreviewQuery({
+  type,
+  entityId,
+  lang,
+  templateVariantId,
+  enabled = false,
+}: {
+  type?: string;
+  entityId?: string;
+  lang?: string;
+  templateVariantId?: string;
+  enabled?: boolean;
+}) {
+  return useQuery({
+    queryKey: ["documents", "inline-preview", type, entityId, lang, templateVariantId],
+    enabled: enabled && Boolean(type) && Boolean(entityId),
+    queryFn: async () => {
+      const response = await apiClient.get<string>(`/documents/${type}/${entityId}/preview`, {
+        params: { lang: lang ?? "vi", templateVariantId },
+        responseType: "text",
+      });
+      return response.data;
+    },
+  });
+}
+
 export function useRenderDocument() {
   const queryClient = useQueryClient();
 

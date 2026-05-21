@@ -268,37 +268,40 @@ export function TemplateInspector({
         </div>
       </InspectorSection>
 
-      <InspectorSection title="Token catalog">
-        <div className="space-y-3">
-          {tokenGroups.map((group) => (
-            <div key={group.id} className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-                {group.label}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {group.tokens.map((token) => (
-                  <button
-                    key={token.key}
-                    type="button"
-                    className="rounded-full border border-border bg-bg-hover px-3 py-1 text-xs font-medium text-text-secondary transition hover:border-primary/40 hover:text-primary"
-                    title={token.description}
-                    onClick={() => navigator.clipboard.writeText(`{{${token.key}}}`)}
-                  >
-                    {token.key}
-                  </button>
-                ))}
+      {selectedBox ? (
+        <InspectorSection title="Token catalog">
+          <div className="space-y-3">
+            {tokenGroups.map((group) => (
+              <div key={group.id} className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
+                  {group.label}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {group.tokens.map((token) => (
+                    <button
+                      key={token.key}
+                      type="button"
+                      className="rounded-full border border-border bg-bg-hover px-3 py-1 text-xs font-medium text-text-secondary transition hover:border-primary/40 hover:text-primary"
+                      title={token.description}
+                      onClick={() => navigator.clipboard.writeText(`{{${token.key}}}`)}
+                    >
+                      {token.key}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </InspectorSection>
+            ))}
+          </div>
+        </InspectorSection>
+      ) : null}
 
-      <InspectorSection title="Inspector">
-        {!selectedBox ? (
-          <p className="text-sm text-text-secondary">
-            Chọn một box trên canvas để chỉnh vị trí, kích thước, text và style.
-          </p>
-        ) : (
+      {!selectedBox ? (
+        <div className="rounded-[20px] border border-dashed border-border bg-bg-hover/40 px-4 py-8 text-center">
+          <p className="text-sm font-medium text-text-secondary">Click vào một box trên canvas</p>
+          <p className="mt-1 text-xs text-text-muted">để chỉnh sửa thuộc tính, kích thước và style</p>
+        </div>
+      ) : (
+        <InspectorSection title="Inspector">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -766,8 +769,8 @@ export function TemplateInspector({
               </div>
             ) : null}
           </div>
-        )}
-      </InspectorSection>
+        </InspectorSection>
+      )}
     </div>
   );
 }

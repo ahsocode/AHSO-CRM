@@ -170,63 +170,36 @@ export function TemplateVariantList({
   return (
     <div className="space-y-4">
       <section className="space-y-3 rounded-[28px] border border-white/70 bg-white/90 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.06)]">
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary">Loại tài liệu</h3>
-          <p className="text-sm text-text-secondary">
-            Chọn loại tài liệu cần thiết kế. Hiện editor mở cho Quotation và Contract, các loại khác vẫn dùng fallback `.hbs`.
-          </p>
-        </div>
-
-        <div className="grid gap-2">
+        <h3 className="text-sm font-semibold text-text-primary">Loại tài liệu</h3>
+        <select
+          value={selectedType ?? ""}
+          onChange={(event) => {
+            const value = event.target.value as DocumentTemplateType;
+            if (value) onSelectType(value);
+          }}
+          className="w-full rounded-xl border border-border bg-bg-card px-4 py-2.5 text-sm font-medium text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+        >
           {enabledTypes.map((item) => (
-            <button
-              key={item.type}
-              type="button"
-              className={cn(
-                "rounded-2xl border px-3 py-2.5 text-left shadow-sm transition",
-                selectedType === item.type
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-white hover:border-primary/30 hover:bg-slate-50/80"
-              )}
-              onClick={() => onSelectType(item.type)}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-text-primary">{item.label}</p>
-                  <p className="truncate text-xs text-text-muted">{item.type}</p>
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  <Badge variant={item.runtimeStatus === "production" ? "success" : "warning"}>
-                    {item.runtimeStatus === "production" ? "Production" : "Beta"}
-                  </Badge>
-                  <Badge variant="neutral">Editor</Badge>
-                </div>
-              </div>
-            </button>
+            <option key={item.type} value={item.type}>
+              {item.label} ({item.runtimeStatus === "production" ? "Production" : "Beta"})
+            </option>
           ))}
-        </div>
-
-        {passiveTypes.length > 0 ? (
-          <div className="space-y-2 border-t border-border/70 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-text-muted">
-              Fallback HBS
-            </p>
-            <div className="grid gap-2">
+          {passiveTypes.length > 0 && (
+            <optgroup label="Fallback HBS (chưa mở editor)">
               {passiveTypes.map((item) => (
-                <div
-                  key={item.type}
-                  className="rounded-2xl border border-border/70 bg-bg-hover/40 px-3 py-2.5"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-text-primary">{item.label}</p>
-                      <p className="truncate text-xs text-text-muted">{item.type}</p>
-                    </div>
-                    <Badge variant="warning">Beta</Badge>
-                  </div>
-                </div>
+                <option key={item.type} value={item.type} disabled>
+                  {item.label}
+                </option>
               ))}
-            </div>
+            </optgroup>
+          )}
+        </select>
+        {selectedType ? (
+          <div className="flex items-center gap-2">
+            <Badge variant={registry.find(r => r.type === selectedType)?.runtimeStatus === "production" ? "success" : "warning"}>
+              {registry.find(r => r.type === selectedType)?.runtimeStatus === "production" ? "Production" : "Beta"}
+            </Badge>
+            <span className="text-xs text-text-muted">{selectedType}</span>
           </div>
         ) : null}
       </section>

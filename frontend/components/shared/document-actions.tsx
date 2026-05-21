@@ -14,8 +14,10 @@ import {
   useDocumentTemplateRegistry,
   useRuntimeDocumentTemplateVariants,
   useDownloadDocument,
-  useRenderDocument
+  useRenderDocument,
+  useDocumentPreviewQuery,
 } from "@/hooks/use-documents";
+import { InlinePreviewOverlay } from "@/components/shared/inline-preview-overlay";
 import { useToast } from "@/hooks/use-toast";
 
 export interface DocumentActionOption {
@@ -54,6 +56,7 @@ export function DocumentActions({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<DocumentActionOption | null>(null);
   const [internalSelectedVariantId, setInternalSelectedVariantId] = useState<string>("");
+  const [showPreview, setShowPreview] = useState(false);
   const [language, setLanguage] = useState<"vi" | "vi-en">(
     customerLanguage === "vi-en" ? "vi-en" : "vi"
   );
@@ -68,6 +71,14 @@ export function DocumentActions({
   );
   const isWorking = renderMutation.isPending || downloadMutation.isPending;
   const selectedVariantId = templateVariantId ?? internalSelectedVariantId;
+
+  const previewQuery = useDocumentPreviewQuery({
+    type: selectedType?.type,
+    entityId,
+    lang: language,
+    templateVariantId: selectedVariantId || undefined,
+    enabled: showPreview,
+  });
 
   const availableOptions = useMemo(() => {
     const dynamicOptions = (templateRegistryQuery.data ?? [])
@@ -103,15 +114,8 @@ export function DocumentActions({
 
   const handlePreview = () => {
     if (!selectedType) return;
-    const params = new URLSearchParams({
-      type: selectedType.type,
-      entityId,
-      lang: language
-    });
-    if (selectedVariantId) {
-      params.set("templateVariantId", selectedVariantId);
-    }
-    window.open(`/documents/preview?${params.toString()}`, "_blank");
+    setIsOpen(false);
+    setShowPreview(true);
   };
 
   const handleDownload = async () => {
@@ -153,6 +157,16 @@ export function DocumentActions({
 
   return (
     <>
+      {showPreview && (
+        <InlinePreviewOverlay
+          html={previewQuery.data}
+          isLoading={previewQuery.isLoading}
+          error={previewQuery.error as Error | null}
+          title={selectedType?.label ?? "Xem trước tài liệu"}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="min-h-[44px] gap-2">

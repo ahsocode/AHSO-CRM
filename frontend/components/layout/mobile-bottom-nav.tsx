@@ -4,8 +4,6 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppIcon } from "@/components/shared/app-icon";
-import { useAuthStore } from "@/hooks/use-auth";
-import { getAuthRoleName } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const MOBILE_ITEMS = [
@@ -18,20 +16,14 @@ const MOBILE_ITEMS = [
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const user = useAuthStore((state) => state.user);
-  const roleName = getAuthRoleName(user?.role);
-  const items =
-    roleName === "ADMIN"
-      ? [...MOBILE_ITEMS, { href: "/admin" as Route, label: "Quản trị", icon: "settings" as const }]
-      : MOBILE_ITEMS;
 
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-white/96 px-2 pt-2 shadow-[0_-10px_30px_rgba(21,67,96,0.12)] backdrop-blur-xl print:hidden md:hidden"
       style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
     >
-      <div className={cn("grid gap-1", roleName === "ADMIN" ? "grid-cols-6" : "grid-cols-5")}>
-        {items.map((item) => {
+      <div className="grid grid-cols-5 gap-1">
+        {MOBILE_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (

@@ -1,16 +1,12 @@
 "use client";
 
-import axios from "axios";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { apiClient, getApiErrorMessage } from "@/lib/api-client";
-import { API_URL } from "@/lib/constants";
-import { getAccessToken, persistSession } from "@/lib/auth";
-import { ApiResponse, AuthSession } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function DocumentPreviewClient({
@@ -25,30 +21,8 @@ export function DocumentPreviewClient({
   templateVariantId?: string;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const isReady = Boolean(type && entityId);
   const language = lang ?? "vi";
-
-  // New-tab scenario: sessionStorage is empty, access token is missing.
-  // Do a single explicit refresh (using the HttpOnly cookie) before the
-  // preview query fires, so it never hits a 401 that could clear the shared
-  // localStorage and log the user out across all tabs.
-  const [sessionReady, setSessionReady] = useState(() => Boolean(getAccessToken()));
-  const [sessionError, setSessionError] = useState(false);
-
-  useEffect(() => {
-    if (sessionReady) return;
-
-    axios
-      .post<ApiResponse<AuthSession>>(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
-      .then((response) => {
-        persistSession(response.data.data);
-        setSessionReady(true);
-      })
-      .catch(() => {
-        setSessionError(true);
-      });
-  }, [sessionReady]);
-
-  const isReady = Boolean(type && entityId) && sessionReady;
 
   const previewQuery = useQuery({
     queryKey: ["documents", "preview-page", type, entityId, language, templateVariantId],
@@ -61,19 +35,6 @@ export function DocumentPreviewClient({
       return response.data;
     },
   });
-
-  if (sessionError) {
-    return (
-      <main className="min-h-screen bg-slate-100 px-4 py-6 md:px-8">
-        <div className="mx-auto max-w-7xl">
-          <EmptyState
-            title="Phiên đăng nhập hết hạn"
-            description="Vui lòng đóng tab này, quay lại CRM và thử lại."
-          />
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-6 md:px-8">
@@ -99,7 +60,10 @@ export function DocumentPreviewClient({
         </div>
 
         {!isReady ? (
-          <LoadingSkeleton className="h-[75vh] w-full rounded-[32px]" />
+          <EmptyState
+            title="Thiếu tham số preview"
+            description="Cần có loại tài liệu và entityId để dựng bản xem trước."
+          />
         ) : previewQuery.isLoading ? (
           <LoadingSkeleton className="h-[75vh] w-full rounded-[32px]" />
         ) : previewQuery.error ? (

@@ -148,6 +148,15 @@ export function persistSession(session: AuthSession) {
   return normalizedSession;
 }
 
+// Clears only this tab's session — does NOT touch localStorage so other
+// open tabs remain logged in. Use this when a background token refresh
+// fails (e.g. a new tab that opened before the token was propagated).
+export function clearLocalSession() {
+  getSessionStorage()?.removeItem(ACCESS_TOKEN_KEY);
+  getSessionStorage()?.removeItem(SESSION_ID_KEY);
+  clearLegacyClientCookies();
+}
+
 export function clearSession() {
   getSessionStorage()?.removeItem(ACCESS_TOKEN_KEY);
   getSessionStorage()?.removeItem(SESSION_ID_KEY);

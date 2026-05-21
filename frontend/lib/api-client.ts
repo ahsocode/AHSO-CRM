@@ -1,6 +1,6 @@
 import axios from "axios";
 import { API_URL, ACCESS_TOKEN_KEY } from "./constants";
-import { clearSession, getAccessToken, getSessionId, persistSession } from "./auth";
+import { clearLocalSession, getAccessToken, getSessionId, persistSession } from "./auth";
 import { ApiErrorPayload, ApiResponse, AuthSession } from "./types";
 
 // Cross-tab session sync: when one tab refreshes tokens, broadcast to all others
@@ -90,11 +90,11 @@ apiClient.interceptors.response.use(
           return session.accessToken;
         })
         .catch(() => {
-          // Refresh failed. Do NOT call clearServerSession() (POST /auth/logout) here:
-          // in a multi-tab scenario the cookie may already belong to a different tab that
-          // just finished rotating the token — calling logout would destroy that tab's
-          // valid session. Just clear local state and send the user to the login page.
-          clearSession();
+          // Refresh failed. Clear only THIS tab's session — do not touch localStorage
+          // so other open tabs (e.g. the original tab that opened this preview tab)
+          // remain logged in. Their refresh cookie was rotated and they will continue
+          // to work normally via the BroadcastChannel or their own next refresh.
+          clearLocalSession();
           window.location.href = "/login";
           return null;
         })

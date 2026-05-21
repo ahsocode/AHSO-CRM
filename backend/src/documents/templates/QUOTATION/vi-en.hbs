@@ -27,21 +27,20 @@
     <thead>
       <tr>
         <th class="text-center" style="width: 40pt;">STT</th>
-        <th>{{t "description"}}</th>
-        <th class="text-center" style="width: 50pt;">{{t "unit"}}</th>
-        <th class="text-right" style="width: 50pt;">{{t "qty"}}</th>
-        <th class="text-right" style="width: 80pt;">{{t "unit_price"}}</th>
-        <th class="text-right" style="width: 90pt;">{{t "total"}}</th>
+        <th style="width: 130pt;">{{t "description"}}</th>
+        <th>Mô tả / Description</th>
+        <th class="text-center" style="width: 45pt;">{{t "unit"}}</th>
+        <th class="text-right" style="width: 45pt;">{{t "qty"}}</th>
+        <th class="text-right" style="width: 75pt;">{{t "unit_price"}}</th>
+        <th class="text-right" style="width: 85pt;">{{t "total"}}</th>
       </tr>
     </thead>
     <tbody>
       {{#each items}}
       <tr>
         <td class="text-center">{{add @index 1}}</td>
-        <td>
-          <div class="item-name"><strong>{{this.name}}</strong></div>
-          {{#if this.description}}<div class="item-desc small muted" style="white-space: pre-wrap;">{{this.description}}</div>{{/if}}
-        </td>
+        <td><strong>{{this.name}}</strong></td>
+        <td style="white-space: pre-wrap;">{{this.description}}</td>
         <td class="text-center">{{this.unit}}</td>
         <td class="text-right">{{this.quantity}}</td>
         <td class="text-right">{{currency this.unitPrice}}</td>
@@ -51,15 +50,15 @@
     </tbody>
     <tfoot>
       <tr class="total-row">
-        <td colspan="5" class="text-right">{{t "subtotal"}}</td>
+        <td colspan="6" class="text-right">{{t "subtotal"}}</td>
         <td class="text-right">{{currency quote.subtotal}}</td>
       </tr>
       <tr>
-        <td colspan="5" class="text-right">{{t "vat"}} ({{quote.taxRate}}%)</td>
+        <td colspan="6" class="text-right">{{t "vat"}} ({{quote.taxRate}}%)</td>
         <td class="text-right">{{currency quote.taxAmount}}</td>
       </tr>
       <tr class="grand-total-row">
-        <td colspan="5" class="text-right"><strong>{{t "grand_total"}}</strong></td>
+        <td colspan="6" class="text-right"><strong>{{t "grand_total"}}</strong></td>
         <td class="text-right"><strong>{{currency quote.total}}</strong></td>
       </tr>
     </tfoot>

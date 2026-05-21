@@ -181,7 +181,7 @@ export function TemplateVariantList({
         >
           {enabledTypes.map((item) => (
             <option key={item.type} value={item.type}>
-              {item.label} ({item.runtimeStatus === "production" ? "Production" : "Beta"})
+              {item.label}
             </option>
           ))}
           {passiveTypes.length > 0 && (

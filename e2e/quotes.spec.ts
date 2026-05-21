@@ -15,12 +15,11 @@ test("mở quotes và kiểm tra preview/pdf workflow cơ bản", async ({ page 
   await page.getByRole("button", { name: /Tạo tài liệu/i }).click();
   await page.getByRole("menuitem", { name: /Báo giá/i }).click();
 
-  const previewPopupPromise = page.waitForEvent("popup");
+  // Preview now opens inline (same tab overlay) instead of a new popup tab
   await page.getByRole("button", { name: /Xem trước \(HTML\)/i }).click();
-  const previewPage = await previewPopupPromise;
-  await expect(previewPage).toHaveURL(/\/documents\/preview/);
-  await expect(previewPage.locator('iframe[title="document-preview"]')).toBeVisible();
-  await previewPage.close();
+  await expect(page.locator('iframe[title="document-preview"]')).toBeVisible();
+  await page.getByRole("button", { name: /Đóng/i }).click();
+  await expect(page.locator('iframe[title="document-preview"]')).not.toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /Tải xuống PDF/i }).click();

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
@@ -15,6 +15,16 @@ import {
   runAgentSchema,
   updateAgentSchema
 } from "./dto/agent.dto";
+import {
+  AgentContextEntityDto,
+  ListAgentActionsDto,
+  RejectAgentActionDto,
+  UpdateAgentActionPayloadDto,
+  agentContextEntitySchema,
+  listAgentActionsSchema,
+  rejectAgentActionSchema,
+  updateAgentActionPayloadSchema
+} from "./dto/agent-action.dto";
 
 @ApiTags("agents")
 @ApiBearerAuth("bearer")
@@ -28,6 +38,55 @@ export class AgentsController {
   @ApiOperation({ summary: "Lấy danh sách agent đang khả dụng" })
   list() {
     return this.agentsService.list();
+  }
+
+  @Post("context-scan")
+  @RequirePermissions("ai.use")
+  @ApiOperation({ summary: "Quét ngữ cảnh CRM và tạo gợi ý action draft" })
+  scanContext(
+    @Body(new ZodValidationPipe(agentContextEntitySchema)) dto: AgentContextEntityDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.agentsService.scanContext(dto, user);
+  }
+
+  @Get("actions")
+  @RequirePermissions("ai.use")
+  @ApiOperation({ summary: "Lấy danh sách action draft của CRM Copilot" })
+  listActions(
+    @Query(new ZodValidationPipe(listAgentActionsSchema, "query")) query: ListAgentActionsDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.agentsService.listActions(query, user);
+  }
+
+  @Patch("actions/:id/payload")
+  @RequirePermissions("ai.use")
+  @ApiOperation({ summary: "Cập nhật payload action draft trước khi duyệt" })
+  updateActionPayload(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateAgentActionPayloadSchema)) dto: UpdateAgentActionPayloadDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.agentsService.updateActionPayload(id, dto, user);
+  }
+
+  @Post("actions/:id/execute")
+  @RequirePermissions("ai.use")
+  @ApiOperation({ summary: "Duyệt và thực thi action draft" })
+  executeAction(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.agentsService.executeAction(id, user);
+  }
+
+  @Post("actions/:id/reject")
+  @RequirePermissions("ai.use")
+  @ApiOperation({ summary: "Từ chối action draft" })
+  rejectAction(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(rejectAgentActionSchema)) dto: RejectAgentActionDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.agentsService.rejectAction(id, dto, user);
   }
 
   @Post()

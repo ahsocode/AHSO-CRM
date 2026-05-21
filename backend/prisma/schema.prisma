@@ -44,6 +44,8 @@ model User {
   aiUsageLogs                      AiUsageLog[]
   agentsCreated                    Agent[]                   @relation("AgentCreatedBy")
   agentRuns                        AgentRun[]
+  agentActionsRequested            AgentAction[]             @relation("AgentActionRequestedBy")
+  agentActionsReviewed             AgentAction[]             @relation("AgentActionReviewedBy")
   webhooksCreated                  Webhook[]                 @relation("WebhookCreatedBy")
 }
 
@@ -1148,22 +1150,71 @@ model Agent {
 }
 
 model AgentRun {
-  id         String          @id @default(cuid())
-  agentId    String
-  agent      Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User            @relation(fields: [userId], references: [id])
-  status     String
-  input      String
-  output     String?
-  error      String?
-  durationMs Int?
-  createdAt  DateTime        @default(now())
-  messages   AgentMessage[]
-  toolCalls  AgentToolCall[]
+  id                String          @id @default(cuid())
+  agentId           String
+  agent             Agent           @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  status            String
+  input             String
+  output            String?
+  error             String?
+  durationMs        Int?
+  contextEntityType String?
+  contextEntityId   String?
+  createdAt         DateTime        @default(now())
+  messages          AgentMessage[]
+  toolCalls         AgentToolCall[]
+  actions           AgentAction[]
 
   @@index([agentId, createdAt])
   @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([contextEntityType, contextEntityId])
+}
+
+enum AgentActionStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  EXECUTED
+  FAILED
+}
+
+enum ActionRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model AgentAction {
+  id                String            @id @default(cuid())
+  agentRunId        String
+  agentRun          AgentRun          @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  actionType        String
+  contextEntityType String?
+  contextEntityId   String?
+  targetEntityType  String?
+  targetEntityId    String?
+  proposedPayload   Json
+  finalPayload      Json?
+  validationErrors  Json?
+  status            AgentActionStatus @default(PENDING_REVIEW)
+  riskLevel         ActionRiskLevel   @default(MEDIUM)
+  requestedById     String
+  requestedBy       User              @relation("AgentActionRequestedBy", fields: [requestedById], references: [id])
+  reviewedById      String?
+  reviewedBy        User?             @relation("AgentActionReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt        DateTime?
+  reviewNote        String?
+  executedAt        DateTime?
+  executionError    String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([agentRunId])
+  @@index([contextEntityType, contextEntityId])
+  @@index([requestedById, status])
   @@index([status, createdAt])
 }
 

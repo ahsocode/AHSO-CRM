@@ -22,6 +22,7 @@ import { formatDate, formatMonthYear, formatRelativeTime } from "@/lib/format";
 import { ActivityType, ContractStatus, Priority } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ContactManager } from "./contact-manager";
+import { CustomerCopilotCard } from "./customer-copilot-card";
 
 const PRIORITY_CONFIG: Record<
   Priority,
@@ -230,6 +231,8 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
+          <CustomerCopilotCard customerId={customerId} />
+
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Delivery Snapshot</p>

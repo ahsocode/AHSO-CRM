@@ -14,6 +14,7 @@ export const DOMAIN_EVENT_NAMES = [
   "payment.overdue",
   "milestone.due_soon",
   "activity.assigned",
+  "agent_action.executed",
   "mention.created"
 ] as const;
 

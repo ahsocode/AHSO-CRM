@@ -130,6 +130,50 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
+export type AgentActionStatus = "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "EXECUTED" | "FAILED";
+export type ActionRiskLevel = "LOW" | "MEDIUM" | "HIGH";
+export type AgentActionType = "CREATE_ACTIVITY";
+
+export interface CreateActivityAgentPayload {
+  type: "CALL" | "EMAIL" | "MEETING" | "SURVEY" | "DEMO" | "NOTE" | "FOLLOWUP";
+  title: string;
+  content?: string;
+  customerId?: string;
+  projectId?: string;
+  attachmentUrl?: string;
+  scheduledAt?: string;
+}
+
+export interface AgentActionSummary {
+  id: string;
+  agentRunId: string;
+  actionType: AgentActionType;
+  contextEntityType: string | null;
+  contextEntityId: string | null;
+  targetEntityType: string | null;
+  targetEntityId: string | null;
+  proposedPayload: CreateActivityAgentPayload;
+  finalPayload: CreateActivityAgentPayload | null;
+  validationErrors: unknown;
+  status: AgentActionStatus;
+  riskLevel: ActionRiskLevel;
+  requestedById: string;
+  reviewedById: string | null;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  executedAt: string | null;
+  executionError: string | null;
+  dryRunSummary: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScanAgentContextResult {
+  created: number;
+  message: string;
+  actions: AgentActionSummary[];
+}
+
 export function useAiProviders() {
   return useQuery({
     queryKey: ["ai", "providers"],
@@ -257,6 +301,86 @@ export function useRunAgent() {
     mutationFn: async ({ agentId, input }: { agentId: string; input: string }) => {
       const response = await apiClient.post<ApiResponse<AgentRunResult>>(`/agents/${agentId}/run`, { input });
       return response.data.data;
+    }
+  });
+}
+
+export function useAgentActions(params: {
+  contextEntityType?: "customer";
+  contextEntityId?: string;
+  status?: AgentActionStatus;
+}) {
+  return useQuery({
+    queryKey: ["agent-actions", params],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<AgentActionSummary[]>>("/agents/actions", { params });
+      return response.data.data;
+    },
+    enabled: Boolean(params.contextEntityType && params.contextEntityId),
+    retry: 0
+  });
+}
+
+export function useScanAgentContext() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { entityType: "customer"; entityId: string }) => {
+      const response = await apiClient.post<ApiResponse<ScanAgentContextResult>>("/agents/context-scan", payload);
+      return response.data.data;
+    },
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["agent-actions", { contextEntityType: variables.entityType, contextEntityId: variables.entityId }]
+      });
+      await queryClient.invalidateQueries({ queryKey: ["agent-actions"] });
+    }
+  });
+}
+
+export function useUpdateAgentActionPayload() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ actionId, finalPayload }: { actionId: string; finalPayload: CreateActivityAgentPayload }) => {
+      const response = await apiClient.patch<ApiResponse<AgentActionSummary>>(`/agents/actions/${actionId}/payload`, {
+        finalPayload
+      });
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["agent-actions"] });
+    }
+  });
+}
+
+export function useExecuteAgentAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (actionId: string) => {
+      const response = await apiClient.post<ApiResponse<AgentActionSummary>>(`/agents/actions/${actionId}/execute`);
+      return response.data.data;
+    },
+    onSuccess: async (action) => {
+      await queryClient.invalidateQueries({ queryKey: ["agent-actions"] });
+      await queryClient.invalidateQueries({ queryKey: ["activities"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      if (action.contextEntityType === "customer" && action.contextEntityId) {
+        await queryClient.invalidateQueries({ queryKey: ["customers", action.contextEntityId] });
+      }
+    }
+  });
+}
+
+export function useRejectAgentAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ actionId, reviewNote }: { actionId: string; reviewNote?: string }) => {
+      const response = await apiClient.post<ApiResponse<AgentActionSummary>>(`/agents/actions/${actionId}/reject`, {
+        reviewNote
+      });
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["agent-actions"] });
     }
   });
 }

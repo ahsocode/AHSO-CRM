@@ -38,20 +38,21 @@ export class GeminiProvider implements AiTextProvider {
   }
 
   async generateText(request: AiTextRequest) {
-    const accessToken = await this.getAccessToken();
+    const authMode = await this.resolveAuthMode();
+    const accessToken = await this.getAccessToken(authMode);
     if (!accessToken) {
       throw new Error("GEMINI_API_KEY hoặc AI_OAUTH_ACCESS_TOKEN chưa được cấu hình");
     }
 
     const baseUrl = this.configService.get<string>("GEMINI_BASE_URL") ?? "https://generativelanguage.googleapis.com";
-    const modelPath = encodeURIComponent(await this.resolveModel());
-    const apiKeyQuery = this.getAuthMode() === "api_key" ? `?key=${encodeURIComponent(accessToken)}` : "";
+    const modelPath = encodeURIComponent(request.model?.trim() || await this.resolveModel());
+    const apiKeyQuery = authMode === "api_key" ? `?key=${encodeURIComponent(accessToken)}` : "";
     const response = await fetchWithTimeout(
       `${baseUrl.replace(/\/+$/, "")}/v1beta/models/${modelPath}:generateContent${apiKeyQuery}`,
       {
         method: "POST",
         headers: {
-          ...(this.getAuthMode() === "oauth" ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...(authMode === "oauth" ? { Authorization: `Bearer ${accessToken}` } : {}),
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -82,18 +83,22 @@ export class GeminiProvider implements AiTextProvider {
     return payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
   }
 
-  private async getAccessToken() {
+  private async getAccessToken(authMode: AiAuthMode) {
     const storedToken = await this.aiCredentialsService.getCredentialAccessToken("gemini");
     if (storedToken) {
       return storedToken;
     }
 
-    if (this.getAuthMode() === "oauth") {
+    if (authMode === "oauth") {
       return this.configService.get<string>("GEMINI_OAUTH_ACCESS_TOKEN")
         ?? this.configService.get<string>("AI_OAUTH_ACCESS_TOKEN");
     }
 
     return this.configService.get<string>("GEMINI_API_KEY");
+  }
+
+  private async resolveAuthMode(): Promise<AiAuthMode> {
+    return await this.aiCredentialsService.getCredentialAuthMode("gemini") ?? this.getAuthMode();
   }
 
   private async resolveModel() {

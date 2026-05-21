@@ -6,6 +6,7 @@ export interface AiTextRequest {
   prompt: string;
   maxTokens: number;
   temperature: number;
+  model?: string | null;
 }
 
 export interface AiUsage {

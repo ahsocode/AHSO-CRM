@@ -35,7 +35,7 @@ export class AnthropicProvider implements AiTextProvider {
     }
 
     const client = this.getClient(apiKey);
-    const model = await this.resolveModel();
+    const model = request.model?.trim() || await this.resolveModel();
     const response = await client.messages.create({
       model,
       system: request.system,

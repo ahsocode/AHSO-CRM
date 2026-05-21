@@ -39,7 +39,7 @@ export class AiProviderRegistry {
       return {
         text: normalizedText,
         provider: provider.name,
-        model: this.getProviderModel(provider),
+        model: request.model?.trim() || this.getProviderModel(provider),
         durationMs: Date.now() - startedAt
       };
     } catch (error) {
@@ -155,7 +155,7 @@ export class AiProviderRegistry {
 
   private toUserFacingError(provider: AiProviderName, error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    if (/API_KEY|OAUTH|chưa được cấu hình|401|403/i.test(message)) {
+    if (/API[_\s-]?KEY|OAUTH|UNAUTHENTICATED|PERMISSION_DENIED|chưa được cấu hình|401|403/i.test(message)) {
       return `AI provider ${provider} chưa được cấu hình hợp lệ. Vui lòng kiểm tra credential trong Admin.`;
     }
     if (/429/i.test(message)) {

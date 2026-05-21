@@ -183,6 +183,19 @@ export class AiCredentialsService {
     return credential?.modelOverride ?? null;
   }
 
+  async getCredentialAuthMode(provider: AiCredentialProvider) {
+    const credential = await this.prisma.aiProviderCredential.findUnique({
+      where: { provider },
+      select: { authMode: true, status: true }
+    });
+
+    if (!credential || credential.status !== "ACTIVE") {
+      return null;
+    }
+
+    return credential.authMode === "oauth" ? "oauth" : "api_key";
+  }
+
   async disconnect(provider: AiCredentialProvider) {
     await this.prisma.aiProviderCredential.delete({ where: { provider } }).catch(() => {
       throw new NotFoundException("Chưa có credential để xóa");

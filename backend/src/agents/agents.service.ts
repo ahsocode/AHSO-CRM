@@ -128,7 +128,8 @@ export class AgentsService implements OnModuleInit {
           "Trả lời bằng tiếng Việt, rõ ràng, có hành động đề xuất nếu phù hợp."
         ].filter(Boolean).join("\n\n"),
         maxTokens: 1200,
-        temperature: 0.3
+        temperature: 0.3,
+        model: agent.model
       }, agent.provider as "anthropic" | "openai" | "gemini" | null), AGENT_RUN_TIMEOUT_MS);
       if (!result) {
         throw new ServiceUnavailableException("AI provider chưa được cấu hình. Vui lòng kiểm tra trong Admin.");

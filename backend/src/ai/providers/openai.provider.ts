@@ -42,7 +42,7 @@ export class OpenAiProvider implements AiTextProvider {
     }
 
     const baseUrl = this.configService.get<string>("OPENAI_BASE_URL") ?? "https://api.openai.com";
-    const model = await this.resolveModel();
+    const model = request.model?.trim() || await this.resolveModel();
     const response = await fetchWithTimeout(
       `${baseUrl.replace(/\/+$/, "")}/v1/chat/completions`,
       {

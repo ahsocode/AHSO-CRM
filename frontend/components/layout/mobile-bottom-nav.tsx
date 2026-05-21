@@ -12,7 +12,7 @@ const MOBILE_ITEMS = [
   { href: "/dashboard" as Route, label: "Dashboard", icon: "dashboard" as const },
   { href: "/customers" as Route, label: "Khách hàng", icon: "groups" as const },
   { href: "/projects" as Route, label: "Dự án", icon: "factory" as const },
-  { href: "/mailbox" as Route, label: "Mailbox", icon: "mail" as const },
+  { href: "/activities" as Route, label: "Hoạt động", icon: "history" as const },
   { href: "/calendar" as Route, label: "Lịch", icon: "calendar" as const }
 ];
 

@@ -290,7 +290,7 @@ export class DocumentLayoutRendererService {
       const header = box.content.columns
         .map(
           (column) =>
-            `<th style="${column.width ? `width:${column.width}mm;` : ""} text-align:${column.align ?? "left"}">${escapeHtml(language === "viEn" ? column.label.viEn ?? column.label.vi : column.label.vi)}</th>`
+            `<th style="${column.width ? `min-width:${column.width}mm;` : ""} text-align:${column.align ?? "left"}">${escapeHtml(language === "viEn" ? column.label.viEn ?? column.label.vi : column.label.vi)}</th>`
         )
         .join("");
       const body = lineItems.length
@@ -303,7 +303,7 @@ export class DocumentLayoutRendererService {
               return `<tr>${box.content.columns
                 .map((column) => {
                   const content = this.interpolate(column.value, rowContext);
-                  return `<td style="text-align:${column.align ?? "left"};white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere">${content}</td>`;
+                  return `<td style="text-align:${column.align ?? "left"};white-space:pre-wrap;word-break:normal;overflow-wrap:break-word">${content}</td>`;
                 })
                 .join("")}</tr>`;
             })
@@ -314,9 +314,12 @@ export class DocumentLayoutRendererService {
               : box.content.emptyText?.vi ?? "Chưa có dữ liệu"
           )}</td></tr>`;
 
-      // Table rows must expand to fit content: replace fixed height with min-height
-      // and allow overflow so rows aren't clipped.
-      const tableStyle = style.replace(/\bheight:[\d.]+mm/, `min-height:${box.height}mm`) + ";overflow:visible";
+      // Auto-scale in both X and Y: replace fixed dimensions with min-* so the box
+      // expands to fit content in either direction without clipping rows or columns.
+      const tableStyle = style
+        .replace(/\bheight:[\d.]+mm/, `min-height:${box.height}mm`)
+        .replace(/\bwidth:[\d.]+mm/, `min-width:${box.width}mm`)
+        + ";overflow:visible";
       return `<div class="schema-document__box" style="${tableStyle}"><table class="schema-document__table"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table></div>`;
     }
 

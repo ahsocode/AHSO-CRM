@@ -566,10 +566,53 @@ function MessageViewer({ message, isLoading, onReply, onReplyAll, onForward }: {
   onReply: () => void; onReplyAll: () => void; onForward: () => void;
 }) {
   const [showImages, setShowImages] = useState(false);
+  const [resolvedHtml, setResolvedHtml] = useState<string | null>(null);
   const markRead = useMarkRead();
   const starMessage = useStarMessage();
   const deleteMessage = useDeleteMessage();
-  const safeHtml = sanitizeEmailHtml(message?.bodyHtml, showImages);
+
+  // Replace cid: inline image references with base64 data URLs so they render in the iframe.
+  // Browsers cannot resolve cid: URIs outside of a native email client.
+  useEffect(() => {
+    setResolvedHtml(null);
+    if (!message?.bodyHtml) return;
+
+    const inlineAtts = (message.attachments ?? []).filter(
+      (att) => att.cid && /cid:/i.test(message.bodyHtml ?? "")
+    );
+    if (inlineAtts.length === 0) {
+      setResolvedHtml(message.bodyHtml);
+      return;
+    }
+
+    void Promise.all(
+      inlineAtts.map(async (att) => {
+        try {
+          const res = await apiClient.get<ArrayBuffer>(`/mailbox/attachments/${att.id}/download`, {
+            responseType: "arraybuffer"
+          });
+          const bytes = new Uint8Array(res.data as ArrayBuffer);
+          const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), "");
+          const base64 = btoa(binary);
+          const cleanCid = (att.cid ?? "").replace(/^<|>$/g, "");
+          return { cid: cleanCid, dataUrl: `data:${att.mimeType};base64,${base64}` };
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      const cidMap = results.filter((r): r is { cid: string; dataUrl: string } => r !== null);
+      let html = message.bodyHtml ?? "";
+      for (const { cid, dataUrl } of cidMap) {
+        const escaped = cid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        html = html.replace(new RegExp(`src="cid:${escaped}"`, "gi"), `src="${dataUrl}"`);
+        html = html.replace(new RegExp(`src='cid:${escaped}'`, "gi"), `src='${dataUrl}'`);
+      }
+      setResolvedHtml(html);
+    });
+  }, [message?.id]);
+
+  const safeHtml = sanitizeEmailHtml(resolvedHtml ?? message?.bodyHtml, showImages);
 
   if (isLoading) return <div className="p-5"><LoadingSkeleton className="h-[520px] w-full" /></div>;
   if (!message) return (

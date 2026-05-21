@@ -625,29 +625,67 @@ export function TemplateInspector({
                     />
                   </div>
 
-                  {selectedBox.content.columns.map((column, colIndex) => (
+                  {selectedBox.content.columns.map((column, colIndex) => {
+                    const totalCols = (selectedBox as TemplateLineItemsTableBox).content.columns.length;
+                    const moveColumn = (fromIndex: number, toIndex: number) => {
+                      onUpdateBox((box) => {
+                        const current = box as TemplateLineItemsTableBox;
+                        const cols = [...current.content.columns];
+                        const [moved] = cols.splice(fromIndex, 1);
+                        cols.splice(toIndex, 0, moved);
+                        return { ...current, content: { ...current.content, columns: cols } };
+                      });
+                    };
+
+                    return (
                     <div key={column.id} className="space-y-2 rounded-xl border border-border/70 p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-semibold text-text-muted">Cột {colIndex + 1}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="flex-1 text-xs font-semibold text-text-muted">Cột {colIndex + 1}</span>
                         {editable ? (
-                          <button
-                            type="button"
-                            className="rounded px-1.5 py-0.5 text-xs text-danger hover:bg-danger-bg"
-                            onClick={() =>
-                              onUpdateBox((box) => {
-                                const current = box as TemplateLineItemsTableBox;
-                                return {
-                                  ...current,
-                                  content: {
-                                    ...current.content,
-                                    columns: current.content.columns.filter((c) => c.id !== column.id)
-                                  }
-                                };
-                              })
-                            }
-                          >
-                            Xóa cột
-                          </button>
+                          <>
+                            {/* Move up */}
+                            <button
+                              type="button"
+                              disabled={colIndex === 0}
+                              title="Di chuyển lên"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition hover:bg-bg-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                              onClick={() => moveColumn(colIndex, colIndex - 1)}
+                            >
+                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M8 12V4M4 7l4-4 4 4" />
+                              </svg>
+                            </button>
+                            {/* Move down */}
+                            <button
+                              type="button"
+                              disabled={colIndex === totalCols - 1}
+                              title="Di chuyển xuống"
+                              className="inline-flex h-6 w-6 items-center justify-center rounded text-text-secondary transition hover:bg-bg-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-30"
+                              onClick={() => moveColumn(colIndex, colIndex + 1)}
+                            >
+                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M8 4v8M4 9l4 4 4-4" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded px-1.5 py-0.5 text-xs text-danger hover:bg-danger-bg"
+                              onClick={() =>
+                                onUpdateBox((box) => {
+                                  const current = box as TemplateLineItemsTableBox;
+                                  return {
+                                    ...current,
+                                    content: {
+                                      ...current.content,
+                                      columns: current.content.columns.filter((c) => c.id !== column.id)
+                                    }
+                                  };
+                                })
+                              }
+                            >
+                              Xóa
+                            </button>
+                          </>
                         ) : null}
                       </div>
                       <LocalizedTextEditor
@@ -691,7 +729,8 @@ export function TemplateInspector({
                         />
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
 
                   {editable ? (
                     <button

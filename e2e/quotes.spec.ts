@@ -21,6 +21,10 @@ test("mở quotes và kiểm tra preview/pdf workflow cơ bản", async ({ page 
   await page.getByRole("button", { name: /Đóng/i }).click();
   await expect(page.locator('iframe[title="document-preview"]')).not.toBeVisible();
 
+  // Preview closes the document modal — re-open it to access PDF download
+  await page.getByRole("button", { name: /Tạo tài liệu/i }).click();
+  await page.getByRole("menuitem", { name: /Báo giá/i }).click();
+
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /Tải xuống PDF/i }).click();
   const download = await downloadPromise;

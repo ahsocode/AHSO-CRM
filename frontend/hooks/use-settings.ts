@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { ApiResponse, CompanyInfo, Policies } from "@/lib/types";
+import { ApiResponse, CompanyInfo, Policies, PolicyItem, PolicyItemType } from "@/lib/types";
 
 interface SettingsBundle {
   company: CompanyInfo;
@@ -86,5 +86,50 @@ export function useUpdatePolicies() {
         queryClient.invalidateQueries({ queryKey: ["settings", "policies"] })
       ]);
     }
+  });
+}
+
+// ── Policy Items ──────────────────────────────────────────────
+
+export function usePolicyItems(type?: PolicyItemType) {
+  return useQuery({
+    queryKey: ["policy-items", type ?? "all"],
+    queryFn: async () => {
+      const params = type ? `?type=${type}` : "";
+      const response = await apiClient.get<ApiResponse<PolicyItem[]>>(`/policy-items${params}`);
+      return response.data.data ?? [];
+    }
+  });
+}
+
+export function useCreatePolicyItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { type: PolicyItemType; name: string; content: string; isDefault?: boolean; sortOrder?: number }) => {
+      const response = await apiClient.post<ApiResponse<PolicyItem>>("/policy-items", payload);
+      return response.data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["policy-items"] })
+  });
+}
+
+export function useUpdatePolicyItem(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { name?: string; content?: string; isDefault?: boolean; sortOrder?: number }) => {
+      const response = await apiClient.patch<ApiResponse<PolicyItem>>(`/policy-items/${id}`, payload);
+      return response.data.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["policy-items"] })
+  });
+}
+
+export function useDeletePolicyItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await apiClient.delete(`/policy-items/${id}`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["policy-items"] })
   });
 }

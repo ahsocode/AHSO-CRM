@@ -24,6 +24,7 @@ import { CalendarModule } from "./calendar/calendar.module";
 import { ReportsModule } from "./reports/reports.module";
 import { UploadModule } from "./upload/upload.module";
 import { SettingsModule } from "./settings/settings.module";
+import { PolicyItemsModule } from "./policy-items/policy-items.module";
 import { RolesModule } from "./roles/roles.module";
 import { PermissionsModule } from "./permissions/permissions.module";
 import { WebsocketModule } from "./websocket/websocket.module";
@@ -82,6 +83,7 @@ import { StockCountsModule } from "./stock-counts/stock-counts.module";
     ReportsModule,
     UploadModule,
     SettingsModule,
+    PolicyItemsModule,
     RolesModule,
     PermissionsModule,
     EmailModule,

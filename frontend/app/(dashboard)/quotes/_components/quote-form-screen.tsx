@@ -36,6 +36,7 @@ import {
   quoteFormSchema,
   type QuoteFormValues
 } from "./form-schemas";
+import { PolicyItemSelect } from "./policy-item-select";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
 const QUOTE_TABLE_WIDTH_FIELDS = [
@@ -486,7 +487,15 @@ export function QuoteFormScreen({
             </CardHeader>
             <CardContent className="grid gap-4">
               <Field>
-                <Label htmlFor="terms">Điều khoản thanh toán</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="terms">Điều khoản thanh toán</Label>
+                  {isEditableQuote && (
+                    <PolicyItemSelect
+                      type="PAYMENT_TERMS"
+                      onSelect={(content) => form.setValue("terms", content, { shouldDirty: true })}
+                    />
+                  )}
+                </div>
                 <Textarea
                   id="terms"
                   disabled={!isEditableQuote}
@@ -497,7 +506,15 @@ export function QuoteFormScreen({
               </Field>
 
               <Field>
-                <Label htmlFor="deliveryTerms">Điều khoản giao hàng / triển khai</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="deliveryTerms">Điều khoản giao hàng / triển khai</Label>
+                  {isEditableQuote && (
+                    <PolicyItemSelect
+                      type="DELIVERY_TERMS"
+                      onSelect={(content) => form.setValue("deliveryTerms", content, { shouldDirty: true })}
+                    />
+                  )}
+                </div>
                 <Textarea
                   id="deliveryTerms"
                   disabled={!isEditableQuote}

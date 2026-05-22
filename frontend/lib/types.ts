@@ -80,6 +80,19 @@ export interface Policies {
   service?: string | null;
 }
 
+export type PolicyItemType = "PAYMENT_TERMS" | "DELIVERY_TERMS";
+
+export interface PolicyItem {
+  id: string;
+  type: PolicyItemType;
+  name: string;
+  content: string;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Permission {
   id: string;
   resource: string;

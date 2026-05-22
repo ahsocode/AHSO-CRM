@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Policies } from "@/lib/types";
+import { PolicyItemList } from "./policy-item-list";
 
 const policyEditorSchema = z.object({
   paymentTerms: z.string().max(500, "Điều khoản thanh toán không được vượt quá 500 ký tự").optional().or(z.literal("")),
@@ -67,9 +68,32 @@ export function PolicyEditor({
   }
 
   return (
+    <div className="space-y-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border border-white/70 bg-white/88">
+          <CardHeader>
+            <CardTitle className="text-base">Mẫu điều khoản thanh toán</CardTitle>
+            <CardDescription>Danh sách các mẫu để chọn nhanh khi tạo báo giá.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PolicyItemList type="PAYMENT_TERMS" title="Điều khoản thanh toán" />
+          </CardContent>
+        </Card>
+
+        <Card className="border border-white/70 bg-white/88">
+          <CardHeader>
+            <CardTitle className="text-base">Mẫu điều khoản giao hàng</CardTitle>
+            <CardDescription>Danh sách các mẫu thời gian & điều kiện giao hàng.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PolicyItemList type="DELIVERY_TERMS" title="Điều khoản giao hàng / triển khai" />
+          </CardContent>
+        </Card>
+      </div>
+
     <Card className="border border-white/70 bg-white/88">
       <CardHeader>
-        <CardTitle>Chính sách vận hành</CardTitle>
+        <CardTitle>Chính sách vận hành khác</CardTitle>
         <CardDescription>
           Các đoạn văn bản này sẽ là nguồn chuẩn để tái sử dụng trên báo giá, hợp đồng và tài liệu gửi khách.
         </CardDescription>
@@ -118,5 +142,6 @@ export function PolicyEditor({
         </form>
       </CardContent>
     </Card>
+    </div>
   );
 }

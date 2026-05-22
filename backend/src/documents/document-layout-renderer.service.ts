@@ -298,9 +298,15 @@ export class DocumentLayoutRendererService {
           }
 
           const groupHeight = Math.max(...fragments.map((fragment) => fragment.height));
-          const desiredY = fragmentIndex === 0
-            ? Math.max(group.y, currentY > 0 ? currentY + contentGap : 0)
-            : currentY + contentGap;
+          const hasContinuationHeader = currentPage.boxes.some((box) => box.id.includes("__continuation-header"));
+          const desiredY = this.getFlowPlacementY({
+            groupY: group.y,
+            currentY,
+            hasBoxes: currentPage.boxes.length > 0,
+            hasContinuationHeader,
+            fragmentIndex,
+            contentGap
+          });
 
           if (
             desiredY + groupHeight > pageBottom &&
@@ -312,9 +318,14 @@ export class DocumentLayoutRendererService {
             currentY = continuationStartY;
           }
 
-          const y = currentPage.boxes.length === 0
-            ? Math.max(group.y, currentY)
-            : Math.max(currentY + contentGap, currentPage.boxes.some((box) => box.id.includes("__continuation-header")) ? currentY : group.y);
+          const y = this.getFlowPlacementY({
+            groupY: group.y,
+            currentY,
+            hasBoxes: currentPage.boxes.length > 0,
+            hasContinuationHeader: currentPage.boxes.some((box) => box.id.includes("__continuation-header")),
+            fragmentIndex,
+            contentGap
+          });
           const placedY = y + groupHeight > pageBottom && currentPage.boxes.length > 0
             ? continuationStartY
             : y;
@@ -338,6 +349,36 @@ export class DocumentLayoutRendererService {
     });
 
     return { pages, context: flowContext };
+  }
+
+  private getFlowPlacementY({
+    groupY,
+    currentY,
+    hasBoxes,
+    hasContinuationHeader,
+    fragmentIndex,
+    contentGap
+  }: {
+    groupY: number;
+    currentY: number;
+    hasBoxes: boolean;
+    hasContinuationHeader: boolean;
+    fragmentIndex: number;
+    contentGap: number;
+  }) {
+    if (!hasBoxes) {
+      return Math.max(groupY, currentY);
+    }
+
+    if (hasContinuationHeader) {
+      return fragmentIndex === 0 ? currentY : currentY + contentGap;
+    }
+
+    if (fragmentIndex > 0) {
+      return currentY + contentGap;
+    }
+
+    return groupY >= currentY ? groupY : currentY + contentGap;
   }
 
   private groupBoxesForFlow(boxes: TemplateBox[]) {

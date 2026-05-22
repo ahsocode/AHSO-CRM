@@ -648,6 +648,36 @@ function createContinuationHeader(
   };
 }
 
+function getFlowPlacementY({
+  groupY,
+  currentY,
+  hasBoxes,
+  hasContinuationHeader,
+  fragmentIndex,
+  contentGap
+}: {
+  groupY: number;
+  currentY: number;
+  hasBoxes: boolean;
+  hasContinuationHeader: boolean;
+  fragmentIndex: number;
+  contentGap: number;
+}) {
+  if (!hasBoxes) {
+    return Math.max(groupY, currentY);
+  }
+
+  if (hasContinuationHeader) {
+    return fragmentIndex === 0 ? currentY : currentY + contentGap;
+  }
+
+  if (fragmentIndex > 0) {
+    return currentY + contentGap;
+  }
+
+  return groupY >= currentY ? groupY : currentY + contentGap;
+}
+
 function buildPresentationPages(
   layout: DocumentTemplateLayout,
   rawSampleData: Record<string, unknown>,
@@ -680,9 +710,14 @@ function buildPresentationPages(
         }
 
         const groupHeight = Math.max(...fragments.map((fragment) => fragment.height));
-        let y = currentPage.boxes.length === 0
-          ? Math.max(group.y, currentY)
-          : Math.max(currentY + contentGap, group.y);
+        let y = getFlowPlacementY({
+          groupY: group.y,
+          currentY,
+          hasBoxes: currentPage.boxes.length > 0,
+          hasContinuationHeader: currentPage.boxes.some((box) => box.id.includes("__continuation-header")),
+          fragmentIndex,
+          contentGap
+        });
 
         if (y + groupHeight > pageBottom && currentPage.boxes.length > 0) {
           currentPage = {

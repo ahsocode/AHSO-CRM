@@ -270,4 +270,77 @@ describe("DocumentLayoutRendererService", () => {
     expect(html).toContain('width:30.0000%');
     expect(html).toContain('width:15.0000%');
   });
+
+  it("keeps a signature block on the same page when the original spacing fits", () => {
+    const layout: DocumentTemplateLayout = {
+      version: 1,
+      page: basePage,
+      pages: [
+        {
+          id: "page-1",
+          boxes: [
+            {
+              id: "quote-terms",
+              type: "text",
+              page: 0,
+              x: 12,
+              y: 222,
+              width: 108,
+              height: 42,
+              zIndex: 1,
+              visible: true,
+              style: { fontSize: 9.4, lineHeight: 1.45, padding: 2 },
+              content: {
+                text: {
+                  vi: "Điều khoản thanh toán:\nThanh toán 50% khi xác nhận đơn hàng.\n\nĐiều khoản giao hàng:\nTriển khai sau khi nhận PO."
+                }
+              }
+            },
+            {
+              id: "quote-summary",
+              type: "key_value_table",
+              page: 0,
+              x: 126,
+              y: 222,
+              width: 72,
+              height: 42,
+              zIndex: 1,
+              visible: true,
+              style: { fontSize: 9.8, lineHeight: 1.5, padding: 2 },
+              content: {
+                labelWidth: 28,
+                rows: [
+                  { id: "subtotal", label: { vi: "Tạm tính" }, value: "6.840.000" },
+                  { id: "tax", label: { vi: "Thuế" }, value: "547.200" },
+                  { id: "total", label: { vi: "Tổng cộng" }, value: "7.387.200" }
+                ]
+              }
+            },
+            {
+              id: "quote-signature",
+              type: "signature_block",
+              page: 0,
+              x: 12,
+              y: 266,
+              width: 186,
+              height: 18,
+              zIndex: 1,
+              visible: true,
+              style: { fontSize: 9.8, lineHeight: 1.35, padding: 1 },
+              content: {
+                leftTitle: { vi: "ĐẠI DIỆN AHSO" },
+                rightTitle: { vi: "ĐẠI DIỆN KHÁCH HÀNG" }
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    const html = service.render(layout, {}, "vi");
+
+    expect(countPages(html)).toBe(1);
+    expect(html).toContain("ĐẠI DIỆN KHÁCH HÀNG");
+    expect(html).not.toContain("Trang 2");
+  });
 });

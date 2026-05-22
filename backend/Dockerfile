@@ -16,6 +16,8 @@ RUN apk upgrade --no-cache && \
   ca-certificates \
   ttf-freefont \
   font-noto \
+  font-noto-extra \
+  weasyprint \
   postgresql16-client
 
 # Stage 2: install node_modules (invalidated only when package-lock.json changes)

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { JwtUser } from "../auth/auth.types";
-import { renderPdfBuffer } from "../common/pdf/pdf.utils";
+import { PdfRendererService } from "../documents/pdf-renderer.service";
 import { SettingsService } from "../settings/settings.service";
 import { UploadService } from "../upload/upload.service";
 import { QuotesService } from "./quotes.service";
@@ -24,7 +23,7 @@ export class QuotesPdfService {
     private readonly quotesService: QuotesService,
     private readonly settingsService: SettingsService,
     private readonly uploadService: UploadService,
-    private readonly configService: ConfigService
+    private readonly pdfRenderer: PdfRendererService
   ) {}
 
   async generatePdf(quoteId: string, user: JwtUser) {
@@ -33,19 +32,18 @@ export class QuotesPdfService {
       this.settingsService.getAllSettings()
     ]);
     const logoSrc = await this.resolveLogoSource(settings.logo);
-    const pdf = await renderPdfBuffer(
+    const buffer = await this.pdfRenderer.render(
       this.buildHtml(
         quote,
         settings.company ?? {},
         settings.policies ?? {},
         logoSrc
-      ),
-      this.configService
+      )
     );
 
     return {
       filename: `${quote.quoteNo}-v${quote.version}.pdf`,
-      buffer: Buffer.from(pdf)
+      buffer
     };
   }
 

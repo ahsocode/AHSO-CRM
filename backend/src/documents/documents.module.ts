@@ -10,6 +10,7 @@ import { DocumentsController } from "./documents.controller";
 import { DocumentsService } from "./documents.service";
 import { I18nService } from "./i18n.service";
 import { PdfRendererService } from "./pdf-renderer.service";
+import { QuotationFlowHtmlRendererService } from "./quotation-flow-html-renderer.service";
 
 @Module({
   imports: [ConfigModule, SettingsModule, UploadModule],
@@ -21,8 +22,9 @@ import { PdfRendererService } from "./pdf-renderer.service";
     DocumentTemplateVariantsService,
     DocumentLayoutRendererService,
     PdfRendererService,
+    QuotationFlowHtmlRendererService,
     I18nService
   ],
-  exports: [DocumentsService, DocumentNumberService, DocumentTemplateVariantsService]
+  exports: [DocumentsService, DocumentNumberService, DocumentTemplateVariantsService, PdfRendererService]
 })
 export class DocumentsModule {}

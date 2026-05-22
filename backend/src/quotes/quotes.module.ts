@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { DocumentsModule } from "../documents/documents.module";
 import { DomainEventsModule } from "../domain-events/domain-events.module";
 import { EmailModule } from "../email/email.module";
 import { SettingsModule } from "../settings/settings.module";
@@ -8,7 +9,7 @@ import { QuotesPdfService } from "./quotes-pdf.service";
 import { QuotesService } from "./quotes.service";
 
 @Module({
-  imports: [SettingsModule, UploadModule, EmailModule, DomainEventsModule],
+  imports: [SettingsModule, UploadModule, EmailModule, DomainEventsModule, DocumentsModule],
   controllers: [QuotesController],
   providers: [QuotesService, QuotesPdfService]
 })

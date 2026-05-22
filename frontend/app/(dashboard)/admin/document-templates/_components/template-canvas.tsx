@@ -153,7 +153,7 @@ function renderBoxContent(
   if (box.type === "line_items_table") {
     const source = getValueByPath(sampleData, box.content.source);
     const items = Array.isArray(source) ? source : [];
-    const columnPercents = getLineItemColumnPercents(box);
+    const columnPercents = getLineItemColumnPercents(box, sampleData);
 
     return (
       <table className="w-full table-fixed border-collapse text-left">
@@ -285,7 +285,10 @@ function getLineItemColumnRole(column: Extract<TemplateBox, { type: "line_items_
   return "other";
 }
 
-function getLineItemColumnPercents(box: Extract<TemplateBox, { type: "line_items_table" }>) {
+function getLineItemColumnPercents(
+  box: Extract<TemplateBox, { type: "line_items_table" }>,
+  sampleData?: Record<string, unknown>
+) {
   const roles = box.content.columns.map((column) => getLineItemColumnRole(column));
   const roleSet = new Set(roles);
   const isStandardCommercialTable =
@@ -295,7 +298,8 @@ function getLineItemColumnPercents(box: Extract<TemplateBox, { type: "line_items
     roleSet.has("unitPrice") &&
     roleSet.has("total");
 
-  if (!isStandardCommercialTable) {
+  const quoteOverrides = getQuoteTableColumnWidthOverrides(sampleData);
+  if (!isStandardCommercialTable && !quoteOverrides) {
     const raw = box.content.columns.map((column) => Math.max(1, column.width ?? 1));
     const total = raw.reduce((sum, value) => sum + value, 0) || 1;
     return raw.map((value) => (value / total) * 100);
@@ -304,10 +308,33 @@ function getLineItemColumnPercents(box: Extract<TemplateBox, { type: "line_items
   const weights: Record<LineItemColumnRole, number> = roleSet.has("description")
     ? { index: 6, name: 41, description: 23, quantity: 6, unitPrice: 12, total: 12, other: 8 }
     : { index: 6, name: 50, description: 0, quantity: 7, unitPrice: 18, total: 19, other: 8 };
-  const raw = roles.map((role) => weights[role] || weights.other);
+  const raw = roles.map((role, index) => {
+    const column = box.content.columns[index];
+    const exactOverride = column ? quoteOverrides?.[column.id] : undefined;
+    const roleOverride = quoteOverrides?.[role];
+    return exactOverride ?? roleOverride ?? weights[role] ?? weights.other;
+  });
   const total = raw.reduce((sum, value) => sum + value, 0) || 1;
 
   return raw.map((value) => (value / total) * 100);
+}
+
+function getQuoteTableColumnWidthOverrides(sampleData?: Record<string, unknown>) {
+  const raw = sampleData
+    ? getValueByPath(sampleData, "quote.tableColumnWidths") ?? getValueByPath(sampleData, "tableColumnWidths")
+    : undefined;
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return undefined;
+  }
+
+  return Object.entries(raw as Record<string, unknown>).reduce<Record<string, number>>((result, [key, value]) => {
+    const numericValue = Number(value);
+    if (Number.isFinite(numericValue) && numericValue > 0) {
+      result[key] = numericValue;
+    }
+    return result;
+  }, {});
 }
 
 function estimateTextLines(text: string, columnWidthMm: number, fontSize: number) {
@@ -455,7 +482,7 @@ function createLineItemsFragments(
 ): FlowFragment[] {
   const source = getValueByPath(sampleData, box.content.source);
   const rows = Array.isArray(source) ? source : [];
-  const rowHeights = estimateLineItemsRowHeights(box, rows);
+  const rowHeights = estimateLineItemsRowHeights(box, rows, sampleData);
   const fontSize = box.style?.fontSize ?? 9;
   const lineHeight = box.style?.lineHeight ?? 1.35;
   const padding = box.style?.padding ?? 2;
@@ -503,12 +530,16 @@ function createLineItemsFragments(
   });
 }
 
-function estimateLineItemsRowHeights(box: Extract<TemplateBox, { type: "line_items_table" }>, rows: unknown[]) {
+function estimateLineItemsRowHeights(
+  box: Extract<TemplateBox, { type: "line_items_table" }>,
+  rows: unknown[],
+  sampleData?: Record<string, unknown>
+) {
   const fontSize = box.style?.fontSize ?? 9;
   const lineHeight = box.style?.lineHeight ?? 1.35;
   const rowVerticalPaddingMm = 3.2;
   const textLineHeightMm = fontSize * 0.3528 * lineHeight;
-  const columnPercents = getLineItemColumnPercents(box);
+  const columnPercents = getLineItemColumnPercents(box, sampleData);
 
   return rows.map((row, index) => {
     const rowContext = {

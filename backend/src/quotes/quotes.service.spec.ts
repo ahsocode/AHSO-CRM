@@ -102,6 +102,14 @@ describe("QuotesService", () => {
           projectId: "project-1",
           status: "DRAFT",
           taxRate: 10,
+          tableColumnWidths: {
+            index: 5,
+            name: 38,
+            description: 30,
+            quantity: 5,
+            unitPrice: 10,
+            total: 12
+          },
           terms: "Thanh toán theo tiến độ",
           deliveryTerms: "Giao tại kho AHSO",
           internalNote: "Ưu tiên chốt trong tháng",
@@ -135,6 +143,14 @@ describe("QuotesService", () => {
         taxRate: 10,
         taxAmount: 25,
         total: 275,
+        tableColumnWidths: {
+          index: 5,
+          name: 38,
+          description: 30,
+          quantity: 5,
+          unitPrice: 10,
+          total: 12
+        },
         terms: "Thanh toán theo tiến độ",
         deliveryTerms: "Giao tại kho AHSO",
         internalNote: "Ưu tiên chốt trong tháng",

@@ -30,12 +30,21 @@ import { QuoteStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   createEmptyQuoteItem,
+  defaultQuoteTableColumnWidths,
   defaultQuoteFormValues,
   quoteFormSchema,
   type QuoteFormValues
 } from "./form-schemas";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
+const QUOTE_TABLE_WIDTH_FIELDS = [
+  { key: "index", label: "STT", min: 3, max: 25 },
+  { key: "name", label: "Hạng mục", min: 10, max: 75 },
+  { key: "description", label: "Mô tả", min: 10, max: 75 },
+  { key: "quantity", label: "SL", min: 3, max: 25 },
+  { key: "unitPrice", label: "Đơn giá", min: 6, max: 40 },
+  { key: "total", label: "Thành tiền", min: 6, max: 40 }
+] as const;
 
 export function QuoteFormScreen({
   mode = "create",
@@ -83,6 +92,7 @@ export function QuoteFormScreen({
         projectId: quoteQuery.data.project.id,
         validUntil: quoteQuery.data.validUntil ? quoteQuery.data.validUntil.slice(0, 10) : "",
         taxRate: quoteQuery.data.taxRate,
+        tableColumnWidths: quoteQuery.data.tableColumnWidths ?? defaultQuoteTableColumnWidths,
         terms: quoteQuery.data.terms ?? "",
         deliveryTerms: quoteQuery.data.deliveryTerms ?? "",
         internalNote: quoteQuery.data.internalNote ?? "",
@@ -101,6 +111,7 @@ export function QuoteFormScreen({
   const selectedProjectId = form.watch("projectId");
   const watchedItems = form.watch("items") ?? [];
   const watchedTaxRate = form.watch("taxRate") ?? 0;
+  const watchedTableColumnWidths = form.watch("tableColumnWidths") ?? defaultQuoteTableColumnWidths;
   const selectedProjectQuery = useProject(selectedProjectId || "");
   const selectedProject = selectedProjectQuery.data;
   const subtotal = watchedItems.reduce(
@@ -407,6 +418,60 @@ export function QuoteFormScreen({
                 <AppIcon name="plus" className="h-4 w-4" />
                 Thêm hạng mục
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="v2-label text-primary">Print Layout</p>
+              <CardTitle>Độ rộng cột bảng báo giá</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {QUOTE_TABLE_WIDTH_FIELDS.map((column) => (
+                  <Field key={column.key}>
+                    <Label htmlFor={`tableColumnWidths.${column.key}`}>{column.label}</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={`tableColumnWidths.${column.key}`}
+                        type="number"
+                        min={column.min}
+                        max={column.max}
+                        step="1"
+                        disabled={!isEditableQuote}
+                        {...form.register(`tableColumnWidths.${column.key}`, {
+                          setValueAs: (value) => (value === "" ? 0 : Number(value))
+                        })}
+                      />
+                      <span className="shrink-0 text-sm font-semibold text-text-secondary">%</span>
+                    </div>
+                    <ErrorText message={form.formState.errors.tableColumnWidths?.[column.key]?.message} />
+                  </Field>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-white/80 px-4 py-3 text-sm text-text-secondary">
+                <span>
+                  Tổng nhập:{" "}
+                  <strong className="text-text-primary">
+                    {Object.values(watchedTableColumnWidths).reduce((sum, value) => sum + Number(value || 0), 0)}%
+                  </strong>{" "}
+                  · hệ thống sẽ tự chuẩn hóa về 100% khi render.
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!isEditableQuote}
+                  onClick={() => {
+                    form.setValue("tableColumnWidths", defaultQuoteTableColumnWidths, {
+                      shouldDirty: true,
+                      shouldValidate: true
+                    });
+                  }}
+                >
+                  Khôi phục mặc định
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

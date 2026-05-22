@@ -14,7 +14,31 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { resolveAssetUrl } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
+import type { QuoteTableColumnWidths } from "@/lib/types";
 import { cn, downloadBlob } from "@/lib/utils";
+
+const DEFAULT_QUOTE_TABLE_COLUMN_WIDTHS: QuoteTableColumnWidths = {
+  index: 6,
+  name: 41,
+  description: 23,
+  quantity: 6,
+  unitPrice: 12,
+  total: 12
+};
+
+function normalizeQuoteTableWidths(widths?: QuoteTableColumnWidths | null) {
+  const next = widths ?? DEFAULT_QUOTE_TABLE_COLUMN_WIDTHS;
+  const total = Object.values(next).reduce((sum, value) => sum + Number(value || 0), 0) || 1;
+
+  return {
+    index: (next.index / total) * 100,
+    name: (next.name / total) * 100,
+    description: (next.description / total) * 100,
+    quantity: (next.quantity / total) * 100,
+    unitPrice: (next.unitPrice / total) * 100,
+    total: (next.total / total) * 100
+  };
+}
 
 export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
   const quoteQuery = useQuote(quoteId);
@@ -66,6 +90,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
     quote.deliveryTerms?.trim() ||
     policies?.service?.trim() ||
     "Tiến độ triển khai sẽ được xác nhận theo survey và lịch điều động kỹ thuật.";
+  const tableWidths = normalizeQuoteTableWidths(quote.tableColumnWidths);
 
   return (
     <div className="space-y-8 print:space-y-0">
@@ -195,12 +220,20 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
           </p>
 
           <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-            <table className="min-w-full border-collapse">
+            <table className="min-w-full table-fixed border-collapse">
+              <colgroup>
+                <col style={{ width: `${tableWidths.index.toFixed(4)}%` }} />
+                <col style={{ width: `${tableWidths.name.toFixed(4)}%` }} />
+                <col style={{ width: `${tableWidths.description.toFixed(4)}%` }} />
+                <col style={{ width: `${tableWidths.quantity.toFixed(4)}%` }} />
+                <col style={{ width: `${tableWidths.unitPrice.toFixed(4)}%` }} />
+                <col style={{ width: `${tableWidths.total.toFixed(4)}%` }} />
+              </colgroup>
               <thead>
                 <tr className="bg-primary text-left text-[11px] font-bold uppercase tracking-[0.18em] text-white">
                   <th className="px-3 py-3">STT</th>
-                  <th className="px-3 py-3">Hạng mục / Quy cách</th>
-                  <th className="px-3 py-3 text-center">ĐVT</th>
+                  <th className="px-3 py-3">Hạng mục</th>
+                  <th className="px-3 py-3">Mô tả</th>
                   <th className="px-3 py-3 text-center">SL</th>
                   <th className="px-3 py-3 text-right">Đơn giá</th>
                   <th className="px-3 py-3 text-right">Thành tiền</th>
@@ -212,9 +245,8 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
                     <td className="px-3 py-3 text-center">{String(index + 1).padStart(2, "0")}</td>
                     <td className="px-3 py-3">
                       <p className="font-semibold text-slate-800">{item.name}</p>
-                      {item.description ? <p className="mt-1 text-slate-500">{item.description}</p> : null}
                     </td>
-                    <td className="px-3 py-3 text-center">{item.unit ?? "Đơn vị"}</td>
+                    <td className="whitespace-pre-wrap px-3 py-3 text-slate-500">{item.description ?? ""}</td>
                     <td className="px-3 py-3 text-center">{item.quantity}</td>
                     <td className="px-3 py-3 text-right">
                       <CurrencyDisplay amount={item.unitPrice} />

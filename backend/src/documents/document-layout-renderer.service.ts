@@ -542,7 +542,7 @@ export class DocumentLayoutRendererService {
   ): FlowFragment[] {
     const sourceRows = getByPath(flowContext, box.content.source);
     const rows = Array.isArray(sourceRows) ? sourceRows : [];
-    const rowHeights = this.estimateLineItemsRowHeights(box, rows);
+    const rowHeights = this.estimateLineItemsRowHeights(box, rows, flowContext);
     const fontSize = box.style?.fontSize ?? 9;
     const lineHeight = box.style?.lineHeight ?? 1.35;
     const padding = box.style?.padding ?? 2;
@@ -593,12 +593,16 @@ export class DocumentLayoutRendererService {
     });
   }
 
-  private estimateLineItemsRowHeights(box: Extract<TemplateBox, { type: "line_items_table" }>, rows: unknown[]) {
+  private estimateLineItemsRowHeights(
+    box: Extract<TemplateBox, { type: "line_items_table" }>,
+    rows: unknown[],
+    context?: Record<string, unknown>
+  ) {
     const fontSizePt = box.style?.fontSize ?? 9;
     const lineHeight = box.style?.lineHeight ?? 1.35;
     const rowVerticalPaddingMm = 3.2;
     const textLineHeightMm = fontSizePt * 0.3528 * lineHeight;
-    const columnPercents = this.getLineItemColumnPercents(box);
+    const columnPercents = this.getLineItemColumnPercents(box, context);
 
     return rows.map((row, index) => {
       const rowContext = {
@@ -678,7 +682,10 @@ export class DocumentLayoutRendererService {
       .reduce((sum, line) => sum + Math.max(1, Math.ceil(line.length / charsPerLine)), 0);
   }
 
-  private getLineItemColumnPercents(box: Extract<TemplateBox, { type: "line_items_table" }>) {
+  private getLineItemColumnPercents(
+    box: Extract<TemplateBox, { type: "line_items_table" }>,
+    context?: Record<string, unknown>
+  ) {
     const roles = box.content.columns.map((column) => this.getLineItemColumnRole(column));
     const roleSet = new Set(roles);
     const isStandardCommercialTable =
@@ -687,10 +694,6 @@ export class DocumentLayoutRendererService {
       roleSet.has("quantity") &&
       roleSet.has("unitPrice") &&
       roleSet.has("total");
-
-    if (!isStandardCommercialTable) {
-      return this.normalizeRawColumnPercents(box);
-    }
 
     const weightsWithDescription: Record<LineItemColumnRole, number> = {
       index: 6,
@@ -711,10 +714,40 @@ export class DocumentLayoutRendererService {
       other: 8
     };
     const weights = roleSet.has("description") ? weightsWithDescription : weightsWithoutDescription;
-    const raw = roles.map((role) => weights[role] || weights.other);
+    const quoteOverrides = this.getQuoteTableColumnWidthOverrides(context);
+    if (!isStandardCommercialTable && !quoteOverrides) {
+      return this.normalizeRawColumnPercents(box);
+    }
+
+    const raw = roles.map((role, index) => {
+      const column = box.content.columns[index];
+      const exactOverride = column ? quoteOverrides?.[column.id] : undefined;
+      const roleOverride = quoteOverrides?.[role];
+      return exactOverride ?? roleOverride ?? weights[role] ?? weights.other;
+    });
     const total = raw.reduce((sum, value) => sum + value, 0) || 1;
 
     return raw.map((value) => (value / total) * 100);
+  }
+
+  private getQuoteTableColumnWidthOverrides(context?: Record<string, unknown>) {
+    const raw = (
+      context
+        ? getByPath(context, "quote.tableColumnWidths") ?? getByPath(context, "tableColumnWidths")
+        : undefined
+    );
+
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return undefined;
+    }
+
+    return Object.entries(raw as Record<string, unknown>).reduce<Record<string, number>>((result, [key, value]) => {
+      const numericValue = Number(value);
+      if (Number.isFinite(numericValue) && numericValue > 0) {
+        result[key] = numericValue;
+      }
+      return result;
+    }, {});
   }
 
   private normalizeRawColumnPercents(box: Extract<TemplateBox, { type: "line_items_table" }>) {
@@ -808,7 +841,7 @@ export class DocumentLayoutRendererService {
     if (box.type === "line_items_table") {
       const rows = getByPath(context, box.content.source);
       const lineItems = Array.isArray(rows) ? rows : [];
-      const columnPercents = this.getLineItemColumnPercents(box);
+      const columnPercents = this.getLineItemColumnPercents(box, context);
       const colgroup = box.content.columns
         .map((_column, index) => `<col style="width:${(columnPercents[index] ?? 1).toFixed(4)}%" />`)
         .join("");

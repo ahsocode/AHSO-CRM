@@ -22,10 +22,20 @@ export const createQuoteItemSchema = z.object({
   unitPrice: z.coerce.number().min(0, "Đơn giá không được âm").max(999_999_999_999)
 });
 
+export const quoteTableColumnWidthsSchema = z.object({
+  index: z.coerce.number().min(3).max(25),
+  name: z.coerce.number().min(10).max(75),
+  description: z.coerce.number().min(10).max(75),
+  quantity: z.coerce.number().min(3).max(25),
+  unitPrice: z.coerce.number().min(6).max(40),
+  total: z.coerce.number().min(6).max(40)
+});
+
 export const createQuoteSchema = z.object({
   projectId: z.string().trim().min(1, "Dự án là bắt buộc"),
   validUntil: optionalDate,
   taxRate: z.coerce.number().min(0, "Thuế suất phải từ 0%").max(100, "Thuế suất tối đa 100%").default(10),
+  tableColumnWidths: quoteTableColumnWidthsSchema.optional(),
   terms: optionalString(2000),
   deliveryTerms: optionalString(2000),
   internalNote: optionalString(2000),

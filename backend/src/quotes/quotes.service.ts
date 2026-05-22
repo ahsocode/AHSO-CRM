@@ -15,6 +15,10 @@ import { QuotesPdfService } from "./quotes-pdf.service";
 const EXPIRING_SOON_WINDOW_DAYS = 7;
 const EDITABLE_QUOTE_STATUSES = ["DRAFT", "REJECTED"] as const;
 const PRE_SALE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING"] as const;
+const QUOTE_TABLE_COLUMN_KEYS = ["index", "name", "description", "quantity", "unitPrice", "total"] as const;
+
+type QuoteTableColumnKey = (typeof QUOTE_TABLE_COLUMN_KEYS)[number];
+type QuoteTableColumnWidths = Record<QuoteTableColumnKey, number>;
 
 @Injectable()
 export class QuotesService {
@@ -152,6 +156,7 @@ export class QuotesService {
       taxRate: Number(quote.taxRate),
       taxAmount: Number(quote.taxAmount),
       total: Number(quote.total),
+      tableColumnWidths: this.normalizeQuoteTableColumnWidths(quote.tableColumnWidths),
       terms: quote.terms,
       deliveryTerms: quote.deliveryTerms,
       internalNote: quote.internalNote,
@@ -247,6 +252,7 @@ export class QuotesService {
           taxRate: dto.taxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
+          ...this.buildTableColumnWidthsPayload(dto.tableColumnWidths),
           terms: dto.terms,
           deliveryTerms: dto.deliveryTerms,
           internalNote: dto.internalNote,
@@ -300,6 +306,7 @@ export class QuotesService {
           taxRate: dto.taxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
+          ...this.buildTableColumnWidthsPayload(dto.tableColumnWidths),
           terms: dto.terms,
           deliveryTerms: dto.deliveryTerms,
           internalNote: dto.internalNote,
@@ -357,6 +364,7 @@ export class QuotesService {
           taxRate: quote.taxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
+          ...this.buildTableColumnWidthsPayload(quote.tableColumnWidths),
           terms: quote.terms,
           deliveryTerms: quote.deliveryTerms,
           internalNote: quote.internalNote,
@@ -887,6 +895,30 @@ export class QuotesService {
       unitPrice: item.unitPrice,
       total: Math.round(item.quantity * item.unitPrice)
     }));
+  }
+
+  private normalizeQuoteTableColumnWidths(input: unknown): QuoteTableColumnWidths | undefined {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return undefined;
+    }
+
+    const raw = input as Record<string, unknown>;
+    const next = QUOTE_TABLE_COLUMN_KEYS.reduce<Partial<QuoteTableColumnWidths>>((result, key) => {
+      const value = Number(raw[key]);
+      if (Number.isFinite(value) && value > 0) {
+        result[key] = Math.round(value * 100) / 100;
+      }
+      return result;
+    }, {});
+
+    return QUOTE_TABLE_COLUMN_KEYS.every((key) => typeof next[key] === "number")
+      ? (next as QuoteTableColumnWidths)
+      : undefined;
+  }
+
+  private buildTableColumnWidthsPayload(input: unknown): { tableColumnWidths: QuoteTableColumnWidths } | Record<string, never> {
+    const tableColumnWidths = this.normalizeQuoteTableColumnWidths(input);
+    return tableColumnWidths ? { tableColumnWidths } : {};
   }
 
   private buildQuoteTotals(

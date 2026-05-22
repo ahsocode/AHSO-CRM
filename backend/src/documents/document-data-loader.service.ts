@@ -101,8 +101,10 @@ export class DocumentDataLoaderService {
         subtotal: Number(quote.subtotal),
         taxRate: Number(quote.taxRate),
         taxAmount: Number(quote.taxAmount),
-        total: Number(quote.total)
+        total: Number(quote.total),
+        tableColumnWidths: quote.tableColumnWidths
       },
+      tableColumnWidths: quote.tableColumnWidths,
       items: quote.items.map((item) => ({
         ...item,
         quantity: Number(item.quantity),

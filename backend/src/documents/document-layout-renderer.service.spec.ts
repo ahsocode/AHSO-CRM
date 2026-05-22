@@ -211,4 +211,63 @@ describe("DocumentLayoutRendererService", () => {
     expect(html).toContain("Điều khoản triển khai số 1");
     expect(html).toContain("Điều khoản triển khai số 80");
   });
+
+  it("applies quote-specific line item column widths without changing the template", () => {
+    const layout: DocumentTemplateLayout = {
+      version: 1,
+      page: basePage,
+      pages: [
+        {
+          id: "page-1",
+          boxes: [
+            {
+              id: "quote-items",
+              type: "line_items_table",
+              page: 0,
+              x: 12,
+              y: 48,
+              width: 186,
+              height: 80,
+              zIndex: 2,
+              visible: true,
+              style: { fontSize: 9, lineHeight: 1.35, padding: 1 },
+              content: {
+                source: "items",
+                columns: [
+                  { id: "stt", label: { vi: "STT" }, value: "{{index}}", width: 10, align: "center" },
+                  { id: "name", label: { vi: "Hạng mục" }, value: "{{name}}", width: 58 },
+                  { id: "description", label: { vi: "Mô tả" }, value: "{{description}}", width: 48 },
+                  { id: "qty", label: { vi: "SL" }, value: "{{quantity}}", width: 14, align: "center" },
+                  { id: "unit", label: { vi: "Đơn giá" }, value: "{{unitPrice|currency}}", width: 28, align: "right" },
+                  { id: "total", label: { vi: "Thành tiền" }, value: "{{total|currency}}", width: 28, align: "right" }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    };
+
+    const html = service.render(
+      layout,
+      {
+        quote: {
+          tableColumnWidths: {
+            index: 5,
+            name: 30,
+            description: 35,
+            quantity: 5,
+            unitPrice: 10,
+            total: 15
+          }
+        },
+        items: [{ name: "Máy đóng gói", description: "Mô tả dài", quantity: 1, unitPrice: 1000, total: 1000 }]
+      },
+      "vi"
+    );
+
+    expect(html).toContain('width:35.0000%');
+    expect(html).toContain('width:30.0000%');
+    expect(html).toContain('width:15.0000%');
+  });
 });

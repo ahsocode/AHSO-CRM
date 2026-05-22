@@ -7,6 +7,16 @@ import { UploadService } from "../upload/upload.service";
 import { QuotesService } from "./quotes.service";
 
 type QuotePdfData = Awaited<ReturnType<QuotesService["findOne"]>>;
+type QuoteTableColumnWidths = NonNullable<QuotePdfData["tableColumnWidths"]>;
+
+const DEFAULT_QUOTE_TABLE_COLUMN_WIDTHS: QuoteTableColumnWidths = {
+  index: 6,
+  name: 41,
+  description: 23,
+  quantity: 6,
+  unitPrice: 12,
+  total: 12
+};
 
 @Injectable()
 export class QuotesPdfService {
@@ -68,6 +78,7 @@ export class QuotesPdfService {
       stringOrFallback(quote.deliveryTerms) ||
       stringOrFallback(policies.service) ||
       "Tiến độ triển khai sẽ được xác nhận theo survey và kế hoạch điều động kỹ thuật.";
+    const tableWidths = normalizeQuoteTableWidths(quote.tableColumnWidths);
 
     const contactLine = [
       quote.project.customer.primaryContact?.name ? escapeHtml(quote.project.customer.primaryContact.name) : "Chưa thiết lập",
@@ -89,9 +100,8 @@ export class QuotesPdfService {
             <td class="center">${String(index + 1).padStart(2, "0")}</td>
             <td>
               <div class="item-name">${escapeHtml(item.name)}</div>
-              ${item.description ? `<div class="muted">${escapeHtml(item.description)}</div>` : ""}
             </td>
-            <td class="center">${escapeHtml(item.unit ?? "Đơn vị")}</td>
+            <td>${item.description ? `<div class="muted">${escapeHtml(item.description)}</div>` : ""}</td>
             <td class="center">${formatQuantity(item.quantity)}</td>
             <td class="right">${formatCurrency(item.unitPrice)}</td>
             <td class="right strong">${formatCurrency(item.total)}</td>
@@ -168,11 +178,19 @@ export class QuotesPdfService {
             </p>
 
             <table>
+              <colgroup>
+                <col style="width:${tableWidths.index.toFixed(4)}%" />
+                <col style="width:${tableWidths.name.toFixed(4)}%" />
+                <col style="width:${tableWidths.description.toFixed(4)}%" />
+                <col style="width:${tableWidths.quantity.toFixed(4)}%" />
+                <col style="width:${tableWidths.unitPrice.toFixed(4)}%" />
+                <col style="width:${tableWidths.total.toFixed(4)}%" />
+              </colgroup>
               <thead>
                 <tr>
                   <th class="center">STT</th>
-                  <th>Hạng mục / Quy cách</th>
-                  <th class="center">ĐVT</th>
+                  <th>Hạng mục</th>
+                  <th>Mô tả</th>
                   <th class="center">SL</th>
                   <th class="right">Đơn giá</th>
                   <th class="right">Thành tiền</th>
@@ -244,6 +262,7 @@ function basePdfStyles() {
     .lead { margin: 18px 0 0; font-size: 12px; line-height: 1.7; color: #5D6D7E; }
     .muted { color: #5D6D7E; line-height: 1.6; }
     table { width: 100%; border-collapse: collapse; margin-top: 16px; border: 1px solid #D5D8DC; border-radius: 16px; overflow: hidden; }
+    table { table-layout: fixed; }
     thead tr { background: #1A5276; color: #ffffff; }
     th { padding: 10px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; }
     td { padding: 10px 12px; border-top: 1px solid #E5E7EB; vertical-align: top; }
@@ -258,7 +277,21 @@ function basePdfStyles() {
     .chip { display: inline-block; padding: 6px 12px; border-radius: 999px; background: #EBF5FB; color: #1A5276; font-weight: 700; font-size: 11px; }
     .signature { min-width: 220px; text-align: center; }
     .signature-line { margin-top: 72px; padding-top: 8px; border-top: 1px solid #D5D8DC; font-size: 12px; color: #5D6D7E; }
-  `;
+`;
+}
+
+function normalizeQuoteTableWidths(widths?: QuoteTableColumnWidths | null) {
+  const next = widths ?? DEFAULT_QUOTE_TABLE_COLUMN_WIDTHS;
+  const total = Object.values(next).reduce((sum, value) => sum + Number(value || 0), 0) || 1;
+
+  return {
+    index: (next.index / total) * 100,
+    name: (next.name / total) * 100,
+    description: (next.description / total) * 100,
+    quantity: (next.quantity / total) * 100,
+    unitPrice: (next.unitPrice / total) * 100,
+    total: (next.total / total) * 100
+  };
 }
 
 function escapeHtml(value: string) {

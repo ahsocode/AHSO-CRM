@@ -1006,6 +1006,15 @@ export interface QuoteDetailItem {
   total: number;
 }
 
+export interface QuoteTableColumnWidths {
+  index: number;
+  name: number;
+  description: number;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
 export interface QuoteDetail {
   id: string;
   quoteNo: string;
@@ -1016,6 +1025,7 @@ export interface QuoteDetail {
   taxRate: number;
   taxAmount: number;
   total: number;
+  tableColumnWidths?: QuoteTableColumnWidths | null;
   terms?: string | null;
   deliveryTerms?: string | null;
   internalNote?: string | null;
@@ -1041,6 +1051,7 @@ export interface QuoteCreateInput {
   projectId: string;
   validUntil?: string;
   taxRate: number;
+  tableColumnWidths?: QuoteTableColumnWidths;
   terms?: string;
   deliveryTerms?: string;
   internalNote?: string;

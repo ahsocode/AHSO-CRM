@@ -282,6 +282,7 @@ model Quote {
   taxRate           Decimal            @default(10) @db.Decimal(5, 2)
   taxAmount         Decimal            @default(0) @db.Decimal(15, 0)
   total             Decimal            @default(0) @db.Decimal(15, 0)
+  tableColumnWidths Json?
   terms             String?
   deliveryTerms     String?
   internalNote      String?

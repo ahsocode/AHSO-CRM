@@ -1,4 +1,4 @@
-import type { StockDocStatus } from "./types";
+import type { StockDocStatus, SurveyNoteType } from "./types";
 
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "AHSO CRM";
 
@@ -51,6 +51,7 @@ export const NAV_ITEMS = [
   { href: "/quotes", label: "Báo giá", icon: "description" },
   { href: "/contracts", label: "Hợp đồng", icon: "contract" },
   { href: "/activities", label: "Hoạt động", icon: "history" },
+  { href: "/surveys", label: "Khảo sát", icon: "search" },
   { href: "/calendar", label: "Lịch công tác", icon: "calendar" },
   { href: "/mailbox", label: "Mailbox", icon: "mail" },
   { href: "/agents", label: "AI Agents", icon: "smart_toy" },
@@ -113,4 +114,24 @@ export const STOCK_DOC_STATUS_COLORS: Record<StockDocStatus, string> = {
   DRAFT: "text-text-secondary bg-bg-hover",
   CONFIRMED: "text-success bg-success-bg",
   CANCELLED: "text-danger bg-danger-bg",
+};
+
+export const SURVEY_NOTE_TYPE_LABELS: Record<SurveyNoteType, string> = {
+  GENERAL: "Chung",
+  TECHNICAL_REQUIREMENT: "Yêu cầu kỹ thuật",
+  COMMERCIAL_REQUIREMENT: "Yêu cầu thương mại",
+  SITE_CONSTRAINT: "Ràng buộc thực địa",
+  RISK: "Rủi ro",
+  DECISION: "Quyết định",
+  OPEN_QUESTION: "Câu hỏi mở",
+};
+
+export const SURVEY_NOTE_TYPE_COLORS: Record<SurveyNoteType, string> = {
+  GENERAL: "text-text-secondary bg-bg-hover",
+  TECHNICAL_REQUIREMENT: "text-primary-mid bg-primary-bg",
+  COMMERCIAL_REQUIREMENT: "text-accent bg-accent-bg",
+  SITE_CONSTRAINT: "text-warning bg-warning-bg",
+  RISK: "text-danger bg-danger-bg",
+  DECISION: "text-success bg-success-bg",
+  OPEN_QUESTION: "text-text-muted bg-bg-subtle",
 };

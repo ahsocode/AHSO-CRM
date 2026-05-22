@@ -1994,3 +1994,21 @@ export interface InventorySummary {
   draftDocsCount: number;
   warehouseCount: number;
 }
+
+// Survey list
+export interface SurveyListMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface SurveyListFilter {
+  page?: number;
+  limit?: number;
+  customerId?: string;
+  projectId?: string;
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}

@@ -225,4 +225,18 @@ export class AdminEmailAccountsController {
   remove(@Param("id") id: string) {
     return this.mailboxService.deleteAccount(id);
   }
+
+  @RequirePermissions("settings.view")
+  @ApiOperation({ summary: "POST /api/admin/email-accounts/:id/test-connection" })
+  @Post(":id/test-connection")
+  testConnection(@Param("id") id: string) {
+    return this.mailboxService.testAccountConnection(id);
+  }
+
+  @RequirePermissions("settings.edit")
+  @ApiOperation({ summary: "POST /api/admin/email-accounts/:id/sync" })
+  @Post(":id/sync")
+  triggerSync(@Param("id") id: string) {
+    return this.mailboxService.triggerAccountSync(id);
+  }
 }

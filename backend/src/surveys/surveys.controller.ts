@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Response } from "express";
@@ -11,10 +11,12 @@ import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import {
   AddSurveyNoteDto,
   CreateSurveyDto,
+  SurveyListFilterDto,
   UpdateSurveyDto,
   UploadSurveyMediaDto,
   addSurveyNoteSchema,
   createSurveySchema,
+  surveyListFilterSchema,
   updateSurveySchema,
   uploadSurveyMediaSchema
 } from "./dto/survey.dto";
@@ -28,6 +30,23 @@ const FILE_UPLOAD_OPTIONS = { limits: { fileSize: 10 * 1024 * 1024 } };
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SurveysController {
   constructor(private readonly surveysService: SurveysService) {}
+
+  @RequirePermissions("surveys.view")
+  @ApiOperation({ summary: "GET /api/surveys" })
+  @Get()
+  findAll(
+    @Query(new ZodValidationPipe(surveyListFilterSchema)) filters: SurveyListFilterDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.surveysService.findAll(filters, user);
+  }
+
+  @RequirePermissions("surveys.view")
+  @ApiOperation({ summary: "GET /api/surveys/:id" })
+  @Get(":id")
+  findOne(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.surveysService.findOne(id, user);
+  }
 
   @RequirePermissions("surveys.create")
   @ApiOperation({ summary: "POST /api/surveys" })

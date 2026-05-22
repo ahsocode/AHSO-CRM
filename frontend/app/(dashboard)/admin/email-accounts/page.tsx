@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { useAdminEmailAccounts, useBulkCreateEmailAccounts, useCreateEmailAccount, useDeleteEmailAccount } from "@/hooks/use-mailbox";
+import { useAdminEmailAccounts, useBulkCreateEmailAccounts, useCreateEmailAccount, useDeleteEmailAccount, useSyncEmailAccount, useTestEmailConnection } from "@/hooks/use-mailbox";
 import { useUsers } from "@/hooks/use-users";
 import { toast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -20,10 +20,14 @@ export default function AdminEmailAccountsPage() {
   const createMutation = useCreateEmailAccount();
   const deleteMutation = useDeleteEmailAccount();
   const bulkCreateMutation = useBulkCreateEmailAccounts();
+  const testConnectionMutation = useTestEmailConnection();
+  const syncMutation = useSyncEmailAccount();
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [imapHost, setImapHost] = useState("mail.ahso.vn");
   const [smtpHost, setSmtpHost] = useState("mail.ahso.vn");
+  const [imapPort, setImapPort] = useState("993");
+  const [imapSecure, setImapSecure] = useState(true);
 
   const handleBulkCreate = async () => {
     try {
@@ -41,8 +45,8 @@ export default function AdminEmailAccountsPage() {
         email,
         imapHost,
         smtpHost,
-        imapPort: 993,
-        imapSecure: true,
+        imapPort: parseInt(imapPort, 10) || 993,
+        imapSecure,
         smtpPort: 587
       });
       setUserId("");
@@ -97,6 +101,24 @@ export default function AdminEmailAccountsPage() {
               Thêm
             </Button>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Input
+              className="w-28"
+              type="number"
+              value={imapPort}
+              onChange={(e) => setImapPort(e.target.value)}
+              placeholder="IMAP port"
+            />
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-text-secondary">
+              <input
+                type="checkbox"
+                checked={imapSecure}
+                onChange={(e) => setImapSecure(e.target.checked)}
+                className="h-4 w-4"
+              />
+              IMAP Secure (TLS)
+            </label>
+          </div>
         </CardContent>
       </Card>
 
@@ -132,9 +154,43 @@ export default function AdminEmailAccountsPage() {
                       </td>
                       <td className="text-text-muted">{account.lastSyncAt ? formatDateTime(account.lastSyncAt) : "Chưa sync"}</td>
                       <td className="text-right">
-                        <Button type="button" size="sm" variant="outline" onClick={() => deleteMutation.mutate(account.id)}>
-                          Xóa
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={testConnectionMutation.isPending}
+                            onClick={async () => {
+                              try {
+                                const result = await testConnectionMutation.mutateAsync(account.id);
+                                toast({ title: result.message, variant: result.success ? "default" : "destructive" });
+                              } catch (error) {
+                                toast({ title: "Lỗi kiểm tra kết nối", description: getApiErrorMessage(error), variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Test
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={syncMutation.isPending}
+                            onClick={async () => {
+                              try {
+                                const result = await syncMutation.mutateAsync(account.id);
+                                toast({ title: result.message });
+                              } catch (error) {
+                                toast({ title: "Lỗi sync", description: getApiErrorMessage(error), variant: "destructive" });
+                              }
+                            }}
+                          >
+                            Sync
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => deleteMutation.mutate(account.id)}>
+                            Xóa
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -59,7 +59,18 @@ export const uploadSurveyMediaSchema = z.object({
   isImportant: optionalBoolean.default(false)
 });
 
+export const surveyListFilterSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  customerId: optionalString(80),
+  projectId: optionalString(80),
+  search: optionalString(200),
+  dateFrom: optionalDate,
+  dateTo: optionalDate
+});
+
 export type CreateSurveyDto = z.infer<typeof createSurveySchema>;
 export type UpdateSurveyDto = z.infer<typeof updateSurveySchema>;
 export type AddSurveyNoteDto = z.infer<typeof addSurveyNoteSchema>;
 export type UploadSurveyMediaDto = z.infer<typeof uploadSurveyMediaSchema>;
+export type SurveyListFilterDto = z.infer<typeof surveyListFilterSchema>;

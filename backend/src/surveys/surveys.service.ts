@@ -3,7 +3,7 @@ import type { Prisma, SurveyMediaKind } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { UploadService } from "../upload/upload.service";
-import { AddSurveyNoteDto, CreateSurveyDto, UpdateSurveyDto, UploadSurveyMediaDto } from "./dto/survey.dto";
+import { AddSurveyNoteDto, CreateSurveyDto, SurveyListFilterDto, UpdateSurveyDto, UploadSurveyMediaDto } from "./dto/survey.dto";
 
 const surveyInclude = {
   customer: {
@@ -69,6 +69,72 @@ export class SurveysService {
     private readonly prisma: PrismaService,
     private readonly uploadService: UploadService
   ) {}
+
+  async findAll(filters: SurveyListFilterDto, user: JwtUser) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.SurveyWhereInput = {
+      ...this.surveyAccessWhere(user),
+      ...(filters.customerId ? { customerId: filters.customerId } : {}),
+      ...(filters.projectId ? { projectId: filters.projectId } : {}),
+      ...(filters.search
+        ? {
+            OR: [
+              { title: { contains: filters.search, mode: "insensitive" as const } },
+              { location: { contains: filters.search, mode: "insensitive" as const } },
+              { summary: { contains: filters.search, mode: "insensitive" as const } }
+            ]
+          }
+        : {}),
+      ...(filters.dateFrom || filters.dateTo
+        ? {
+            surveyedAt: {
+              ...(filters.dateFrom ? { gte: filters.dateFrom } : {}),
+              ...(filters.dateTo ? { lte: filters.dateTo } : {})
+            }
+          }
+        : {})
+    };
+
+    const [surveys, total] = await this.prisma.$transaction([
+      this.prisma.survey.findMany({
+        where,
+        include: surveyInclude,
+        orderBy: [{ surveyedAt: "desc" }, { createdAt: "desc" }],
+        skip,
+        take: limit
+      }),
+      this.prisma.survey.count({ where })
+    ]);
+
+    return {
+      items: surveys.map((s) => this.mapSurvey(s)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.max(1, Math.ceil(total / limit))
+      }
+    };
+  }
+
+  async findOne(id: string, user: JwtUser) {
+    const survey = await this.prisma.survey.findFirst({
+      where: {
+        id,
+        ...this.surveyAccessWhere(user)
+      },
+      include: surveyInclude
+    });
+
+    if (!survey) {
+      throw new NotFoundException("Không tìm thấy khảo sát");
+    }
+
+    return this.mapSurvey(survey);
+  }
 
   async create(dto: CreateSurveyDto, user: JwtUser) {
     const link = await this.resolveSurveyLink(dto.customerId, dto.projectId, user);

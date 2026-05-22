@@ -149,6 +149,23 @@ export class MailboxService {
     return { success: true, message: "Đã xóa tài khoản email" };
   }
 
+  async testAccountConnection(accountId: string) {
+    const account = await this.prisma.emailAccount.findUnique({ where: { id: accountId } });
+    if (!account) throw new Error("Không tìm thấy tài khoản email");
+    const ok = await this.imapService.verifyCredentials(account.email, account.password, account.imapHost);
+    return {
+      success: ok,
+      message: ok ? "Kết nối IMAP thành công" : "Không thể kết nối — kiểm tra lại mật khẩu và host",
+    };
+  }
+
+  async triggerAccountSync(accountId: string) {
+    const account = await this.prisma.emailAccount.findUnique({ where: { id: accountId } });
+    if (!account) throw new Error("Không tìm thấy tài khoản email");
+    await this.syncService.syncAccount(account.id);
+    return { message: "Đã sync email" };
+  }
+
   async getFolders(userId: string): Promise<FolderInfo[]> {
     const account = await this.requireUserAccount(userId);
 

@@ -239,6 +239,32 @@ export function useBulkCreateEmailAccounts() {
   });
 }
 
+export function useTestEmailConnection() {
+  return useMutation({
+    mutationFn: async (accountId: string) => {
+      const response = await apiClient.post<ApiResponse<{ success: boolean; message: string }>>(
+        `/admin/email-accounts/${accountId}/test-connection`
+      );
+      return response.data.data;
+    },
+  });
+}
+
+export function useSyncEmailAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (accountId: string) => {
+      const response = await apiClient.post<ApiResponse<{ message: string }>>(
+        `/admin/email-accounts/${accountId}/sync`
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin", "email-accounts"] });
+    },
+  });
+}
+
 export function useMailboxSignature() {
   return useQuery({
     queryKey: ["mailbox", "signature"],

@@ -23,6 +23,10 @@ const contentSecurityPolicy = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  // Prevent webpack from bundling jsdom (used by isomorphic-dompurify server-side).
+  // Without this, webpack replaces __dirname with the bundle output path, causing
+  // jsdom to fail when looking for its default-stylesheet.css at build time.
+  serverExternalPackages: ["jsdom", "isomorphic-dompurify"],
   experimental: {
     typedRoutes: true
   },

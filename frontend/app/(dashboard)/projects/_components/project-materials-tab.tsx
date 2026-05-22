@@ -7,16 +7,14 @@ import { formatVND } from "@/lib/format";
 import { STOCK_DOC_STATUS_LABELS } from "@/lib/constants";
 
 export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
-  const issues = useStockIssues({ projectId, limit: 50, page: 1 });
+  const issues = useStockIssues({ projectId, status: "CONFIRMED", limit: 50, page: 1 });
 
   if (issues.isLoading) {
     return <div className="p-4 text-sm text-text-secondary">Đang tải...</div>;
   }
 
   const items = issues.data?.items ?? [];
-  const totalValue = items
-    .filter((i) => i.status === "CONFIRMED")
-    .reduce((s, i) => s + i.totalAmount, 0);
+  const totalValue = items.reduce((s, i) => s + i.totalAmount, 0);
 
   return (
     <div className="space-y-4">

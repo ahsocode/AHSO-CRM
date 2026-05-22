@@ -32,8 +32,8 @@ export class MaterialsController {
   @RequirePermissions("materials.view")
   @ApiOperation({ summary: "GET /api/materials/select" })
   @Get("select")
-  findAllSelect(@CurrentUser() user: JwtUser) {
-    return this.service.findAllSelect(user);
+  findAllSelect(@CurrentUser() user: JwtUser, @Query("search") search?: string) {
+    return this.service.findAllSelect(user, search);
   }
 
   @RequirePermissions("materials.view")

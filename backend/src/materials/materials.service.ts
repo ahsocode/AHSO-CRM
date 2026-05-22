@@ -59,9 +59,16 @@ export class MaterialsService {
     };
   }
 
-  async findAllSelect(_user: JwtUser) {
+  async findAllSelect(_user: JwtUser, search?: string) {
+    const where: Prisma.MaterialWhereInput = { deletedAt: null, isActive: true };
+    if (search?.trim()) {
+      where.OR = [
+        { name: { contains: search.trim(), mode: "insensitive" } },
+        { code: { contains: search.trim(), mode: "insensitive" } },
+      ];
+    }
     const items = await this.prisma.material.findMany({
-      where: { deletedAt: null, isActive: true },
+      where,
       take: 300,
       orderBy: { name: "asc" },
       select: { id: true, code: true, name: true, unit: true, salePrice: true },

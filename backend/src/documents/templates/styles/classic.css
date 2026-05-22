@@ -42,7 +42,7 @@
 }
 
 .classic-body {
-  font-family: "Times New Roman", Times, serif;
+  font-family: "Times New Roman", "FreeSerif", "DejaVu Serif", Times, serif;
   font-size: 12pt;
   line-height: 1.6;
   text-align: justify;

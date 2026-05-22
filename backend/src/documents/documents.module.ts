@@ -1,5 +1,4 @@
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config";
 import { SettingsModule } from "../settings/settings.module";
 import { UploadModule } from "../upload/upload.module";
 import { DocumentDataLoaderService } from "./document-data-loader.service";
@@ -13,7 +12,7 @@ import { PdfRendererService } from "./pdf-renderer.service";
 import { QuotationFlowHtmlRendererService } from "./quotation-flow-html-renderer.service";
 
 @Module({
-  imports: [ConfigModule, SettingsModule, UploadModule],
+  imports: [SettingsModule, UploadModule],
   controllers: [DocumentsController],
   providers: [
     DocumentsService,

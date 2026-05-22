@@ -1,16 +1,12 @@
 # Pull rclone binary for the backup/restore feature
 FROM rclone/rclone:latest AS rclone-src
 
-# Stage 1: system packages + chromium (changes rarely → stable cache layer)
+# Stage 1: system packages (changes rarely → stable cache layer)
 # alpine3.21 = latest patch; apk upgrade applies any remaining CVE fixes
 FROM node:20-alpine3.21 AS base
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 RUN apk upgrade --no-cache && \
   apk add --no-cache \
   openssl \
-  chromium \
-  nss \
   freetype \
   harfbuzz \
   ca-certificates \

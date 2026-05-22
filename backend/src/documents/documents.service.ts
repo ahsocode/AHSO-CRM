@@ -20,6 +20,7 @@ import type { DocumentListFilterDto } from "./dto/render-document.dto";
 import { registerHelpers } from "./helpers";
 import { I18nService } from "./i18n.service";
 import { PdfRendererService } from "./pdf-renderer.service";
+import { QuotationFlowHtmlRendererService } from "./quotation-flow-html-renderer.service";
 import { TEMPLATE_REGISTRY, TemplateRegistryEntry, getTemplateEntry } from "./template-registry";
 import { UploadService } from "../upload/upload.service";
 
@@ -53,6 +54,7 @@ export class DocumentsService implements OnModuleInit {
     private readonly i18n: I18nService,
     private readonly templateVariants: DocumentTemplateVariantsService,
     private readonly layoutRenderer: DocumentLayoutRendererService,
+    private readonly quotationFlowRenderer: QuotationFlowHtmlRendererService,
     private readonly uploadService: UploadService
   ) {}
 
@@ -99,14 +101,14 @@ export class DocumentsService implements OnModuleInit {
     return input === "vi-en" ? "viEn" : "vi";
   }
 
-  private wrapHtml(body: string, title: string, extraCss = ""): string {
+  private wrapHtml(body: string, title: string, extraCss = "", includeBaseCss = true): string {
     return `<!doctype html>
 <html lang="vi">
   <head>
     <meta charset="utf-8" />
     <title>${title}</title>
     <style>
-${this.cssBundle}
+${includeBaseCss ? this.cssBundle : ""}
 ${extraCss}
     </style>
   </head>
@@ -401,6 +403,11 @@ ${extraCss}
     title: string,
     templateVariantId?: string
   ) {
+    if (type === "QUOTATION") {
+      const body = this.quotationFlowRenderer.renderBody(context, language);
+      return this.wrapHtml(body, title, this.quotationFlowRenderer.getCss(), false);
+    }
+
     const activeVariant = templateVariantId
       ? await this.templateVariants.getPublishedRuntimeVariant(templateVariantId, type)
       : await this.templateVariants.getActiveVariant(type);

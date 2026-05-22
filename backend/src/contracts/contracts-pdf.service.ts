@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { JwtUser } from "../auth/auth.types";
-import { renderPdfBuffer } from "../common/pdf/pdf.utils";
+import { PdfRendererService } from "../documents/pdf-renderer.service";
 import { SettingsService } from "../settings/settings.service";
 import { UploadService } from "../upload/upload.service";
 import { ContractsService } from "./contracts.service";
@@ -14,7 +13,7 @@ export class ContractsPdfService {
     private readonly contractsService: ContractsService,
     private readonly settingsService: SettingsService,
     private readonly uploadService: UploadService,
-    private readonly configService: ConfigService
+    private readonly pdfRenderer: PdfRendererService
   ) {}
 
   async generateAcceptancePdf(contractId: string, user: JwtUser) {
@@ -23,18 +22,13 @@ export class ContractsPdfService {
       this.settingsService.getAllSettings()
     ]);
     const logoSrc = await this.resolveLogoSource(settings.logo);
-    const pdf = await renderPdfBuffer(
-      this.buildHtml(
-        contract,
-        settings.company ?? {},
-        logoSrc
-      ),
-      this.configService
+    const buffer = await this.pdfRenderer.render(
+      this.buildHtml(contract, settings.company ?? {}, logoSrc)
     );
 
     return {
       filename: `BBNT-${contract.contractNo}.pdf`,
-      buffer: Buffer.from(pdf)
+      buffer
     };
   }
 
@@ -279,9 +273,11 @@ const CONTRACT_LABELS = {
 
 function basePdfStyles() {
   return `
+    @font-face { font-family: "Noto Sans"; font-weight: 400; src: url("file:///usr/share/fonts/noto/NotoSans-Regular.ttf") format("truetype"), local("Noto Sans"); }
+    @font-face { font-family: "Noto Sans"; font-weight: 700; src: url("file:///usr/share/fonts/noto/NotoSans-Bold.ttf") format("truetype"), local("Noto Sans Bold"); }
     @page { size: A4; margin: 14mm 12mm; }
     * { box-sizing: border-box; }
-    body { margin: 0; color: #1C2833; font-family: Arial, "Helvetica Neue", sans-serif; font-size: 12px; }
+    body { margin: 0; color: #1C2833; font-family: "Noto Sans", "Helvetica Neue", Arial, sans-serif; font-size: 12px; }
     .page { width: 100%; }
     .doc-header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
     .brand { display: flex; align-items: center; gap: 12px; max-width: 46%; }

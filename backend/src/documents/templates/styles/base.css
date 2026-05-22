@@ -1,25 +1,30 @@
-/* Base styles shared by every document (classic + modern). Designed for
-   Puppeteer PDF rendering at A4. Fonts use system fallbacks so rendering
-   works without bundled font files; when the `.woff2` files are present
-   alongside this stylesheet they will be picked up automatically. */
+/* Base styles shared by every document (classic + modern). Fonts are loaded
+   from file:// paths so WeasyPrint reads the TTF directly (bypassing fontconfig)
+   and generates correct ToUnicode CMap for Vietnamese characters. The local()
+   fallbacks serve dev environments where exact paths may differ. */
 
 @font-face {
-  font-family: "Inter";
+  font-family: "Noto Sans";
   font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: local("Inter"), local("Inter-Regular");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  font-weight: 400;
+  src: url("file:///usr/share/fonts/noto/NotoSans-Regular.ttf") format("truetype"),
+       local("Noto Sans"), local("NotoSans-Regular");
 }
 
 @font-face {
-  font-family: "Be Vietnam Pro";
+  font-family: "Noto Sans";
   font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: local("Be Vietnam Pro"), local("BeVietnamPro-Regular");
-  /* Vietnamese extended range including combining diacritics */
-  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+1EA0-1EF9, U+20AB;
+  font-weight: 700;
+  src: url("file:///usr/share/fonts/noto/NotoSans-Bold.ttf") format("truetype"),
+       local("Noto Sans Bold"), local("NotoSans-Bold");
+}
+
+@font-face {
+  font-family: "Noto Sans";
+  font-style: italic;
+  font-weight: 400;
+  src: url("file:///usr/share/fonts/noto/NotoSans-Italic.ttf") format("truetype"),
+       local("Noto Sans Italic"), local("NotoSans-Italic");
 }
 
 @page {
@@ -33,7 +38,7 @@
 
 html,
 body {
-  font-family: "Be Vietnam Pro", "Inter", "Helvetica Neue", Arial, "Segoe UI", "Liberation Sans", sans-serif;
+  font-family: "Noto Sans", "Helvetica Neue", Arial, "Liberation Sans", sans-serif;
   font-size: 11.5pt;
   line-height: 1.55;
   color: #1f2937;

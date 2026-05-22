@@ -176,17 +176,17 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 80vh;
+  padding: 80pt 0 60pt 0;
   text-align: center;
 }
 
+/* Top accent band — rendered as a full-width block before the cover content
+   instead of position:absolute (WeasyPrint print context has no viewport). */
 .proposal-cover__band {
   height: 8pt;
   width: 100%;
   background: linear-gradient(90deg, var(--brand-primary) 0%, var(--brand-accent) 100%);
-  position: absolute;
-  top: 0;
-  left: 0;
+  margin-bottom: 40pt;
 }
 
 .proposal-cover__title {

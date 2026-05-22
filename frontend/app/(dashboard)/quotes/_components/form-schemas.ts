@@ -76,8 +76,8 @@ export const defaultQuoteFormValues: QuoteFormValues = {
   validUntil: defaultValidUntil,
   taxRate: 10,
   tableColumnWidths: defaultQuoteTableColumnWidths,
-  terms: "Thanh toán 50% khi xác nhận đơn hàng, phần còn lại khi nghiệm thu hoàn tất.",
-  deliveryTerms: "Thời gian triển khai dự kiến từ 15 đến 30 ngày kể từ ngày xác nhận PO.",
+  terms: "",
+  deliveryTerms: "",
   internalNote: "",
   status: "DRAFT",
   items: [createEmptyQuoteItem()]

@@ -74,6 +74,7 @@ export interface CompanyInfo {
 
 export interface Policies {
   paymentTerms?: string | null;
+  deliveryTerms?: string | null;
   taxTypes?: string | null;
   warranty?: string | null;
   service?: string | null;

@@ -23,6 +23,7 @@ import {
 } from "@/hooks/use-quotes";
 import { useProject, useProjects } from "@/hooks/use-projects";
 import { useMaterialsSelect } from "@/hooks/use-materials";
+import { usePolicies } from "@/hooks/use-settings";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { QUOTE_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -59,6 +60,7 @@ export function QuoteFormScreen({
   const createQuoteMutation = useCreateQuote();
   const updateQuoteMutation = useUpdateQuote(quoteId ?? "");
   const quoteQuery = useQuote(mode === "edit" ? quoteId ?? "" : "");
+  const policiesQuery = usePolicies();
   const projectsQuery = useProjects({
     page: 1,
     limit: 100
@@ -81,10 +83,12 @@ export function QuoteFormScreen({
     if (mode === "create") {
       form.reset({
         ...defaultQuoteFormValues,
-        projectId: initialProjectId
+        projectId: initialProjectId,
+        terms: policiesQuery.data?.paymentTerms ?? "",
+        deliveryTerms: policiesQuery.data?.deliveryTerms ?? ""
       });
     }
-  }, [form, initialProjectId, mode]);
+  }, [form, initialProjectId, mode, policiesQuery.data]);
 
   useEffect(() => {
     if (mode === "edit" && quoteQuery.data) {

@@ -12,6 +12,7 @@ import { Policies } from "@/lib/types";
 
 const policyEditorSchema = z.object({
   paymentTerms: z.string().max(500, "Điều khoản thanh toán không được vượt quá 500 ký tự").optional().or(z.literal("")),
+  deliveryTerms: z.string().max(500, "Điều khoản giao hàng không được vượt quá 500 ký tự").optional().or(z.literal("")),
   taxTypes: z.string().max(500, "Thông tin thuế không được vượt quá 500 ký tự").optional().or(z.literal("")),
   warranty: z.string().max(500, "Chính sách bảo hành không được vượt quá 500 ký tự").optional().or(z.literal("")),
   service: z.string().max(500, "Chính sách dịch vụ không được vượt quá 500 ký tự").optional().or(z.literal(""))
@@ -26,6 +27,7 @@ function toOptionalString(value?: string) {
 function normalizePolicies(values?: Policies): PolicyEditorValues {
   return {
     paymentTerms: values?.paymentTerms ?? "",
+    deliveryTerms: values?.deliveryTerms ?? "",
     taxTypes: values?.taxTypes ?? "",
     warranty: values?.warranty ?? "",
     service: values?.service ?? ""
@@ -78,6 +80,7 @@ export function PolicyEditor({
           onSubmit={form.handleSubmit((values) => {
           onSubmit({
               paymentTerms: toOptionalString(values.paymentTerms),
+              deliveryTerms: toOptionalString(values.deliveryTerms),
               taxTypes: toOptionalString(values.taxTypes),
               warranty: toOptionalString(values.warranty),
               service: toOptionalString(values.service)
@@ -86,6 +89,7 @@ export function PolicyEditor({
         >
           {[
             { key: "paymentTerms", label: "Điều khoản thanh toán" },
+            { key: "deliveryTerms", label: "Điều khoản giao hàng / triển khai" },
             { key: "taxTypes", label: "Loại thuế / VAT" },
             { key: "warranty", label: "Chính sách bảo hành" },
             { key: "service", label: "Chính sách dịch vụ" }

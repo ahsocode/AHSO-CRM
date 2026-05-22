@@ -1,7 +1,12 @@
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from "dompurify";
 
 export function sanitizeEmailHtml(html?: string | null, showImages = false): string {
   if (!html) return "";
+
+  // Server-side pre-rendering: dompurify requires a real browser DOM and cannot
+  // run in Node.js. Return the raw HTML here — the component renders it inside
+  // a sandboxed <iframe>, and DOMPurify runs again on the client after hydration.
+  if (typeof window === "undefined") return html;
 
   // Block external tracking images before sanitize
   if (!showImages) {

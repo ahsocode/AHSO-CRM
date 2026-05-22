@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { PolicyItemType } from "@prisma/client";
 import { RequirePermissions } from "src/common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
@@ -12,17 +13,20 @@ import {
 } from "./dto/policy-item.dto";
 import { PolicyItemsService } from "./policy-items.service";
 
+@ApiTags("policy-items")
 @Controller("policy-items")
 @UseGuards(JwtAuthGuard)
 export class PolicyItemsController {
   constructor(private readonly service: PolicyItemsService) {}
 
   @Get()
+  @ApiOperation({ summary: "List policy items, optionally filtered by type" })
   findAll(@Query("type") type?: PolicyItemType) {
     return this.service.findAll(type);
   }
 
   @Post()
+  @ApiOperation({ summary: "Create a policy item" })
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
   create(@Body(new ZodValidationPipe(createPolicyItemSchema)) dto: CreatePolicyItemDto) {
@@ -30,6 +34,7 @@ export class PolicyItemsController {
   }
 
   @Patch(":id")
+  @ApiOperation({ summary: "Update a policy item" })
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
   update(
@@ -40,6 +45,7 @@ export class PolicyItemsController {
   }
 
   @Delete(":id")
+  @ApiOperation({ summary: "Delete a policy item" })
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
   remove(@Param("id") id: string) {

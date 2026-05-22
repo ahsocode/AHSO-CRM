@@ -376,7 +376,7 @@ export function InlinePreviewOverlay({
                   onChange: setDraftColumnWidths
                 });
               }}
-              sandbox="allow-same-origin allow-popups"
+              sandbox="allow-same-origin allow-popups allow-modals"
               className="h-full w-full bg-white"
             />
           )}

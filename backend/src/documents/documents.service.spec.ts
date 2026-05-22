@@ -7,6 +7,7 @@ import { DocumentTemplateVariantsService } from "./document-template-variants.se
 import { DocumentsService } from "./documents.service";
 import { I18nService } from "./i18n.service";
 import { PdfRendererService } from "./pdf-renderer.service";
+import { QuotationFlowHtmlRendererService } from "./quotation-flow-html-renderer.service";
 import { UploadService } from "../upload/upload.service";
 
 describe("DocumentsService", () => {
@@ -78,8 +79,10 @@ describe("DocumentsService", () => {
       {} as I18nService,
       {} as DocumentTemplateVariantsService,
       {} as DocumentLayoutRendererService,
+      {} as QuotationFlowHtmlRendererService,
       uploadService as unknown as UploadService
     );
+
 
     (service as unknown as { initialized: boolean }).initialized = true;
     jest.spyOn(service as any, "buildRenderContext").mockResolvedValue({

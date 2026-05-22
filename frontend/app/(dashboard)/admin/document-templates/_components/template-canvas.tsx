@@ -487,7 +487,11 @@ function createLineItemsFragments(
   const lineHeight = box.style?.lineHeight ?? 1.35;
   const padding = box.style?.padding ?? 2;
   const headerHeight = fontSize * 0.3528 * lineHeight + 3.2;
-  const maxChunkHeight = Math.min(Math.max(box.height, 90), getMaxContentHeight(layout));
+  const pageBottom = layout.page.heightMm - layout.page.marginMm.bottom;
+  const continuationStartY = layout.page.marginMm.top + 18;
+  const minimumChunkHeight = headerHeight + padding * 2 + Math.max(...rowHeights, headerHeight);
+  const firstChunkMaxHeight = Math.max(minimumChunkHeight, pageBottom - box.y);
+  const continuationMaxHeight = Math.max(minimumChunkHeight, pageBottom - continuationStartY);
   const chunks: unknown[][] = [];
   const chunkHeights: number[] = [];
   let currentRows: unknown[] = [];
@@ -495,7 +499,8 @@ function createLineItemsFragments(
 
   rows.forEach((row, index) => {
     const rowHeight = rowHeights[index] ?? headerHeight;
-    if (currentRows.length > 0 && currentHeight + rowHeight > maxChunkHeight) {
+    const currentMaxHeight = chunks.length === 0 ? firstChunkMaxHeight : continuationMaxHeight;
+    if (currentRows.length > 0 && currentHeight + rowHeight > currentMaxHeight) {
       chunks.push(currentRows);
       chunkHeights.push(currentHeight);
       currentRows = [];
@@ -525,7 +530,7 @@ function createLineItemsFragments(
         id: index === 0 ? box.id : `${box.id}__flow_table_${index + 1}`,
         content: { ...box.content, source: sourcePath }
       },
-      height: Math.max(box.height, chunkHeights[index] ?? box.height)
+      height: Math.max(headerHeight + padding * 2, chunkHeights[index] ?? headerHeight + padding * 2)
     };
   });
 }

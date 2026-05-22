@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useDownloadDocument, useRenderDocument } from "@/hooks/use-documents";
 import { apiClient, getApiErrorMessage } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,9 @@ export function DocumentPreviewClient({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const isReady = Boolean(type && entityId);
   const language = lang ?? "vi";
+  const renderDocument = useRenderDocument();
+  const downloadDocument = useDownloadDocument();
+  const isPdfPending = renderDocument.isPending || downloadDocument.isPending;
 
   const previewQuery = useQuery({
     queryKey: ["documents", "preview-page", type, entityId, language, templateVariantId],
@@ -36,6 +40,26 @@ export function DocumentPreviewClient({
     },
   });
 
+  const handleRenderPdf = async () => {
+    if (!type || !entityId) {
+      return;
+    }
+
+    const rendered = await renderDocument.mutateAsync({
+      type,
+      entityId,
+      payload: {
+        language: language === "vi-en" ? "vi-en" : "vi",
+        templateVariantId,
+      },
+    });
+
+    await downloadDocument.mutateAsync({
+      downloadUrl: rendered.downloadUrl,
+      filename: rendered.number,
+    });
+  };
+
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-6 md:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-4">
@@ -46,12 +70,16 @@ export function DocumentPreviewClient({
             </p>
             <h1 className="text-2xl font-bold text-text-primary">Xem trước tài liệu</h1>
             <p className="text-sm text-text-secondary">
-              Preview HTML được tải qua session hiện tại để giữ đúng quyền truy cập.
+              Preview HTML giữ đúng quyền truy cập; file PDF được render bằng backend để kiểm tra phân trang thật.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => iframeRef.current?.contentWindow?.print()} disabled={!previewQuery.data}>
-              In / Lưu PDF
+            <Button
+              variant="outline"
+              onClick={handleRenderPdf}
+              disabled={!previewQuery.data || isPdfPending}
+            >
+              {isPdfPending ? "Đang render..." : "In / Lưu PDF"}
             </Button>
             <Link href="/dashboard" className={cn(buttonVariants({ variant: "ghost" }))}>
               Về dashboard

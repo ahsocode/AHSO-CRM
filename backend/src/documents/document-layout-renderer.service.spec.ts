@@ -271,6 +271,57 @@ describe("DocumentLayoutRendererService", () => {
     expect(html).toContain('width:15.0000%');
   });
 
+  it("lets a line item table grow instead of splitting while it still fits the page", () => {
+    const layout: DocumentTemplateLayout = {
+      version: 1,
+      page: basePage,
+      pages: [
+        {
+          id: "page-1",
+          boxes: [
+            {
+              id: "quote-items",
+              type: "line_items_table",
+              page: 0,
+              x: 12,
+              y: 146,
+              width: 186,
+              height: 72,
+              zIndex: 2,
+              visible: true,
+              style: { fontSize: 9.2, lineHeight: 1.35, padding: 2 },
+              content: {
+                source: "items",
+                columns: [
+                  { id: "stt", label: { vi: "STT" }, value: "{{index}}", width: 10, align: "center" },
+                  { id: "name", label: { vi: "Hạng mục" }, value: "{{name}}", width: 58 },
+                  { id: "description", label: { vi: "Mô tả" }, value: "{{description}}", width: 48 },
+                  { id: "qty", label: { vi: "SL" }, value: "{{quantity}}", width: 14, align: "center" },
+                  { id: "unit", label: { vi: "Đơn giá" }, value: "{{unitPrice|currency}}", width: 28, align: "right" },
+                  { id: "total", label: { vi: "Thành tiền" }, value: "{{total|currency}}", width: 28, align: "right" }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    };
+    const description = "Cảm biến inline tích hợp cảnh báo và hỗ trợ nghiệm thu.";
+    const items = Array.from({ length: 6 }, (_, index) => ({
+      name: `Hạng mục kiểm tra chất lượng ${index + 1}`,
+      description,
+      quantity: 1,
+      unitPrice: 1000000,
+      total: 1000000
+    }));
+
+    const html = service.render(layout, { items }, "vi");
+
+    expect(countPages(html)).toBe(1);
+    expect(html.match(/schema-document__table/g)?.length ?? 0).toBe(1);
+    expect(html).not.toContain("__flow_table_2");
+  });
+
   it("keeps a signature block on the same page when the original spacing fits", () => {
     const layout: DocumentTemplateLayout = {
       version: 1,

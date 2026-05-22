@@ -1,6 +1,7 @@
 -- Convert Webhook.createdBy into a nullable FK relation to User.
 DROP INDEX IF EXISTS "Webhook_createdBy_createdAt_idx";
 ALTER TABLE "Webhook" RENAME COLUMN "createdBy" TO "createdById";
+ALTER TABLE "Webhook" ALTER COLUMN "createdById" DROP NOT NULL;
 UPDATE "Webhook"
 SET "createdById" = NULL
 WHERE "createdById" IS NOT NULL

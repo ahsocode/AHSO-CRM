@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { PolicyItemType } from "@prisma/client";
 import { RequirePermissions } from "src/common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
@@ -14,6 +14,7 @@ import {
 import { PolicyItemsService } from "./policy-items.service";
 
 @ApiTags("policy-items")
+@ApiBearerAuth()
 @Controller("policy-items")
 @UseGuards(JwtAuthGuard)
 export class PolicyItemsController {

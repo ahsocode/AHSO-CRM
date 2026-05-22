@@ -73,6 +73,7 @@ export function useUpdateQuote(quoteId: string) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["quotes"] });
       await queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
+      await queryClient.invalidateQueries({ queryKey: ["documents", "inline-preview"] });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       await queryClient.invalidateQueries({ queryKey: ["reports"] });

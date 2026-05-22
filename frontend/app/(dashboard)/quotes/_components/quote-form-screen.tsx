@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
@@ -80,6 +80,9 @@ export function QuoteFormScreen({
     name: "items"
   });
 
+  // Track which quoteId has already been loaded to prevent re-reset on background refetches.
+  const initializedQuoteIdRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     if (mode === "create") {
       form.reset({
@@ -92,7 +95,8 @@ export function QuoteFormScreen({
   }, [form, initialProjectId, mode, policiesQuery.data]);
 
   useEffect(() => {
-    if (mode === "edit" && quoteQuery.data) {
+    if (mode === "edit" && quoteQuery.data && initializedQuoteIdRef.current !== quoteQuery.data.id) {
+      initializedQuoteIdRef.current = quoteQuery.data.id;
       form.reset({
         projectId: quoteQuery.data.project.id,
         validUntil: quoteQuery.data.validUntil ? quoteQuery.data.validUntil.slice(0, 10) : "",

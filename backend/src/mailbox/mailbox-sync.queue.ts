@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit, forwardRef, Inject } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Job, Queue, Worker } from "bullmq";
 import type { ConnectionOptions } from "bullmq";
@@ -30,7 +30,7 @@ export class MailboxSyncQueue implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly syncService: MailboxSyncService,
+    @Inject(forwardRef(() => MailboxSyncService)) private readonly syncService: MailboxSyncService,
   ) {}
 
   onModuleInit() {

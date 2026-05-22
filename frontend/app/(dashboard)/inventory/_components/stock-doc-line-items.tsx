@@ -7,6 +7,18 @@ import {
   useFieldArray,
   useWatch,
 } from "react-hook-form";
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { GripVertical } from "lucide-react";
 import { useMaterialsSelect } from "@/hooks/use-materials";
 import { AppIcon } from "@/components/shared/app-icon";
 import { Button } from "@/components/ui/button";
@@ -164,6 +176,30 @@ function toInputString(value: unknown) {
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
+// ─── Sortable shell (same pattern as quote form) ─────────────────────────────
+
+function SortableItemShell({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: (handleProps: React.HTMLAttributes<HTMLElement>) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      {...attributes}
+      className={isDragging ? "relative z-50 opacity-40" : undefined}
+    >
+      {children(listeners ?? {})}
+    </div>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function StockDocLineItems({
@@ -173,12 +209,24 @@ export function StockDocLineItems({
   fieldName,
   disabled,
 }: StockDocLineItemsProps) {
-  const { fields, append, remove } = useFieldArray({ control, name: fieldName });
+  const { fields, append, remove, move } = useFieldArray({ control, name: fieldName });
   const watchedItems = (useWatch({ control, name: fieldName }) ?? []) as Array<Record<string, unknown>>;
 
   const showPrice = mode === "receipt" || mode === "issue";
   const showCount = mode === "count";
   const showTransfer = mode === "transfer";
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const from = fields.findIndex((f) => f.id === active.id);
+    const to = fields.findIndex((f) => f.id === over.id);
+    if (from !== -1 && to !== -1) move(from, to);
+  }
 
   return (
     <div className="space-y-4">
@@ -211,6 +259,8 @@ export function StockDocLineItems({
       </div>
 
       {/* Rows */}
+      <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
       {fields.map((field, index) => {
         const item = watchedItems[index] ?? {};
         const qty = Number(item.quantity) || 0;
@@ -221,17 +271,28 @@ export function StockDocLineItems({
         const diff = actual - system;
 
         return (
+          <SortableItemShell key={field.id} id={field.id} disabled={disabled}>
+          {(dragHandleProps) => (
           <div
-            key={field.id}
             className={cn(
               "grid gap-2 rounded-xl border border-border/60 bg-white p-3",
               "md:items-center",
-              showPrice && "md:grid-cols-[2fr_80px_100px_140px_140px_36px]",
-              showCount && "md:grid-cols-[2fr_80px_100px_100px_80px_36px]",
-              showTransfer && "md:grid-cols-[2fr_80px_100px_36px]",
-              !showPrice && !showCount && !showTransfer && "md:grid-cols-[2fr_80px_100px_36px]"
+              showPrice && "md:grid-cols-[auto_2fr_80px_100px_140px_140px_36px]",
+              showCount && "md:grid-cols-[auto_2fr_80px_100px_100px_80px_36px]",
+              showTransfer && "md:grid-cols-[auto_2fr_80px_100px_36px]",
+              !showPrice && !showCount && !showTransfer && "md:grid-cols-[auto_2fr_80px_100px_36px]"
             )}
           >
+            {/* Drag handle */}
+            {!disabled && (
+              <div
+                {...dragHandleProps}
+                className="hidden cursor-grab items-center rounded p-0.5 text-text-muted hover:bg-bg-hover hover:text-text-secondary active:cursor-grabbing md:flex"
+                title="Kéo để sắp xếp"
+              >
+                <GripVertical className="h-4 w-4" />
+              </div>
+            )}
             {/* Material picker */}
             <div className="min-w-0">
               <span className="mb-1 block text-xs text-text-muted md:hidden">Vật tư</span>
@@ -351,8 +412,12 @@ export function StockDocLineItems({
               </Button>
             </div>
           </div>
+          )}
+          </SortableItemShell>
         );
       })}
+      </SortableContext>
+      </DndContext>
 
       {!disabled && (
         <Button

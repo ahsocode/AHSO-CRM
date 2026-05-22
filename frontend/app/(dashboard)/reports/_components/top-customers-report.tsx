@@ -10,9 +10,11 @@ import {
 } from "recharts";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatVNDShort } from "@/lib/format";
 import { ReportTopCustomer, ReportsOverview } from "@/lib/types";
+import { cn, downloadExcelRows } from "@/lib/utils";
 
 export function TopCustomersReport({
   customers,
@@ -35,9 +37,28 @@ export function TopCustomersReport({
   return (
     <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
       <Card className="border border-white/70">
-        <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Top Customers</p>
-          <CardTitle>Khách hàng mang tiền về</CardTitle>
+        <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Top Customers</p>
+            <CardTitle>Khách hàng mang tiền về</CardTitle>
+          </div>
+          {(customers ?? []).length > 0 && (
+            <button
+              type="button"
+              onClick={async () => {
+                const rows = (customers ?? []).map((c) => ({
+                  "Khách hàng": c.name,
+                  "Đã thu": c.paidAmount,
+                  "Giá trị hợp đồng": c.contractValue,
+                  "Số dự án": c.projectCount,
+                }));
+                await downloadExcelRows("top-khach-hang.xlsx", rows);
+              }}
+              className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
+            >
+              Xuất Excel
+            </button>
+          )}
         </CardHeader>
         <CardContent>
           {(customers ?? []).length > 0 ? (

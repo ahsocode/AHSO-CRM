@@ -7,13 +7,15 @@ import { useStockReceipts } from "@/hooks/use-stock-receipts";
 import { useWarehousesSelect } from "@/hooks/use-warehouses";
 import { useSuppliersSelect } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/layout/page-header";
-import { getApiErrorMessage } from "@/lib/api-client";
+import { apiClient, getApiErrorMessage } from "@/lib/api-client";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import type { StockDocStatus } from "@/lib/types";
+import type { StockDocStatus, StockReceiptListItem } from "@/lib/types";
 import { STOCK_DOC_STATUS_LABELS } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { formatDate } from "@/lib/format";
+import { cn, downloadExcelRows } from "@/lib/utils";
+import { toast } from "sonner";
 import { StockReceiptTable } from "./stock-receipt-table";
 
 const PAGE_SIZE = 10;
@@ -26,8 +28,43 @@ export function StockReceiptClient() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
 
   const warehousesSelect = useWarehousesSelect();
+
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      const res = await apiClient.get<{ data: StockReceiptListItem[] }>("/stock-receipts", {
+        params: {
+          page: 1, limit: 500,
+          search: search.trim() || undefined,
+          status: status || undefined,
+          warehouseId: warehouseId || undefined,
+          supplierId: supplierId || undefined,
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+        },
+      });
+      const items = res.data.data ?? [];
+      if (!items.length) { toast.warning("Không có dữ liệu để xuất."); return; }
+      const rows = items.map((r) => ({
+        "Số phiếu": r.receiptNo,
+        "Ngày": formatDate(r.date),
+        "Kho": r.warehouse.name,
+        "Nhà cung cấp": r.supplier?.name ?? "",
+        "Số mặt hàng": r.itemCount,
+        "Tổng tiền": r.totalAmount,
+        "Trạng thái": STOCK_DOC_STATUS_LABELS[r.status],
+      }));
+      await downloadExcelRows("phieu-nhap-kho.xlsx", rows);
+      toast.success(`Đã xuất ${rows.length} phiếu nhập kho.`);
+    } catch {
+      toast.error("Không thể xuất dữ liệu.");
+    } finally {
+      setIsExporting(false);
+    }
+  }
   const suppliersSelect = useSuppliersSelect();
 
   const query = useStockReceipts({
@@ -47,9 +84,19 @@ export function StockReceiptClient() {
         title="Phiếu nhập kho"
         description="Quản lý toàn bộ phiếu nhập kho, theo dõi trạng thái và giá trị nhập hàng."
         action={
-          <Link href={"/inventory/receipts/new" as Route} className={cn(buttonVariants({ variant: "primary" }))}>
-            Tạo phiếu nhập kho
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={isExporting}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              {isExporting ? "Đang xuất..." : "Xuất Excel"}
+            </button>
+            <Link href={"/inventory/receipts/new" as Route} className={cn(buttonVariants({ variant: "primary" }))}>
+              Tạo phiếu nhập kho
+            </Link>
+          </div>
         }
       />
 

@@ -120,6 +120,27 @@ export class SuppliersService {
     return { success: true, id };
   }
 
+  async bulkExport(ids: string[]) {
+    const items = await this.prisma.supplier.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      orderBy: { name: "asc" },
+    });
+    return {
+      action: "export",
+      items: items.map((s) => ({
+        "Mã NCC": s.code,
+        "Tên nhà cung cấp": s.name,
+        "Mã số thuế": s.taxCode ?? "",
+        "Địa chỉ": s.address ?? "",
+        "Điện thoại": s.phone ?? "",
+        "Email": s.email ?? "",
+        "Liên hệ": s.contactName ?? "",
+        "Ghi chú": s.notes ?? "",
+        "Trạng thái": s.isActive ? "Hoạt động" : "Ngưng",
+      })),
+    };
+  }
+
   private buildWhere(filters: SupplierFilterDto): Prisma.SupplierWhereInput {
     const where: Prisma.SupplierWhereInput = { deletedAt: null };
 

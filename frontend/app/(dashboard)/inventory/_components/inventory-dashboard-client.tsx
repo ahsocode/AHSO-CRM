@@ -10,7 +10,7 @@ import { AppIcon } from "@/components/shared/app-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { formatVND } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { cn, downloadExcelRows } from "@/lib/utils";
 
 type AppIconName = ComponentProps<typeof AppIcon>["name"];
 
@@ -88,9 +88,32 @@ export function InventoryDashboardClient() {
 
       {/* Low stock table */}
       <Card className="border border-white/70">
-        <CardHeader className="gap-2">
-          <p className="v2-label text-accent">Cảnh báo</p>
-          <CardTitle>Vật tư tồn thấp</CardTitle>
+        <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="v2-label text-accent">Cảnh báo</p>
+            <CardTitle>Vật tư tồn thấp</CardTitle>
+          </div>
+          {(lowStock.data?.items.length ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={async () => {
+                const items = lowStock.data?.items ?? [];
+                const rows = items.map((item) => ({
+                  "Mã vật tư": item.material.code,
+                  "Tên vật tư": item.material.name,
+                  "Kho": item.warehouse.name,
+                  "Đơn vị": item.material.unit,
+                  "Tồn hiện tại": item.quantity,
+                  "Tồn tối thiểu": item.material.minStock ?? "",
+                  "Giá trị tồn": item.value,
+                }));
+                await downloadExcelRows("ton-kho-thap.xlsx", rows);
+              }}
+              className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
+            >
+              Xuất Excel
+            </button>
+          )}
         </CardHeader>
         <CardContent>
           {lowStock.isLoading ? (

@@ -225,4 +225,32 @@ export class MaterialsService {
 
     return where;
   }
+
+  async bulkExport(ids: string[]) {
+    const items = await this.prisma.material.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      include: {
+        category: { select: { name: true } },
+        stockBalances: { select: { quantity: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+    return {
+      action: "export",
+      items: items.map((m) => {
+        const totalStock = m.stockBalances.reduce((s, b) => s + Number(b.quantity), 0);
+        return {
+          "Mã vật tư": m.code,
+          "Tên vật tư": m.name,
+          "Nhóm": m.category?.name ?? "",
+          "Đơn vị tính": m.unit,
+          "Giá bán": Number(m.salePrice),
+          "Giá nhập TB": Number(m.costPrice),
+          "Tồn min": m.minStock != null ? Number(m.minStock) : "",
+          "Tổng tồn kho": totalStock,
+          "Trạng thái": m.isActive ? "Hoạt động" : "Ngưng",
+        };
+      }),
+    };
+  }
 }

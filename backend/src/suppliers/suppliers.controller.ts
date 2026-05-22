@@ -69,4 +69,11 @@ export class SuppliersController {
   remove(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.service.remove(id, user);
   }
+
+  @RequirePermissions("suppliers.view")
+  @ApiOperation({ summary: "POST /api/suppliers/bulk — export selected rows" })
+  @Post("bulk")
+  bulk(@Body() dto: { action: "export"; ids: string[] }) {
+    return this.service.bulkExport(dto.ids);
+  }
 }

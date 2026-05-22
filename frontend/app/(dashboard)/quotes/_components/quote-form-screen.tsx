@@ -37,6 +37,18 @@ import {
   type QuoteFormValues
 } from "./form-schemas";
 import { PolicyItemSelect } from "./policy-item-select";
+import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { GripVertical } from "lucide-react";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
 const QUOTE_TABLE_WIDTH_FIELDS = [
@@ -47,6 +59,30 @@ const QUOTE_TABLE_WIDTH_FIELDS = [
   { key: "unitPrice", label: "Đơn giá", min: 6, max: 40 },
   { key: "total", label: "Thành tiền", min: 6, max: 40 }
 ] as const;
+
+// Drag-and-drop shell for each line item — renders only the sortable wrapper,
+// exposes drag handle props via render-prop so inner content stays unchanged.
+function SortableItemShell({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: (handleProps: React.HTMLAttributes<HTMLElement>) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      {...attributes}
+      className={isDragging ? "relative z-50 opacity-40" : undefined}
+    >
+      {children(listeners ?? {})}
+    </div>
+  );
+}
 
 export function QuoteFormScreen({
   mode = "create",
@@ -79,6 +115,18 @@ export function QuoteFormScreen({
     control: form.control,
     name: "items"
   });
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  function handleItemDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const from = itemsFieldArray.fields.findIndex((f) => f.id === active.id);
+    const to = itemsFieldArray.fields.findIndex((f) => f.id === over.id);
+    if (from !== -1 && to !== -1) itemsFieldArray.move(from, to);
+  }
 
   // Track which quoteId has already been loaded to prevent re-reset on background refetches.
   const initializedQuoteIdRef = useRef<string | undefined>(undefined);
@@ -309,10 +357,23 @@ export function QuoteFormScreen({
               <CardTitle>Danh mục chào giá</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
+              <SortableContext items={itemsFieldArray.fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
               {itemsFieldArray.fields.map((field, index) => (
-                <article key={field.id} className="rounded-xl border border-border-light bg-white p-4 shadow-sm">
+                <SortableItemShell key={field.id} id={field.id} disabled={!isEditableQuote}>
+                {(dragHandleProps) => (
+                <article className="rounded-xl border border-border-light bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
+                      {isEditableQuote && (
+                        <div
+                          {...dragHandleProps}
+                          className="cursor-grab rounded p-0.5 text-text-muted hover:bg-bg-hover hover:text-text-secondary active:cursor-grabbing"
+                          title="Kéo để sắp xếp"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </div>
+                      )}
                       <Badge variant="neutral">#{String(index + 1).padStart(2, "0")}</Badge>
                       <p className="text-sm font-semibold text-text-primary">Hạng mục báo giá</p>
                     </div>
@@ -421,7 +482,11 @@ export function QuoteFormScreen({
                     </span>
                   </div>
                 </article>
+                )}
+                </SortableItemShell>
               ))}
+              </SortableContext>
+              </DndContext>
 
               <Button disabled={!isEditableQuote} onClick={() => itemsFieldArray.append(createEmptyQuoteItem())} type="button" variant="outline">
                 <AppIcon name="plus" className="h-4 w-4" />

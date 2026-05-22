@@ -81,4 +81,11 @@ export class MaterialsController {
   ) {
     return this.service.replaceSuppliers(id, dto, user);
   }
+
+  @RequirePermissions("materials.view")
+  @ApiOperation({ summary: "POST /api/materials/bulk — export selected rows" })
+  @Post("bulk")
+  bulk(@Body() dto: { action: "export"; ids: string[] }) {
+    return this.service.bulkExport(dto.ids);
+  }
 }

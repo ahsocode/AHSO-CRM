@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationBootstrap, forwardRef, Inject } from "@nestjs/common";
 import { EmailAccount, Prisma } from "@prisma/client";
 import { FetchMessageObject, MessageAddressObject, MessageStructureObject } from "imapflow";
 import { setTimeout as delay } from "node:timers/promises";
@@ -6,6 +6,7 @@ import { PrismaService } from "../common/prisma.service";
 import { UploadService } from "../upload/upload.service";
 import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { ImapService } from "./imap.service";
+import { MailboxSyncQueue } from "./mailbox-sync.queue";
 import { MailboxAddress, ParsedMailboxMessage } from "./mailbox.types";
 
 interface AttachmentPart {
@@ -25,18 +26,22 @@ export class MailboxSyncService implements OnApplicationBootstrap {
     private readonly prisma: PrismaService,
     private readonly imapService: ImapService,
     private readonly uploadService: UploadService,
-    private readonly websocketGateway: WebsocketGateway
+    private readonly websocketGateway: WebsocketGateway,
+    @Inject(forwardRef(() => MailboxSyncQueue))
+    private readonly mailboxSyncQueue: MailboxSyncQueue,
   ) {}
 
   async onApplicationBootstrap() {
     const accounts = await this.prisma.emailAccount.findMany({ where: { isActive: true } });
 
-    accounts.forEach((account) => {
-      void this.syncAccount(account.id).catch((error) => {
-        this.logger.warn(`Không thể đồng bộ email ${account.email}: ${this.getErrorMessage(error)}`);
-      });
+    for (const account of accounts) {
+      try {
+        await this.mailboxSyncQueue.enqueueSync(account.id);
+      } catch (error) {
+        this.logger.warn(`Không thể xếp hàng sync email ${account.email}: ${this.getErrorMessage(error)}`);
+      }
       this.startIdleWatch(account.id);
-    });
+    }
   }
 
   async syncAccount(accountId: string) {
@@ -162,6 +167,7 @@ export class MailboxSyncService implements OnApplicationBootstrap {
   }
 
   private async runIdleLoop(accountId: string) {
+    let retries = 0;
     while (this.idleAccounts.has(accountId)) {
       try {
         const account = await this.getActiveAccount(accountId);
@@ -173,17 +179,28 @@ export class MailboxSyncService implements OnApplicationBootstrap {
         });
 
         await client.idle();
+        retries = 0; // reset on successful idle
       } catch (error) {
         this.logger.warn(`IMAP IDLE ngắt kết nối: ${this.getErrorMessage(error)}`);
         this.imapService.closeConnection(accountId);
-        await delay(5000);
+        // Exponential backoff: 5s → 15s → 45s → 2m → 5m (max)
+        const backoffMs = Math.min(5000 * Math.pow(2, retries), 300_000);
+        retries = Math.min(retries + 1, 6);
+        await delay(backoffMs);
       }
     }
   }
 
   private async syncNewestInboxMessage(accountId: string) {
     const before = await this.prisma.emailMessage.count({ where: { accountId, folder: "INBOX" } });
+    // Direct sync (not queued) so we can check count immediately for WebSocket notification
     await this.syncFolder(accountId, "INBOX");
+    const after = await this.prisma.emailMessage.count({ where: { accountId, folder: "INBOX" } });
+
+    if (after <= before) {
+      return;
+    }
+
     const latest = await this.prisma.emailMessage.findFirst({
       where: { accountId, folder: "INBOX" },
       include: { account: true },
@@ -191,11 +208,6 @@ export class MailboxSyncService implements OnApplicationBootstrap {
     });
 
     if (!latest) {
-      return;
-    }
-
-    const after = await this.prisma.emailMessage.count({ where: { accountId, folder: "INBOX" } });
-    if (after <= before) {
       return;
     }
 

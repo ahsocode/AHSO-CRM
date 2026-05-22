@@ -12,6 +12,7 @@ import { BulkActionDto, bulkActionSchema } from "./dto/bulk-action.dto";
 import { CreateEmailAccountDto, createEmailAccountSchema } from "./dto/create-email-account.dto";
 import { SaveDraftDto, saveDraftSchema } from "./dto/draft.dto";
 import { GetMessagesDto, getMessagesSchema } from "./dto/get-messages.dto";
+import { GetThreadsDto, getThreadsSchema } from "./dto/get-threads.dto";
 import { MarkReadDto, StarMessageDto, markReadSchema, starMessageSchema } from "./dto/message-actions.dto";
 import { ReplyDto, replySchema } from "./dto/reply.dto";
 import { SendEmailDto, sendEmailSchema } from "./dto/send-email.dto";
@@ -41,6 +42,15 @@ export class MailboxController {
   @Get("folders")
   getFolders(@CurrentUser() user: JwtUser) {
     return this.mailboxService.getFolders(user.sub);
+  }
+
+  @ApiOperation({ summary: "GET /api/mailbox/threads" })
+  @Get("threads")
+  getThreads(
+    @CurrentUser() user: JwtUser,
+    @Query(new ZodValidationPipe(getThreadsSchema, "query")) query: GetThreadsDto
+  ) {
+    return this.mailboxService.getThreads(user.sub, query);
   }
 
   @ApiOperation({ summary: "GET /api/mailbox/messages" })

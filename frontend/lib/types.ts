@@ -251,6 +251,41 @@ export interface MailboxMessageParams {
   customerId?: string;
 }
 
+export interface EmailThreadReply {
+  id: string;
+  fromName: string | null;
+  fromEmail: string;
+  receivedAt: string;
+  isRead: boolean;
+  snippet: string;
+}
+
+export interface EmailThread {
+  id: string;
+  messageId: string | null;
+  subject: string;
+  fromName: string | null;
+  fromEmail: string;
+  snippet: string;
+  receivedAt: string;
+  latestAt: string;
+  isRead: boolean;
+  isStarred: boolean;
+  hasUnread: boolean;
+  replyCount: number;
+  replies: EmailThreadReply[];
+}
+
+export interface MailboxThreadsResponse {
+  items: EmailThread[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export interface ForgotPasswordResponse extends ActionResponse {
   debug?: {
     resetToken: string;

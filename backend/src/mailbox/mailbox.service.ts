@@ -12,6 +12,7 @@ import { BulkActionDto } from "./dto/bulk-action.dto";
 import { CreateEmailAccountDto } from "./dto/create-email-account.dto";
 import { SaveDraftDto } from "./dto/draft.dto";
 import { GetMessagesDto } from "./dto/get-messages.dto";
+import { GetThreadsDto } from "./dto/get-threads.dto";
 import { ReplyDto } from "./dto/reply.dto";
 import { SendEmailDto } from "./dto/send-email.dto";
 import { SetupPasswordDto } from "./dto/setup-password.dto";
@@ -205,6 +206,78 @@ export class MailboxService {
         if (bi !== -1) return 1;
         return a.path.localeCompare(b.path);
       });
+  }
+
+  async getThreads(userId: string, query: GetThreadsDto) {
+    const account = await this.requireUserAccount(userId);
+
+    const where: Prisma.EmailMessageWhereInput = {
+      accountId: account.id,
+      folder: query.folder,
+      isDraft: false,
+      inReplyTo: null,
+    };
+
+    if (query.search) {
+      where.OR = [
+        { subject: { contains: query.search, mode: "insensitive" } },
+        { fromEmail: { contains: query.search, mode: "insensitive" } },
+        { snippet: { contains: query.search, mode: "insensitive" } },
+      ];
+    }
+
+    if (query.customerId) {
+      where.customerId = query.customerId;
+    }
+
+    const skip = (query.page - 1) * query.limit;
+
+    const [roots, total] = await Promise.all([
+      this.prisma.emailMessage.findMany({
+        where,
+        orderBy: { receivedAt: "desc" },
+        skip,
+        take: query.limit,
+        select: {
+          id: true, messageId: true, subject: true,
+          fromName: true, fromEmail: true,
+          snippet: true, receivedAt: true,
+          isRead: true, isStarred: true,
+        },
+      }),
+      this.prisma.emailMessage.count({ where }),
+    ]);
+
+    const threads = await Promise.all(
+      roots.map(async (root) => {
+        const replies = await this.prisma.emailMessage.findMany({
+          where: {
+            accountId: account.id,
+            inReplyTo: root.messageId ?? undefined,
+          },
+          orderBy: { receivedAt: "asc" },
+          select: {
+            id: true, fromName: true, fromEmail: true,
+            receivedAt: true, isRead: true, snippet: true,
+          },
+        });
+        const hasUnread = !root.isRead || replies.some((r) => !r.isRead);
+        const latestAt = replies.length > 0
+          ? replies[replies.length - 1].receivedAt
+          : root.receivedAt;
+        return { ...root, replies, replyCount: replies.length, hasUnread, latestAt };
+      }),
+    );
+
+    return {
+      items: threads,
+      meta: {
+        total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.max(1, Math.ceil(total / query.limit)),
+      },
+    };
   }
 
   async getMessages(userId: string, query: GetMessagesDto) {

@@ -9,7 +9,8 @@ import {
   EmailMessage,
   MailboxFolder,
   MailboxMessageParams,
-  MailboxMessagesResponse
+  MailboxMessagesResponse,
+  MailboxThreadsResponse
 } from "@/lib/types";
 
 export interface CreateEmailAccountInput {
@@ -52,6 +53,17 @@ export function useMailboxFolders() {
     },
     staleTime: 60_000,  // folder list rarely changes — avoid refetch on every focus
     retry: 0
+  });
+}
+
+export function useMailboxThreads(params: MailboxMessageParams) {
+  return useQuery({
+    queryKey: ["mailbox", "threads", params],
+    queryFn: async () => {
+      const response = await apiClient.get<{ data: MailboxThreadsResponse["items"]; meta: MailboxThreadsResponse["meta"] }>("/mailbox/threads", { params });
+      return { items: response.data.data, meta: response.data.meta } satisfies MailboxThreadsResponse;
+    },
+    retry: 1,
   });
 }
 

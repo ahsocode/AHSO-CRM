@@ -8,7 +8,8 @@ import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function ThreadAvatar({ name, email }: { name: string | null; email: string }) {
-  const initial = (name ?? email)[0].toUpperCase();
+  const sender = (name || email || "?").trim();
+  const initial = sender.charAt(0).toUpperCase() || "?";
   return (
     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
       {initial}
@@ -66,48 +67,55 @@ export function ThreadList({
                 </button>
               </div>
             )
-          : threads.length > 0
-            ? threads.map((thread) => (
-              <button
-                key={thread.id}
-                type="button"
-                onClick={() => onSelect(thread)}
-                className={cn(
-                  "group flex w-full items-start gap-3 rounded-2xl border px-3 py-2.5 text-left transition",
-                  selectedThreadId === thread.id
-                    ? "border-primary/30 bg-primary-bg"
-                    : "border-transparent hover:bg-bg-hover",
-                  thread.hasUnread && selectedThreadId !== thread.id && "bg-primary-bg/30",
-                )}
-              >
-                <ThreadAvatar name={thread.fromName} email={thread.fromEmail} />
+            : threads.length > 0
+            ? threads.map((thread) => {
+              const replies = Array.isArray(thread.replies) ? thread.replies : [];
+              const sender = thread.fromName || thread.fromEmail || "Không rõ người gửi";
+              const latestAt = thread.latestAt || thread.receivedAt || new Date().toISOString();
+              const latestSnippet = replies[replies.length - 1]?.snippet ?? thread.snippet ?? "";
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={cn("truncate text-sm text-text-primary", thread.hasUnread && "font-bold")}>
-                      {thread.fromName || thread.fromEmail}
-                      {thread.replyCount > 0 && (
-                        <span className="ml-1.5 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
-                          {thread.replyCount + 1}
-                        </span>
-                      )}
-                    </p>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      {thread.isStarred && <Star size={11} className="fill-warning text-warning" />}
-                      <span className="text-[11px] text-text-muted">{formatDateTime(thread.latestAt)}</span>
+              return (
+                <button
+                  key={thread.id}
+                  type="button"
+                  onClick={() => onSelect({ ...thread, replies })}
+                  className={cn(
+                    "group flex w-full items-start gap-3 rounded-2xl border px-3 py-2.5 text-left transition",
+                    selectedThreadId === thread.id
+                      ? "border-primary/30 bg-primary-bg"
+                      : "border-transparent hover:bg-bg-hover",
+                    thread.hasUnread && selectedThreadId !== thread.id && "bg-primary-bg/30",
+                  )}
+                >
+                  <ThreadAvatar name={thread.fromName} email={thread.fromEmail || ""} />
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={cn("truncate text-sm text-text-primary", thread.hasUnread && "font-bold")}>
+                        {sender}
+                        {thread.replyCount > 0 && (
+                          <span className="ml-1.5 rounded-full bg-bg-subtle px-1.5 py-0.5 text-[11px] font-medium text-text-muted">
+                            {thread.replyCount + 1}
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {thread.isStarred && <Star size={11} className="fill-warning text-warning" />}
+                        <span className="text-[11px] text-text-muted">{formatDateTime(latestAt)}</span>
+                      </div>
                     </div>
+                    <p className={cn("mt-0.5 truncate text-sm", thread.hasUnread ? "font-semibold text-text-primary" : "text-text-secondary")}>
+                      {thread.subject || "(Không tiêu đề)"}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-text-muted">{latestSnippet}</p>
                   </div>
-                  <p className={cn("mt-0.5 truncate text-sm", thread.hasUnread ? "font-semibold text-text-primary" : "text-text-secondary")}>
-                    {thread.subject || "(Không tiêu đề)"}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-text-muted">{thread.replies[thread.replies.length - 1]?.snippet ?? thread.snippet}</p>
-                </div>
 
-                {thread.hasUnread && (
-                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                )}
-              </button>
-            ))
+                  {thread.hasUnread && (
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  )}
+                </button>
+              );
+            })
             : <EmptyState title="Không có email" description="Thư mục này chưa có email hoặc bộ lọc chưa khớp." />
         }
 

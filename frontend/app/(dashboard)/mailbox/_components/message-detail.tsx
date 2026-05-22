@@ -102,7 +102,7 @@ export function MessageDetail({
       }
       setResolvedHtml(html);
     });
-  }, [message?.id]);
+  }, [message?.attachments, message?.bodyHtml, message?.id]);
 
   const safeHtml = sanitizeEmailHtml(resolvedHtml ?? message?.bodyHtml, showImages);
 
@@ -113,6 +113,11 @@ export function MessageDetail({
     </div>
   );
 
+  const toAddresses = Array.isArray(message.toAddresses) ? message.toAddresses : [];
+  const ccAddresses = Array.isArray(message.ccAddresses) ? message.ccAddresses : [];
+  const attachments = Array.isArray(message.attachments) ? message.attachments : [];
+  const fromLabel = message.fromName ? `${message.fromName} <${message.fromEmail}>` : (message.fromEmail || "Không rõ người gửi");
+
   return (
     <article className="flex h-full min-h-0 flex-col overflow-hidden">
       <header className="border-b border-border/30 p-5">
@@ -120,12 +125,12 @@ export function MessageDetail({
           <div className="flex-1">
             <h2 className="font-heading text-xl font-bold text-text-primary">{message.subject || "(Không tiêu đề)"}</h2>
             <div className="mt-2 space-y-1 text-sm text-text-secondary">
-              <p><span className="font-medium">Từ:</span> {message.fromName ? `${message.fromName} <${message.fromEmail}>` : message.fromEmail}</p>
-              {message.toAddresses.length > 0 && (
-                <p className="truncate"><span className="font-medium">Đến:</span> {message.toAddresses.map((a) => a.name ? `${a.name} <${a.email}>` : a.email).join(", ")}</p>
+              <p><span className="font-medium">Từ:</span> {fromLabel}</p>
+              {toAddresses.length > 0 && (
+                <p className="truncate"><span className="font-medium">Đến:</span> {toAddresses.map((a) => a.name ? `${a.name} <${a.email}>` : a.email).join(", ")}</p>
               )}
-              {message.ccAddresses.length > 0 && (
-                <p className="truncate"><span className="font-medium">CC:</span> {message.ccAddresses.map((a) => a.email).join(", ")}</p>
+              {ccAddresses.length > 0 && (
+                <p className="truncate"><span className="font-medium">CC:</span> {ccAddresses.map((a) => a.email).join(", ")}</p>
               )}
               {message.customer && (
                 <p><span className="font-medium">Khách hàng:</span> <span className="text-primary">{message.customer.name}</span></p>
@@ -170,13 +175,13 @@ export function MessageDetail({
           : <pre className="whitespace-pre-wrap rounded-xl bg-bg-subtle p-4 text-sm text-text-primary">{message.bodyText}</pre>
         }
 
-        {message.attachments && message.attachments.length > 0 && (
+        {attachments.length > 0 && (
           <div className="mt-5 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
-              File đính kèm ({message.attachments.length})
+              File đính kèm ({attachments.length})
             </p>
             <div className="flex flex-wrap gap-2">
-              {message.attachments.map((att) => <AttachmentChip key={att.id} attachment={att} />)}
+              {attachments.map((att) => <AttachmentChip key={att.id} attachment={att} />)}
             </div>
           </div>
         )}

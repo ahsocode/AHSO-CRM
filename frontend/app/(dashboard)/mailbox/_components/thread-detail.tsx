@@ -7,7 +7,7 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { useDeleteMessage, useMailboxMessage, useMarkRead, useStarMessage } from "@/hooks/use-mailbox";
 import { formatDateTime } from "@/lib/format";
-import { EmailThread, EmailThreadReply } from "@/lib/types";
+import { EmailThread } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { sanitizeEmailHtml } from "./email-sanitizer";
 
@@ -57,6 +57,9 @@ function ThreadMessageItem({
   const starMessage = useStarMessage();
   const deleteMessage = useDeleteMessage();
   const msgQuery = useMailboxMessage(isExpanded ? id : null);
+  const sender = fromName || fromEmail || "Không rõ";
+  const senderInitial = sender.trim().charAt(0).toUpperCase() || "?";
+  const toAddresses = msgQuery.data?.toAddresses ?? [];
 
   return (
     <div className={cn(
@@ -70,11 +73,11 @@ function ThreadMessageItem({
       >
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-            {(fromName ?? fromEmail)[0].toUpperCase()}
+            {senderInitial}
           </div>
           <div>
             <p className={cn("text-sm font-semibold text-text-primary", isLatest && "font-bold")}>
-              {fromName || fromEmail}
+              {sender}
             </p>
             {!isExpanded && (
               <p className="mt-0.5 max-w-[240px] truncate text-xs text-text-muted">{snippet}</p>
@@ -91,9 +94,9 @@ function ThreadMessageItem({
         <div className="px-4 pb-4">
           {msgQuery.data && (
             <div className="mb-2 text-xs text-text-secondary">
-              <span className="font-medium">Từ:</span> {fromName ? `${fromName} <${fromEmail}>` : fromEmail}
-              {msgQuery.data.toAddresses.length > 0 && (
-                <span className="ml-3"><span className="font-medium">Đến:</span> {msgQuery.data.toAddresses.map((a) => a.email).join(", ")}</span>
+              <span className="font-medium">Từ:</span> {fromName ? `${fromName} <${fromEmail}>` : sender}
+              {toAddresses.length > 0 && (
+                <span className="ml-3"><span className="font-medium">Đến:</span> {toAddresses.map((a) => a.email).join(", ")}</span>
               )}
             </div>
           )}
@@ -139,8 +142,16 @@ export function ThreadDetail({
   thread: EmailThread | null;
   onReply: (mode: ComposeMode, messageId: string) => void;
 }) {
+  const replies = Array.isArray(thread?.replies) ? thread.replies : [];
   const allItems = thread
-    ? [{ id: thread.id, fromName: thread.fromName, fromEmail: thread.fromEmail, receivedAt: thread.receivedAt, snippet: thread.snippet }, ...thread.replies]
+    ? [{
+        id: thread.id,
+        fromName: thread.fromName ?? null,
+        fromEmail: thread.fromEmail || "Không rõ",
+        receivedAt: thread.receivedAt || thread.latestAt || new Date().toISOString(),
+        isRead: thread.isRead,
+        snippet: thread.snippet ?? "",
+      }, ...replies]
     : [];
 
   const latestId = allItems.length > 0 ? allItems[allItems.length - 1].id : null;
@@ -148,10 +159,11 @@ export function ThreadDetail({
 
   useEffect(() => {
     if (thread) {
-      const latest = [...thread.replies].pop()?.id ?? thread.id;
+      const threadReplies = Array.isArray(thread.replies) ? thread.replies : [];
+      const latest = [...threadReplies].pop()?.id ?? thread.id;
       setExpandedId(latest);
     }
-  }, [thread?.id]);
+  }, [thread]);
 
   if (!thread) {
     return (
@@ -175,10 +187,10 @@ export function ThreadDetail({
           <ThreadMessageItem
             key={item.id}
             id={item.id}
-            fromName={(item as EmailThreadReply).fromName}
-            fromEmail={(item as EmailThreadReply).fromEmail}
-            receivedAt={(item as EmailThreadReply).receivedAt}
-            snippet={(item as EmailThreadReply).snippet}
+            fromName={item.fromName}
+            fromEmail={item.fromEmail}
+            receivedAt={item.receivedAt}
+            snippet={item.snippet}
             isExpanded={expandedId === item.id}
             isLatest={item.id === latestId}
             onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}

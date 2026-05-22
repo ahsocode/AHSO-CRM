@@ -56,9 +56,11 @@ export default function MailboxPage() {
   const bulkAction = useBulkMailboxAction();
 
   const folders = foldersQuery.data ?? [];
+  const messageItems = messagesQuery.data?.items;
+  const threadItems = threadsQuery.data?.items;
   const total = isThreadMode
-    ? (threadsQuery.data?.meta.total ?? 0)
-    : (messagesQuery.data?.meta.total ?? 0);
+    ? (threadsQuery.data?.meta?.total ?? 0)
+    : (messagesQuery.data?.meta?.total ?? 0);
 
   // Reset on folder/search change
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function MailboxPage() {
   // Accumulate flat messages pages
   useEffect(() => {
     if (isThreadMode) return;
-    const items = messagesQuery.data?.items;
+    const items = messageItems;
     if (!items) return;
     if (page === 1) {
       setAllMessages(items);
@@ -83,12 +85,12 @@ export default function MailboxPage() {
         return [...prev, ...items.filter((m) => !ids.has(m.id))];
       });
     }
-  }, [messagesQuery.dataUpdatedAt, page, isThreadMode]);
+  }, [messageItems, page, isThreadMode]);
 
   // Accumulate thread pages
   useEffect(() => {
     if (!isThreadMode) return;
-    const items = threadsQuery.data?.items;
+    const items = threadItems;
     if (!items) return;
     if (page === 1) {
       setAllThreads(items);
@@ -98,7 +100,7 @@ export default function MailboxPage() {
         return [...prev, ...items.filter((t) => !ids.has(t.id))];
       });
     }
-  }, [threadsQuery.dataUpdatedAt, page, isThreadMode]);
+  }, [threadItems, page, isThreadMode]);
 
   // URL param: open a specific message
   useEffect(() => {

@@ -44,6 +44,66 @@ export interface ReplyEmailInput {
   replyAll?: boolean;
 }
 
+type MailboxPageMeta = MailboxMessagesResponse["meta"];
+
+const DEFAULT_MAILBOX_META: MailboxPageMeta = {
+  total: 0,
+  page: 1,
+  limit: 50,
+  totalPages: 1,
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function normalizeNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeMailboxMeta(value: unknown, fallback: MailboxPageMeta = DEFAULT_MAILBOX_META): MailboxPageMeta {
+  if (!isRecord(value)) return fallback;
+
+  return {
+    total: normalizeNumber(value.total, fallback.total),
+    page: normalizeNumber(value.page, fallback.page),
+    limit: normalizeNumber(value.limit, fallback.limit),
+    totalPages: normalizeNumber(value.totalPages, fallback.totalPages),
+  };
+}
+
+function unwrapPaginatedMailboxResponse<TItem>(
+  payload: unknown,
+  fallbackMeta: MailboxPageMeta = DEFAULT_MAILBOX_META
+): { items: TItem[]; meta: MailboxPageMeta } {
+  if (!isRecord(payload)) {
+    return { items: [], meta: fallbackMeta };
+  }
+
+  if (Array.isArray(payload.items)) {
+    return {
+      items: payload.items as TItem[],
+      meta: normalizeMailboxMeta(payload.meta, fallbackMeta),
+    };
+  }
+
+  if (Array.isArray(payload.data)) {
+    return {
+      items: payload.data as TItem[],
+      meta: normalizeMailboxMeta(payload.meta, fallbackMeta),
+    };
+  }
+
+  if (isRecord(payload.data) && Array.isArray(payload.data.items)) {
+    return {
+      items: payload.data.items as TItem[],
+      meta: normalizeMailboxMeta(payload.data.meta, fallbackMeta),
+    };
+  }
+
+  return { items: [], meta: normalizeMailboxMeta(payload.meta, fallbackMeta) };
+}
+
 export function useMailboxFolders() {
   return useQuery({
     queryKey: ["mailbox", "folders"],
@@ -60,8 +120,8 @@ export function useMailboxThreads(params: MailboxMessageParams) {
   return useQuery({
     queryKey: ["mailbox", "threads", params],
     queryFn: async () => {
-      const response = await apiClient.get<{ data: MailboxThreadsResponse["items"]; meta: MailboxThreadsResponse["meta"] }>("/mailbox/threads", { params });
-      return { items: response.data.data, meta: response.data.meta } satisfies MailboxThreadsResponse;
+      const response = await apiClient.get<unknown>("/mailbox/threads", { params });
+      return unwrapPaginatedMailboxResponse<MailboxThreadsResponse["items"][number]>(response.data) satisfies MailboxThreadsResponse;
     },
     retry: 1,
   });
@@ -71,8 +131,8 @@ export function useMailboxMessages(params: MailboxMessageParams) {
   return useQuery({
     queryKey: ["mailbox", "messages", params],
     queryFn: async () => {
-      const response = await apiClient.get<{ data: EmailMessage[]; meta: MailboxMessagesResponse["meta"] }>("/mailbox/messages", { params });
-      return { items: response.data.data, meta: response.data.meta } satisfies MailboxMessagesResponse;
+      const response = await apiClient.get<unknown>("/mailbox/messages", { params });
+      return unwrapPaginatedMailboxResponse<EmailMessage>(response.data) satisfies MailboxMessagesResponse;
     },
     // staleTime intentionally omitted (defaults to 0) — mailbox data must always
     // refetch on folder switch; a 30s cache caused empty INBOX when emails had

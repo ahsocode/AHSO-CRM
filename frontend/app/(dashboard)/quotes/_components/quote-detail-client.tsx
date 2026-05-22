@@ -18,13 +18,33 @@ import { useAiDraftEmail } from "@/hooks/use-ai";
 import { toast } from "@/hooks/use-toast";
 import { useRuntimeDocumentTemplateVariants, useDocumentPreviewQuery } from "@/hooks/use-documents";
 import { InlinePreviewOverlay } from "@/components/shared/inline-preview-overlay";
-import { useDuplicateQuote, useQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
+import { useDuplicateQuote, useQuote, useUpdateQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
-import type { DocumentTemplateVariant, QuoteStatus } from "@/lib/types";
+import type { DocumentTemplateVariant, QuoteDetail, QuoteStatus, QuoteTableColumnWidths } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
+
+function buildQuoteUpdatePayload(quote: QuoteDetail, tableColumnWidths: QuoteTableColumnWidths) {
+  return {
+    projectId: quote.project.id,
+    validUntil: quote.validUntil ? quote.validUntil.slice(0, 10) : undefined,
+    taxRate: quote.taxRate,
+    tableColumnWidths,
+    terms: quote.terms ?? "",
+    deliveryTerms: quote.deliveryTerms ?? "",
+    internalNote: quote.internalNote ?? "",
+    status: quote.status,
+    items: quote.items.map((item) => ({
+      name: item.name,
+      description: item.description ?? "",
+      unit: item.unit ?? "",
+      quantity: item.quantity,
+      unitPrice: item.unitPrice
+    }))
+  };
+}
 
 const STATUS_ACTIONS: Partial<
   Record<
@@ -57,6 +77,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const quoteQuery = useQuote(quoteId);
   const templateVariantsQuery = useRuntimeDocumentTemplateVariants("QUOTATION");
   const duplicateQuoteMutation = useDuplicateQuote();
+  const updateQuoteMutation = useUpdateQuote(quoteId);
   const updateQuoteStatusMutation = useUpdateQuoteStatus();
   const previewLang = quoteQuery.data?.project.customer.language === "vi-en" ? "vi-en" : "vi";
   const previewQuery = useDocumentPreviewQuery({
@@ -135,6 +156,25 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
           isLoading={previewQuery.isLoading}
           error={previewQuery.error as Error | null}
           title="Xem trước báo giá"
+          quoteColumnResize={{
+            initialWidths: quote.tableColumnWidths,
+            canEdit,
+            isSaving: updateQuoteMutation.isPending,
+            onSave: (widths) => {
+              updateQuoteMutation.mutate(buildQuoteUpdatePayload(quote, widths), {
+                onSuccess: () => {
+                  toast("Đã lưu độ rộng cột báo giá.");
+                  void previewQuery.refetch();
+                },
+                onError: (error) => {
+                  toast({
+                    title: getApiErrorMessage(error, "Không thể lưu độ rộng cột."),
+                    variant: "destructive"
+                  });
+                }
+              });
+            }
+          }}
           onClose={() => setShowPreview(false)}
         />
       )}

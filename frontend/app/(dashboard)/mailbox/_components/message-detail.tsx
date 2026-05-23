@@ -168,7 +168,7 @@ export function MessageDetail({
         {safeHtml
           ? <iframe
               title="Email content"
-              sandbox="allow-same-origin"
+              sandbox=""
               className="h-[400px] min-h-[300px] w-full rounded-xl border border-border/40 bg-white"
               srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:'Be Vietnam Pro',sans-serif;font-size:14px;line-height:1.6;color:#1C2833;padding:16px;margin:0}img{max-width:100%}a{color:#1A5276}</style></head><body>${safeHtml}</body></html>`}
             />

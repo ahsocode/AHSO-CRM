@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button } from "@/components/ui/button";
 import { useDeleteMessage, useMailboxMessage, useMarkRead, useStarMessage } from "@/hooks/use-mailbox";
+import { apiClient } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { EmailThread } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -15,16 +16,56 @@ type ComposeMode = "reply" | "replyAll" | "forward";
 
 function MessageBody({ messageId, showImages }: { messageId: string; showImages: boolean }) {
   const query = useMailboxMessage(messageId);
+  const [resolvedHtml, setResolvedHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    setResolvedHtml(null);
+    if (!query.data?.bodyHtml) return;
+
+    const inlineAtts = (query.data.attachments ?? []).filter(
+      (att) => att.cid && /cid:/i.test(query.data.bodyHtml ?? "")
+    );
+    if (inlineAtts.length === 0) {
+      setResolvedHtml(query.data.bodyHtml);
+      return;
+    }
+
+    void Promise.all(
+      inlineAtts.map(async (att) => {
+        try {
+          const res = await apiClient.get<ArrayBuffer>(`/mailbox/attachments/${att.id}/download`, {
+            responseType: "arraybuffer"
+          });
+          const bytes = new Uint8Array(res.data as ArrayBuffer);
+          const binary = bytes.reduce((acc, byte) => acc + String.fromCharCode(byte), "");
+          const base64 = btoa(binary);
+          const cleanCid = (att.cid ?? "").replace(/^<|>$/g, "");
+          return { cid: cleanCid, dataUrl: `data:${att.mimeType};base64,${base64}` };
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      const cidMap = results.filter((r): r is { cid: string; dataUrl: string } => r !== null);
+      let html = query.data?.bodyHtml ?? "";
+      for (const { cid, dataUrl } of cidMap) {
+        const escaped = cid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        html = html.replace(new RegExp(`src="cid:${escaped}"`, "gi"), `src="${dataUrl}"`);
+        html = html.replace(new RegExp(`src='cid:${escaped}'`, "gi"), `src='${dataUrl}'`);
+      }
+      setResolvedHtml(html);
+    });
+  }, [query.data?.id, query.data?.bodyHtml, query.data?.attachments]);
 
   if (query.isLoading) return <LoadingSkeleton className="h-40 w-full" />;
   if (!query.data?.bodyHtml && !query.data?.bodyText) return null;
 
-  const safeHtml = sanitizeEmailHtml(query.data.bodyHtml, showImages);
+  const safeHtml = sanitizeEmailHtml(resolvedHtml ?? query.data?.bodyHtml, showImages);
 
   return safeHtml
     ? <iframe
         title="Email content"
-        sandbox="allow-same-origin"
+        sandbox=""
         className="mt-3 h-[280px] min-h-[120px] w-full rounded-xl border border-border/40 bg-white"
         srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:'Be Vietnam Pro',sans-serif;font-size:13px;line-height:1.6;color:#1C2833;padding:12px;margin:0}img{max-width:100%}a{color:#1A5276}</style></head><body>${safeHtml}</body></html>`}
       />

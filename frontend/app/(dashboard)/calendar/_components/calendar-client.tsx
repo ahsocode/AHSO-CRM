@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useEffect, useState, useCallback, useRef } from "react";
+import type { Route } from "next";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
@@ -44,6 +46,18 @@ function getDefaultWeekRange() {
   return { dateFrom: toDateStr(start), dateTo: toDateStr(end) };
 }
 
+function getWeekRangeForDate(dateStr: string) {
+  const selected = new Date(`${dateStr}T00:00:00`);
+  const dayIndex = (selected.getDay() + 6) % 7;
+  const start = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() - dayIndex);
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  return { dateFrom: toDateStr(start), dateTo: toDateStr(end) };
+}
+
+function isDateParam(value: string | null): value is string {
+  return Boolean(value && /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
 function getMonthSelectionRange(year: number, month: number, spanMonths = 1) {
   const start = new Date(year, month, 1);
   const end = new Date(year, month + spanMonths, 0);
@@ -56,17 +70,28 @@ function getMonthSpanCount(dateFrom: string, dateTo: string) {
   return Math.max(1, (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1);
 }
 
+function getDefaultCreateDateTime(dateFrom: string, dateTo: string) {
+  const today = toDateStr(new Date());
+  const selectedDate = today >= dateFrom && today <= dateTo ? today : dateFrom;
+  return `${selectedDate}T09:00`;
+}
+
 export function CalendarClient() {
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get("date");
   const user = useAuthStore((state) => state.user);
   const canManageUsers = isLeadershipRole(user?.role);
 
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [defaultWeekRange] = useState(() => getDefaultWeekRange());
+  const [initialRange] = useState(() =>
+    isDateParam(dateParam) ? getWeekRangeForDate(dateParam) : defaultWeekRange
+  );
   const warningShownRef = useRef(false);
 
   // Shared selected date range across both week/month views.
-  const [rangeDateFrom, setRangeDateFrom] = useState(defaultWeekRange.dateFrom);
-  const [rangeDateTo, setRangeDateTo] = useState(defaultWeekRange.dateTo);
+  const [rangeDateFrom, setRangeDateFrom] = useState(initialRange.dateFrom);
+  const [rangeDateTo, setRangeDateTo] = useState(initialRange.dateTo);
 
   // Shared filter state
   const [search, setSearch] = useState("");
@@ -116,6 +141,14 @@ export function CalendarClient() {
 
   useEffect(() => { setPage(1); }, [assigneeId, completion, rangeDateFrom, rangeDateTo, debouncedSearch, type]);
 
+  useEffect(() => {
+    if (!isDateParam(dateParam)) return;
+    const nextRange = getWeekRangeForDate(dateParam);
+    setRangeDateFrom(nextRange.dateFrom);
+    setRangeDateTo(nextRange.dateTo);
+    setViewMode("week");
+  }, [dateParam]);
+
   const handleDateRangeChange = (from: string, to: string) => {
     setRangeDateFrom(from);
     setRangeDateTo(to);
@@ -143,6 +176,9 @@ export function CalendarClient() {
     assigneeId.length > 0;
 
   const usersQuery = useUsers(canManageUsers);
+  const createActivityHref = `/activities/new?returnTo=calendar&scheduledAt=${encodeURIComponent(
+    getDefaultCreateDateTime(rangeDateFrom, rangeDateTo)
+  )}` as Route;
   const calendarQuery = useCalendarEvents({
     page,
     limit: PAGE_SIZE,
@@ -231,7 +267,7 @@ export function CalendarClient() {
               </div>
             </div>
 
-            <Link href="/activities/new" className={cn(buttonVariants({ variant: "primary" }))}>
+            <Link href={createActivityHref} className={cn(buttonVariants({ variant: "primary" }))}>
               + Tạo hoạt động
             </Link>
           </div>

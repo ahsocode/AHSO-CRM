@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
@@ -46,8 +47,25 @@ interface ActivityFormScreenProps {
   id?: string;
 }
 
+function getDateParamFromScheduledAt(value: Date): string {
+  return formatDateTimeLocalInput(value).slice(0, 10);
+}
+
+function getInitialScheduledAt(value: string | null): Date | undefined {
+  if (!value) return undefined;
+  const parsedLocal = parseDateTimeLocalInput(value);
+  if (parsedLocal) return parsedLocal;
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
+  const isCalendarFlow = !id && returnTo === 'calendar';
+  const initialScheduledAt = !id ? getInitialScheduledAt(searchParams.get('scheduledAt')) : undefined;
   const { data: activity, isLoading: isLoadingActivity } = useActivity(id || '');
   const createMutation = useCreateActivity();
   const updateMutation = useUpdateActivity();
@@ -66,7 +84,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
       customerId: '',
       projectId: '',
       attachmentUrl: '',
-      scheduledAt: undefined,
+      scheduledAt: initialScheduledAt,
       isCompleted: false,
     },
   });
@@ -98,6 +116,14 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
   }, [activity, form]);
 
   const onSubmit = async (values: ActivityFormValues) => {
+    if (isCalendarFlow && !values.scheduledAt) {
+      form.setError('scheduledAt', {
+        type: 'manual',
+        message: 'Cần chọn thời gian dự kiến để hoạt động hiển thị trên lịch công tác',
+      });
+      return;
+    }
+
     const input = {
       type: values.type,
       title: values.title,
@@ -117,7 +143,11 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
         router.push(`/activities/${id}`);
       } else {
         const result = await createMutation.mutateAsync(input);
-        router.push(`/activities/${result.id}`);
+        if (isCalendarFlow && values.scheduledAt) {
+          router.push(`/calendar?date=${getDateParamFromScheduledAt(values.scheduledAt)}` as Route);
+        } else {
+          router.push(`/activities/${result.id}`);
+        }
       }
     } catch (error) {
       // Error handled by mutation
@@ -317,7 +347,9 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                 name="scheduledAt"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[#1C2833]">Thời gian dự kiến</FormLabel>
+                    <FormLabel className="text-[#1C2833]">
+                      Thời gian dự kiến{isCalendarFlow ? ' *' : ''}
+                    </FormLabel>
                     <FormControl>
                       <Input
                         type="datetime-local"
@@ -333,6 +365,11 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                         }}
                       />
                     </FormControl>
+                    {isCalendarFlow ? (
+                      <p className="text-xs text-[#5D6D7E]">
+                        Hoạt động tạo từ lịch cần có thời gian để hiển thị đúng trên lịch công tác.
+                      </p>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

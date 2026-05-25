@@ -30,7 +30,8 @@ export class DashboardService {
         paidAt: {
           gte: previousMonthStart,
           lt: nextMonthStart
-        }
+        },
+        contract: { deletedAt: null }
       },
       include: {
         contract: true
@@ -189,7 +190,8 @@ export class DashboardService {
           gte: start,
           lte: end
         },
-        isCompleted: false
+        isCompleted: false,
+        deletedAt: null
       },
       include: {
         user: true,
@@ -212,6 +214,9 @@ export class DashboardService {
 
   async getRecentActivity() {
     const activities = await this.prisma.activity.findMany({
+      where: {
+        deletedAt: null
+      },
       include: {
         user: true,
         customer: true,

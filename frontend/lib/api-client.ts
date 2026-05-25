@@ -1,6 +1,7 @@
 import axios from "axios";
 import { API_URL, ACCESS_TOKEN_KEY } from "./constants";
 import { clearLocalSession, getAccessToken, getSessionId, persistSession } from "./auth";
+import { recordSessionActivity } from "./session-activity";
 import { ApiErrorPayload, ApiResponse, AuthSession } from "./types";
 
 // Cross-tab session sync: when one tab refreshes tokens, broadcast to all others
@@ -41,6 +42,8 @@ apiClient.interceptors.request.use((config) => {
   if (typeof window === "undefined") {
     return config;
   }
+
+  recordSessionActivity("api");
 
   const accessToken = getAccessToken();
   if (accessToken) {

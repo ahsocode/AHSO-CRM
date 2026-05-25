@@ -1032,6 +1032,7 @@ export class ProjectsService {
         const existing = await this.prisma.document.findFirst({
           where: {
             type: requirement.type,
+            entityType: source.entityType,
             entityId: source.entityId,
             language: "vi"
           },
@@ -1706,7 +1707,8 @@ export class ProjectsService {
           }
         },
         quotes: {
-          orderBy: [{ createdAt: "desc" }, { version: "desc" }],
+          where: { status: "ACCEPTED", deletedAt: null },
+          orderBy: [{ acceptedAt: "desc" }, { createdAt: "desc" }, { version: "desc" }],
           take: 1,
           select: {
             id: true
@@ -1735,6 +1737,7 @@ export class ProjectsService {
 
     if (entity === "project") {
       return {
+        entityType: "project",
         entityId: project.id,
         missingReason: ""
       };
@@ -1742,6 +1745,7 @@ export class ProjectsService {
 
     if (entity === "customer") {
       return {
+        entityType: "customer",
         entityId: project.customerId,
         missingReason: ""
       };
@@ -1749,14 +1753,24 @@ export class ProjectsService {
 
     if (entity === "quote") {
       return {
+        entityType: "quote",
         entityId: project.quotes[0]?.id ?? null,
         missingReason: "Dự án chưa có báo giá để sinh tài liệu loại này."
       };
     }
 
+    if (!project.contract?.id) {
+      return {
+        entityType: "quote",
+        entityId: project.quotes[0]?.id ?? null,
+        missingReason: "Dự án chưa có hợp đồng hoặc báo giá để sinh tài liệu loại này."
+      };
+    }
+
     return {
-      entityId: project.contract?.id ?? null,
-      missingReason: "Dự án chưa có hợp đồng để sinh tài liệu loại này."
+      entityType: "contract",
+      entityId: project.contract.id,
+      missingReason: ""
     };
   }
 

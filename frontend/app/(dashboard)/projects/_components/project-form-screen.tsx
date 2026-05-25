@@ -108,6 +108,7 @@ export function ProjectFormScreen({
         estimatedValue: projectQuery.data.estimatedValue || undefined,
         startDate: projectQuery.data.startDate ? projectQuery.data.startDate.slice(0, 10) : "",
         expectedEndDate: projectQuery.data.expectedEndDate ? projectQuery.data.expectedEndDate.slice(0, 10) : "",
+        completedAt: projectQuery.data.completedAt ? projectQuery.data.completedAt.slice(0, 10) : "",
         contactId: projectQuery.data.contactId ?? undefined,
         notes: projectQuery.data.notes ?? ""
       });
@@ -125,6 +126,7 @@ export function ProjectFormScreen({
   const customerOptions = getCustomerOptions(customersQuery.data?.items ?? [], projectQuery.data?.customer);
   const isSubmitting = activeMutation.isPending || deleteProjectMutation.isPending;
   const watchedCustomerId = form.watch("customerId");
+  const watchedStatus = form.watch("status");
   const selectedCustomer = customerOptions.find((customer) => customer.id === watchedCustomerId) ?? null;
   const contactsQuery = useCustomerContacts(watchedCustomerId ?? "");
 
@@ -135,6 +137,12 @@ export function ProjectFormScreen({
       prevCustomerIdRef.current = watchedCustomerId;
     }
   }, [form, watchedCustomerId]);
+
+  useEffect(() => {
+    if (watchedStatus !== "COMPLETED" && form.getValues("completedAt")) {
+      form.setValue("completedAt", "");
+    }
+  }, [form, watchedStatus]);
 
   if (mode === "edit" && projectQuery.isLoading) {
     return (
@@ -324,6 +332,17 @@ export function ProjectFormScreen({
               <ErrorText message={form.formState.errors.expectedEndDate?.message} />
             </Field>
 
+            {watchedStatus === "COMPLETED" ? (
+              <Field>
+                <Label htmlFor="completedAt">Ngày hoàn thành</Label>
+                <Input id="completedAt" type="date" {...form.register("completedAt")} />
+                <p className="text-xs text-text-secondary">
+                  Doanh thu dự án sẽ được ghi nhận theo ngày này, không theo ngày cập nhật hồ sơ.
+                </p>
+                <ErrorText message={form.formState.errors.completedAt?.message} />
+              </Field>
+            ) : null}
+
             <Field className="md:col-span-2">
               <Label htmlFor="description">Mô tả kỹ thuật</Label>
               <Textarea
@@ -389,6 +408,10 @@ export function ProjectFormScreen({
               {mode === "edit" && projectQuery.data ? (
                 <>
                   <MiniInfo label="Tạo lúc" value={formatDateTime(projectQuery.data.createdAt)} />
+                  <MiniInfo
+                    label="Hoàn thành"
+                    value={projectQuery.data.completedAt ? formatDateTime(projectQuery.data.completedAt) : "Chưa ghi nhận"}
+                  />
                   <MiniInfo label="Cập nhật cuối" value={formatDateTime(projectQuery.data.updatedAt)} />
                 </>
               ) : (

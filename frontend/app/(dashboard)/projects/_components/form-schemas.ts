@@ -33,6 +33,7 @@ export const projectFormSchema = z
     ),
     startDate: optionalDateString,
     expectedEndDate: optionalDateString,
+    completedAt: optionalDateString,
     contactId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     notes: optionalString(2000)
   })
@@ -43,7 +44,15 @@ export const projectFormSchema = z
       message: "Ngày kết thúc dự kiến phải sau hoặc bằng ngày bắt đầu",
       path: ["expectedEndDate"]
     }
-  );
+  )
+  .refine((value) => value.status === "COMPLETED" || !value.completedAt, {
+    message: "Chỉ nhập ngày hoàn thành khi dự án ở trạng thái Hoàn thành",
+    path: ["completedAt"]
+  })
+  .refine((value) => !value.startDate || !value.completedAt || value.completedAt >= value.startDate, {
+    message: "Ngày hoàn thành phải sau hoặc bằng ngày bắt đầu",
+    path: ["completedAt"]
+  });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
@@ -56,6 +65,7 @@ export const defaultProjectFormValues: ProjectFormValues = {
   estimatedValue: undefined,
   startDate: "",
   expectedEndDate: "",
+  completedAt: "",
   contactId: undefined,
   notes: ""
 };

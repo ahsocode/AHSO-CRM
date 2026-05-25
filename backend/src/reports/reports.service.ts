@@ -901,6 +901,7 @@ export class ReportsService {
           estimatedValue: Number(item.estimatedValue ?? 0),
           customerName: item.customer.name,
           assignedTo: item.customer.assignedTo.name,
+          completedAt: item.completedAt ? item.completedAt.toISOString().slice(0, 10) : null,
           createdAt: item.createdAt.toISOString()
         }));
       }

@@ -128,6 +128,7 @@ export class ProjectsService {
           id: true,
           status: true,
           estimatedValue: true,
+          completedAt: true,
           contract: {
             select: {
               value: true
@@ -222,7 +223,7 @@ export class ProjectsService {
         estimatedValue: dto.estimatedValue ?? null,
         startDate: dto.startDate,
         expectedEndDate: dto.expectedEndDate,
-        completedAt: dto.status === "COMPLETED" ? new Date() : null,
+        completedAt: dto.status === "COMPLETED" ? dto.completedAt ?? new Date() : null,
         notes: dto.notes
       }
     });
@@ -320,6 +321,7 @@ export class ProjectsService {
       progressPercent: this.mapProjectProgress(project.status),
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
+      completedAt: project.completedAt,
       notes: project.notes,
       customFieldValues,
       createdAt: project.createdAt,
@@ -1217,9 +1219,22 @@ export class ProjectsService {
     const project = await this.findAccessibleProjectRecord(id, user);
     const nextStartDate = dto.startDate ?? project.startDate;
     const nextExpectedEndDate = dto.expectedEndDate ?? project.expectedEndDate;
+    const nextStatus = dto.status ?? project.status;
+    const nextCompletedAt = this.resolveNextCompletedAt({
+      currentStatus: project.status,
+      nextStatus,
+      currentCompletedAt: project.completedAt,
+      providedCompletedAt: dto.completedAt,
+      statusWasProvided: dto.status !== undefined,
+      completedAtWasProvided: dto.completedAt !== undefined
+    });
 
     if (nextStartDate && nextExpectedEndDate && nextExpectedEndDate.getTime() < nextStartDate.getTime()) {
       throw new BadRequestException("Ngày kết thúc dự kiến phải sau hoặc bằng ngày bắt đầu");
+    }
+
+    if (nextStartDate && nextCompletedAt && nextCompletedAt.getTime() < nextStartDate.getTime()) {
+      throw new BadRequestException("Ngày hoàn thành phải sau hoặc bằng ngày bắt đầu");
     }
 
     if (dto.customerId && dto.customerId !== project.customerId) {
@@ -1239,9 +1254,13 @@ export class ProjectsService {
         ...(dto.estimatedValue !== undefined ? { estimatedValue: dto.estimatedValue } : {}),
         ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
         ...(dto.expectedEndDate !== undefined ? { expectedEndDate: dto.expectedEndDate } : {}),
-        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
-        ...(dto.status === "COMPLETED" ? { completedAt: new Date() } : {}),
-        ...(dto.status !== undefined && dto.status !== "COMPLETED" ? { completedAt: null } : {})
+        ...this.buildCompletedAtUpdate({
+          statusWasProvided: dto.status !== undefined,
+          completedAtWasProvided: dto.completedAt !== undefined,
+          nextStatus,
+          nextCompletedAt
+        }),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {})
       }
     });
 
@@ -1254,6 +1273,14 @@ export class ProjectsService {
 
   async updateStatus(id: string, dto: UpdateProjectStatusDto, user: JwtUser) {
     const project = await this.findAccessibleProjectRecord(id, user);
+    const completedAt = this.resolveNextCompletedAt({
+      currentStatus: project.status,
+      nextStatus: dto.status,
+      currentCompletedAt: project.completedAt,
+      providedCompletedAt: dto.completedAt,
+      statusWasProvided: true,
+      completedAtWasProvided: dto.completedAt !== undefined
+    });
 
     const updatedProject = await this.prisma.project.update({
       where: {
@@ -1261,7 +1288,7 @@ export class ProjectsService {
       },
       data: {
         status: dto.status,
-        completedAt: dto.status === "COMPLETED" ? new Date() : null
+        completedAt
       }
     });
 
@@ -1279,7 +1306,8 @@ export class ProjectsService {
 
     return {
       id: updatedProject.id,
-      status: updatedProject.status
+      status: updatedProject.status,
+      completedAt: updatedProject.completedAt
     };
   }
 
@@ -1647,6 +1675,56 @@ export class ProjectsService {
     };
   }
 
+  private resolveNextCompletedAt({
+    currentStatus,
+    nextStatus,
+    currentCompletedAt,
+    providedCompletedAt,
+    statusWasProvided,
+    completedAtWasProvided
+  }: {
+    currentStatus: string;
+    nextStatus: string;
+    currentCompletedAt: Date | null;
+    providedCompletedAt?: Date;
+    statusWasProvided: boolean;
+    completedAtWasProvided: boolean;
+  }) {
+    if (nextStatus !== "COMPLETED") {
+      return null;
+    }
+
+    if (completedAtWasProvided) {
+      return providedCompletedAt ?? null;
+    }
+
+    if (currentStatus === "COMPLETED" && currentCompletedAt) {
+      return currentCompletedAt;
+    }
+
+    return statusWasProvided ? new Date() : currentCompletedAt;
+  }
+
+  private buildCompletedAtUpdate({
+    statusWasProvided,
+    completedAtWasProvided,
+    nextStatus,
+    nextCompletedAt
+  }: {
+    statusWasProvided: boolean;
+    completedAtWasProvided: boolean;
+    nextStatus: string;
+    nextCompletedAt: Date | null;
+  }) {
+    if (!statusWasProvided && !completedAtWasProvided) {
+      return {};
+    }
+
+    return {
+      completedAt: nextStatus === "COMPLETED" ? nextCompletedAt : null
+    };
+  }
+
   private resolveProjectCommercialValue(project: {
     estimatedValue: Prisma.Decimal | number | null;
     contract?: { value: Prisma.Decimal | number } | null;
@@ -1668,6 +1746,7 @@ export class ProjectsService {
       progressPercent: this.mapProjectProgress(project.status),
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
+      completedAt: project.completedAt,
       updatedAt: project.updatedAt,
       lastActivityAt: project.activities[0]?.updatedAt ?? null,
       isOverdue: Boolean(
@@ -1842,6 +1921,7 @@ export class ProjectsService {
         status: true,
         startDate: true,
         expectedEndDate: true,
+        completedAt: true,
         contract: {
           select: {
             id: true

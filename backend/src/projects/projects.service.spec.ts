@@ -109,6 +109,7 @@ describe("ProjectsService", () => {
       id: "project-1",
       customerId: "customer-1",
       status: "QUOTING",
+      completedAt: null,
       startDate: null,
       expectedEndDate: null,
       contract: null
@@ -135,6 +136,90 @@ describe("ProjectsService", () => {
       projectId: "project-1",
       previousStatus: "QUOTING",
       status: "NEGOTIATING"
+    });
+  });
+
+  it("sets completedAt when a project is completed", async () => {
+    const completedAt = new Date("2026-05-25T00:00:00.000Z");
+    prisma.project.findFirst.mockResolvedValue({
+      id: "project-1",
+      customerId: "customer-1",
+      status: "DELIVERING",
+      completedAt: null,
+      startDate: null,
+      expectedEndDate: null,
+      contract: null
+    });
+    prisma.project.update.mockResolvedValue({
+      id: "project-1",
+      status: "COMPLETED",
+      completedAt
+    });
+
+    await expect(
+      service.updateStatus(
+        "project-1",
+        {
+          status: "COMPLETED",
+          completedAt
+        },
+        user
+      )
+    ).resolves.toEqual({
+      id: "project-1",
+      status: "COMPLETED",
+      completedAt
+    });
+
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: {
+        id: "project-1"
+      },
+      data: {
+        status: "COMPLETED",
+        completedAt
+      }
+    });
+  });
+
+  it("does not reset completedAt when editing an already completed project", async () => {
+    const completedAt = new Date("2026-04-30T00:00:00.000Z");
+    prisma.project.findFirst.mockResolvedValue({
+      id: "project-1",
+      customerId: "customer-1",
+      status: "COMPLETED",
+      completedAt,
+      startDate: null,
+      expectedEndDate: null,
+      contract: null
+    });
+    prisma.project.update.mockResolvedValue({
+      id: "project-1"
+    });
+
+    await expect(
+      service.update(
+        "project-1",
+        {
+          name: "Dự án đã nghiệm thu",
+          status: "COMPLETED",
+          customFieldValues: {}
+        },
+        user
+      )
+    ).resolves.toEqual({
+      id: "project-1"
+    });
+
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: {
+        id: "project-1"
+      },
+      data: expect.objectContaining({
+        name: "Dự án đã nghiệm thu",
+        status: "COMPLETED",
+        completedAt
+      })
     });
   });
 

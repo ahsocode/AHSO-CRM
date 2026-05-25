@@ -561,6 +561,7 @@ export interface ProjectListItem {
   progressPercent: number;
   startDate?: string | null;
   expectedEndDate?: string | null;
+  completedAt?: string | null;
   updatedAt: string;
   lastActivityAt?: string | null;
   isOverdue: boolean;
@@ -616,12 +617,14 @@ export interface ProjectUpsertInput {
   estimatedValue?: number;
   startDate?: string;
   expectedEndDate?: string;
+  completedAt?: string;
   notes?: string;
   customFieldValues?: CustomFieldValues;
 }
 
 export interface ProjectStatusUpdateInput {
   status: ProjectStatus;
+  completedAt?: string;
 }
 
 export interface ProjectDetailCustomer {
@@ -707,6 +710,7 @@ export interface ProjectDetail {
   progressPercent: number;
   startDate?: string | null;
   expectedEndDate?: string | null;
+  completedAt?: string | null;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;

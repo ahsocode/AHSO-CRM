@@ -25,6 +25,7 @@ export const createProjectSchema = z
     estimatedValue: z.coerce.number().min(0, "Giá trị dự kiến không được âm").max(999_999_999_999).optional(),
     startDate: optionalDate,
     expectedEndDate: optionalDate,
+    completedAt: optionalDate,
     contactId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     notes: optionalString(2000),
     customFieldValues: customFieldValuesSchema
@@ -36,6 +37,14 @@ export const createProjectSchema = z
       message: "Ngày kết thúc dự kiến phải sau hoặc bằng ngày bắt đầu",
       path: ["expectedEndDate"]
     }
-  );
+  )
+  .refine((value) => value.status === "COMPLETED" || !value.completedAt, {
+    message: "Chỉ nhập ngày hoàn thành khi dự án ở trạng thái Hoàn thành",
+    path: ["completedAt"]
+  })
+  .refine((value) => !value.startDate || !value.completedAt || value.completedAt.getTime() >= value.startDate.getTime(), {
+    message: "Ngày hoàn thành phải sau hoặc bằng ngày bắt đầu",
+    path: ["completedAt"]
+  });
 
 export type CreateProjectDto = z.infer<typeof createProjectSchema>;

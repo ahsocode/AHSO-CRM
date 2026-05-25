@@ -422,7 +422,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               <MiniPanel label="Bắt đầu" value={project.startDate ? formatDate(project.startDate) : "Chưa xác định"} />
               <MiniPanel label="Đích dự kiến" value={project.expectedEndDate ? formatDate(project.expectedEndDate) : "Chưa xác định"} />
-              <MiniPanel label="Cập nhật cuối" value={formatRelativeTime(project.updatedAt)} />
+              <MiniPanel label="Hoàn thành" value={project.completedAt ? formatDate(project.completedAt) : "Chưa hoàn thành"} />
             </div>
             <ProjectStageStepper currentStatus={project.status} />
           </div>

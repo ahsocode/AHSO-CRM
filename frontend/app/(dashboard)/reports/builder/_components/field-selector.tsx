@@ -48,7 +48,8 @@ export const REPORT_DATASET_FIELDS: Record<
       { key: "status", label: "Trạng thái", kind: "dimension" },
       { key: "priority", label: "Ưu tiên", kind: "dimension" },
       { key: "assignedTo", label: "Owner", kind: "dimension" },
-      { key: "customerName", label: "Khách hàng", kind: "dimension" }
+      { key: "customerName", label: "Khách hàng", kind: "dimension" },
+      { key: "completedAt", label: "Ngày hoàn thành", kind: "dimension" }
     ],
     measures: [
       { key: "estimatedValue", label: "Giá trị dự kiến", kind: "measure" }
@@ -56,7 +57,8 @@ export const REPORT_DATASET_FIELDS: Record<
     filters: [
       { key: "status", label: "Trạng thái", kind: "filter" },
       { key: "priority", label: "Ưu tiên", kind: "filter" },
-      { key: "assignedTo", label: "Owner", kind: "filter" }
+      { key: "assignedTo", label: "Owner", kind: "filter" },
+      { key: "completedAt", label: "Ngày hoàn thành", kind: "filter" }
     ]
   },
   quotes: {

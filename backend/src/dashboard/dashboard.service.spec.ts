@@ -97,6 +97,21 @@ describe("DashboardService", () => {
         }
       })
     );
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: "COMPLETED",
+          completedAt: expect.objectContaining({
+            gte: expect.any(Date),
+            lt: expect.any(Date)
+          })
+        }),
+        select: {
+          completedAt: true,
+          estimatedValue: true
+        }
+      })
+    );
   });
 
   it("keeps dashboard pipeline stages aligned with the project status ledger", async () => {

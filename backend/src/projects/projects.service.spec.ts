@@ -1,5 +1,6 @@
 import { PrismaService } from "../common/prisma.service";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { ProjectsService } from "./projects.service";
 
@@ -32,6 +33,9 @@ describe("ProjectsService", () => {
   let domainEvents: {
     emit: jest.Mock;
   };
+  let documentsService: {
+    renderPdf: jest.Mock;
+  };
 
   beforeEach(() => {
     prisma = {
@@ -53,11 +57,15 @@ describe("ProjectsService", () => {
     domainEvents = {
       emit: jest.fn()
     };
+    documentsService = {
+      renderPdf: jest.fn()
+    };
 
     service = new ProjectsService(
       prisma as unknown as PrismaService,
       customFieldsService as unknown as CustomFieldsService,
-      domainEvents as unknown as DomainEventsService
+      domainEvents as unknown as DomainEventsService,
+      documentsService as unknown as DocumentsService
     );
   });
 

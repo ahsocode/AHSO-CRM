@@ -54,15 +54,13 @@ export class ReportsService {
       this.prisma.payment.findMany({
         where: paymentWhere,
         include: {
-          contract: {
+          project: {
             include: {
-              project: {
-                include: {
-                  customer: true
-                }
-              }
+              customer: true
             }
-          }
+          },
+          contract: true,
+          quote: true
         },
         orderBy: {
           paidAt: "desc"
@@ -125,9 +123,10 @@ export class ReportsService {
         id: payment.id,
         amount: Number(payment.amount),
         paidAt: payment.paidAt,
-        contractNo: payment.contract.contractNo,
-        customerName: payment.contract.project.customer.name,
-        projectName: payment.contract.project.name,
+        contractNo: this.resolvePaymentSourceLabel(payment),
+        sourceLabel: this.resolvePaymentSourceLabel(payment),
+        customerName: payment.project.customer.name,
+        projectName: payment.project.name,
         method: payment.method,
         reference: payment.reference
       }))
@@ -198,26 +197,24 @@ export class ReportsService {
     const payments = await this.prisma.payment.findMany({
       where: this.buildPaymentWhere(user, start, nextMonthStart),
       include: {
-        contract: {
+        project: {
           include: {
-            project: {
+            customer: {
               include: {
-                customer: {
-                  include: {
-                    projects: {
-                      where: {
-                        deletedAt: null
-                      },
-                      select: {
-                        id: true
-                      }
-                    }
+                projects: {
+                  where: {
+                    deletedAt: null
+                  },
+                  select: {
+                    id: true
                   }
                 }
               }
             }
           }
-        }
+        },
+        contract: true,
+        quote: true
       }
     });
 
@@ -229,27 +226,37 @@ export class ReportsService {
         paidAmount: number;
         contractValue: number;
         contractIds: Set<string>;
+        quoteIds: Set<string>;
+        projectOnlyIds: Set<string>;
         projectIds: Set<string>;
       }
     >();
 
     for (const payment of payments) {
-      const customer = payment.contract.project.customer;
+      const customer = payment.project.customer;
       const current = customerMap.get(customer.id) ?? {
         customerId: customer.id,
         name: customer.name,
         paidAmount: 0,
         contractValue: 0,
         contractIds: new Set<string>(),
+        quoteIds: new Set<string>(),
+        projectOnlyIds: new Set<string>(),
         projectIds: new Set<string>()
       };
 
       current.paidAmount += Number(payment.amount);
-      if (!current.contractIds.has(payment.contract.id)) {
+      if (payment.contract && !current.contractIds.has(payment.contract.id)) {
         current.contractValue += Number(payment.contract.value);
         current.contractIds.add(payment.contract.id);
+      } else if (payment.quote && !current.quoteIds.has(payment.quote.id)) {
+        current.contractValue += Number(payment.quote.total);
+        current.quoteIds.add(payment.quote.id);
+      } else if (!payment.contract && !payment.quote && !current.projectOnlyIds.has(payment.project.id)) {
+        current.contractValue += Number(payment.project.estimatedValue ?? 0);
+        current.projectOnlyIds.add(payment.project.id);
       }
-      current.projectIds.add(payment.contract.project.id);
+      current.projectIds.add(payment.project.id);
       customerMap.set(customer.id, current);
     }
 
@@ -387,22 +394,16 @@ export class ReportsService {
             gte: start,
             lt: nextMonthStart
           },
-          contract: {
-            project: this.buildProjectWhere(user, {
-              customerId: {
-                in: scopedCustomerIds
-              }
-            })
-          }
+          project: this.buildProjectWhere(user, {
+            customerId: {
+              in: scopedCustomerIds
+            }
+          })
         },
         select: {
-          contract: {
+          project: {
             select: {
-              project: {
-                select: {
-                  customerId: true
-                }
-              }
+              customerId: true
             }
           }
         }
@@ -419,7 +420,7 @@ export class ReportsService {
     );
     const closedCustomers = this.createCustomerSet([
       ...completedContracts.map((contract) => contract.project.customerId),
-      ...payments.map((payment) => payment.contract.project.customerId)
+      ...payments.map((payment) => payment.project.customerId)
     ]);
 
     return {
@@ -529,13 +530,9 @@ export class ReportsService {
         createdAt: true,
         projects: {
           select: {
-            contract: {
+            payments: {
               select: {
-                payments: {
-                  select: {
-                    paidAt: true
-                  }
-                }
+                paidAt: true
               }
             }
           }
@@ -556,7 +553,7 @@ export class ReportsService {
       const cohortMonth = `${customer.createdAt.getFullYear()}-${customer.createdAt.getMonth() + 1}`;
       const activeMonths = new Set(
         customer.projects.flatMap((project) =>
-          project.contract?.payments.map((payment) => `${payment.paidAt.getFullYear()}-${payment.paidAt.getMonth() + 1}`) ?? []
+          project.payments.map((payment) => `${payment.paidAt.getFullYear()}-${payment.paidAt.getMonth() + 1}`)
         )
       );
 
@@ -760,10 +757,16 @@ export class ReportsService {
         gte: start,
         lt: end
       },
-      contract: {
-        project: this.buildProjectWhere(user)
-      }
+      project: this.buildProjectWhere(user)
     };
+  }
+
+  private resolvePaymentSourceLabel(payment: {
+    contract?: { contractNo: string } | null;
+    quote?: { quoteNo: string } | null;
+    project?: { code?: string | null } | null;
+  }) {
+    return payment.contract?.contractNo ?? payment.quote?.quoteNo ?? payment.project?.code ?? "Dự án";
   }
 
   private buildActivityWhere(user: JwtUser, extra?: Prisma.ActivityWhereInput): Prisma.ActivityWhereInput {
@@ -1004,15 +1007,13 @@ export class ReportsService {
         const payments = await this.prisma.payment.findMany({
           where: this.buildPaymentWhere(user, new Date(2000, 0, 1), new Date(2100, 0, 1)),
           include: {
-            contract: {
+            project: {
               include: {
-                project: {
-                  include: {
-                    customer: true
-                  }
-                }
+                customer: true
               }
-            }
+            },
+            contract: true,
+            quote: true
           }
         });
 
@@ -1021,9 +1022,10 @@ export class ReportsService {
           amount: Number(item.amount),
           paidAt: item.paidAt.toISOString(),
           method: item.method,
-          contractNo: item.contract.contractNo,
-          projectName: item.contract.project.name,
-          customerName: item.contract.project.customer.name,
+          contractNo: this.resolvePaymentSourceLabel(item),
+          sourceLabel: this.resolvePaymentSourceLabel(item),
+          projectName: item.project.name,
+          customerName: item.project.customer.name,
           createdAt: item.createdAt.toISOString()
         }));
       }

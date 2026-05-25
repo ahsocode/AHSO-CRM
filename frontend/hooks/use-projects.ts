@@ -15,6 +15,7 @@ import {
   ProjectDocuments360,
   ProjectDocumentPlanGenerateResult,
   ProjectOverview360,
+  ProjectPaymentCreateInput,
   ProjectStatus,
   ProjectStatusUpdateInput,
   ProjectTimelineItem,
@@ -181,6 +182,34 @@ export function useCreateProjectHandover(projectId: string) {
       toast({
         title: "Lỗi",
         description: error instanceof Error ? error.message : "Không thể lưu ghi chú bàn giao.",
+        variant: "destructive"
+      });
+    }
+  });
+}
+
+export function useCreateProjectPayment(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ProjectPaymentCreateInput) => {
+      const response = await apiClient.post<ApiResponse<{ id: string }>>(`/projects/${projectId}/payments`, payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "timeline"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "overview-360"] });
+      await queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+      toast("Đã ghi nhận thanh toán cho dự án.");
+    },
+    onError: (error) => {
+      toast({
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể ghi nhận thanh toán.",
         variant: "destructive"
       });
     }

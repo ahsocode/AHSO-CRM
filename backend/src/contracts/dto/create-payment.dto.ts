@@ -17,7 +17,9 @@ export const createPaymentSchema = z.object({
   paidAt: z.coerce.date(),
   method: optionalString(60),
   reference: optionalString(120),
-  notes: optionalString(1000)
+  notes: optionalString(1000),
+  contractId: optionalString(120),
+  quoteId: optionalString(120)
 });
 
 export type CreatePaymentDto = z.infer<typeof createPaymentSchema>;

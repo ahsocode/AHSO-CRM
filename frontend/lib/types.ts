@@ -646,6 +646,11 @@ export interface ProjectDetailPayment {
   method?: string | null;
   reference?: string | null;
   notes?: string | null;
+  projectId?: string | null;
+  contractId?: string | null;
+  quoteId?: string | null;
+  sourceType?: "contract" | "quote" | "project";
+  sourceLabel?: string | null;
 }
 
 export interface ProjectDetailContract {
@@ -719,6 +724,7 @@ export interface ProjectDetail {
   stats: ProjectDetailStats;
   customer: ProjectDetailCustomer;
   contract: ProjectDetailContract | null;
+  payments: ProjectDetailPayment[];
   quotes: ProjectDetailQuote[];
   milestones: ProjectDetailMilestone[];
   activities: ProjectDetailActivity[];
@@ -1331,6 +1337,11 @@ export interface ContractPaymentCreateInput {
   notes?: string;
 }
 
+export interface ProjectPaymentCreateInput extends ContractPaymentCreateInput {
+  contractId?: string;
+  quoteId?: string;
+}
+
 export interface CalendarEventItem {
   id: string;
   title: string;
@@ -1389,6 +1400,7 @@ export interface ReportRecentPayment {
   amount: number;
   paidAt: string;
   contractNo: string;
+  sourceLabel?: string;
   customerName: string;
   projectName: string;
   method?: string | null;

@@ -253,6 +253,7 @@ model Project {
   handovers         ProjectHandover[]
   documentRequirements ProjectDocumentRequirement[]
   stockIssues       StockIssue[]
+  payments          Payment[]
 
   @@index([customerId, deletedAt])
   @@index([status, deletedAt])
@@ -300,6 +301,7 @@ model Quote {
   deletedAt         DateTime?
   items             QuoteItem[]
   businessDocuments BusinessDocument[]
+  payments          Payment[]
 
   @@index([projectId, deletedAt])
   @@index([status, deletedAt])
@@ -414,10 +416,19 @@ model Payment {
   method            String?
   reference         String?
   notes             String?
-  contract          Contract           @relation(fields: [contractId], references: [id])
-  contractId        String
+  project           Project            @relation(fields: [projectId], references: [id])
+  projectId         String
+  contract          Contract?          @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  contractId        String?
+  quote             Quote?             @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  quoteId           String?
   businessDocuments BusinessDocument[]
   createdAt         DateTime           @default(now())
+
+  @@index([projectId])
+  @@index([contractId])
+  @@index([quoteId])
+  @@index([paidAt])
 }
 
 model Activity {

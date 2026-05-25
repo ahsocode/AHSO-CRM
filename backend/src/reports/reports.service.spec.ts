@@ -65,31 +65,35 @@ describe("ReportsService", () => {
     prisma.payment.findMany.mockResolvedValue([
       {
         amount: 50_000_000,
+        project: {
+          id: "project-1",
+          estimatedValue: 200_000_000,
+          customer: {
+            id: "customer-1",
+            name: "Khách hàng A"
+          }
+        },
         contract: {
           id: "contract-1",
-          value: 200_000_000,
-          project: {
-            id: "project-1",
-            customer: {
-              id: "customer-1",
-              name: "Khách hàng A"
-            }
-          }
-        }
+          value: 200_000_000
+        },
+        quote: null
       },
       {
         amount: 70_000_000,
+        project: {
+          id: "project-1",
+          estimatedValue: 200_000_000,
+          customer: {
+            id: "customer-1",
+            name: "Khách hàng A"
+          }
+        },
         contract: {
           id: "contract-1",
-          value: 200_000_000,
-          project: {
-            id: "project-1",
-            customer: {
-              id: "customer-1",
-              name: "Khách hàng A"
-            }
-          }
-        }
+          value: 200_000_000
+        },
+        quote: null
       }
     ]);
 
@@ -114,7 +118,7 @@ describe("ReportsService", () => {
     prisma.contract.findMany
       .mockResolvedValueOnce([{ project: { customerId: "customer-2" } }])
       .mockResolvedValueOnce([{ project: { customerId: "customer-2" } }]);
-    prisma.payment.findMany.mockResolvedValue([{ contract: { project: { customerId: "customer-2" } } }]);
+    prisma.payment.findMany.mockResolvedValue([{ project: { customerId: "customer-2" } }]);
 
     await expect(service.getCustomerJourney({ months: 3, topLimit: 5 }, user)).resolves.toEqual({
       nodes: [
@@ -138,15 +142,30 @@ describe("ReportsService", () => {
       {
         amount: 50_000_000,
         paidAt: new Date(),
-        contract: {
-          contractNo: "HD-001",
-          project: {
-            name: "Dự án A",
-            customer: {
-              name: "Khách hàng A"
-            }
+        project: {
+          code: "PRJ-001",
+          name: "Dự án A",
+          customer: {
+            name: "Khách hàng A"
           }
-        }
+        },
+        contract: {
+          contractNo: "HD-001"
+        },
+        quote: null
+      },
+      {
+        amount: 25_000_000,
+        paidAt: new Date(),
+        project: {
+          code: "PRJ-002",
+          name: "Dự án không hợp đồng",
+          customer: {
+            name: "Khách hàng B"
+          }
+        },
+        contract: null,
+        quote: null
       }
     ]);
     prisma.project.findMany.mockResolvedValue([{ estimatedValue: 100_000_000 }]);
@@ -171,7 +190,7 @@ describe("ReportsService", () => {
     prisma.customer.count.mockResolvedValue(2);
 
     await expect(service.getOverview({ months: 6, topLimit: 5 }, user)).resolves.toMatchObject({
-      collectionsValue: 50_000_000,
+      collectionsValue: 75_000_000,
       openPipelineValue: 100_000_000,
       outstandingDebt: 200_000_000,
       quoteAcceptanceRate: 33.3,

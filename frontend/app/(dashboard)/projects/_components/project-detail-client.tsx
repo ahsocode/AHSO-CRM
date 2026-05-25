@@ -28,6 +28,7 @@ import { useCustomFields } from "@/hooks/use-custom-fields";
 import {
   useGenerateProjectDocumentPlan,
   useCreateProjectHandover,
+  useCreateProjectPayment,
   useProject,
   useProjectDocuments,
   useProjectOverview360,
@@ -335,7 +336,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
   };
   const projectQuotes = project.quotes ?? [];
   const projectMilestones = project.milestones ?? [];
-  const projectPayments = project.contract?.payments ?? [];
+  const projectPayments = project.payments ?? project.contract?.payments ?? [];
   const priorityConfig = getPriorityConfig(project.priority);
   const tabCounts: Partial<Record<Project360Tab, number>> = {
     surveys: overview?.latestSurvey ? 1 : 0,
@@ -1897,19 +1898,128 @@ function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof use
 }
 
 function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof useProject>["data"]> }) {
-  const payments = project.contract?.payments ?? [];
+  const createPaymentMutation = useCreateProjectPayment(project.id);
+  const acceptedQuotes = project.quotes.filter((quote) => quote.status === "ACCEPTED");
+  const sourceQuotes = acceptedQuotes.length > 0 ? acceptedQuotes : project.quotes.slice(0, 1);
+  const defaultSource = project.contract
+    ? `contract:${project.contract.id}`
+    : sourceQuotes[0]
+      ? `quote:${sourceQuotes[0].id}`
+      : `project:${project.id}`;
+  const [source, setSource] = useState(defaultSource);
+  const [amount, setAmount] = useState("");
+  const [paidAt, setPaidAt] = useState(() => new Date().toISOString().slice(0, 10));
+  const [method, setMethod] = useState("Chuyển khoản");
+  const [reference, setReference] = useState("");
+  const [notes, setNotes] = useState("");
+  const payments = project.payments ?? project.contract?.payments ?? [];
+
+  useEffect(() => {
+    setSource(defaultSource);
+  }, [defaultSource]);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const parsedAmount = Number(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast({ title: "Lỗi", description: "Số tiền thanh toán phải lớn hơn 0.", variant: "destructive" });
+      return;
+    }
+
+    const [sourceType, sourceId] = source.split(":");
+
+    createPaymentMutation.mutate(
+      {
+        amount: parsedAmount,
+        paidAt,
+        method: method.trim() || undefined,
+        reference: reference.trim() || undefined,
+        notes: notes.trim() || undefined,
+        ...(sourceType === "contract" ? { contractId: sourceId } : {}),
+        ...(sourceType === "quote" ? { quoteId: sourceId } : {})
+      },
+      {
+        onSuccess: () => {
+          setAmount("");
+          setReference("");
+          setNotes("");
+        }
+      }
+    );
+  }
 
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Cash Collection</p>
-        <CardTitle>Lịch sử thanh toán</CardTitle>
+        <CardTitle>Thanh toán dự án</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {!project.contract ? (
-          <EmptyState title="Chưa có hợp đồng" description="Thanh toán sẽ xuất hiện khi dự án có hợp đồng." />
-        ) : payments.length === 0 ? (
-          <EmptyState title="Chưa có thanh toán" description="Chưa ghi nhận thanh toán nào cho hợp đồng này." />
+      <CardContent className="space-y-5">
+        <form onSubmit={handleSubmit} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <label className="space-y-1.5 text-sm font-semibold text-text-primary">
+              <span>Nguồn thu</span>
+              <select
+                value={source}
+                onChange={(event) => setSource(event.target.value)}
+                className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+              >
+                {project.contract ? (
+                  <option value={`contract:${project.contract.id}`}>Hợp đồng {project.contract.contractNo}</option>
+                ) : null}
+                {sourceQuotes.map((quote) => (
+                  <option key={quote.id} value={`quote:${quote.id}`}>
+                    Báo giá {quote.quoteNo}
+                  </option>
+                ))}
+                <option value={`project:${project.id}`}>Dự án {project.code}</option>
+              </select>
+            </label>
+            <label className="space-y-1.5 text-sm font-semibold text-text-primary">
+              <span>Số tiền</span>
+              <Input
+                inputMode="numeric"
+                min={1}
+                type="number"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="VD: 50000000"
+              />
+            </label>
+            <label className="space-y-1.5 text-sm font-semibold text-text-primary">
+              <span>Ngày thu</span>
+              <Input type="date" value={paidAt} onChange={(event) => setPaidAt(event.target.value)} />
+            </label>
+            <label className="space-y-1.5 text-sm font-semibold text-text-primary">
+              <span>Phương thức</span>
+              <Input value={method} onChange={(event) => setMethod(event.target.value)} placeholder="Chuyển khoản" />
+            </label>
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-[1fr_2fr]">
+            <label className="space-y-1.5 text-sm font-semibold text-text-primary">
+              <span>Mã tham chiếu</span>
+              <Input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="UNC, phiếu thu..." />
+            </label>
+            <label className="space-y-1.5 text-sm font-semibold text-text-primary">
+              <span>Ghi chú</span>
+              <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Nội dung thanh toán, đợt thanh toán..." />
+            </label>
+          </div>
+          {createPaymentMutation.isError ? (
+            <p className="mt-3 text-sm font-medium text-danger">
+              {getApiErrorMessage(createPaymentMutation.error, "Không thể ghi nhận thanh toán.")}
+            </p>
+          ) : null}
+          <div className="mt-4 flex justify-end">
+            <Button disabled={createPaymentMutation.isPending} type="submit">
+              {createPaymentMutation.isPending ? "Đang ghi nhận..." : "Ghi nhận thanh toán"}
+            </Button>
+          </div>
+        </form>
+
+        {payments.length === 0 ? (
+          <EmptyState title="Chưa có thanh toán" description="Có thể ghi nhận thu tiền theo dự án, báo giá hoặc hợp đồng." />
         ) : (
           payments.map((payment) => (
             <div key={payment.id} className="rounded-xl bg-bg-hover/60 p-3 text-sm text-text-secondary">
@@ -1919,9 +2029,14 @@ function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof use
                 </span>
                 <span>{formatDate(payment.paidAt)}</span>
               </div>
+              <p className="mt-1 font-medium text-text-primary">
+                Nguồn: {payment.sourceType === "contract" ? "Hợp đồng" : payment.sourceType === "quote" ? "Báo giá" : "Dự án"}{" "}
+                {payment.sourceLabel ?? project.code}
+              </p>
               <p className="mt-1">
                 {payment.method ?? "Chưa rõ phương thức"} · {payment.reference ?? "Chưa có mã tham chiếu"}
               </p>
+              {payment.notes ? <p className="mt-1">{payment.notes}</p> : null}
             </div>
           ))
         )}

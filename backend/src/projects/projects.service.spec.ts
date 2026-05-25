@@ -26,6 +26,15 @@ describe("ProjectsService", () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    contract: {
+      findFirst: jest.Mock;
+    };
+    quote: {
+      findFirst: jest.Mock;
+    };
+    payment: {
+      create: jest.Mock;
+    };
   };
   let customFieldsService: {
     saveValues: jest.Mock;
@@ -39,7 +48,9 @@ describe("ProjectsService", () => {
 
   beforeEach(() => {
     prisma = {
-      $transaction: jest.fn(async (operations: Array<Promise<unknown>>) => Promise.all(operations)),
+      $transaction: jest.fn(async (operations: Array<Promise<unknown>> | ((client: typeof prisma) => Promise<unknown>)) =>
+        typeof operations === "function" ? operations(prisma) : Promise.all(operations)
+      ),
       customer: {
         findFirst: jest.fn()
       },
@@ -49,6 +60,15 @@ describe("ProjectsService", () => {
         create: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn()
+      },
+      contract: {
+        findFirst: jest.fn()
+      },
+      quote: {
+        findFirst: jest.fn()
+      },
+      payment: {
+        create: jest.fn()
       }
     };
     customFieldsService = {
@@ -294,5 +314,98 @@ describe("ProjectsService", () => {
         }
       }
     });
+  });
+
+  it("creates a project-only payment when there is no contract", async () => {
+    prisma.project.findFirst.mockResolvedValue({
+      id: "project-1",
+      code: "AHSO-001",
+      name: "Dự án thanh toán trực tiếp",
+      estimatedValue: 100_000_000,
+      payments: [{ amount: 20_000_000 }],
+      customer: {
+        assignedTo: {
+          id: "user-1"
+        }
+      }
+    });
+    prisma.payment.create.mockResolvedValue({
+      id: "payment-1",
+      amount: 30_000_000,
+      paidAt: new Date("2026-05-25T00:00:00.000Z"),
+      method: "Chuyển khoản",
+      reference: null,
+      notes: null
+    });
+
+    await expect(
+      service.createPayment(
+        "project-1",
+        {
+          amount: 30_000_000,
+          paidAt: new Date("2026-05-25T00:00:00.000Z"),
+          method: "Chuyển khoản"
+        },
+        user
+      )
+    ).resolves.toMatchObject({
+      id: "payment-1",
+      amount: 30_000_000,
+      projectId: "project-1",
+      contractId: null,
+      quoteId: null,
+      sourceType: "project",
+      sourceLabel: "AHSO-001"
+    });
+
+    expect(prisma.payment.create).toHaveBeenCalledWith({
+      data: {
+        amount: 30_000_000,
+        paidAt: new Date("2026-05-25T00:00:00.000Z"),
+        method: "Chuyển khoản",
+        reference: undefined,
+        notes: undefined,
+        projectId: "project-1",
+        contractId: null,
+        quoteId: null
+      }
+    });
+    expect(domainEvents.emit).toHaveBeenCalledWith(
+      "payment.received",
+      expect.objectContaining({
+        projectId: "project-1",
+        amount: 30_000_000,
+        sourceLabel: "AHSO-001"
+      })
+    );
+  });
+
+  it("rejects a quote payment when the quote does not belong to the project", async () => {
+    prisma.project.findFirst.mockResolvedValue({
+      id: "project-1",
+      code: "AHSO-001",
+      estimatedValue: 0,
+      payments: [],
+      customer: {
+        assignedTo: {
+          id: "user-1"
+        }
+      }
+    });
+    prisma.quote.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.createPayment(
+        "project-1",
+        {
+          amount: 10_000_000,
+          paidAt: new Date("2026-05-25T00:00:00.000Z"),
+          quoteId: "quote-other"
+        },
+        user
+      )
+    ).rejects.toThrow("Báo giá không thuộc dự án này hoặc đã bị xóa");
+
+    expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { CreatePaymentDto, createPaymentSchema } from "../contracts/dto/create-payment.dto";
 import { CreateProjectHandoverDto, createProjectHandoverSchema } from "./dto/create-project-handover.dto";
 import { CreateProjectDto, createProjectSchema } from "./dto/create-project.dto";
 import { BulkProjectDto, bulkProjectSchema } from "./dto/bulk-project.dto";
@@ -134,6 +135,17 @@ export class ProjectsController {
     @CurrentUser() user: JwtUser
   ) {
     return this.projectsService.createHandover(id, dto, user);
+  }
+
+  @RequirePermissions("payments.create")
+  @ApiOperation({ summary: "POST /api/projects/:id/payments" })
+  @Post(":id/payments")
+  createPayment(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(createPaymentSchema)) dto: CreatePaymentDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.createPayment(id, dto, user);
   }
 
   @RequirePermissions("projects.edit")

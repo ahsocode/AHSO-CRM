@@ -399,9 +399,9 @@ export class NotificationsService {
               {
                 userId: String(payload.ownerUserId),
                 title: "Đã ghi nhận thanh toán",
-                message: `Khoản thanh toán mới đã được ghi nhận cho hợp đồng ${payload.contractNo ?? ""}.`,
+                message: `Khoản thanh toán mới đã được ghi nhận cho ${payload.contractNo ? `hợp đồng ${payload.contractNo}` : payload.sourceLabel ?? "dự án"}.`,
                 type: "success",
-                link: payload.contractId ? `/contracts/${payload.contractId}` : "/contracts"
+                link: payload.contractId ? `/contracts/${payload.contractId}` : payload.projectId ? `/projects/${payload.projectId}?tab=payments` : "/projects"
               }
             ]
           : [];

@@ -391,6 +391,7 @@ describe("ContractsService", () => {
         method: "Chuyển khoản",
         reference: "UNC-001",
         notes: "Thanh toán đợt 2",
+        projectId: "project-1",
         contractId: "contract-1"
       }
     });

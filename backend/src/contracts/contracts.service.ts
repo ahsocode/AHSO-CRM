@@ -461,6 +461,7 @@ export class ContractsService {
           method: dto.method,
           reference: dto.reference,
           notes: dto.notes,
+          projectId: contract.projectId,
           contractId: contract.id
         }
       });
@@ -491,7 +492,12 @@ export class ContractsService {
       paidAt: payment.paidAt,
       method: payment.method,
       reference: payment.reference,
-      notes: payment.notes
+      notes: payment.notes,
+      projectId,
+      contractId,
+      quoteId: null,
+      sourceType: "contract",
+      sourceLabel: context.contractNo
     };
   }
 

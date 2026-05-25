@@ -133,7 +133,7 @@ export function TopCustomersReport({
                     <span className="ml-3 truncate text-sm font-medium text-text-primary">
                       {payment.customerName}
                     </span>
-                    <span className="ml-1 shrink-0 text-xs text-text-secondary">· {payment.contractNo}</span>
+                    <span className="ml-1 shrink-0 text-xs text-text-secondary">· {payment.sourceLabel ?? payment.contractNo}</span>
                   </div>
                   <CurrencyDisplay
                     amount={payment.amount}

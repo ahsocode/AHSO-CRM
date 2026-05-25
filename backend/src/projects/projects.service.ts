@@ -6,6 +6,7 @@ import { PrismaService } from "../common/prisma.service";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
+import { CreatePaymentDto } from "../contracts/dto/create-payment.dto";
 import { BulkProjectDto } from "./dto/bulk-project.dto";
 import { CreateProjectHandoverDto } from "./dto/create-project-handover.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
@@ -252,7 +253,7 @@ export class ProjectsService {
     const project = await this.findAccessibleProject(id, user);
     const customFieldValues = await this.customFieldsService.getValues("project", id);
 
-    const [quotes, milestones, activities, contract] = await this.prisma.$transaction([
+    const [quotes, milestones, activities, contract, payments] = await this.prisma.$transaction([
       this.prisma.quote.findMany({
         where: {
           projectId: id
@@ -301,14 +302,38 @@ export class ProjectsService {
             }
           }
         }
+      }),
+      this.prisma.payment.findMany({
+        where: {
+          projectId: id
+        },
+        include: {
+          contract: {
+            select: {
+              id: true,
+              contractNo: true
+            }
+          },
+          quote: {
+            select: {
+              id: true,
+              quoteNo: true
+            }
+          }
+        },
+        orderBy: {
+          paidAt: "desc"
+        }
       })
     ]);
 
-    const paidAmount = contract
+    const paidAmount = payments.reduce((total, payment) => total + Number(payment.amount), 0);
+    const contractPaidAmount = contract
       ? contract.payments.reduce((total, payment) => total + Number(payment.amount), 0)
       : 0;
     const contractValue = Number(contract?.value ?? 0);
-    const outstandingAmount = Math.max(0, contractValue - paidAmount);
+    const projectValue = contract ? contractValue : Number(project.estimatedValue ?? 0);
+    const outstandingAmount = projectValue > 0 ? Math.max(0, projectValue - paidAmount) : 0;
 
     return {
       id: project.id,
@@ -317,7 +342,7 @@ export class ProjectsService {
       description: project.description,
       status: project.status,
       priority: project.priority,
-      estimatedValue: contract ? contractValue : Number(project.estimatedValue ?? 0),
+      estimatedValue: projectValue,
       progressPercent: this.mapProjectProgress(project.status),
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
@@ -364,8 +389,8 @@ export class ProjectsService {
             endDate: contract.endDate,
             fileUrl: contract.fileUrl,
             notes: contract.notes,
-            paidAmount,
-            outstandingAmount,
+            paidAmount: contractPaidAmount,
+            outstandingAmount: Math.max(0, contractValue - contractPaidAmount),
             paymentCount: contract.payments.length,
             payments: contract.payments.map((payment) => ({
               id: payment.id,
@@ -373,10 +398,28 @@ export class ProjectsService {
               paidAt: payment.paidAt,
               method: payment.method,
               reference: payment.reference,
-              notes: payment.notes
+              notes: payment.notes,
+              projectId: id,
+              contractId: contract.id,
+              quoteId: null,
+              sourceType: "contract",
+              sourceLabel: contract.contractNo
             }))
           }
         : null,
+      payments: payments.map((payment) => ({
+        id: payment.id,
+        amount: Number(payment.amount),
+        paidAt: payment.paidAt,
+        method: payment.method,
+        reference: payment.reference,
+        notes: payment.notes,
+        projectId: id,
+        contractId: payment.contractId,
+        quoteId: payment.quoteId,
+        sourceType: payment.contractId ? "contract" : payment.quoteId ? "quote" : "project",
+        sourceLabel: payment.contract?.contractNo ?? payment.quote?.quoteNo ?? project.code
+      })),
       quotes: quotes.map((quote) => ({
         id: quote.id,
         quoteNo: quote.quoteNo,
@@ -457,7 +500,7 @@ export class ProjectsService {
             { projectId: id },
             { quote: { projectId: id } },
             { contract: { projectId: id } },
-            { payment: { contract: { projectId: id } } }
+            { payment: { projectId: id } }
           ]
         },
         include: {
@@ -570,7 +613,7 @@ export class ProjectsService {
 
   async getTimeline(id: string, user: JwtUser) {
     await this.findAccessibleProjectRecord(id, user);
-    const [activities, surveys, quotes, contract, documents, milestones, handovers] = await this.prisma.$transaction([
+    const [activities, surveys, quotes, contract, payments, documents, milestones, handovers] = await this.prisma.$transaction([
       this.prisma.activity.findMany({
         where: {
           projectId: id,
@@ -628,13 +671,28 @@ export class ProjectsService {
       this.prisma.contract.findUnique({
         where: {
           projectId: id
+        }
+      }),
+      this.prisma.payment.findMany({
+        where: {
+          projectId: id
         },
         include: {
-          payments: {
-            orderBy: {
-              paidAt: "desc"
+          contract: {
+            select: {
+              id: true,
+              contractNo: true
+            }
+          },
+          quote: {
+            select: {
+              id: true,
+              quoteNo: true
             }
           }
+        },
+        orderBy: {
+          paidAt: "desc"
         }
       }),
       this.prisma.businessDocument.findMany({
@@ -643,7 +701,7 @@ export class ProjectsService {
             { projectId: id },
             { quote: { projectId: id } },
             { contract: { projectId: id } },
-            { payment: { contract: { projectId: id } } }
+            { payment: { projectId: id } }
           ]
         },
         include: {
@@ -746,21 +804,22 @@ export class ProjectsService {
                 status: contract.status,
                 value: Number(contract.value)
               }
-            },
-            ...contract.payments.map((payment) => ({
-              id: `payment:${payment.id}`,
-              type: "payment",
-              title: `Thanh toán ${Number(payment.amount).toLocaleString("vi-VN")} VND`,
-              description: payment.reference ?? payment.method ?? payment.notes,
-              happenedAt: payment.paidAt,
-              actorName: null,
-              link: `/contracts/${contract.id}`,
-              meta: {
-                amount: Number(payment.amount)
-              }
-            }))
+            }
           ]
         : []),
+      ...payments.map((payment) => ({
+        id: `payment:${payment.id}`,
+        type: "payment",
+        title: `Thanh toán ${Number(payment.amount).toLocaleString("vi-VN")} VND`,
+        description: payment.reference ?? payment.method ?? payment.notes ?? payment.contract?.contractNo ?? payment.quote?.quoteNo,
+        happenedAt: payment.paidAt,
+        actorName: null,
+        link: payment.contract ? `/contracts/${payment.contract.id}` : `/projects/${id}?tab=payments`,
+        meta: {
+          amount: Number(payment.amount),
+          source: payment.contract?.contractNo ?? payment.quote?.quoteNo ?? "Dự án"
+        }
+      })),
       ...documents.map((document) => ({
         id: `document:${document.id}`,
         type: "document",
@@ -818,7 +877,7 @@ export class ProjectsService {
             { projectId: id },
             { quote: { projectId: id } },
             { contract: { projectId: id } },
-            { payment: { contract: { projectId: id } } }
+            { payment: { projectId: id } }
           ]
         },
         include: {
@@ -892,12 +951,12 @@ export class ProjectsService {
           },
           contract: {
             select: {
-              id: true,
-              payments: {
-                select: {
-                  id: true
-                }
-              }
+              id: true
+            }
+          },
+          payments: {
+            select: {
+              id: true
             }
           }
         }
@@ -918,7 +977,7 @@ export class ProjectsService {
       ...(projectLinks?.customerId ? [projectLinks.customerId] : []),
       ...(projectLinks?.quotes.map((quote) => quote.id) ?? []),
       ...(projectLinks?.contract ? [projectLinks.contract.id] : []),
-      ...(projectLinks?.contract?.payments.map((payment) => payment.id) ?? [])
+      ...(projectLinks?.payments.map((payment) => payment.id) ?? [])
     ];
 
     const generatedDocuments = entityIds.length
@@ -1213,6 +1272,184 @@ export class ProjectsService {
     });
 
     return this.mapHandover(handover);
+  }
+
+  async createPayment(id: string, dto: CreatePaymentDto, user: JwtUser) {
+    if (dto.contractId && dto.quoteId) {
+      throw new BadRequestException("Chỉ chọn một nguồn thu: hợp đồng hoặc báo giá");
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const project = await tx.project.findFirst({
+        where: {
+          ...this.buildWhere({}, user),
+          id
+        },
+        select: {
+          id: true,
+          code: true,
+          name: true,
+          estimatedValue: true,
+          payments: {
+            select: {
+              amount: true
+            }
+          },
+          customer: {
+            select: {
+              assignedTo: {
+                select: {
+                  id: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!project) {
+        throw new NotFoundException("Không tìm thấy dự án");
+      }
+
+      let contractId: string | null = null;
+      let quoteId: string | null = null;
+      let sourceType: "contract" | "quote" | "project" = "project";
+      let sourceLabel = project.code;
+
+      if (dto.contractId) {
+        const contract = await tx.contract.findFirst({
+          where: {
+            id: dto.contractId,
+            projectId: id,
+            deletedAt: null
+          },
+          select: {
+            id: true,
+            contractNo: true,
+            value: true,
+            payments: {
+              select: {
+                amount: true
+              }
+            }
+          }
+        });
+
+        if (!contract) {
+          throw new BadRequestException("Hợp đồng không thuộc dự án này hoặc đã bị xóa");
+        }
+
+        this.assertPaymentLimit({
+          currentPaid: contract.payments.reduce((sum, payment) => sum + Number(payment.amount), 0),
+          nextAmount: dto.amount,
+          limit: Number(contract.value),
+          sourceLabel: `hợp đồng ${contract.contractNo}`
+        });
+
+        contractId = contract.id;
+        sourceType = "contract";
+        sourceLabel = contract.contractNo;
+      } else if (dto.quoteId) {
+        const quote = await tx.quote.findFirst({
+          where: {
+            id: dto.quoteId,
+            projectId: id,
+            deletedAt: null
+          },
+          select: {
+            id: true,
+            quoteNo: true,
+            total: true,
+            payments: {
+              select: {
+                amount: true
+              }
+            }
+          }
+        });
+
+        if (!quote) {
+          throw new BadRequestException("Báo giá không thuộc dự án này hoặc đã bị xóa");
+        }
+
+        this.assertPaymentLimit({
+          currentPaid: quote.payments.reduce((sum, payment) => sum + Number(payment.amount), 0),
+          nextAmount: dto.amount,
+          limit: Number(quote.total),
+          sourceLabel: `báo giá ${quote.quoteNo}`
+        });
+
+        quoteId = quote.id;
+        sourceType = "quote";
+        sourceLabel = quote.quoteNo;
+      } else {
+        const projectValue = Number(project.estimatedValue ?? 0);
+
+        if (projectValue > 0) {
+          this.assertPaymentLimit({
+            currentPaid: project.payments.reduce((sum, payment) => sum + Number(payment.amount), 0),
+            nextAmount: dto.amount,
+            limit: projectValue,
+            sourceLabel: `dự án ${project.code}`
+          });
+        }
+      }
+
+      const payment = await tx.payment.create({
+        data: {
+          amount: dto.amount,
+          paidAt: dto.paidAt,
+          method: dto.method,
+          reference: dto.reference,
+          notes: dto.notes,
+          projectId: project.id,
+          contractId,
+          quoteId
+        }
+      });
+
+      return {
+        payment,
+        projectId: project.id,
+        projectCode: project.code,
+        ownerUserId: project.customer.assignedTo.id,
+        contractId,
+        quoteId,
+        sourceType,
+        sourceLabel
+      };
+    });
+
+    void Promise.resolve(this.domainEvents
+      .emit("payment.received", {
+        paymentId: result.payment.id,
+        projectId: result.projectId,
+        contractId: result.contractId,
+        quoteId: result.quoteId,
+        ownerUserId: result.ownerUserId,
+        contractNo: result.sourceType === "contract" ? result.sourceLabel : undefined,
+        sourceLabel: result.sourceLabel,
+        amount: Number(result.payment.amount),
+        paidAt: result.payment.paidAt,
+        method: result.payment.method
+      }))
+      .catch((err: unknown) =>
+        this.logger.error("Domain event handler failed", { event: "payment.received", err })
+      );
+
+    return {
+      id: result.payment.id,
+      amount: Number(result.payment.amount),
+      paidAt: result.payment.paidAt,
+      method: result.payment.method,
+      reference: result.payment.reference,
+      notes: result.payment.notes,
+      projectId: result.projectId,
+      contractId: result.contractId,
+      quoteId: result.quoteId,
+      sourceType: result.sourceType,
+      sourceLabel: result.sourceLabel
+    };
   }
 
   async update(id: string, dto: UpdateProjectDto, user: JwtUser) {
@@ -1592,6 +1829,32 @@ export class ProjectsService {
       toUser: handover.toUser,
       createdBy: handover.createdBy
     };
+  }
+
+  private assertPaymentLimit({
+    currentPaid,
+    nextAmount,
+    limit,
+    sourceLabel
+  }: {
+    currentPaid: number;
+    nextAmount: number;
+    limit: number;
+    sourceLabel: string;
+  }) {
+    const nextPaidAmount = currentPaid + nextAmount;
+
+    if (nextPaidAmount > limit) {
+      throw new BadRequestException(
+        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị ${sourceLabel} (${this.formatNumber(limit)} VND)`
+      );
+    }
+  }
+
+  private formatNumber(value: number) {
+    return new Intl.NumberFormat("vi-VN", {
+      maximumFractionDigits: 0
+    }).format(value);
   }
 
   private buildWhere(filters: Partial<ProjectFilterDto>, user: JwtUser): Prisma.ProjectWhereInput {

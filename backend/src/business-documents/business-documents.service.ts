@@ -88,7 +88,7 @@ export class BusinessDocumentsService {
             { project: this.projectAccessWhere(user) },
             { quote: { project: this.projectAccessWhere(user) } },
             { contract: { project: this.projectAccessWhere(user) } },
-            { payment: { contract: { project: this.projectAccessWhere(user) } } },
+            { payment: { project: this.projectAccessWhere(user) } },
             { customer: this.customerAccessWhere(user) }
           ]
         },
@@ -322,7 +322,7 @@ export class BusinessDocumentsService {
           { projectId },
           { quote: { projectId } },
           { contract: { projectId } },
-          { payment: { contract: { projectId } } }
+          { payment: { projectId } }
         ]
       },
       include: businessDocumentInclude,
@@ -343,21 +343,19 @@ export class BusinessDocumentsService {
       const payment = await this.prisma.payment.findFirst({
         where: {
           id: paymentId,
-          contract: {
-            project: this.projectAccessWhere(user)
-          }
+          project: this.projectAccessWhere(user)
         },
         select: {
           id: true,
+          projectId: true,
           contract: {
             select: {
-              id: true,
-              projectId: true,
-              project: {
-                select: {
-                  customerId: true
-                }
-              }
+              id: true
+            }
+          },
+          project: {
+            select: {
+              customerId: true
             }
           }
         }
@@ -367,9 +365,9 @@ export class BusinessDocumentsService {
         throw new NotFoundException("Không tìm thấy thanh toán để gắn tài liệu");
       }
 
-      contractId = payment.contract.id;
-      projectId = payment.contract.projectId;
-      customerId = payment.contract.project.customerId;
+      contractId = payment.contract?.id ?? null;
+      projectId = payment.projectId;
+      customerId = payment.project.customerId;
     }
 
     if (contractId) {
@@ -475,7 +473,7 @@ export class BusinessDocumentsService {
           { project: this.projectAccessWhere(user) },
           { quote: { project: this.projectAccessWhere(user) } },
           { contract: { project: this.projectAccessWhere(user) } },
-          { payment: { contract: { project: this.projectAccessWhere(user) } } },
+          { payment: { project: this.projectAccessWhere(user) } },
           { customer: this.customerAccessWhere(user) }
         ]
       },

@@ -15,7 +15,7 @@ import { DocumentDataLoaderService } from "./document-data-loader.service";
 import { DocumentLayoutRendererService } from "./document-layout-renderer.service";
 import { DocumentNumberService } from "./document-number.service";
 import { DocumentTemplateVariantsService } from "./document-template-variants.service";
-import type { DocumentLanguage } from "./dto/document-type.enum";
+import { DOCUMENT_ENTITY_TYPES, type DocumentEntityType, type DocumentLanguage } from "./dto/document-type.enum";
 import type { DocumentListFilterDto } from "./dto/render-document.dto";
 import { registerHelpers } from "./helpers";
 import { I18nService } from "./i18n.service";
@@ -177,6 +177,8 @@ ${extraCss}
     const { context, title, entry } = await this.buildRenderContext(type, entityId, language, user, extra);
     const customerCode = this.extractCustomerCode(context);
     const customerId = this.extractCustomerId(context);
+    const renderEntityType = this.extractDocumentEntityType(context, entry.entityType);
+    const renderEntityId = this.extractDocumentEntityId(context, entityId);
 
     let createdDocumentNumber: string | null = null;
     let createdDocumentId: string | null = null;
@@ -204,8 +206,8 @@ ${extraCss}
             number,
             version: 1,
             language,
-            entityType: entry.entityType,
-            entityId,
+            entityType: renderEntityType,
+            entityId: renderEntityId,
             customerId: customerId ?? undefined,
             createdById: user.sub,
             pdfPath: null,
@@ -526,6 +528,16 @@ ${extraCss}
       }
     }
     return null;
+  }
+
+  private extractDocumentEntityType(data: Record<string, unknown>, fallback: string) {
+    const value = data.documentEntityType;
+    return typeof value === "string" && DOCUMENT_ENTITY_TYPES.includes(value as DocumentEntityType) ? value : fallback;
+  }
+
+  private extractDocumentEntityId(data: Record<string, unknown>, fallback: string) {
+    const value = data.documentEntityId;
+    return typeof value === "string" && value.trim().length > 0 ? value : fallback;
   }
 
   private async ensureInitialized() {

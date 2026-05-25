@@ -141,6 +141,139 @@ export class DocumentDataLoaderService {
     return scopedItems.length > 0 ? scopedItems : this.mapQuoteItems(quoteItems);
   }
 
+  private async loadContractOrQuoteReference(entityId: string) {
+    const contract = await this.prisma.contract.findUnique({
+      where: { id: entityId },
+      include: {
+        project: {
+          include: {
+            customer: {
+              include: {
+                contacts: {
+                  where: { isPrimary: true },
+                  take: 1
+                }
+              }
+            },
+            quotes: {
+              where: { status: "ACCEPTED" },
+              include: { items: { orderBy: { order: "asc" } } },
+              take: 1
+            }
+          }
+        },
+        items: {
+          orderBy: { order: "asc" }
+        },
+        milestones: {
+          orderBy: { dueDate: "asc" }
+        }
+      }
+    });
+
+    if (contract) {
+      const linkedQuote = contract.project.quotes[0] || null;
+      const contractItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+
+      return {
+        contract: {
+          ...contract,
+          value: Number(contract.value)
+        },
+        project: contract.project,
+        customer: contract.project.customer,
+        primaryContact: contract.project.customer.contacts[0] || null,
+        linkedQuote: linkedQuote
+          ? {
+              ...linkedQuote,
+              subtotal: Number(linkedQuote.subtotal),
+              taxRate: Number(linkedQuote.taxRate),
+              taxAmount: Number(linkedQuote.taxAmount),
+              total: Number(linkedQuote.total),
+              items: contractItems
+            }
+          : null,
+        contractItems,
+        milestones: contract.milestones.map((milestone) => ({
+          ...milestone,
+          paymentAmount: milestone.paymentAmount ? Number(milestone.paymentAmount) : null
+        })),
+        documentEntityType: "contract",
+        documentEntityId: contract.id,
+        isQuoteReference: false
+      };
+    }
+
+    const quote = await this.prisma.quote.findUnique({
+      where: { id: entityId },
+      include: {
+        items: {
+          orderBy: { order: "asc" }
+        },
+        project: {
+          include: {
+            customer: {
+              include: {
+                contacts: {
+                  where: { isPrimary: true },
+                  take: 1
+                }
+              }
+            },
+            milestones: {
+              orderBy: { dueDate: "asc" }
+            }
+          }
+        }
+      }
+    });
+
+    if (!quote) {
+      throw new NotFoundException(`Không tìm thấy hợp đồng hoặc báo giá với ID: ${entityId}`);
+    }
+
+    const quoteItems = this.mapQuoteItems(quote.items);
+    const syntheticContract = {
+      id: quote.id,
+      contractNo: `Theo báo giá ${quote.quoteNo}`,
+      signDate: quote.acceptedAt ?? quote.sentAt ?? quote.createdAt,
+      startDate: quote.project.startDate,
+      endDate: quote.project.expectedEndDate,
+      expectedEndDate: quote.project.expectedEndDate,
+      value: Number(quote.total),
+      status: "ACTIVE",
+      fileUrl: null,
+      notes: quote.terms,
+      projectId: quote.projectId,
+      createdAt: quote.createdAt,
+      updatedAt: quote.updatedAt,
+      deletedAt: quote.deletedAt
+    };
+
+    return {
+      contract: syntheticContract,
+      project: quote.project,
+      customer: quote.project.customer,
+      primaryContact: quote.project.customer.contacts[0] || null,
+      linkedQuote: {
+        ...quote,
+        subtotal: Number(quote.subtotal),
+        taxRate: Number(quote.taxRate),
+        taxAmount: Number(quote.taxAmount),
+        total: Number(quote.total),
+        items: quoteItems
+      },
+      contractItems: quoteItems,
+      milestones: quote.project.milestones.map((milestone) => ({
+        ...milestone,
+        paymentAmount: milestone.paymentAmount ? Number(milestone.paymentAmount) : null
+      })),
+      documentEntityType: "quote",
+      documentEntityId: quote.id,
+      isQuoteReference: true
+    };
+  }
+
   async loadForQuotation(entityId: string): Promise<Record<string, unknown>> {
     const quote = await this.prisma.quote.findUnique({
       where: { id: entityId },
@@ -295,92 +428,16 @@ export class DocumentDataLoaderService {
   }
 
   async loadForContract(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            },
-            quotes: {
-              where: { status: "ACCEPTED" },
-              include: { items: { orderBy: { order: "asc" } } },
-              take: 1
-            }
-          }
-        },
-        items: {
-          orderBy: { order: "asc" }
-        },
-        milestones: {
-          orderBy: { dueDate: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
-
-    const linkedQuote = contract.project.quotes[0] || null;
-    const contractScopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+    const reference = await this.loadContractOrQuoteReference(entityId);
 
     return {
       title: "HỢP ĐỒNG KINH TẾ / ECONOMIC CONTRACT",
-      contract: {
-        ...contract,
-        value: Number(contract.value)
-      },
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
-      contractItems: contractScopeItems,
-      linkedQuote: linkedQuote ? {
-        ...linkedQuote,
-        subtotal: Number(linkedQuote.subtotal),
-        taxRate: Number(linkedQuote.taxRate),
-        taxAmount: Number(linkedQuote.taxAmount),
-        total: Number(linkedQuote.total),
-        items: contractScopeItems
-      } : null,
-      milestones: contract.milestones.map(m => ({
-        ...m,
-        paymentAmount: m.paymentAmount ? Number(m.paymentAmount) : null
-      }))
+      ...reference
     };
   }
 
   async loadForContractAddendum(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            }
-          }
-        },
-        items: {
-          orderBy: { order: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
+    const reference = await this.loadContractOrQuoteReference(entityId);
 
     // Mock changes for the addendum. In a real app, these could be stored in a ContractAddendum entity.
     const modifications = [
@@ -390,13 +447,7 @@ export class DocumentDataLoaderService {
 
     return {
       title: "PHỤ LỤC HỢP ĐỒNG / CONTRACT ADDENDUM",
-      contract: {
-        ...contract,
-        value: Number(contract.value)
-      },
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       modifications,
       addendumDate: new Date()
     };
@@ -426,38 +477,8 @@ export class DocumentDataLoaderService {
   }
 
   async loadForDeliveryNote(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            },
-            quotes: {
-              where: { status: "ACCEPTED" },
-              include: { items: { orderBy: { order: "asc" } } },
-              take: 1
-            }
-          }
-        },
-        items: {
-          orderBy: { order: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
-
-    const linkedQuote = contract.project.quotes[0] || null;
-    const deliveredItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []).map((item) => ({
+    const reference = await this.loadContractOrQuoteReference(entityId);
+    const deliveredItems = reference.contractItems.map((item) => ({
       name: item.name,
       description: item.description,
       quantity: item.quantity,
@@ -466,45 +487,14 @@ export class DocumentDataLoaderService {
 
     return {
       title: "BIÊN BẢN GIAO HÀNG / DELIVERY NOTE",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       deliveredItems,
       deliveryDate: new Date()
     };
   }
 
   async loadForDocHandover(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            },
-            quotes: {
-              where: { status: "ACCEPTED" },
-              include: { items: { orderBy: { order: "asc" } } },
-              take: 1
-            }
-          }
-        },
-        items: {
-          orderBy: { order: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
+    const reference = await this.loadContractOrQuoteReference(entityId);
 
     const handedOverDocs = [
       { name: "Tài liệu Hướng dẫn sử dụng (User Manual)", format: "Bản cứng & Bản mềm", note: "Đã bao gồm tài khoản quản trị" },
@@ -514,48 +504,15 @@ export class DocumentDataLoaderService {
 
     return {
       title: "BIÊN BẢN BÀN GIAO TÀI LIỆU / DOCUMENT HANDOVER",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       handedOverDocs,
       handoverDate: new Date()
     };
   }
 
   async loadForInstallationReport(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            },
-            quotes: {
-              where: { status: "ACCEPTED" },
-              include: { items: { orderBy: { order: "asc" } } },
-              take: 1
-            }
-          }
-        },
-        items: {
-          orderBy: { order: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
-
-    const linkedQuote = contract.project.quotes[0] || null;
-    const scopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+    const reference = await this.loadContractOrQuoteReference(entityId);
+    const scopeItems = reference.contractItems;
     const installations = scopeItems.length > 0
       ? scopeItems.map((item) => ({
           name: item.name,
@@ -570,48 +527,15 @@ export class DocumentDataLoaderService {
 
     return {
       title: "BIÊN BẢN CÀI ĐẶT & TRIỂN KHAI / INSTALLATION REPORT",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       installations,
       installationDate: new Date()
     };
   }
 
   async loadForAcceptanceReport(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            },
-            quotes: {
-              where: { status: "ACCEPTED" },
-              include: { items: { orderBy: { order: "asc" } } },
-              take: 1
-            }
-          }
-        },
-        items: {
-          orderBy: { order: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
-
-    const linkedQuote = contract.project.quotes[0] || null;
-    const scopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+    const reference = await this.loadContractOrQuoteReference(entityId);
+    const scopeItems = reference.contractItems;
     const testResults = scopeItems.length > 0
       ? scopeItems.map((item) => ({
           name: item.name,
@@ -627,56 +551,20 @@ export class DocumentDataLoaderService {
 
     return {
       title: "BIÊN BẢN NGHIỆM THU KỸ THUẬT / UAT REPORT",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       testResults,
       acceptanceDate: new Date()
     };
   }
 
   async loadForPartialAcceptance(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            },
-            quotes: {
-              where: { status: "ACCEPTED" },
-              include: { items: { orderBy: { order: "asc" } } },
-              take: 1
-            }
-          }
-        },
-        items: {
-          orderBy: { order: "asc" }
-        },
-        milestones: {
-          orderBy: { dueDate: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
-
-    const linkedQuote = contract.project.quotes[0] || null;
-    const scopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+    const reference = await this.loadContractOrQuoteReference(entityId);
+    const scopeItems = reference.contractItems;
     const acceptedParts = scopeItems.length > 0
       ? scopeItems.map((item) => {
           const ratio =
-            Number(contract.value) > 0 && item.total > 0
-              ? `${Math.round((item.total / Number(contract.value)) * 100)}%`
+            Number(reference.contract.value) > 0 && item.total > 0
+              ? `${Math.round((item.total / Number(reference.contract.value)) * 100)}%`
               : "Theo giá trị";
 
           return {
@@ -686,12 +574,12 @@ export class DocumentDataLoaderService {
             note: item.description ?? "Hạng mục thuộc phạm vi nghiệm thu"
           };
         })
-      : contract.milestones
+      : reference.milestones
       .filter((milestone) => ["DONE", "ACCEPTED", "IN_PROGRESS"].includes(milestone.status))
       .map((milestone) => {
         const value = milestone.paymentAmount ? Number(milestone.paymentAmount) : 0;
         const ratio =
-          Number(contract.value) > 0 && value > 0 ? `${Math.round((value / Number(contract.value)) * 100)}%` : "Theo giá trị";
+          Number(reference.contract.value) > 0 && value > 0 ? `${Math.round((value / Number(reference.contract.value)) * 100)}%` : "Theo giá trị";
 
         return {
           name: milestone.name,
@@ -702,15 +590,12 @@ export class DocumentDataLoaderService {
       });
 
     if (acceptedParts.length === 0) {
-      acceptedParts.push({ name: "Giai đoạn 1: Triển khai thiết kế", ratio: "30%", value: Number(contract.value) * 0.3, note: "" });
+      acceptedParts.push({ name: "Giai đoạn 1: Triển khai thiết kế", ratio: "30%", value: Number(reference.contract.value) * 0.3, note: "" });
     }
 
     return {
       title: "BIÊN BẢN NGHIỆM THU GIAI ĐOẠN / PARTIAL ACCEPTANCE REPORT",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       acceptedParts,
       acceptanceDate: new Date()
     };
@@ -760,27 +645,7 @@ export class DocumentDataLoaderService {
   }
 
   async loadForWarrantyCert(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
+    const reference = await this.loadContractOrQuoteReference(entityId);
 
     const warrantyMonths = 12;
     const warrantyEndDate = new Date();
@@ -788,10 +653,7 @@ export class DocumentDataLoaderService {
 
     return {
       title: "GIẤY CHỨNG NHẬN BẢO HÀNH / WARRANTY CERTIFICATE",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       warrantyDate: new Date(),
       warrantyPeriodMonths: warrantyMonths,
       warrantyEndDate
@@ -799,27 +661,7 @@ export class DocumentDataLoaderService {
   }
 
   async loadForMaintenanceRecord(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
+    const reference = await this.loadContractOrQuoteReference(entityId);
 
     const issues = [
       { name: "Kiểm tra tình trạng Server", status: "Hoạt động bình thường", note: "CPU < 40%, RAM < 60%" },
@@ -829,10 +671,7 @@ export class DocumentDataLoaderService {
 
     return {
       title: "BIÊN BẢN BẢO TRÌ & HỖ TRỢ / MAINTENANCE RECORD",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       issues,
       maintenanceDate: new Date(),
       technician: "Nguyễn Văn Kỹ Thuật"
@@ -840,41 +679,15 @@ export class DocumentDataLoaderService {
   }
 
   async loadForPaymentRequest(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            }
-          }
-        },
-        milestones: {
-          orderBy: { dueDate: "asc" }
-        }
-      }
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
+    const reference = await this.loadContractOrQuoteReference(entityId);
 
     // Usually payment request is for a specific milestone or total
-    const paymentAmount = contract.value ? Number(contract.value) * 0.3 : 0; // Requesting 30% for demo
+    const paymentAmount = reference.contract.value ? Number(reference.contract.value) * 0.3 : 0; // Requesting 30% for demo
     const paymentReason = "Thanh toán tạm ứng đợt 1 theo hợp đồng (30%)";
 
     return {
       title: "GIẤY ĐỀ NGHỊ THANH TOÁN / PAYMENT REQUEST",
-      contract,
-      project: contract.project,
-      customer: contract.project.customer,
-      primaryContact: contract.project.customer.contacts[0] || null,
+      ...reference,
       requestDate: new Date(),
       paymentAmount,
       paymentReason,
@@ -885,44 +698,21 @@ export class DocumentDataLoaderService {
   }
 
   async loadForPaymentReceipt(entityId: string): Promise<Record<string, unknown>> {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id: entityId },
-      include: {
-        project: {
-          include: {
-            customer: {
-              include: {
-                contacts: {
-                  where: { isPrimary: true },
-                  take: 1
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const reference = await this.loadContractOrQuoteReference(entityId);
 
-    if (!contract) {
-      throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
-    }
-
-    const receiptAmount = contract.value ? Number(contract.value) * 0.3 : 0;
+    const receiptAmount = reference.contract.value ? Number(reference.contract.value) * 0.3 : 0;
     const paymentMethod = "Chuyển khoản (Bank Transfer)";
-    const receiptReason = `Thu tiền tạm ứng HĐ số ${contract.contractNo}`;
+    const receiptReason = `Thu tiền tạm ứng HĐ số ${reference.contract.contractNo}`;
 
     return {
       title: "PHIẾU THU / PAYMENT RECEIPT",
-      contract,
-      project: contract.project,
-      customer: contract.project?.customer,
-      primaryContact: contract.project?.customer?.contacts[0] || null,
+      ...reference,
       receiptDate: new Date(),
       receiptAmount,
       paymentMethod,
       receiptReason,
       cashier: "Nguyễn Thu Ngân",
-      payerName: contract.project?.customer?.contacts[0]?.name || "Đại diện khách hàng"
+      payerName: reference.primaryContact?.name || "Đại diện khách hàng"
     };
   }
 

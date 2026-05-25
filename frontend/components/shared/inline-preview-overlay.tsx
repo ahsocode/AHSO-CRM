@@ -92,6 +92,34 @@ function getColumnDividerPosition(widths: QuoteTableColumnWidths, columnIndex: n
   );
 }
 
+function applyWidthsToQuotationTables(
+  tables: HTMLTableElement[],
+  widths: QuoteTableColumnWidths
+) {
+  tables.forEach((lineItemTable) => {
+    const columns = Array.from(lineItemTable.querySelectorAll<HTMLTableColElement>("colgroup col")).slice(
+      0,
+      QUOTE_TABLE_COLUMNS.length
+    );
+    QUOTE_TABLE_COLUMNS.forEach((column, index) => {
+      const tableColumn = columns[index];
+      if (tableColumn) {
+        tableColumn.style.width = `${widths[column.key].toFixed(4)}%`;
+      }
+    });
+  });
+}
+
+function repositionQuoteResizeHandles(layer: HTMLElement, widths: QuoteTableColumnWidths) {
+  const handles = Array.from(
+    layer.querySelectorAll<HTMLButtonElement>("[data-quote-column-resize-handle]")
+  );
+
+  handles.forEach((handle, index) => {
+    handle.style.left = `${getColumnDividerPosition(widths, index)}%`;
+  });
+}
+
 function areQuoteTableWidthsEqual(left: QuoteTableColumnWidths, right: QuoteTableColumnWidths) {
   return QUOTE_TABLE_COLUMNS.every((column) => Math.abs(left[column.key] - right[column.key]) < 0.05);
 }
@@ -167,18 +195,7 @@ function applyQuoteColumnResizeControls({
     return;
   }
 
-  lineItemTables.forEach((lineItemTable) => {
-    const columns = Array.from(lineItemTable.querySelectorAll<HTMLTableColElement>("colgroup col")).slice(
-      0,
-      QUOTE_TABLE_COLUMNS.length
-    );
-    QUOTE_TABLE_COLUMNS.forEach((column, index) => {
-      const tableColumn = columns[index];
-      if (tableColumn) {
-        tableColumn.style.width = `${widths[column.key].toFixed(4)}%`;
-      }
-    });
-  });
+  applyWidthsToQuotationTables(lineItemTables, widths);
 
   if (!canEdit) {
     return;
@@ -200,12 +217,15 @@ function applyQuoteColumnResizeControls({
     layer.style.width = layerHost.width;
   }
   layer.style.height = `${headerHeight}px`;
-  layer.style.pointerEvents = "none";
+  layer.style.cursor = "col-resize";
+  layer.style.pointerEvents = "auto";
+  layer.style.userSelect = "none";
   layer.style.zIndex = "9999";
 
   QUOTE_TABLE_COLUMNS.slice(0, -1).forEach((column, index) => {
     const handle = documentRef.createElement("button");
     handle.type = "button";
+    handle.dataset.quoteColumnResizeHandle = "true";
     handle.setAttribute("aria-label", `Kéo để chỉnh cột ${column.label}`);
     handle.style.position = "absolute";
     handle.style.top = "0";
@@ -218,6 +238,9 @@ function applyQuoteColumnResizeControls({
     handle.style.background = "transparent";
     handle.style.cursor = "col-resize";
     handle.style.pointerEvents = "auto";
+    handle.style.touchAction = "none";
+    handle.style.userSelect = "none";
+    handle.style.zIndex = "1";
 
     const indicator = documentRef.createElement("span");
     indicator.style.display = "block";
@@ -232,30 +255,57 @@ function applyQuoteColumnResizeControls({
     handle.addEventListener("pointerdown", (event) => {
       const pointerEvent = event as PointerEvent;
       pointerEvent.preventDefault();
+      pointerEvent.stopPropagation();
       const startClientX = pointerEvent.clientX;
       const startWidths = widths;
+      let latestWidths = widths;
+
+      try {
+        handle.setPointerCapture(pointerEvent.pointerId);
+      } catch {
+        // Some embedded document contexts do not allow pointer capture.
+        // Document-level listeners below still keep the drag interaction working.
+      }
 
       const handleMove = (moveEvent: PointerEvent) => {
+        moveEvent.preventDefault();
         const tableWidthPx = table.getBoundingClientRect().width;
         if (tableWidthPx <= 0) {
           return;
         }
 
         const deltaPercent = ((moveEvent.clientX - startClientX) / tableWidthPx) * 100;
-        onChange(adjustAdjacentColumnWidths(startWidths, index, deltaPercent));
+        latestWidths = adjustAdjacentColumnWidths(startWidths, index, deltaPercent);
+        applyWidthsToQuotationTables(lineItemTables, latestWidths);
+        repositionQuoteResizeHandles(layer, latestWidths);
       };
 
-      const handleUp = () => {
+      const handleUp = (upEvent: PointerEvent) => {
+        upEvent.preventDefault();
         frameWindow.document.body.style.cursor = "";
         frameWindow.document.body.style.userSelect = "";
-        frameWindow.removeEventListener("pointermove", handleMove);
-        frameWindow.removeEventListener("pointerup", handleUp);
+        documentRef.removeEventListener("pointermove", handleMove);
+        documentRef.removeEventListener("pointerup", handleUp);
+        documentRef.removeEventListener("pointercancel", handleUp);
+        handle.removeEventListener("pointermove", handleMove);
+        handle.removeEventListener("pointerup", handleUp);
+        handle.removeEventListener("pointercancel", handleUp);
+        try {
+          handle.releasePointerCapture(pointerEvent.pointerId);
+        } catch {
+          // Ignore release errors from browsers that skipped capture.
+        }
+        onChange(latestWidths);
       };
 
       frameWindow.document.body.style.cursor = "col-resize";
       frameWindow.document.body.style.userSelect = "none";
-      frameWindow.addEventListener("pointermove", handleMove);
-      frameWindow.addEventListener("pointerup", handleUp);
+      documentRef.addEventListener("pointermove", handleMove);
+      documentRef.addEventListener("pointerup", handleUp);
+      documentRef.addEventListener("pointercancel", handleUp);
+      handle.addEventListener("pointermove", handleMove);
+      handle.addEventListener("pointerup", handleUp);
+      handle.addEventListener("pointercancel", handleUp);
     });
 
     layer.appendChild(handle);

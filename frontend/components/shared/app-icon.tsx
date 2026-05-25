@@ -42,7 +42,11 @@ type IconName =
   | "warehouse"
   | "inventory"
   | "truck"
-  | "smart_toy";
+  | "smart_toy"
+  | "chevron-left"
+  | "chevron-right"
+  | "external-link"
+  | "pencil";
 
 const ICONS: Record<IconName, ReactNode> = {
   dashboard: <path d="M3 3h7v8H3zM14 3h7v5h-7zM14 11h7v10h-7zM3 14h7v7H3z" />,
@@ -85,7 +89,11 @@ const ICONS: Record<IconName, ReactNode> = {
   warehouse: <path d="M2 21V9l10-6 10 6v12M6 21V12h12v9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   inventory: <path d="M3 3h18v4H3zM3 10h18v11H3zM9 14h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
   truck: <path d="M1 3h15v13H1zM16 8h4l3 4v4h-7zM5.5 20a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm13 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-  smart_toy: <path d="M12 3v3M8 3h8M5 9a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V9Zm-3 2v4m20-4v4M9 12h.01M15 12h.01M9 16h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  smart_toy: <path d="M12 3v3M8 3h8M5 9a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V9Zm-3 2v4m20-4v4M9 12h.01M15 12h.01M9 16h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "chevron-left": <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "chevron-right": <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  "external-link": <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  pencil: <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
 };
 
 export function AppIcon({

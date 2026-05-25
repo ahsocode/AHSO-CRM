@@ -1104,6 +1104,7 @@ export interface QuoteDetail {
   internalNote?: string | null;
   sentAt?: string | null;
   acceptedAt?: string | null;
+  acceptedItemIds: string[];
   createdAt: string;
   updatedAt: string;
   itemCount: number;
@@ -1136,6 +1137,7 @@ export interface QuoteUpdateInput extends QuoteCreateInput {}
 
 export interface QuoteStatusUpdateInput {
   status: QuoteStatus;
+  acceptedItemIds?: string[];
 }
 
 export interface ContractListProject {

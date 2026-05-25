@@ -194,7 +194,14 @@ export function ContractFormScreen({
       return;
     }
 
-    setSelectedQuoteItemIds(selectedSourceQuoteDetail.items.map((item) => item.id));
+    // Pre-fill with the accepted items if the quote had partial acceptance, otherwise all items
+    const prefill =
+      selectedSourceQuoteDetail.acceptedItemIds?.length
+        ? selectedSourceQuoteDetail.items
+            .filter((item) => selectedSourceQuoteDetail.acceptedItemIds!.includes(item.id))
+            .map((item) => item.id)
+        : selectedSourceQuoteDetail.items.map((item) => item.id);
+    setSelectedQuoteItemIds(prefill);
   }, [mode, selectedSourceQuoteDetail]);
 
   useEffect(() => {

@@ -74,6 +74,10 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const [selectedTemplateVariantId, setSelectedTemplateVariantId] = useState("");
   const [isDraftEmailOpen, setIsDraftEmailOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [acceptDialog, setAcceptDialog] = useState<{ open: boolean; selectedIds: string[] }>({
+    open: false,
+    selectedIds: []
+  });
   const quoteQuery = useQuote(quoteId);
   const templateVariantsQuery = useRuntimeDocumentTemplateVariants("QUOTATION");
   const duplicateQuoteMutation = useDuplicateQuote();
@@ -505,11 +509,16 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                           key={action.nextStatus}
                           disabled={isMutating}
                           onClick={() => {
+                            if (action.nextStatus === "ACCEPTED") {
+                              setAcceptDialog({
+                                open: true,
+                                selectedIds: quote.items.map((item) => item.id)
+                              });
+                              return;
+                            }
                             updateQuoteStatusMutation.mutate({
                               quoteId: quote.id,
-                              payload: {
-                                status: action.nextStatus
-                              }
+                              payload: { status: action.nextStatus }
                             });
                           }}
                           size="lg"
@@ -604,6 +613,33 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
         projectId={quote.project.id}
         quoteId={quote.id}
       />
+
+      {acceptDialog.open ? (
+        <AcceptQuoteDialog
+          items={quote.items}
+          selectedIds={acceptDialog.selectedIds}
+          isPending={updateQuoteStatusMutation.isPending}
+          onToggle={(itemId) =>
+            setAcceptDialog((prev) => ({
+              ...prev,
+              selectedIds: prev.selectedIds.includes(itemId)
+                ? prev.selectedIds.filter((id) => id !== itemId)
+                : [...prev.selectedIds, itemId]
+            }))
+          }
+          onSelectAll={() =>
+            setAcceptDialog((prev) => ({ ...prev, selectedIds: quote.items.map((item) => item.id) }))
+          }
+          onClear={() => setAcceptDialog((prev) => ({ ...prev, selectedIds: [] }))}
+          onConfirm={() => {
+            updateQuoteStatusMutation.mutate(
+              { quoteId: quote.id, payload: { status: "ACCEPTED", acceptedItemIds: acceptDialog.selectedIds } },
+              { onSuccess: () => setAcceptDialog({ open: false, selectedIds: [] }) }
+            );
+          }}
+          onClose={() => setAcceptDialog({ open: false, selectedIds: [] })}
+        />
+      ) : null}
     </div>
   );
 }
@@ -851,6 +887,137 @@ function TermBlock({
     <div className="rounded-2xl border border-border/60 bg-white/80 p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">{title}</p>
       <p className="mt-3 text-sm leading-6 text-text-secondary">{description}</p>
+    </div>
+  );
+}
+
+function AcceptQuoteDialog({
+  items,
+  selectedIds,
+  isPending,
+  onToggle,
+  onSelectAll,
+  onClear,
+  onConfirm,
+  onClose
+}: {
+  items: import("@/lib/types").QuoteDetailItem[];
+  selectedIds: string[];
+  isPending: boolean;
+  onToggle: (itemId: string) => void;
+  onSelectAll: () => void;
+  onClear: () => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const subtotal = items
+    .filter((item) => selectedIds.includes(item.id))
+    .reduce((sum, item) => sum + item.total, 0);
+  const allSelected = selectedIds.length === items.length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex w-full max-w-xl flex-col rounded-2xl bg-white shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
+          <div>
+            <h2 className="text-base font-semibold text-text-primary">Xác nhận hạng mục khách chốt</h2>
+            <p className="mt-0.5 text-sm text-text-secondary">Chọn các hạng mục khách hàng đã chấp nhận</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-text-secondary hover:bg-bg-hover"
+          >
+            <AppIcon name="close" className="text-[20px]" />
+          </button>
+        </div>
+
+        {/* Select-all controls */}
+        <div className="flex items-center justify-between border-b border-border/60 bg-bg-subtle px-6 py-2.5">
+          <span className="text-sm font-medium text-text-secondary">
+            Đã chọn{" "}
+            <span className="font-semibold text-text-primary">{selectedIds.length}</span>/{items.length} hạng mục
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onSelectAll}
+              disabled={allSelected}
+              className="text-xs font-medium text-primary-mid hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Chọn tất cả
+            </button>
+            <span className="text-text-muted">·</span>
+            <button
+              type="button"
+              onClick={onClear}
+              disabled={selectedIds.length === 0}
+              className="text-xs font-medium text-text-secondary hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Bỏ chọn
+            </button>
+          </div>
+        </div>
+
+        {/* Item list */}
+        <div className="max-h-72 overflow-y-auto px-6 py-2">
+          {items.map((item) => {
+            const checked = selectedIds.includes(item.id);
+            return (
+              <label
+                key={item.id}
+                className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 hover:bg-bg-hover"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(item.id)}
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-primary"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className={cn("text-sm font-medium leading-snug", checked ? "text-text-primary" : "text-text-secondary")}>
+                    {item.order}. {item.name}
+                  </p>
+                  {item.description ? (
+                    <p className="mt-0.5 line-clamp-1 text-xs text-text-muted">{item.description}</p>
+                  ) : null}
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <p className={cn("text-sm font-semibold tabular-nums", checked ? "text-text-primary" : "text-text-muted")}>
+                    <CurrencyDisplay amount={item.total} />
+                  </p>
+                  <p className="text-xs text-text-muted">
+                    {item.quantity} {item.unit ?? ""}
+                  </p>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-border/60 px-6 py-4">
+          <div className="mb-4 flex items-center justify-between rounded-xl bg-bg-subtle px-4 py-3">
+            <span className="text-sm font-medium text-text-secondary">Tổng giá trị chốt</span>
+            <span className="text-base font-bold text-text-primary">
+              <CurrencyDisplay amount={subtotal} />
+            </span>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
+              Hủy
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={onConfirm}
+              disabled={isPending || selectedIds.length === 0}
+            >
+              {isPending ? "Đang lưu..." : `Xác nhận${selectedIds.length < items.length ? " (một phần)" : ""}`}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -162,6 +162,7 @@ export class QuotesService {
       internalNote: quote.internalNote,
       sentAt: quote.sentAt,
       acceptedAt: quote.acceptedAt,
+      acceptedItemIds: quote.acceptedItemIds,
       createdAt: quote.createdAt,
       updatedAt: quote.updatedAt,
       itemCount: quote.items.length,
@@ -496,12 +497,26 @@ export class QuotesService {
         throw new BadRequestException("Báo giá đã bị từ chối, chỉ có thể chuyển về nháp để chỉnh sửa");
       }
 
+      if (dto.status === "ACCEPTED" && dto.acceptedItemIds?.length) {
+        const quoteItemIds = new Set(quote.items.map((item) => item.id));
+        const invalid = dto.acceptedItemIds.filter((itemId) => !quoteItemIds.has(itemId));
+        if (invalid.length > 0) {
+          throw new BadRequestException("Một số hạng mục được chốt không thuộc báo giá này");
+        }
+      }
+
+      const resolvedAcceptedItemIds =
+        dto.status === "ACCEPTED"
+          ? (dto.acceptedItemIds?.length ? dto.acceptedItemIds : quote.items.map((item) => item.id))
+          : [];
+
       const updatedQuote = await tx.quote.update({
         where: {
           id
         },
         data: {
           status: dto.status,
+          acceptedItemIds: resolvedAcceptedItemIds,
           ...this.resolveQuoteStatusPayload(quote, dto.status)
         },
         select: {

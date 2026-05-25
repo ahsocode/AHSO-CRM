@@ -1,0 +1,1 @@
+ALTER TABLE "Quote" ADD COLUMN "acceptedItemIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

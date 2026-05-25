@@ -235,6 +235,7 @@ model Project {
   estimatedValue    Decimal?           @db.Decimal(15, 0)
   startDate         DateTime?
   expectedEndDate   DateTime?
+  completedAt       DateTime?
   notes             String?
   deletedAt         DateTime?
   customer          Customer           @relation(fields: [customerId], references: [id])

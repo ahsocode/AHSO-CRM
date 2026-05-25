@@ -222,6 +222,7 @@ export class ProjectsService {
         estimatedValue: dto.estimatedValue ?? null,
         startDate: dto.startDate,
         expectedEndDate: dto.expectedEndDate,
+        completedAt: dto.status === "COMPLETED" ? new Date() : null,
         notes: dto.notes
       }
     });
@@ -1238,7 +1239,9 @@ export class ProjectsService {
         ...(dto.estimatedValue !== undefined ? { estimatedValue: dto.estimatedValue } : {}),
         ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
         ...(dto.expectedEndDate !== undefined ? { expectedEndDate: dto.expectedEndDate } : {}),
-        ...(dto.notes !== undefined ? { notes: dto.notes } : {})
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+        ...(dto.status === "COMPLETED" ? { completedAt: new Date() } : {}),
+        ...(dto.status !== undefined && dto.status !== "COMPLETED" ? { completedAt: null } : {})
       }
     });
 
@@ -1257,7 +1260,8 @@ export class ProjectsService {
         id
       },
       data: {
-        status: dto.status
+        status: dto.status,
+        completedAt: dto.status === "COMPLETED" ? new Date() : null
       }
     });
 

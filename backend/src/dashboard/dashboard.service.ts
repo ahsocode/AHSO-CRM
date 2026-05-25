@@ -3,7 +3,6 @@ import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../common/prisma.service";
 
 const ACTIVE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING"] as const;
-const RECEIVABLE_CONTRACT_STATUSES = ["ACTIVE", "SUSPENDED", "COMPLETED"] as const;
 const PENDING_QUOTE_STATUSES = ["DRAFT", "SENT"] as const;
 const PIPELINE_STAGE_CONFIG = [
   { status: "SURVEY", label: "Khảo sát", color: "stage-survey" },
@@ -25,74 +24,54 @@ export class DashboardService {
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        paidAt: {
-          gte: previousMonthStart,
-          lt: nextMonthStart
+    const [completedProjects, activeProjects, pendingQuotes, contracts] = await Promise.all([
+      this.prisma.project.findMany({
+        where: {
+          deletedAt: null,
+          status: "COMPLETED",
+          completedAt: { gte: previousMonthStart, lt: nextMonthStart }
         },
-        contract: { deletedAt: null }
-      },
-      include: {
-        contract: true
-      }
-    });
-
-    const activeProjects = await this.prisma.project.count({
-      where: {
-        deletedAt: null,
-        status: {
-          in: [...ACTIVE_PROJECT_STATUSES]
+        select: { completedAt: true, estimatedValue: true }
+      }),
+      this.prisma.project.count({
+        where: {
+          deletedAt: null,
+          status: { in: [...ACTIVE_PROJECT_STATUSES] }
         }
-      }
-    });
+      }),
+      this.prisma.quote.findMany({
+        where: {
+          deletedAt: null,
+          status: { in: [...PENDING_QUOTE_STATUSES] }
+        },
+        select: { total: true }
+      }),
+      this.prisma.contract.findMany({
+        where: { deletedAt: null, status: { in: ["ACTIVE", "SUSPENDED", "COMPLETED"] } },
+        include: { payments: true }
+      })
+    ]);
 
-    const pendingQuotes = await this.prisma.quote.findMany({
-      where: {
-        deletedAt: null,
-        status: {
-          in: [...PENDING_QUOTE_STATUSES]
-        }
-      }
-    });
+    const currentMonthRevenue = completedProjects
+      .filter((p) => p.completedAt !== null && p.completedAt >= currentMonthStart)
+      .reduce((sum, p) => sum + Number(p.estimatedValue ?? 0), 0);
 
-    const contracts = await this.prisma.contract.findMany({
-      where: {
-        deletedAt: null,
-        status: {
-          in: [...RECEIVABLE_CONTRACT_STATUSES]
-        }
-      },
-      include: {
-        payments: true
-      }
-    });
-
-    const currentMonthRevenue = this.sumCurrency(
-      payments.filter((payment) => payment.paidAt >= currentMonthStart).map((payment) => payment.amount)
-    );
-    const previousMonthRevenue = this.sumCurrency(
-      payments
-        .filter((payment) => payment.paidAt >= previousMonthStart && payment.paidAt < currentMonthStart)
-        .map((payment) => payment.amount)
-    );
+    const previousMonthRevenue = completedProjects
+      .filter((p) => p.completedAt !== null && p.completedAt >= previousMonthStart && p.completedAt < currentMonthStart)
+      .reduce((sum, p) => sum + Number(p.estimatedValue ?? 0), 0);
 
     const revenueChange = previousMonthRevenue === 0
       ? 100
       : Number((((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100).toFixed(1));
 
     const outstandingContracts = contracts.map((contract) => {
-      const paidAmount = this.sumCurrency(contract.payments.map((payment) => payment.amount));
-      const remainingAmount = Number(contract.value) - paidAmount;
-
-      return {
-        remainingAmount
-      };
+      const paidAmount = this.sumCurrency(contract.payments.map((p) => p.amount));
+      return { remainingAmount: Number(contract.value) - paidAmount };
     });
 
-    const outstandingDebt = outstandingContracts.reduce((total, contract) => total + Math.max(0, contract.remainingAmount), 0);
-    const overdueCustomers = outstandingContracts.filter((contract) => contract.remainingAmount > 0).length;
-    const pendingQuoteValue = pendingQuotes.reduce((total, quote) => total + Number(quote.total), 0);
+    const outstandingDebt = outstandingContracts.reduce((total, c) => total + Math.max(0, c.remainingAmount), 0);
+    const overdueCustomers = outstandingContracts.filter((c) => c.remainingAmount > 0).length;
+    const pendingQuoteValue = pendingQuotes.reduce((total, q) => total + Number(q.total), 0);
 
     return {
       monthlyRevenue: {
@@ -117,22 +96,21 @@ export class DashboardService {
     const end = new Date();
     const start = new Date(end.getFullYear(), end.getMonth() - 5, 1);
 
-    const payments = await this.prisma.payment.findMany({
+    const completedProjects = await this.prisma.project.findMany({
       where: {
-        paidAt: { gte: start },
-        contract: { deletedAt: null }
+        deletedAt: null,
+        status: "COMPLETED",
+        completedAt: { gte: start }
       },
-      orderBy: {
-        paidAt: "asc"
-      }
+      select: { completedAt: true, estimatedValue: true }
     });
 
     const months = Array.from({ length: 6 }, (_, index) => {
       const date = new Date(end.getFullYear(), end.getMonth() - (5 - index), 1);
       const key = `${date.getFullYear()}-${date.getMonth()}`;
-      const revenue = payments
-        .filter((payment) => payment.paidAt.getFullYear() === date.getFullYear() && payment.paidAt.getMonth() === date.getMonth())
-        .reduce((total, payment) => total + Number(payment.amount), 0);
+      const revenue = completedProjects
+        .filter((p) => p.completedAt !== null && p.completedAt.getFullYear() === date.getFullYear() && p.completedAt.getMonth() === date.getMonth())
+        .reduce((total, p) => total + Number(p.estimatedValue ?? 0), 0);
 
       return {
         month: date.toLocaleDateString("vi-VN", { month: "short" }).replace(".", ""),

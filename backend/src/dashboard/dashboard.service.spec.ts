@@ -45,18 +45,18 @@ describe("DashboardService", () => {
     service = new DashboardService(prisma as unknown as PrismaService);
   });
 
-  it("calculates KPI summary from payments, quotes and contracts", async () => {
+  it("calculates KPI summary from completed projects, quotes and contracts", async () => {
     const now = new Date();
-    const currentMonthPayment = {
-      amount: 150_000_000,
-      paidAt: now
+    const currentMonthProject = {
+      completedAt: now,
+      estimatedValue: 150_000_000
     };
-    const previousMonthPayment = {
-      amount: 100_000_000,
-      paidAt: new Date(now.getFullYear(), now.getMonth() - 1, 15)
+    const previousMonthProject = {
+      completedAt: new Date(now.getFullYear(), now.getMonth() - 1, 15),
+      estimatedValue: 100_000_000
     };
 
-    prisma.payment.findMany.mockResolvedValue([currentMonthPayment, previousMonthPayment]);
+    prisma.project.findMany.mockResolvedValue([currentMonthProject, previousMonthProject]);
     prisma.project.count.mockResolvedValue(4);
     prisma.quote.findMany.mockResolvedValue([
       { total: 200_000_000 },

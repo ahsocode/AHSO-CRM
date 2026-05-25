@@ -113,7 +113,7 @@ export function useWebsocket(enabled = true) {
       const revokedSessionId = payload?.sessionId ?? null;
       const currentSessionId = getSessionId();
 
-      // If the event targets a specific session and it's not ours, ignore it.
+      // Targeted revoke: only act if this is our session or if no specific session is named.
       if (revokedSessionId && currentSessionId && revokedSessionId !== currentSessionId) {
         return;
       }
@@ -121,12 +121,13 @@ export function useWebsocket(enabled = true) {
       socket.disconnect();
       toast({
         title: "Phiên đăng nhập kết thúc",
-        description: "Thiết bị này đã bị đăng xuất từ xa.",
+        description: "Tài khoản vừa đăng nhập trên thiết bị khác.",
         variant: "destructive"
       });
+      // Short delay so the toast is visible before redirect.
       setTimeout(() => {
         void useAuthStore.getState().logout();
-      }, 3000);
+      }, 1500);
     });
 
     socket.on("domain-event", (event: RealtimeEvent) => {

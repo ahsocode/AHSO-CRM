@@ -18,7 +18,7 @@ import { AuthTokens, JwtUser, PasswordResetTokenPayload } from "./auth.types";
 
 const AHSO_MAIL_DOMAIN = "@ahso.vn";
 const DEFAULT_AHSO_IMAP_HOST = "mail90168.maychuemail.com";
-const MAX_ACTIVE_SESSIONS = 5;
+// One active session per user: logging in from a new device immediately invalidates all existing sessions.
 
 interface AuthRequestMeta {
   ip?: string | null;
@@ -90,7 +90,7 @@ export class AuthService {
     const payload = this.buildPayload(user);
     const tokens = await this.issueTokens(payload);
 
-    await this.pruneOldSessions(user.id);
+    await this.revokeAllSessionsOnLogin(user.id);
     const session = await this.createSession(user.id, tokens.refreshToken, meta);
 
     await this.auditService.recordLogin({
@@ -420,27 +420,21 @@ export class AuthService {
     });
   }
 
-  private async pruneOldSessions(userId: string) {
-    const sessions = await this.prisma.userSession.findMany({
+  private async revokeAllSessionsOnLogin(userId: string) {
+    const existing = await this.prisma.userSession.findMany({
       where: { userId },
-      orderBy: { createdAt: "asc" },
       select: { id: true }
     });
 
-    if (sessions.length < MAX_ACTIVE_SESSIONS) {
+    if (existing.length === 0) {
       return;
     }
 
-    const sessionsToDelete = sessions.slice(0, sessions.length - (MAX_ACTIVE_SESSIONS - 1));
-    await this.prisma.userSession.deleteMany({
-      where: {
-        id: {
-          in: sessionsToDelete.map((session) => session.id)
-        }
-      }
-    });
+    await this.prisma.userSession.deleteMany({ where: { userId } });
 
-    for (const session of sessionsToDelete) {
+    // Notify each displaced session individually so the new session (not yet in DB) is not affected.
+    // Frontend filters by sessionId: if the incoming sessionId matches its own, it logs out.
+    for (const session of existing) {
       this.websocketGateway.publishSessionInvalidated(userId, session.id);
     }
   }

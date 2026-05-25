@@ -100,6 +100,48 @@ function removeQuoteResizeLayers(documentRef: Document) {
   documentRef.querySelectorAll("[data-quote-column-resize-layer]").forEach((node) => node.remove());
 }
 
+function findQuotationLineItemTables(documentRef: Document) {
+  const candidates = Array.from(
+    documentRef.querySelectorAll<HTMLTableElement>(".schema-document__table, table.line-items")
+  );
+
+  return candidates.filter((candidate) => candidate.querySelectorAll("colgroup col").length >= QUOTE_TABLE_COLUMNS.length);
+}
+
+function getResizeLayerHost(frameWindow: Window, table: HTMLTableElement) {
+  const schemaBox = table.closest<HTMLElement>(".schema-document__box");
+  if (schemaBox) {
+    if (frameWindow.getComputedStyle(schemaBox).position === "static") {
+      schemaBox.style.position = "relative";
+    }
+
+    return {
+      host: schemaBox,
+      left: "0",
+      right: "0",
+      top: "0",
+      width: "",
+    };
+  }
+
+  const host = table.parentElement;
+  if (!host) {
+    return null;
+  }
+
+  if (frameWindow.getComputedStyle(host).position === "static") {
+    host.style.position = "relative";
+  }
+
+  return {
+    host,
+    left: `${table.offsetLeft}px`,
+    right: "",
+    top: `${table.offsetTop}px`,
+    width: `${table.getBoundingClientRect().width}px`,
+  };
+}
+
 function applyQuoteColumnResizeControls({
   iframe,
   widths,
@@ -119,8 +161,7 @@ function applyQuoteColumnResizeControls({
 
   removeQuoteResizeLayers(documentRef);
 
-  const tables = Array.from(documentRef.querySelectorAll<HTMLTableElement>(".schema-document__table"));
-  const lineItemTables = tables.filter((candidate) => candidate.querySelectorAll("colgroup col").length >= 6);
+  const lineItemTables = findQuotationLineItemTables(documentRef);
   const table = lineItemTables[0];
   if (!table) {
     return;
@@ -143,22 +184,21 @@ function applyQuoteColumnResizeControls({
     return;
   }
 
-  const box = table.closest<HTMLElement>(".schema-document__box");
-  if (!box) {
+  const layerHost = getResizeLayerHost(frameWindow, table);
+  if (!layerHost) {
     return;
-  }
-
-  if (frameWindow.getComputedStyle(box).position === "static") {
-    box.style.position = "relative";
   }
 
   const headerHeight = Math.max(32, table.tHead?.getBoundingClientRect().height ?? 38);
   const layer = documentRef.createElement("div");
   layer.dataset.quoteColumnResizeLayer = "true";
   layer.style.position = "absolute";
-  layer.style.left = "0";
-  layer.style.right = "0";
-  layer.style.top = "0";
+  layer.style.left = layerHost.left;
+  layer.style.right = layerHost.right;
+  layer.style.top = layerHost.top;
+  if (layerHost.width) {
+    layer.style.width = layerHost.width;
+  }
   layer.style.height = `${headerHeight}px`;
   layer.style.pointerEvents = "none";
   layer.style.zIndex = "9999";
@@ -221,7 +261,7 @@ function applyQuoteColumnResizeControls({
     layer.appendChild(handle);
   });
 
-  box.appendChild(layer);
+  layerHost.host.appendChild(layer);
 }
 
 export function InlinePreviewOverlay({

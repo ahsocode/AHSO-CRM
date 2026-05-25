@@ -5,6 +5,15 @@ import { SettingsService } from "../settings/settings.service";
 import { UploadService } from "../upload/upload.service";
 import type { DocumentLanguage } from "./dto/document-type.enum";
 
+// Mirror of frontend normalizeItemDescription — converts inline ✓ bullet
+// markers stored without newlines ("✓ A ✓ B") into newline-separated form
+// so Handlebars templates rendered with white-space:pre-wrap show each item
+// on its own line.
+function normalizeDescription(text: string | null | undefined): string | null | undefined {
+  if (!text) return text;
+  return text.replace(/\s+(?=✓\s)/g, "\n");
+}
+
 export interface BaseDocumentContext {
   company: Record<string, unknown>;
   policies: Record<string, unknown>;
@@ -107,6 +116,7 @@ export class DocumentDataLoaderService {
       tableColumnWidths: quote.tableColumnWidths,
       items: quote.items.map((item) => ({
         ...item,
+        description: normalizeDescription(item.description),
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         total: Number(item.total)
@@ -269,6 +279,7 @@ export class DocumentDataLoaderService {
         total: Number(linkedQuote.total),
         items: linkedQuote.items.map(i => ({
           ...i,
+          description: normalizeDescription(i.description),
           quantity: Number(i.quantity),
           unitPrice: Number(i.unitPrice),
           total: Number(i.total)
@@ -378,9 +389,8 @@ export class DocumentDataLoaderService {
     const linkedQuote = contract.project.quotes[0] || null;
     const deliveredItems = linkedQuote?.items.map(item => ({
       ...item,
+      description: normalizeDescription(item.description),
       quantity: Number(item.quantity)
-      // Note: A real delivery note might track partial quantities. 
-      // We assume full delivery for Phase 7 based on Quote items.
     })) || [];
 
     return {

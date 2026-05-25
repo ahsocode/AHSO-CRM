@@ -239,6 +239,7 @@ describe("QuotesService", () => {
       },
       data: {
         status: "ACCEPTED",
+        acceptedItemIds: [],
         sentAt: expect.any(Date),
         acceptedAt: expect.any(Date)
       },

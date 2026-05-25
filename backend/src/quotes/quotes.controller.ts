@@ -7,7 +7,7 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
-import { CreateQuoteDto, createQuoteSchema } from "./dto/create-quote.dto";
+import { CreateQuoteDto, createQuoteSchema, quoteTableColumnWidthsSchema } from "./dto/create-quote.dto";
 import { BulkQuoteDto, bulkQuoteSchema } from "./dto/bulk-quote.dto";
 import { QuoteFilterDto, quoteFilterSchema } from "./dto/quote-filter.dto";
 import { UpdateQuoteDto, updateQuoteSchema } from "./dto/update-quote.dto";
@@ -103,6 +103,17 @@ export class QuotesController {
     @CurrentUser() user: JwtUser
   ) {
     return this.quotesService.update(id, dto, user);
+  }
+
+  @RequirePermissions("quotes.edit")
+  @ApiOperation({ summary: "PATCH /api/quotes/:id/table-layout" })
+  @Patch(":id/table-layout")
+  updateTableLayout(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(quoteTableColumnWidthsSchema)) tableColumnWidths: Record<string, number>,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.quotesService.updateTableLayout(id, tableColumnWidths as never, user);
   }
 
   @RequirePermissions("quotes.edit")

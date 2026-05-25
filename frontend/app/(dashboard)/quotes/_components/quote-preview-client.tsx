@@ -9,7 +9,7 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useDownloadQuotePdf, useQuote, useUpdateQuote } from "@/hooks/use-quotes";
+import { useDownloadQuotePdf, useQuote, useUpdateQuoteTableLayout } from "@/hooks/use-quotes";
 import { useCompanyInfo, useLogo, usePolicies } from "@/hooks/use-settings";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -133,7 +133,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
   const policiesQuery = usePolicies();
   const logoQuery = useLogo();
   const downloadMutation = useDownloadQuotePdf();
-  const updateQuoteMutation = useUpdateQuote(quoteId);
+  const updateTableLayoutMutation = useUpdateQuoteTableLayout(quoteId);
   const { error: showError, success: showSuccess } = useToast();
   const tableContainerRef = useRef<HTMLDivElement | null>(null);
   const resizeRef = useRef<ColumnResizeState | null>(null);
@@ -226,7 +226,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
     quote.status as (typeof EDITABLE_QUOTE_STATUSES)[number]
   );
   const hasUnsavedColumnWidths = !areQuoteTableWidthsEqual(tableWidths, savedTableWidths);
-  const canDragColumns = isEditableQuote && !updateQuoteMutation.isPending;
+  const canDragColumns = !updateTableLayoutMutation.isPending;
 
   return (
     <div className="space-y-8 print:space-y-0">
@@ -269,11 +269,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
         <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-text-secondary">
           <div>
             <p className="font-semibold text-text-primary">Chỉnh độ rộng cột trực tiếp trên bản review</p>
-            <p className="mt-1">
-              {isEditableQuote
-                ? "Kéo các vạch chia ở đầu bảng báo giá, sau đó lưu để PDF backend dùng đúng layout này."
-                : "Báo giá đã khóa. Chỉ bản nháp hoặc bản bị từ chối mới chỉnh được layout cột."}
-            </p>
+            <p className="mt-1">Kéo các vạch chia ở đầu bảng báo giá, sau đó lưu để PDF backend dùng đúng layout này.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {hasUnsavedColumnWidths ? (
@@ -284,7 +280,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
             <Button
               type="button"
               variant="outline"
-              disabled={!isEditableQuote || updateQuoteMutation.isPending}
+              disabled={updateTableLayoutMutation.isPending}
               onClick={() => setDraftTableWidths(savedTableWidths)}
             >
               Hủy thay đổi
@@ -292,16 +288,16 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
             <Button
               type="button"
               variant="outline"
-              disabled={!isEditableQuote || updateQuoteMutation.isPending}
+              disabled={updateTableLayoutMutation.isPending}
               onClick={() => setDraftTableWidths(DEFAULT_QUOTE_TABLE_COLUMN_WIDTHS)}
             >
               Mặc định
             </Button>
             <Button
               type="button"
-              disabled={!isEditableQuote || !hasUnsavedColumnWidths || updateQuoteMutation.isPending}
+              disabled={!hasUnsavedColumnWidths || updateTableLayoutMutation.isPending}
               onClick={() => {
-                updateQuoteMutation.mutate(buildQuoteUpdatePayload(quote, tableWidths), {
+                updateTableLayoutMutation.mutate(tableWidths, {
                   onSuccess: () => showSuccess("Đã lưu độ rộng cột báo giá."),
                   onError: (updateError) => {
                     showError(getApiErrorMessage(updateError, "Không thể lưu độ rộng cột."));
@@ -309,7 +305,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
                 });
               }}
             >
-              {updateQuoteMutation.isPending ? "Đang lưu..." : "Lưu độ rộng"}
+              {updateTableLayoutMutation.isPending ? "Đang lưu..." : "Lưu độ rộng"}
             </Button>
           </div>
         </CardContent>

@@ -11,6 +11,7 @@ import {
   QuoteListMeta,
   QuoteStatus,
   QuoteStatusUpdateInput,
+  QuoteTableColumnWidths,
   QuoteUpdateInput
 } from "@/lib/types";
 import { getFilenameFromContentDisposition } from "@/lib/utils";
@@ -77,6 +78,22 @@ export function useUpdateQuote(quoteId: string) {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
+export function useUpdateQuoteTableLayout(quoteId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (tableColumnWidths: QuoteTableColumnWidths) => {
+      const response = await apiClient.patch<ApiResponse<{ id: string; tableColumnWidths: QuoteTableColumnWidths }>>(
+        `/quotes/${quoteId}/table-layout`,
+        tableColumnWidths
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["quotes", quoteId] });
     }
   });
 }

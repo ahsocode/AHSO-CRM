@@ -328,6 +328,19 @@ export class QuotesService {
     });
   }
 
+  async updateTableLayout(id: string, tableColumnWidths: QuoteTableColumnWidths, user: JwtUser) {
+    const quote = await this.prisma.quote.findFirst({
+      where: { ...this.buildWhere({}, user), id },
+      select: { id: true },
+    });
+    if (!quote) throw new NotFoundException("Không tìm thấy báo giá");
+    return this.prisma.quote.update({
+      where: { id },
+      data: this.buildTableColumnWidthsPayload(tableColumnWidths),
+      select: { id: true, tableColumnWidths: true },
+    });
+  }
+
   async duplicate(id: string, user: JwtUser) {
     return this.prisma.$transaction(async (tx) => {
       const quote = await this.findAccessibleQuoteForMutation(tx, id, user);

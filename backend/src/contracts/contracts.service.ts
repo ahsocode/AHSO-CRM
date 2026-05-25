@@ -380,7 +380,11 @@ export class ContractsService {
     await this.customFieldsService.saveValues("contract", id, dto.customFieldValues);
     await this.handleContractStatusSideEffects(id, result.previousStatus, result.updatedContract.status);
 
-    return result.updatedContract;
+    return {
+      id: result.updatedContract.id,
+      contractNo: result.updatedContract.contractNo,
+      status: result.updatedContract.status
+    };
   }
 
   async createMilestone(contractId: string, dto: CreateMilestoneDto, user: JwtUser) {

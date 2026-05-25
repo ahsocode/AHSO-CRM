@@ -1007,7 +1007,7 @@ export class QuotesService {
       nextData.status = "WON";
     }
 
-    if (quoteStatus === "ACCEPTED") {
+    if (quoteStatus === "ACCEPTED" && Number.isFinite(quoteTotal)) {
       nextData.estimatedValue = quoteTotal;
     }
 

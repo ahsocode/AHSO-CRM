@@ -113,7 +113,19 @@ describe("ContractsService", () => {
       contract: null,
       quotes: [
         {
-          id: "quote-accepted"
+          id: "quote-accepted",
+          items: [
+            {
+              id: "quote-item-1",
+              order: 1,
+              name: "Máy đóng gói",
+              description: "Phạm vi đã chốt",
+              unit: "Bộ",
+              quantity: 1,
+              unitPrice: 5_000_000,
+              total: 5_000_000
+            }
+          ]
         }
       ]
     });
@@ -173,7 +185,21 @@ describe("ContractsService", () => {
         status: "ACTIVE",
         fileUrl: undefined,
         notes: "Kích hoạt ngay sau khi khách xác nhận",
-        projectId: "project-1"
+        projectId: "project-1",
+        items: {
+          create: [
+            {
+              order: 1,
+              name: "Máy đóng gói",
+              description: "Phạm vi đã chốt",
+              unit: "Bộ",
+              quantity: 1,
+              unitPrice: 5_000_000,
+              total: 5_000_000,
+              quoteItemId: "quote-item-1"
+            }
+          ]
+        }
       },
       select: {
         id: true,
@@ -186,7 +212,8 @@ describe("ContractsService", () => {
         id: "project-1"
       },
       data: {
-        status: "DELIVERING"
+        status: "DELIVERING",
+        estimatedValue: 5_000_000
       }
     });
   });
@@ -231,12 +258,14 @@ describe("ContractsService", () => {
       status: "ACTIVE",
       project: {
         status: "DELIVERING"
-      }
+      },
+      value: 5_000_000
     });
     tx.contract.update.mockResolvedValue({
       id: "contract-1",
       contractNo: "HD-2026-005",
-      status: "COMPLETED"
+      status: "COMPLETED",
+      value: 5_000_000
     });
     prisma.contract.findUnique.mockResolvedValue({
       id: "contract-1",
@@ -285,7 +314,8 @@ describe("ContractsService", () => {
       select: {
         id: true,
         contractNo: true,
-        status: true
+        status: true,
+        value: true
       }
     });
     expect(tx.project.update).toHaveBeenCalledWith({
@@ -293,7 +323,8 @@ describe("ContractsService", () => {
         id: "project-1"
       },
       data: {
-        status: "COMPLETED"
+        status: "COMPLETED",
+        estimatedValue: 5_000_000
       }
     });
   });

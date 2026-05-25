@@ -203,6 +203,7 @@ describe("QuotesService", () => {
       status: "SENT",
       sentAt: null,
       acceptedAt: null,
+      total: 275,
       projectId: "project-1",
       items: [],
       project: {
@@ -253,7 +254,8 @@ describe("QuotesService", () => {
         id: "project-1"
       },
       data: {
-        status: "WON"
+        status: "WON",
+        estimatedValue: 275
       }
     });
   });

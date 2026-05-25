@@ -103,3 +103,11 @@ export function formatRelativeTime(date: string | Date): string {
 
   return formatDate(date);
 }
+
+// Normalize a description that may use ✓ as inline bullet separators
+// (e.g. "✓ Item A ✓ Item B") into newline-separated bullets so
+// whitespace-pre-wrap renders each item on its own line.
+// Data already stored with real \n is unaffected.
+export function normalizeItemDescription(text: string): string {
+  return text.replace(/\s+(?=✓\s)/g, "\n");
+}

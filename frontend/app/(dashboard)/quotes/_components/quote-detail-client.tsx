@@ -20,7 +20,7 @@ import { useRuntimeDocumentTemplateVariants, useDocumentPreviewQuery } from "@/h
 import { InlinePreviewOverlay } from "@/components/shared/inline-preview-overlay";
 import { useDuplicateQuote, useQuote, useUpdateQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { formatDate, formatDateTime, formatRelativeTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatRelativeTime, normalizeItemDescription } from "@/lib/format";
 import type { DocumentTemplateVariant, QuoteDetail, QuoteStatus, QuoteTableColumnWidths } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -312,7 +312,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                             <p className="font-semibold text-text-primary">
                               {String(item.order).padStart(2, "0")}. {item.name}
                             </p>
-                            {item.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{item.description}</p> : null}
+                            {item.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{normalizeItemDescription(item.description)}</p> : null}
                           </div>
                           <span className="font-heading text-xl font-extrabold text-text-primary">
                             <CurrencyDisplay amount={item.total} short />
@@ -342,7 +342,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                               <p className="font-semibold text-text-primary">
                                 {String(item.order).padStart(2, "0")}. {item.name}
                               </p>
-                              {item.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{item.description}</p> : null}
+                              {item.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{normalizeItemDescription(item.description)}</p> : null}
                             </td>
                             <td className="px-4 py-4 align-top text-sm text-text-secondary">
                               {item.unit ?? "Đơn vị"} · {item.quantity}

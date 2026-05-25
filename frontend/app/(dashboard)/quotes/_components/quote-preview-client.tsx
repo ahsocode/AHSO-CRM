@@ -14,7 +14,7 @@ import { useCompanyInfo, useLogo, usePolicies } from "@/hooks/use-settings";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { resolveAssetUrl } from "@/lib/auth";
-import { formatDate } from "@/lib/format";
+import { formatDate, normalizeItemDescription } from "@/lib/format";
 import type { QuoteDetail, QuoteTableColumnWidths } from "@/lib/types";
 import { cn, downloadBlob } from "@/lib/utils";
 
@@ -438,7 +438,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
                     <td className="px-3 py-3">
                       <p className="font-semibold text-slate-800">{item.name}</p>
                     </td>
-                    <td className="whitespace-pre-wrap px-3 py-3 text-slate-500">{item.description ?? ""}</td>
+                    <td className="whitespace-pre-wrap px-3 py-3 text-slate-500">{normalizeItemDescription(item.description ?? "")}</td>
                     <td className="px-3 py-3 text-center">{item.quantity}</td>
                     <td className="px-3 py-3 text-right">
                       <CurrencyDisplay amount={item.unitPrice} />

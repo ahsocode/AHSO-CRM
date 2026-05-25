@@ -147,36 +147,6 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
     }
   }, [quoteQuery.data]);
 
-  useEffect(() => {
-    const handlePointerMove = (event: PointerEvent) => {
-      const resize = resizeRef.current;
-      const tableWidthPx = tableContainerRef.current?.getBoundingClientRect().width ?? 0;
-      if (!resize || tableWidthPx <= 0) {
-        return;
-      }
-
-      const deltaPercent = ((event.clientX - resize.startClientX) / tableWidthPx) * 100;
-      setDraftTableWidths(
-        adjustAdjacentColumnWidths(resize.startWidths, resize.columnIndex, deltaPercent)
-      );
-    };
-
-    const handlePointerUp = () => {
-      resizeRef.current = null;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-  }, []);
 
   if (quoteQuery.isLoading) {
     return (
@@ -457,6 +427,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
                     style={{ left: `${getColumnDividerPosition(tableWidths, index)}%` }}
                     onPointerDown={(event) => {
                       event.preventDefault();
+                      event.currentTarget.setPointerCapture(event.pointerId);
                       resizeRef.current = {
                         columnIndex: index,
                         startClientX: event.clientX,
@@ -464,6 +435,20 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
                       };
                       document.body.style.cursor = "col-resize";
                       document.body.style.userSelect = "none";
+                    }}
+                    onPointerMove={(event) => {
+                      const resize = resizeRef.current;
+                      const tableWidthPx = tableContainerRef.current?.getBoundingClientRect().width ?? 0;
+                      if (!resize || tableWidthPx <= 0) return;
+                      const deltaPercent = ((event.clientX - resize.startClientX) / tableWidthPx) * 100;
+                      setDraftTableWidths(
+                        adjustAdjacentColumnWidths(resize.startWidths, resize.columnIndex, deltaPercent)
+                      );
+                    }}
+                    onPointerUp={() => {
+                      resizeRef.current = null;
+                      document.body.style.cursor = "";
+                      document.body.style.userSelect = "";
                     }}
                   >
                     <span className="h-9 w-1 rounded-full bg-white/85 shadow" />

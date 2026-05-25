@@ -276,7 +276,7 @@ export class QuotesService {
         }
       });
 
-      await this.syncProjectStatusForQuote(tx, project.id, project.status, dto.status);
+      await this.syncProjectStatusForQuote(tx, project.id, project.status, dto.status, totals.total);
 
       return quote;
     });
@@ -322,7 +322,7 @@ export class QuotesService {
         }
       });
 
-      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status);
+      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status, totals.total);
 
       return updatedQuote;
     });
@@ -396,7 +396,7 @@ export class QuotesService {
         }
       });
 
-      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, "DRAFT");
+      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, "DRAFT", totals.total);
 
       return duplicatedQuote;
     });
@@ -512,7 +512,7 @@ export class QuotesService {
         }
       });
 
-      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status);
+      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status, Number(quote.total));
 
       return {
         updatedQuote,
@@ -995,33 +995,36 @@ export class QuotesService {
     tx: Prisma.TransactionClient,
     projectId: string,
     currentStatus: string,
-    quoteStatus: string
+    quoteStatus: string,
+    quoteTotal: number
   ) {
+    const nextData: Prisma.ProjectUpdateInput = {};
+
     if (
       quoteStatus === "ACCEPTED" &&
       PRE_SALE_PROJECT_STATUSES.includes(currentStatus as (typeof PRE_SALE_PROJECT_STATUSES)[number])
     ) {
-      await tx.project.update({
-        where: {
-          id: projectId
-        },
-        data: {
-          status: "WON"
-        }
-      });
+      nextData.status = "WON";
+    }
+
+    if (quoteStatus === "ACCEPTED") {
+      nextData.estimatedValue = quoteTotal;
+    }
+
+    if (currentStatus === "SURVEY" && quoteStatus !== "ACCEPTED") {
+      nextData.status = "QUOTING";
+    }
+
+    if (Object.keys(nextData).length === 0) {
       return;
     }
 
-    if (currentStatus === "SURVEY") {
-      await tx.project.update({
-        where: {
-          id: projectId
-        },
-        data: {
-          status: "QUOTING"
-        }
-      });
-    }
+    await tx.project.update({
+      where: {
+        id: projectId
+      },
+      data: nextData
+    });
   }
 }
 

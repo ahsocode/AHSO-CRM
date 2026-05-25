@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { SettingsService } from "../settings/settings.service";
@@ -70,6 +71,76 @@ export class DocumentDataLoaderService {
     return this.uploadService.readFileAsDataUrl(logoUrl);
   }
 
+  private mapQuoteItems(
+    items: Array<{
+      id: string;
+      order: number;
+      name: string;
+      description: string | null;
+      unit: string | null;
+      quantity: Prisma.Decimal;
+      unitPrice: Prisma.Decimal;
+      total: Prisma.Decimal;
+    }>
+  ) {
+    return items.map((item) => ({
+      ...item,
+      description: normalizeDescription(item.description),
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      total: Number(item.total)
+    }));
+  }
+
+  private mapContractItems(
+    items: Array<{
+      id: string;
+      order: number;
+      name: string;
+      description: string | null;
+      unit: string | null;
+      quantity: Prisma.Decimal;
+      unitPrice: Prisma.Decimal;
+      total: Prisma.Decimal;
+      quoteItemId: string | null;
+    }>
+  ) {
+    return items.map((item) => ({
+      ...item,
+      description: normalizeDescription(item.description),
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      total: Number(item.total)
+    }));
+  }
+
+  private resolveContractScopeItems<
+    TContractItem extends {
+      id: string;
+      order: number;
+      name: string;
+      description: string | null;
+      unit: string | null;
+      quantity: Prisma.Decimal;
+      unitPrice: Prisma.Decimal;
+      total: Prisma.Decimal;
+      quoteItemId: string | null;
+    },
+    TQuoteItem extends {
+      id: string;
+      order: number;
+      name: string;
+      description: string | null;
+      unit: string | null;
+      quantity: Prisma.Decimal;
+      unitPrice: Prisma.Decimal;
+      total: Prisma.Decimal;
+    }
+  >(contractItems: TContractItem[], quoteItems: TQuoteItem[] = []) {
+    const scopedItems = this.mapContractItems(contractItems);
+    return scopedItems.length > 0 ? scopedItems : this.mapQuoteItems(quoteItems);
+  }
+
   async loadForQuotation(entityId: string): Promise<Record<string, unknown>> {
     const quote = await this.prisma.quote.findUnique({
       where: { id: entityId },
@@ -114,13 +185,7 @@ export class DocumentDataLoaderService {
         tableColumnWidths: quote.tableColumnWidths
       },
       tableColumnWidths: quote.tableColumnWidths,
-      items: quote.items.map((item) => ({
-        ...item,
-        description: normalizeDescription(item.description),
-        quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice),
-        total: Number(item.total)
-      })),
+      items: this.mapQuoteItems(quote.items),
       project: quote.project,
       customer: quote.project.customer,
       primaryContact: quote.project.customer.contacts[0] || null
@@ -250,6 +315,9 @@ export class DocumentDataLoaderService {
             }
           }
         },
+        items: {
+          orderBy: { order: "asc" }
+        },
         milestones: {
           orderBy: { dueDate: "asc" }
         }
@@ -261,6 +329,7 @@ export class DocumentDataLoaderService {
     }
 
     const linkedQuote = contract.project.quotes[0] || null;
+    const contractScopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
 
     return {
       title: "HỢP ĐỒNG KINH TẾ / ECONOMIC CONTRACT",
@@ -271,19 +340,14 @@ export class DocumentDataLoaderService {
       project: contract.project,
       customer: contract.project.customer,
       primaryContact: contract.project.customer.contacts[0] || null,
+      contractItems: contractScopeItems,
       linkedQuote: linkedQuote ? {
         ...linkedQuote,
         subtotal: Number(linkedQuote.subtotal),
         taxRate: Number(linkedQuote.taxRate),
         taxAmount: Number(linkedQuote.taxAmount),
         total: Number(linkedQuote.total),
-        items: linkedQuote.items.map(i => ({
-          ...i,
-          description: normalizeDescription(i.description),
-          quantity: Number(i.quantity),
-          unitPrice: Number(i.unitPrice),
-          total: Number(i.total)
-        }))
+        items: contractScopeItems
       } : null,
       milestones: contract.milestones.map(m => ({
         ...m,
@@ -307,6 +371,9 @@ export class DocumentDataLoaderService {
               }
             }
           }
+        },
+        items: {
+          orderBy: { order: "asc" }
         }
       }
     });
@@ -378,6 +445,9 @@ export class DocumentDataLoaderService {
               take: 1
             }
           }
+        },
+        items: {
+          orderBy: { order: "asc" }
         }
       }
     });
@@ -387,11 +457,12 @@ export class DocumentDataLoaderService {
     }
 
     const linkedQuote = contract.project.quotes[0] || null;
-    const deliveredItems = linkedQuote?.items.map(item => ({
-      ...item,
-      description: normalizeDescription(item.description),
-      quantity: Number(item.quantity)
-    })) || [];
+    const deliveredItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []).map((item) => ({
+      name: item.name,
+      description: item.description,
+      quantity: item.quantity,
+      unit: item.unit
+    }));
 
     return {
       title: "BIÊN BẢN GIAO HÀNG / DELIVERY NOTE",
@@ -417,8 +488,16 @@ export class DocumentDataLoaderService {
                   take: 1
                 }
               }
+            },
+            quotes: {
+              where: { status: "ACCEPTED" },
+              include: { items: { orderBy: { order: "asc" } } },
+              take: 1
             }
           }
+        },
+        items: {
+          orderBy: { order: "asc" }
         }
       }
     });
@@ -457,8 +536,16 @@ export class DocumentDataLoaderService {
                   take: 1
                 }
               }
+            },
+            quotes: {
+              where: { status: "ACCEPTED" },
+              include: { items: { orderBy: { order: "asc" } } },
+              take: 1
             }
           }
+        },
+        items: {
+          orderBy: { order: "asc" }
         }
       }
     });
@@ -467,11 +554,19 @@ export class DocumentDataLoaderService {
       throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
     }
 
-    const installations = [
-      { name: "Cài đặt Môi trường máy chủ (Server OS & DB)", status: "Hoàn thành", note: "Phiên bản Linux, PostgreSQL 15, Redis" },
-      { name: "Triển khai mã nguồn CRM Hệ thống lõi", status: "Hoàn thành", note: "Đã trỏ tên miền và cài đặt SSL" },
-      { name: "Cấu hình Email/SMS Gateway", status: "Hoàn thành", note: "Đã test gửi nhận thành công" }
-    ];
+    const linkedQuote = contract.project.quotes[0] || null;
+    const scopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+    const installations = scopeItems.length > 0
+      ? scopeItems.map((item) => ({
+          name: item.name,
+          status: "Theo hợp đồng",
+          note: item.description ?? "Hạng mục nằm trong phạm vi triển khai đã chốt"
+        }))
+      : [
+          { name: "Cài đặt Môi trường máy chủ (Server OS & DB)", status: "Hoàn thành", note: "Phiên bản Linux, PostgreSQL 15, Redis" },
+          { name: "Triển khai mã nguồn CRM Hệ thống lõi", status: "Hoàn thành", note: "Đã trỏ tên miền và cài đặt SSL" },
+          { name: "Cấu hình Email/SMS Gateway", status: "Hoàn thành", note: "Đã test gửi nhận thành công" }
+        ];
 
     return {
       title: "BIÊN BẢN CÀI ĐẶT & TRIỂN KHAI / INSTALLATION REPORT",
@@ -497,8 +592,16 @@ export class DocumentDataLoaderService {
                   take: 1
                 }
               }
+            },
+            quotes: {
+              where: { status: "ACCEPTED" },
+              include: { items: { orderBy: { order: "asc" } } },
+              take: 1
             }
           }
+        },
+        items: {
+          orderBy: { order: "asc" }
         }
       }
     });
@@ -507,12 +610,20 @@ export class DocumentDataLoaderService {
       throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
     }
 
-    const testResults = [
-      { name: "Kiểm thử chức năng đăng nhập/Phân quyền (SSO)", status: "Đạt (Pass)", note: "" },
-      { name: "Kiểm thử quy trình tạo Đơn hàng/Báo giá", status: "Đạt (Pass)", note: "Đã xuất PDF thành công" },
-      { name: "Kiểm thử tích hợp hệ thống Kế toán", status: "Đạt (Pass)", note: "API đồng bộ thời gian thực" },
-      { name: "Nghiệm thu hiệu năng (Load Testing)", status: "Đạt (Pass)", note: "1000 CCU không gián đoạn" }
-    ];
+    const linkedQuote = contract.project.quotes[0] || null;
+    const scopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+    const testResults = scopeItems.length > 0
+      ? scopeItems.map((item) => ({
+          name: item.name,
+          status: "Chờ nghiệm thu",
+          note: item.description ?? "Nghiệm thu theo phạm vi hợp đồng"
+        }))
+      : [
+          { name: "Kiểm thử chức năng đăng nhập/Phân quyền (SSO)", status: "Đạt (Pass)", note: "" },
+          { name: "Kiểm thử quy trình tạo Đơn hàng/Báo giá", status: "Đạt (Pass)", note: "Đã xuất PDF thành công" },
+          { name: "Kiểm thử tích hợp hệ thống Kế toán", status: "Đạt (Pass)", note: "API đồng bộ thời gian thực" },
+          { name: "Nghiệm thu hiệu năng (Load Testing)", status: "Đạt (Pass)", note: "1000 CCU không gián đoạn" }
+        ];
 
     return {
       title: "BIÊN BẢN NGHIỆM THU KỸ THUẬT / UAT REPORT",
@@ -538,8 +649,16 @@ export class DocumentDataLoaderService {
                   take: 1
                 }
               }
+            },
+            quotes: {
+              where: { status: "ACCEPTED" },
+              include: { items: { orderBy: { order: "asc" } } },
+              take: 1
             }
           }
+        },
+        items: {
+          orderBy: { order: "asc" }
         },
         milestones: {
           orderBy: { dueDate: "asc" }
@@ -551,10 +670,23 @@ export class DocumentDataLoaderService {
       throw new NotFoundException(`Không tìm thấy hợp đồng với ID: ${entityId}`);
     }
 
-    // Usually partial acceptance is tied to a specific milestone. 
-    // We will pick the first incomplete or recently completed milestone as a demo,
-    // or just list the accepted parts.
-    const acceptedParts = contract.milestones
+    const linkedQuote = contract.project.quotes[0] || null;
+    const scopeItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+    const acceptedParts = scopeItems.length > 0
+      ? scopeItems.map((item) => {
+          const ratio =
+            Number(contract.value) > 0 && item.total > 0
+              ? `${Math.round((item.total / Number(contract.value)) * 100)}%`
+              : "Theo giá trị";
+
+          return {
+            name: item.name,
+            ratio,
+            value: item.total,
+            note: item.description ?? "Hạng mục thuộc phạm vi nghiệm thu"
+          };
+        })
+      : contract.milestones
       .filter((milestone) => ["DONE", "ACCEPTED", "IN_PROGRESS"].includes(milestone.status))
       .map((milestone) => {
         const value = milestone.paymentAmount ? Number(milestone.paymentAmount) : 0;

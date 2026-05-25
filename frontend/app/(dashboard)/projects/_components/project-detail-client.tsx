@@ -26,13 +26,14 @@ import {
 import { useAiProjectForecast } from "@/hooks/use-ai";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import {
+  useGenerateProjectDocumentPlan,
   useCreateProjectHandover,
   useProject,
   useProjectDocuments,
   useProjectOverview360,
-  useProjectTimeline
+  useProjectTimeline,
+  useUpdateProjectDocumentPlan
 } from "@/hooks/use-projects";
-import { useRenderDocument } from "@/hooks/use-documents";
 import { useAddSurveyNote, useCreateSurvey, useProjectSurveys, useUploadSurveyMedia } from "@/hooks/use-surveys";
 import { toast } from "@/hooks/use-toast";
 import { apiClient, getApiErrorMessage } from "@/lib/api-client";
@@ -1153,9 +1154,10 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
   const markSigned = useMarkBusinessDocumentSigned(projectId);
   const updateDocument = useUpdateBusinessDocument(projectId);
   const archiveDocument = useArchiveBusinessDocument(projectId);
-  const renderDocument = useRenderDocument();
+  const updateDocumentPlan = useUpdateProjectDocumentPlan(projectId);
+  const generateDocumentPlan = useGenerateProjectDocumentPlan(projectId);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [systemDocumentType, setSystemDocumentType] = useState<DocumentTemplateType>("DELIVERY_NOTE");
+  const [selectedPlanTypes, setSelectedPlanTypes] = useState<DocumentTemplateType[]>([]);
   const [documentForm, setDocumentForm] = useState({
     type: "CUSTOMER_PO" as BusinessDocumentType,
     source: "RECEIVED" as BusinessDocumentSource,
@@ -1192,6 +1194,15 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
 
   const businessDocuments = documentsQuery.data?.businessDocuments ?? [];
   const generatedDocuments = documentsQuery.data?.generatedDocuments ?? [];
+  const savedPlanTypes = documentsQuery.data?.documentPlan?.requiredTypes ?? [];
+  const savedPlanKey = [...savedPlanTypes].sort().join("|");
+  const selectedPlanKey = [...selectedPlanTypes].sort().join("|");
+  const hasUnsavedPlanChanges = savedPlanKey !== selectedPlanKey;
+  const latestQuote = project.quotes[0] ?? null;
+  const generatedDocumentsByType = generatedDocuments.reduce<Record<string, GeneratedProjectDocument[]>>((acc, document) => {
+    acc[document.type] = [...(acc[document.type] ?? []), document];
+    return acc;
+  }, {});
   const filteredBusinessDocuments = businessDocuments.filter((document) => {
     const search = documentFilters.search.trim().toLowerCase();
     const matchesSearch =
@@ -1214,64 +1225,81 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
     documentFilters.status !== "ALL" ||
     documentFilters.source !== "ALL" ||
     documentFilters.fileState !== "ALL";
-  const selectedSystemDocument = PROJECT_GENERATED_DOCUMENTS.find((document) => document.type === systemDocumentType) ?? PROJECT_GENERATED_DOCUMENTS[0];
-  const latestQuote = project.quotes[0] ?? null;
-  const systemDocumentEntityId =
-    selectedSystemDocument.entity === "project"
-      ? projectId
-      : selectedSystemDocument.entity === "contract"
-        ? project.contract?.id ?? null
-        : selectedSystemDocument.entity === "quote"
-          ? latestQuote?.id ?? null
-          : customerId;
-  const systemDocumentDisabled = !systemDocumentEntityId;
-  const systemDocumentSourceLabel =
-    selectedSystemDocument.entity === "project"
-      ? `Dự án ${project.code}`
-      : selectedSystemDocument.entity === "contract"
-        ? project.contract
-          ? `Hợp đồng ${project.contract.contractNo}`
-          : "Cần tạo hợp đồng trước khi sinh tài liệu này."
-        : selectedSystemDocument.entity === "quote"
-          ? latestQuote
-            ? `Báo giá ${latestQuote.quoteNo} · v${latestQuote.version}`
-            : "Cần tạo báo giá trước khi sinh tài liệu này."
-          : `Khách hàng ${project.customer.name}`;
-  const systemDocumentMissingRequirement =
-    selectedSystemDocument.entity === "contract"
-      ? "Dự án cần có hợp đồng trước khi sinh tài liệu loại này."
-      : selectedSystemDocument.entity === "quote"
-        ? "Dự án cần có báo giá trước khi sinh tài liệu loại này."
-        : "Chưa đủ dữ liệu để sinh tài liệu này.";
 
-  async function handleGenerateSystemDocument() {
-    if (!systemDocumentEntityId) {
+  useEffect(() => {
+    setSelectedPlanTypes(savedPlanKey ? (savedPlanKey.split("|") as DocumentTemplateType[]) : []);
+  }, [savedPlanKey]);
+
+  function getSystemDocumentSourceInfo(document: (typeof PROJECT_GENERATED_DOCUMENTS)[number]) {
+    if (document.entity === "project") {
+      return {
+        sourceLabel: `Dự án ${project.code}`,
+        canGenerate: true,
+        missingReason: ""
+      };
+    }
+
+    if (document.entity === "customer") {
+      return {
+        sourceLabel: `Khách hàng ${project.customer.name}`,
+        canGenerate: true,
+        missingReason: ""
+      };
+    }
+
+    if (document.entity === "quote") {
+      return {
+        sourceLabel: latestQuote ? `Báo giá ${latestQuote.quoteNo} · v${latestQuote.version}` : "Chưa có báo giá",
+        canGenerate: Boolean(latestQuote),
+        missingReason: "Cần tạo báo giá trước khi sinh tài liệu này."
+      };
+    }
+
+    return {
+      sourceLabel: project.contract ? `Hợp đồng ${project.contract.contractNo}` : "Chưa có hợp đồng",
+      canGenerate: Boolean(project.contract),
+      missingReason: "Cần tạo hợp đồng trước khi sinh tài liệu này."
+    };
+  }
+
+  function togglePlanType(type: DocumentTemplateType) {
+    setSelectedPlanTypes((current) =>
+      current.includes(type)
+        ? current.filter((item) => item !== type)
+        : [...current, type]
+    );
+  }
+
+  async function handleSaveDocumentPlan() {
+    await updateDocumentPlan.mutateAsync({
+      requiredTypes: selectedPlanTypes
+    });
+    toast({
+      title: "Đã lưu cấu hình hồ sơ",
+      description: "Bộ tài liệu yêu cầu đã được lưu riêng cho dự án này."
+    });
+  }
+
+  async function handleGenerateDocumentPlan() {
+    if (hasUnsavedPlanChanges) {
       toast({
-        title: "Chưa thể sinh tài liệu",
-        description: systemDocumentMissingRequirement,
-        variant: "destructive"
+        title: "Cần lưu cấu hình trước",
+        description: "Vui lòng lưu bộ hồ sơ cần có rồi sinh tài liệu theo cấu hình."
       });
       return;
     }
 
     try {
-      const rendered = await renderDocument.mutateAsync({
-        type: selectedSystemDocument.type,
-        entityId: systemDocumentEntityId,
-        payload: {
-          language: "vi"
-        }
-      });
+      const result = await generateDocumentPlan.mutateAsync({ mode: "missing" });
       await documentsQuery.refetch();
       toast({
-        title: "Đã sinh tài liệu",
-        description: `${selectedSystemDocument.label} ${rendered.number} đã được tạo.`
+        title: "Đã sinh tài liệu theo cấu hình",
+        description: `${result.generated.length} tạo mới, ${result.skipped.length} bỏ qua, ${result.failed.length} lỗi.`
       });
-      await openSecureFile(`/documents/${rendered.documentId}/download`, `${rendered.number}.pdf`);
     } catch (error) {
       toast({
-        title: "Không sinh được tài liệu",
-        description: getApiErrorMessage(error, "Vui lòng kiểm tra hợp đồng, template và quyền tạo tài liệu."),
+        title: "Không sinh được bộ tài liệu",
+        description: getApiErrorMessage(error, "Vui lòng kiểm tra cấu hình hồ sơ và quyền tạo tài liệu."),
         variant: "destructive"
       });
     }
@@ -1465,48 +1493,90 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Generated Project PDFs</p>
-              <CardTitle>Sinh tài liệu từ hệ thống</CardTitle>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Project Document Plan</p>
+              <CardTitle>Cấu hình hồ sơ cần sinh</CardTitle>
             </div>
-            <Badge variant={systemDocumentDisabled ? "warning" : "info"}>
-              {systemDocumentDisabled ? "Thiếu dữ liệu nguồn" : "Sẵn sàng sinh PDF"}
+            <Badge variant={hasUnsavedPlanChanges ? "warning" : "info"}>
+              {selectedPlanTypes.length} tài liệu được chọn
             </Badge>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 rounded-2xl border border-border/60 bg-bg-hover/50 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                <label className="space-y-2">
-                  <span className="text-sm font-semibold text-text-primary">Loại tài liệu</span>
-                  <select
-                    className="h-11 w-full rounded-md border border-border bg-bg-input px-3 text-sm"
-                    value={systemDocumentType}
-                    onChange={(event) => setSystemDocumentType(event.target.value as DocumentTemplateType)}
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {PROJECT_GENERATED_DOCUMENTS.map((document) => {
+                const sourceInfo = getSystemDocumentSourceInfo(document);
+                const isSelected = selectedPlanTypes.includes(document.type);
+                const generatedForType = generatedDocumentsByType[document.type] ?? [];
+                const latestGenerated = generatedForType[0];
+
+                return (
+                  <button
+                    key={document.type}
+                    type="button"
+                    onClick={() => togglePlanType(document.type)}
+                    className={cn(
+                      "rounded-2xl border p-3 text-left transition",
+                      isSelected
+                        ? "border-primary bg-primary-bg"
+                        : "border-border/60 bg-white hover:border-primary/30 hover:bg-bg-hover"
+                    )}
                   >
-                    {PROJECT_GENERATED_DOCUMENTS.map((document) => (
-                      <option key={document.type} value={document.type}>
-                        {document.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-text-primary">Nguồn dữ liệu</p>
-                  <div className="rounded-xl border border-border/50 bg-white px-3 py-2 text-sm text-text-secondary">
-                    {systemDocumentSourceLabel}
-                  </div>
-                </div>
-              </div>
-              <Button
-                type="button"
-                disabled={renderDocument.isPending || systemDocumentDisabled}
-                onClick={handleGenerateSystemDocument}
-              >
-                {renderDocument.isPending ? "Đang sinh PDF..." : "Sinh & mở PDF"}
-              </Button>
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-bold",
+                          isSelected ? "border-primary bg-primary text-white" : "border-border bg-white text-transparent"
+                        )}
+                      >
+                        ✓
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-text-primary">{document.label}</span>
+                        <span className="mt-1 block text-xs text-text-secondary">{sourceInfo.sourceLabel}</span>
+                        {latestGenerated ? (
+                          <span className="mt-2 inline-flex rounded-full bg-success-bg px-2 py-0.5 text-[11px] font-semibold text-success">
+                            Đã sinh: {latestGenerated.number}
+                          </span>
+                        ) : sourceInfo.canGenerate ? (
+                          <span className="mt-2 inline-flex rounded-full bg-bg-hover px-2 py-0.5 text-[11px] font-semibold text-text-muted">
+                            Chưa sinh
+                          </span>
+                        ) : (
+                          <span className="mt-2 inline-flex rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">
+                            {sourceInfo.missingReason}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <p className="mt-3 text-xs text-text-muted">
-              Hệ thống tự chọn đúng nguồn dữ liệu theo template: báo giá dùng quote mới nhất, nhóm triển khai dùng hợp đồng, NDA/đối chiếu công nợ dùng khách hàng.
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-bg-hover/50 p-4">
+              <p className="text-sm text-text-secondary">
+                Mỗi dự án có một bộ hồ sơ riêng. Sau khi lưu cấu hình, hệ thống sẽ sinh những PDF còn thiếu theo danh sách đã chọn.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!hasUnsavedPlanChanges || updateDocumentPlan.isPending}
+                  onClick={handleSaveDocumentPlan}
+                >
+                  {updateDocumentPlan.isPending ? "Đang lưu..." : "Lưu cấu hình"}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={
+                    selectedPlanTypes.length === 0 ||
+                    hasUnsavedPlanChanges ||
+                    generateDocumentPlan.isPending
+                  }
+                  onClick={handleGenerateDocumentPlan}
+                >
+                  {generateDocumentPlan.isPending ? "Đang sinh..." : "Sinh tài liệu còn thiếu"}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

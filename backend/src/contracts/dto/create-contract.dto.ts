@@ -21,6 +21,7 @@ export const createContractSchema = z
   .object({
     projectId: z.string().trim().min(1, "Dự án là bắt buộc"),
     sourceQuoteId: z.string().trim().min(1, "Báo giá nguồn không hợp lệ").optional(),
+    sourceQuoteItemIds: z.array(z.string().trim().min(1)).max(200).optional(),
     signDate: optionalDate,
     startDate: optionalDate,
     endDate: optionalDate,
@@ -35,6 +36,17 @@ export const createContractSchema = z
     {
       message: "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu",
       path: ["endDate"]
+    }
+  )
+  .refine((value) => !value.sourceQuoteItemIds?.length || Boolean(value.sourceQuoteId), {
+    message: "Chọn báo giá nguồn trước khi chọn hạng mục chốt hợp đồng",
+    path: ["sourceQuoteId"]
+  })
+  .refine(
+    (value) => !value.sourceQuoteItemIds || new Set(value.sourceQuoteItemIds).size === value.sourceQuoteItemIds.length,
+    {
+      message: "Danh sách hạng mục chốt hợp đồng bị trùng",
+      path: ["sourceQuoteItemIds"]
     }
   );
 

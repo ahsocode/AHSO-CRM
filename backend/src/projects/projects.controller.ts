@@ -10,6 +10,12 @@ import { CreateProjectHandoverDto, createProjectHandoverSchema } from "./dto/cre
 import { CreateProjectDto, createProjectSchema } from "./dto/create-project.dto";
 import { BulkProjectDto, bulkProjectSchema } from "./dto/bulk-project.dto";
 import { ProjectFilterDto, projectFilterSchema } from "./dto/project-filter.dto";
+import {
+  GenerateProjectDocumentPlanDto,
+  generateProjectDocumentPlanSchema,
+  UpdateProjectDocumentPlanDto,
+  updateProjectDocumentPlanSchema
+} from "./dto/project-document-plan.dto";
 import { UpdateProjectDto, updateProjectSchema } from "./dto/update-project.dto";
 import { UpdateProjectStatusDto, updateProjectStatusSchema } from "./dto/update-project-status.dto";
 import { ProjectsService } from "./projects.service";
@@ -88,6 +94,28 @@ export class ProjectsController {
   @Get(":id/documents")
   getDocuments(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.getDocuments(id, user);
+  }
+
+  @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "PATCH /api/projects/:id/document-plan" })
+  @Patch(":id/document-plan")
+  updateDocumentPlan(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateProjectDocumentPlanSchema)) dto: UpdateProjectDocumentPlanDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.updateDocumentPlan(id, dto, user);
+  }
+
+  @RequirePermissions("documents.create")
+  @ApiOperation({ summary: "POST /api/projects/:id/document-plan/generate" })
+  @Post(":id/document-plan/generate")
+  generateDocumentPlan(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(generateProjectDocumentPlanSchema)) dto: GenerateProjectDocumentPlanDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.generateDocumentPlan(id, dto, user);
   }
 
   @RequirePermissions("projects.view")

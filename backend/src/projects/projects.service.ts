@@ -1,13 +1,16 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { DocumentType } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { BulkProjectDto } from "./dto/bulk-project.dto";
 import { CreateProjectHandoverDto } from "./dto/create-project-handover.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { ProjectFilterDto } from "./dto/project-filter.dto";
+import { GenerateProjectDocumentPlanDto, UpdateProjectDocumentPlanDto } from "./dto/project-document-plan.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
 import { UpdateProjectStatusDto } from "./dto/update-project-status.dto";
 
@@ -32,6 +35,24 @@ const PROJECT_STATUS_LABELS = {
   DELIVERING: "Triển khai",
   COMPLETED: "Hoàn thành"
 } as const;
+const PROJECT_DOCUMENT_ENTITY: Record<DocumentType, "quote" | "project" | "contract" | "customer"> = {
+  QUOTATION: "quote",
+  PROPOSAL: "project",
+  SURVEY_REPORT: "project",
+  CONTRACT: "contract",
+  CONTRACT_ADDENDUM: "contract",
+  NDA: "customer",
+  DELIVERY_NOTE: "contract",
+  DOC_HANDOVER: "contract",
+  INSTALLATION_REPORT: "contract",
+  ACCEPTANCE_REPORT: "contract",
+  PARTIAL_ACCEPTANCE: "contract",
+  WARRANTY_CERT: "contract",
+  MAINTENANCE_RECORD: "contract",
+  PAYMENT_REQUEST: "contract",
+  PAYMENT_RECEIPT: "contract",
+  AR_RECONCILIATION: "customer"
+};
 
 const projectListInclude = {
   customer: {
@@ -86,7 +107,8 @@ export class ProjectsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly customFieldsService: CustomFieldsService,
-    private readonly domainEvents: DomainEventsService
+    private readonly domainEvents: DomainEventsService,
+    private readonly documentsService: DocumentsService
   ) {}
 
   async findAll(filters: ProjectFilterDto, user: JwtUser) {
@@ -106,6 +128,11 @@ export class ProjectsService {
           id: true,
           status: true,
           estimatedValue: true,
+          contract: {
+            select: {
+              value: true
+            }
+          },
           expectedEndDate: true
         }
       })
@@ -117,7 +144,7 @@ export class ProjectsService {
 
     const summary = {
       pipelineValue: activeProjects.reduce(
-        (totalValue, project) => totalValue + Number(project.estimatedValue ?? 0),
+        (totalValue, project) => totalValue + this.resolveProjectCommercialValue(project),
         0
       ),
       activeProjects: activeProjects.length,
@@ -288,7 +315,7 @@ export class ProjectsService {
       description: project.description,
       status: project.status,
       priority: project.priority,
-      estimatedValue: Number(project.estimatedValue ?? 0),
+      estimatedValue: contract ? contractValue : Number(project.estimatedValue ?? 0),
       progressPercent: this.mapProjectProgress(project.status),
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
@@ -781,7 +808,7 @@ export class ProjectsService {
   async getDocuments(id: string, user: JwtUser) {
     await this.findAccessibleProjectRecord(id, user);
 
-    const [businessDocuments, projectLinks] = await this.prisma.$transaction([
+    const [businessDocuments, projectLinks, documentRequirements] = await this.prisma.$transaction([
       this.prisma.businessDocument.findMany({
         where: {
           OR: [
@@ -854,6 +881,7 @@ export class ProjectsService {
           id
         },
         select: {
+          customerId: true,
           quotes: {
             select: {
               id: true
@@ -870,11 +898,21 @@ export class ProjectsService {
             }
           }
         }
+      }),
+      this.prisma.projectDocumentRequirement.findMany({
+        where: {
+          projectId: id,
+          isRequired: true
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
       })
     ]);
 
     const entityIds = [
       id,
+      ...(projectLinks?.customerId ? [projectLinks.customerId] : []),
       ...(projectLinks?.quotes.map((quote) => quote.id) ?? []),
       ...(projectLinks?.contract ? [projectLinks.contract.id] : []),
       ...(projectLinks?.contract?.payments.map((payment) => payment.id) ?? [])
@@ -901,6 +939,9 @@ export class ProjectsService {
 
     return {
       businessDocuments: businessDocuments.map((document) => this.mapBusinessDocument(document)),
+      documentPlan: {
+        requiredTypes: documentRequirements.map((requirement) => requirement.type)
+      },
       generatedDocuments: generatedDocuments.map((document) => ({
         id: document.id,
         type: document.type,
@@ -915,6 +956,131 @@ export class ProjectsService {
         createdAt: document.createdAt,
         createdBy: document.createdBy
       }))
+    };
+  }
+
+  async updateDocumentPlan(id: string, dto: UpdateProjectDocumentPlanDto, user: JwtUser) {
+    await this.findAccessibleProjectRecord(id, user);
+
+    const requiredTypes = Array.from(new Set(dto.requiredTypes));
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.projectDocumentRequirement.deleteMany({
+        where: {
+          projectId: id,
+          ...(requiredTypes.length > 0 ? { type: { notIn: requiredTypes } } : {})
+        }
+      });
+
+      await Promise.all(
+        requiredTypes.map((type) =>
+          tx.projectDocumentRequirement.upsert({
+            where: {
+              projectId_type: {
+                projectId: id,
+                type
+              }
+            },
+            create: {
+              projectId: id,
+              type,
+              isRequired: true
+            },
+            update: {
+              isRequired: true
+            }
+          })
+        )
+      );
+    });
+
+    return this.getDocuments(id, user);
+  }
+
+  async generateDocumentPlan(id: string, dto: GenerateProjectDocumentPlanDto, user: JwtUser) {
+    const project = await this.getProjectDocumentSources(id, user);
+    const requirements = await this.prisma.projectDocumentRequirement.findMany({
+      where: {
+        projectId: id,
+        isRequired: true
+      },
+      orderBy: {
+        createdAt: "asc"
+      }
+    });
+
+    const generated: Array<{
+      type: DocumentType;
+      documentId: string;
+      number: string;
+      downloadUrl: string;
+    }> = [];
+    const skipped: Array<{ type: DocumentType; reason: string; documentId?: string; number?: string }> = [];
+    const failed: Array<{ type: DocumentType; reason: string }> = [];
+
+    for (const requirement of requirements) {
+      const source = this.resolveProjectDocumentSource(project, requirement.type);
+      if (!source.entityId) {
+        skipped.push({
+          type: requirement.type,
+          reason: source.missingReason
+        });
+        continue;
+      }
+
+      if (dto.mode === "missing") {
+        const existing = await this.prisma.document.findFirst({
+          where: {
+            type: requirement.type,
+            entityId: source.entityId,
+            language: "vi"
+          },
+          orderBy: [{ renderedAt: "desc" }, { createdAt: "desc" }],
+          select: {
+            id: true,
+            number: true
+          }
+        });
+
+        if (existing) {
+          skipped.push({
+            type: requirement.type,
+            reason: "Đã có tài liệu được sinh trước đó.",
+            documentId: existing.id,
+            number: existing.number
+          });
+          continue;
+        }
+      }
+
+      try {
+        const result = await this.documentsService.renderPdf(
+          requirement.type,
+          source.entityId,
+          "vi",
+          undefined,
+          undefined,
+          user
+        );
+
+        generated.push({
+          type: requirement.type,
+          documentId: result.documentId,
+          number: result.number,
+          downloadUrl: result.downloadUrl
+        });
+      } catch (error) {
+        failed.push({
+          type: requirement.type,
+          reason: error instanceof Error ? error.message : "Không sinh được tài liệu."
+        });
+      }
+    }
+
+    return {
+      generated,
+      skipped,
+      failed
     };
   }
 
@@ -1476,7 +1642,16 @@ export class ProjectsService {
     };
   }
 
+  private resolveProjectCommercialValue(project: {
+    estimatedValue: Prisma.Decimal | number | null;
+    contract?: { value: Prisma.Decimal | number } | null;
+  }) {
+    return Number(project.contract?.value ?? project.estimatedValue ?? 0);
+  }
+
   private mapProjectListItem(project: ProjectListRecord, now: Date) {
+    const estimatedValue = this.resolveProjectCommercialValue(project);
+
     return {
       id: project.id,
       code: project.code,
@@ -1484,7 +1659,7 @@ export class ProjectsService {
       description: project.description,
       status: project.status,
       priority: project.priority,
-      estimatedValue: Number(project.estimatedValue ?? 0),
+      estimatedValue,
       progressPercent: this.mapProjectProgress(project.status),
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
@@ -1513,6 +1688,75 @@ export class ProjectsService {
       quoteCount: project._count.quotes,
       milestoneCount: project._count.milestones,
       activityCount: project._count.activities
+    };
+  }
+
+  private async getProjectDocumentSources(id: string, user: JwtUser) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        ...this.buildWhere({}, user),
+        id
+      },
+      select: {
+        id: true,
+        customerId: true,
+        contract: {
+          select: {
+            id: true
+          }
+        },
+        quotes: {
+          orderBy: [{ createdAt: "desc" }, { version: "desc" }],
+          take: 1,
+          select: {
+            id: true
+          }
+        }
+      }
+    });
+
+    if (!project) {
+      throw new NotFoundException("Không tìm thấy dự án");
+    }
+
+    return project;
+  }
+
+  private resolveProjectDocumentSource(
+    project: {
+      id: string;
+      customerId: string;
+      contract: { id: string } | null;
+      quotes: Array<{ id: string }>;
+    },
+    type: DocumentType
+  ) {
+    const entity = PROJECT_DOCUMENT_ENTITY[type];
+
+    if (entity === "project") {
+      return {
+        entityId: project.id,
+        missingReason: ""
+      };
+    }
+
+    if (entity === "customer") {
+      return {
+        entityId: project.customerId,
+        missingReason: ""
+      };
+    }
+
+    if (entity === "quote") {
+      return {
+        entityId: project.quotes[0]?.id ?? null,
+        missingReason: "Dự án chưa có báo giá để sinh tài liệu loại này."
+      };
+    }
+
+    return {
+      entityId: project.contract?.id ?? null,
+      missingReason: "Dự án chưa có hợp đồng để sinh tài liệu loại này."
     };
   }
 

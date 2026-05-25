@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useContract, useCreateContract, useUpdateContract } from "@/hooks/use-contracts";
 import { useProject, useProjects } from "@/hooks/use-projects";
+import { useQuote } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { CONTRACT_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -36,10 +37,11 @@ import {
 
 const CONTRACT_STATUS_OPTIONS: ContractStatus[] = ["ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"];
 
-function toCreatePayload(values: ContractFormValues) {
+function toCreatePayload(values: ContractFormValues, sourceQuoteItemIds: string[]) {
   return {
     projectId: values.projectId,
     sourceQuoteId: values.sourceQuoteId,
+    sourceQuoteItemIds: values.sourceQuoteId ? sourceQuoteItemIds : undefined,
     signDate: values.signDate,
     startDate: values.startDate,
     endDate: values.endDate,
@@ -83,6 +85,7 @@ export function ContractFormScreen({
     limit: 100
   });
   const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
+  const [selectedQuoteItemIds, setSelectedQuoteItemIds] = useState<string[]>([]);
   const form = useForm<ContractFormValues>({
     resolver: zodResolver(contractFormSchema),
     defaultValues: {
@@ -124,6 +127,7 @@ export function ContractFormScreen({
   const selectedSourceQuoteId = form.watch("sourceQuoteId");
   const selectedFileUrl = form.watch("fileUrl");
   const selectedProjectQuery = useProject(selectedProjectId || "");
+  const selectedSourceQuoteDetailQuery = useQuote(mode === "create" ? selectedSourceQuoteId ?? "" : "");
   const activeContract = contractQuery.data;
   const availableProjects = useMemo(
     () =>
@@ -138,6 +142,19 @@ export function ContractFormScreen({
   const acceptedQuotes = (selectedProject?.quotes ?? []).filter((quote) => quote.status === "ACCEPTED");
   const selectedSourceQuote =
     acceptedQuotes.find((quote) => quote.id === selectedSourceQuoteId) ?? null;
+  const selectedSourceQuoteDetail = selectedSourceQuoteDetailQuery.data;
+  const selectedQuoteItems = useMemo(() => {
+    const items = selectedSourceQuoteDetail?.items ?? [];
+    const selectedIds = new Set(selectedQuoteItemIds);
+    return items.filter((item) => selectedIds.has(item.id));
+  }, [selectedQuoteItemIds, selectedSourceQuoteDetail?.items]);
+  const selectedQuoteSubtotal = selectedQuoteItems.reduce((sum, item) => sum + item.total, 0);
+  const selectedQuoteTotal = selectedSourceQuoteDetail
+    ? Math.round(selectedQuoteSubtotal + (selectedQuoteSubtotal * selectedSourceQuoteDetail.taxRate) / 100)
+    : 0;
+  const selectedQuoteHasItems = (selectedSourceQuoteDetail?.items.length ?? 0) > 0;
+  const hasInvalidQuoteScope =
+    mode === "create" && Boolean(selectedSourceQuoteId) && selectedQuoteHasItems && selectedQuoteItemIds.length === 0;
 
   useEffect(() => {
     if (mode !== "create") {
@@ -172,13 +189,26 @@ export function ContractFormScreen({
       return;
     }
 
-    if (selectedSourceQuote) {
-      form.setValue("value", selectedSourceQuote.total, {
+    if (!selectedSourceQuoteDetail) {
+      setSelectedQuoteItemIds([]);
+      return;
+    }
+
+    setSelectedQuoteItemIds(selectedSourceQuoteDetail.items.map((item) => item.id));
+  }, [mode, selectedSourceQuoteDetail]);
+
+  useEffect(() => {
+    if (mode !== "create") {
+      return;
+    }
+
+    if (selectedSourceQuoteDetail && selectedQuoteItemIds.length > 0) {
+      form.setValue("value", selectedQuoteTotal, {
         shouldDirty: true,
         shouldValidate: true
       });
     }
-  }, [form, mode, selectedSourceQuote]);
+  }, [form, mode, selectedQuoteItemIds.length, selectedQuoteTotal, selectedSourceQuoteDetail]);
 
   const activeMutation = mode === "create" ? createContractMutation : updateContractMutation;
   const activeErrorMessage = activeMutation.isError
@@ -257,7 +287,7 @@ export function ContractFormScreen({
         className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]"
         onSubmit={form.handleSubmit((values) => {
           const createPayload = {
-            ...toCreatePayload(values),
+            ...toCreatePayload(values, selectedQuoteItemIds),
             customFieldValues
           };
           const updatePayload = {
@@ -516,6 +546,102 @@ export function ContractFormScreen({
                   <p className="mt-1">
                     Khách chấp nhận: {selectedSourceQuote.acceptedAt ? formatDate(selectedSourceQuote.acceptedAt) : "Chưa ghi nhận"}
                   </p>
+                  <div className="mt-4 border-t border-border/50 pt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                          Phạm vi chốt hợp đồng
+                        </p>
+                        <p className="mt-1 text-xs text-text-muted">
+                          Chọn các hạng mục sẽ ký và triển khai. Hạng mục bỏ chọn sẽ không đi vào hợp đồng/tài liệu bàn giao.
+                        </p>
+                      </div>
+                      {selectedSourceQuoteDetail ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedQuoteItemIds(selectedSourceQuoteDetail.items.map((item) => item.id))}
+                          >
+                            Chọn tất cả
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedQuoteItemIds([])}
+                          >
+                            Bỏ chọn
+                          </Button>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {selectedSourceQuoteDetailQuery.isLoading ? (
+                      <LoadingSkeleton className="mt-3 h-24 w-full" />
+                    ) : selectedSourceQuoteDetail && selectedSourceQuoteDetail.items.length > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        {selectedSourceQuoteDetail.items.map((item) => {
+                          const checked = selectedQuoteItemIds.includes(item.id);
+
+                          return (
+                            <label
+                              key={item.id}
+                              className={cn(
+                                "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition",
+                                checked
+                                  ? "border-primary/30 bg-primary-bg/70"
+                                  : "border-border/60 bg-white hover:border-primary/20"
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 shrink-0 accent-primary"
+                                checked={checked}
+                                onChange={(event) => {
+                                  setSelectedQuoteItemIds((current) =>
+                                    event.target.checked
+                                      ? Array.from(new Set([...current, item.id]))
+                                      : current.filter((itemId) => itemId !== item.id)
+                                  );
+                                }}
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold text-text-primary">{item.name}</span>
+                                {item.description ? (
+                                  <span className="mt-1 line-clamp-2 block text-xs text-text-secondary">
+                                    {item.description}
+                                  </span>
+                                ) : null}
+                                <span className="mt-1 block text-xs text-text-muted">
+                                  {item.quantity.toLocaleString("vi-VN")} {item.unit ?? ""} ·{" "}
+                                  <CurrencyDisplay amount={item.total} short />
+                                </span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                        <div className="flex items-center justify-between rounded-xl bg-bg-subtle px-3 py-2 text-sm">
+                          <span className={cn("font-medium", hasInvalidQuoteScope ? "text-danger" : "text-text-secondary")}>
+                            Đã chọn {selectedQuoteItemIds.length}/{selectedSourceQuoteDetail.items.length} hạng mục
+                          </span>
+                          <span className="font-bold text-text-primary">
+                            <CurrencyDisplay amount={selectedQuoteTotal} short />
+                          </span>
+                        </div>
+                        {hasInvalidQuoteScope ? (
+                          <p className="text-xs font-medium text-danger">
+                            Cần chọn ít nhất một hạng mục để tạo hợp đồng từ báo giá.
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-xl bg-warning-bg/70 px-3 py-2 text-xs font-medium text-warning">
+                        Báo giá này chưa có hạng mục chi tiết để chốt phạm vi.
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <EmptyState
@@ -569,7 +695,11 @@ export function ContractFormScreen({
                 <div className="rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">{activeErrorMessage}</div>
               ) : null}
 
-              <Button className="h-11 rounded-xl" disabled={activeMutation.isPending || hasExistingContract} type="submit">
+              <Button
+                className="h-11 rounded-xl"
+                disabled={activeMutation.isPending || hasExistingContract || hasInvalidQuoteScope}
+                type="submit"
+              >
                 <AppIcon name="arrow-right" className="h-4 w-4" />
                 {activeMutation.isPending
                   ? mode === "create"

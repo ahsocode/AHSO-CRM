@@ -894,8 +894,32 @@ export interface GeneratedProjectDocument {
   createdBy?: Pick<UserListItem, "id" | "name">;
 }
 
+export interface ProjectDocumentPlan {
+  requiredTypes: DocumentTemplateType[];
+}
+
+export interface ProjectDocumentPlanGenerateResult {
+  generated: Array<{
+    type: DocumentTemplateType;
+    documentId: string;
+    number: string;
+    downloadUrl: string;
+  }>;
+  skipped: Array<{
+    type: DocumentTemplateType;
+    reason: string;
+    documentId?: string;
+    number?: string;
+  }>;
+  failed: Array<{
+    type: DocumentTemplateType;
+    reason: string;
+  }>;
+}
+
 export interface ProjectDocuments360 {
   businessDocuments: BusinessDocument[];
+  documentPlan?: ProjectDocumentPlan;
   generatedDocuments: GeneratedProjectDocument[];
 }
 
@@ -1193,6 +1217,18 @@ export interface ContractDetailMilestone {
   notes?: string | null;
 }
 
+export interface ContractDetailItem {
+  id: string;
+  order: number;
+  name: string;
+  description?: string | null;
+  unit?: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  quoteItemId?: string | null;
+}
+
 export interface ContractDetailProject {
   id: string;
   code: string;
@@ -1231,6 +1267,7 @@ export interface ContractDetail {
   updatedAt: string;
   stats: ContractDetailStats;
   project: ContractDetailProject;
+  items: ContractDetailItem[];
   milestones: ContractDetailMilestone[];
   payments: ProjectDetailPayment[];
   customFieldValues?: CustomFieldValues;
@@ -1239,6 +1276,7 @@ export interface ContractDetail {
 export interface ContractCreateInput {
   projectId: string;
   sourceQuoteId?: string;
+  sourceQuoteItemIds?: string[];
   signDate?: string;
   startDate?: string;
   endDate?: string;

@@ -250,6 +250,7 @@ model Project {
   businessDocuments BusinessDocument[]
   surveys           Survey[]
   handovers         ProjectHandover[]
+  documentRequirements ProjectDocumentRequirement[]
   stockIssues       StockIssue[]
 
   @@index([customerId, deletedAt])
@@ -316,6 +317,7 @@ model QuoteItem {
   quoteId     String
   material    Material? @relation(fields: [materialId], references: [id])
   materialId  String?
+  contractItems ContractItem[]
 
   @@index([quoteId, order])
   @@index([materialId])
@@ -344,12 +346,33 @@ model Contract {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   deletedAt         DateTime?
+  items             ContractItem[]
   milestones        Milestone[]
   payments          Payment[]
   businessDocuments BusinessDocument[]
 
   @@index([projectId, deletedAt])
   @@index([status, deletedAt])
+}
+
+model ContractItem {
+  id          String    @id @default(cuid())
+  order       Int
+  name        String
+  description String?
+  unit        String?
+  quantity    Decimal   @db.Decimal(10, 2)
+  unitPrice   Decimal   @db.Decimal(15, 0)
+  total       Decimal   @db.Decimal(15, 0)
+  contract    Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contractId  String
+  quoteItem   QuoteItem? @relation(fields: [quoteItemId], references: [id], onDelete: SetNull)
+  quoteItemId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([contractId, order])
+  @@index([quoteItemId])
 }
 
 enum ContractStatus {
@@ -782,6 +805,20 @@ model Document {
   @@index([entityType, entityId])
   @@index([customerId])
   @@index([type, createdAt])
+}
+
+model ProjectDocumentRequirement {
+  id         String       @id @default(cuid())
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  type       DocumentType
+  isRequired Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@unique([projectId, type])
+  @@index([projectId, isRequired])
+  @@index([type])
 }
 
 enum DocumentType {

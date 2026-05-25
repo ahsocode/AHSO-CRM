@@ -13,11 +13,13 @@ import {
   ProjectListItem,
   ProjectListMeta,
   ProjectDocuments360,
+  ProjectDocumentPlanGenerateResult,
   ProjectOverview360,
   ProjectStatus,
   ProjectStatusUpdateInput,
   ProjectTimelineItem,
-  ProjectUpsertInput
+  ProjectUpsertInput,
+  DocumentTemplateType
 } from "@/lib/types";
 import { PROJECT_STATUS_LABELS } from "@/lib/constants";
 
@@ -123,6 +125,41 @@ export function useProjectDocuments(projectId: string) {
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<ProjectDocuments360>>(`/projects/${projectId}/documents`);
       return response.data.data;
+    }
+  });
+}
+
+export function useUpdateProjectDocumentPlan(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { requiredTypes: DocumentTemplateType[] }) => {
+      const response = await apiClient.patch<ApiResponse<ProjectDocuments360>>(
+        `/projects/${projectId}/document-plan`,
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "documents"] });
+    }
+  });
+}
+
+export function useGenerateProjectDocumentPlan(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { mode: "missing" | "all" }) => {
+      const response = await apiClient.post<ApiResponse<ProjectDocumentPlanGenerateResult>>(
+        `/projects/${projectId}/document-plan/generate`,
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "documents"] });
+      await queryClient.invalidateQueries({ queryKey: ["documents"] });
     }
   });
 }

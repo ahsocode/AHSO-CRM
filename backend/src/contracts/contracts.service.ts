@@ -168,6 +168,13 @@ export class ContractsService {
         }
       }
 
+      const selectedSourceQuote = dto.sourceQuoteId
+        ? project.quotes.find((quote) => quote.id === dto.sourceQuoteId)
+        : null;
+      const selectedQuoteItems = selectedSourceQuote
+        ? this.resolveSelectedQuoteItems(selectedSourceQuote.items, dto.sourceQuoteItemIds)
+        : [];
+
       const contract = await tx.contract.create({
         data: {
           contractNo: await this.generateNextContractNo(tx),
@@ -178,7 +185,23 @@ export class ContractsService {
           status: dto.status,
           fileUrl: dto.fileUrl,
           notes: dto.notes,
-          projectId: dto.projectId
+          projectId: dto.projectId,
+          ...(selectedQuoteItems.length > 0
+            ? {
+                items: {
+                  create: selectedQuoteItems.map((item, index) => ({
+                    order: index + 1,
+                    name: item.name,
+                    description: item.description,
+                    unit: item.unit,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                    total: item.total,
+                    quoteItemId: item.id
+                  }))
+                }
+              }
+            : {})
         },
         select: {
           id: true,
@@ -187,7 +210,7 @@ export class ContractsService {
         }
       });
 
-      await this.syncProjectStatusForContract(tx, project.id, project.status, dto.status);
+      await this.syncProjectStatusForContract(tx, project.id, project.status, dto.status, dto.value);
 
       return contract;
     });
@@ -290,6 +313,7 @@ export class ContractsService {
         paymentAmount: Number(milestone.paymentAmount ?? 0),
         notes: milestone.notes
       })),
+      items: contract.items.map((item) => this.mapContractItem(item)),
       payments: contract.payments.map((payment) => ({
         id: payment.id,
         amount: Number(payment.amount),
@@ -327,7 +351,8 @@ export class ContractsService {
         select: {
           id: true,
           contractNo: true,
-          status: true
+          status: true,
+          value: true
         }
       });
 
@@ -335,7 +360,8 @@ export class ContractsService {
         tx,
         contract.projectId,
         contract.project.status,
-        updatedContract.status
+        updatedContract.status,
+        Number(updatedContract.value)
       );
 
       return {
@@ -626,6 +652,9 @@ export class ContractsService {
         milestones: {
           orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }]
         },
+        items: {
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }]
+        },
         payments: {
           orderBy: {
             paidAt: "desc"
@@ -693,7 +722,8 @@ export class ContractsService {
           select: {
             status: true
           }
-        }
+        },
+        value: true
       }
     });
 
@@ -727,7 +757,20 @@ export class ContractsService {
             status: "ACCEPTED"
           },
           select: {
-            id: true
+            id: true,
+            items: {
+              select: {
+                id: true,
+                order: true,
+                name: true,
+                description: true,
+                unit: true,
+                quantity: true,
+                unitPrice: true,
+                total: true
+              },
+              orderBy: [{ order: "asc" }]
+            }
           },
           orderBy: [{ acceptedAt: "desc" }, { createdAt: "desc" }, { version: "desc" }]
         }
@@ -793,6 +836,68 @@ export class ContractsService {
       status: milestone.status,
       paymentAmount: Number(milestone.paymentAmount ?? 0),
       notes: milestone.notes
+    };
+  }
+
+  private resolveSelectedQuoteItems(
+    quoteItems: Array<{
+      id: string;
+      order: number;
+      name: string;
+      description: string | null;
+      unit: string | null;
+      quantity: Prisma.Decimal;
+      unitPrice: Prisma.Decimal;
+      total: Prisma.Decimal;
+    }>,
+    selectedItemIds?: string[]
+  ) {
+    if (quoteItems.length === 0) {
+      throw new BadRequestException("Báo giá nguồn chưa có hạng mục để chốt hợp đồng");
+    }
+
+    if (!selectedItemIds || selectedItemIds.length === 0) {
+      return quoteItems;
+    }
+
+    const availableIds = new Set(quoteItems.map((item) => item.id));
+    const invalidIds = selectedItemIds.filter((itemId) => !availableIds.has(itemId));
+
+    if (invalidIds.length > 0) {
+      throw new BadRequestException("Một số hạng mục được chọn không thuộc báo giá nguồn");
+    }
+
+    const selectedIds = new Set(selectedItemIds);
+    const selectedItems = quoteItems.filter((item) => selectedIds.has(item.id));
+
+    if (selectedItems.length === 0) {
+      throw new BadRequestException("Cần chọn ít nhất một hạng mục để chốt hợp đồng");
+    }
+
+    return selectedItems;
+  }
+
+  private mapContractItem(item: {
+    id: string;
+    order: number;
+    name: string;
+    description: string | null;
+    unit: string | null;
+    quantity: Prisma.Decimal;
+    unitPrice: Prisma.Decimal;
+    total: Prisma.Decimal;
+    quoteItemId: string | null;
+  }) {
+    return {
+      id: item.id,
+      order: item.order,
+      name: item.name,
+      description: item.description,
+      unit: item.unit,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.unitPrice),
+      total: Number(item.total),
+      quoteItemId: item.quoteItemId
     };
   }
 
@@ -944,7 +1049,8 @@ export class ContractsService {
     tx: Prisma.TransactionClient,
     projectId: string,
     currentStatus: string,
-    contractStatus: string
+    contractStatus: string,
+    contractValue: number
   ) {
     const nextProjectStatus =
       contractStatus === "COMPLETED"
@@ -952,18 +1058,19 @@ export class ContractsService {
         : contractStatus === "ACTIVE" || contractStatus === "SUSPENDED"
           ? "DELIVERING"
           : "WON";
+    const data: Prisma.ProjectUpdateInput = {
+      estimatedValue: contractValue
+    };
 
-    if (currentStatus === nextProjectStatus) {
-      return;
+    if (currentStatus !== nextProjectStatus) {
+      data.status = nextProjectStatus;
     }
 
     await tx.project.update({
       where: {
         id: projectId
       },
-      data: {
-        status: nextProjectStatus
-      }
+      data
     });
   }
 }

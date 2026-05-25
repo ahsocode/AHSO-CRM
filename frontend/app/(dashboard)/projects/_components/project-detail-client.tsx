@@ -32,6 +32,7 @@ import {
   useProjectOverview360,
   useProjectTimeline
 } from "@/hooks/use-projects";
+import { useRenderDocument } from "@/hooks/use-documents";
 import { useAddSurveyNote, useCreateSurvey, useProjectSurveys, useUploadSurveyMedia } from "@/hooks/use-surveys";
 import { toast } from "@/hooks/use-toast";
 import { apiClient, getApiErrorMessage } from "@/lib/api-client";
@@ -43,6 +44,7 @@ import {
   BusinessDocumentStatus,
   BusinessDocumentType,
   ContractStatus,
+  DocumentTemplateType,
   GeneratedProjectDocument,
   MilestoneStatus,
   Priority,
@@ -155,6 +157,48 @@ const DOCUMENT_SOURCE_LABELS: Record<BusinessDocumentSource, string> = {
   RECEIVED: "Khách gửi",
   SIGNED_UPLOAD: "Bản ký upload"
 };
+
+const GENERATED_DOCUMENT_LABELS: Partial<Record<DocumentTemplateType, string>> = {
+  QUOTATION: "Báo giá",
+  PROPOSAL: "Đề xuất dự án",
+  SURVEY_REPORT: "Báo cáo khảo sát",
+  CONTRACT: "Hợp đồng kinh tế",
+  CONTRACT_ADDENDUM: "Phụ lục hợp đồng",
+  NDA: "Thỏa thuận bảo mật",
+  DELIVERY_NOTE: "Biên bản giao hàng",
+  DOC_HANDOVER: "Biên bản bàn giao hồ sơ",
+  INSTALLATION_REPORT: "Biên bản lắp đặt",
+  ACCEPTANCE_REPORT: "Biên bản nghiệm thu",
+  PARTIAL_ACCEPTANCE: "Biên bản nghiệm thu giai đoạn",
+  WARRANTY_CERT: "Phiếu bảo hành",
+  MAINTENANCE_RECORD: "Biên bản bảo trì",
+  PAYMENT_REQUEST: "Đề nghị thanh toán",
+  PAYMENT_RECEIPT: "Phiếu thu",
+  AR_RECONCILIATION: "Biên bản đối chiếu công nợ"
+};
+
+const PROJECT_GENERATED_DOCUMENTS: Array<{
+  type: DocumentTemplateType;
+  label: string;
+  entity: "quote" | "project" | "contract" | "customer";
+}> = [
+  { type: "QUOTATION", label: "Báo giá", entity: "quote" },
+  { type: "PROPOSAL", label: "Đề xuất dự án", entity: "project" },
+  { type: "SURVEY_REPORT", label: "Báo cáo khảo sát", entity: "project" },
+  { type: "CONTRACT", label: "Hợp đồng kinh tế", entity: "contract" },
+  { type: "CONTRACT_ADDENDUM", label: "Phụ lục hợp đồng", entity: "contract" },
+  { type: "NDA", label: "Thỏa thuận bảo mật", entity: "customer" },
+  { type: "DELIVERY_NOTE", label: "Biên bản giao hàng", entity: "contract" },
+  { type: "DOC_HANDOVER", label: "Biên bản bàn giao hồ sơ", entity: "contract" },
+  { type: "INSTALLATION_REPORT", label: "Biên bản lắp đặt", entity: "contract" },
+  { type: "ACCEPTANCE_REPORT", label: "Biên bản nghiệm thu", entity: "contract" },
+  { type: "PARTIAL_ACCEPTANCE", label: "Biên bản nghiệm thu giai đoạn", entity: "contract" },
+  { type: "WARRANTY_CERT", label: "Phiếu bảo hành", entity: "contract" },
+  { type: "MAINTENANCE_RECORD", label: "Biên bản bảo trì", entity: "contract" },
+  { type: "PAYMENT_REQUEST", label: "Đề nghị thanh toán", entity: "contract" },
+  { type: "PAYMENT_RECEIPT", label: "Phiếu thu", entity: "contract" },
+  { type: "AR_RECONCILIATION", label: "Biên bản đối chiếu công nợ", entity: "customer" }
+];
 
 const SURVEY_NOTE_LABELS: Record<SurveyNoteType, string> = {
   GENERAL: "Ghi chú chung",
@@ -447,7 +491,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       ) : null}
       {activeTab === "timeline" ? <TimelinePanel projectId={projectId} /> : null}
       {activeTab === "surveys" ? <SurveysPanel projectId={projectId} customerId={customer.id} /> : null}
-      {activeTab === "documents" ? <DocumentsPanel projectId={projectId} customerId={customer.id} /> : null}
+      {activeTab === "documents" ? <DocumentsPanel project={project} /> : null}
       {activeTab === "quotes" ? <QuotesPanel project={project} /> : null}
       {activeTab === "contracts" ? <ContractsPanel project={project} /> : null}
       {activeTab === "delivery" ? <DeliveryPanel project={project} /> : null}
@@ -1100,14 +1144,18 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
   );
 }
 
-function DocumentsPanel({ projectId, customerId }: { projectId: string; customerId: string }) {
+function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof useProject>["data"]> }) {
+  const projectId = project.id;
+  const customerId = project.customer.id;
   const documentsQuery = useProjectDocuments(projectId);
   const createDocument = useCreateBusinessDocument(projectId);
   const uploadDocument = useUploadBusinessDocumentFile(projectId);
   const markSigned = useMarkBusinessDocumentSigned(projectId);
   const updateDocument = useUpdateBusinessDocument(projectId);
   const archiveDocument = useArchiveBusinessDocument(projectId);
+  const renderDocument = useRenderDocument();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [systemDocumentType, setSystemDocumentType] = useState<DocumentTemplateType>("DELIVERY_NOTE");
   const [documentForm, setDocumentForm] = useState({
     type: "CUSTOMER_PO" as BusinessDocumentType,
     source: "RECEIVED" as BusinessDocumentSource,
@@ -1166,6 +1214,68 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
     documentFilters.status !== "ALL" ||
     documentFilters.source !== "ALL" ||
     documentFilters.fileState !== "ALL";
+  const selectedSystemDocument = PROJECT_GENERATED_DOCUMENTS.find((document) => document.type === systemDocumentType) ?? PROJECT_GENERATED_DOCUMENTS[0];
+  const latestQuote = project.quotes[0] ?? null;
+  const systemDocumentEntityId =
+    selectedSystemDocument.entity === "project"
+      ? projectId
+      : selectedSystemDocument.entity === "contract"
+        ? project.contract?.id ?? null
+        : selectedSystemDocument.entity === "quote"
+          ? latestQuote?.id ?? null
+          : customerId;
+  const systemDocumentDisabled = !systemDocumentEntityId;
+  const systemDocumentSourceLabel =
+    selectedSystemDocument.entity === "project"
+      ? `Dự án ${project.code}`
+      : selectedSystemDocument.entity === "contract"
+        ? project.contract
+          ? `Hợp đồng ${project.contract.contractNo}`
+          : "Cần tạo hợp đồng trước khi sinh tài liệu này."
+        : selectedSystemDocument.entity === "quote"
+          ? latestQuote
+            ? `Báo giá ${latestQuote.quoteNo} · v${latestQuote.version}`
+            : "Cần tạo báo giá trước khi sinh tài liệu này."
+          : `Khách hàng ${project.customer.name}`;
+  const systemDocumentMissingRequirement =
+    selectedSystemDocument.entity === "contract"
+      ? "Dự án cần có hợp đồng trước khi sinh tài liệu loại này."
+      : selectedSystemDocument.entity === "quote"
+        ? "Dự án cần có báo giá trước khi sinh tài liệu loại này."
+        : "Chưa đủ dữ liệu để sinh tài liệu này.";
+
+  async function handleGenerateSystemDocument() {
+    if (!systemDocumentEntityId) {
+      toast({
+        title: "Chưa thể sinh tài liệu",
+        description: systemDocumentMissingRequirement,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const rendered = await renderDocument.mutateAsync({
+        type: selectedSystemDocument.type,
+        entityId: systemDocumentEntityId,
+        payload: {
+          language: "vi"
+        }
+      });
+      await documentsQuery.refetch();
+      toast({
+        title: "Đã sinh tài liệu",
+        description: `${selectedSystemDocument.label} ${rendered.number} đã được tạo.`
+      });
+      await openSecureFile(`/documents/${rendered.documentId}/download`, `${rendered.number}.pdf`);
+    } catch (error) {
+      toast({
+        title: "Không sinh được tài liệu",
+        description: getApiErrorMessage(error, "Vui lòng kiểm tra hợp đồng, template và quyền tạo tài liệu."),
+        variant: "destructive"
+      });
+    }
+  }
 
   async function handleCreateDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1352,6 +1462,54 @@ function DocumentsPanel({ projectId, customerId }: { projectId: string; customer
       ) : null}
 
       <div className="space-y-6">
+        <Card className="border border-white/70">
+          <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Generated Project PDFs</p>
+              <CardTitle>Sinh tài liệu từ hệ thống</CardTitle>
+            </div>
+            <Badge variant={systemDocumentDisabled ? "warning" : "info"}>
+              {systemDocumentDisabled ? "Thiếu dữ liệu nguồn" : "Sẵn sàng sinh PDF"}
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 rounded-2xl border border-border/60 bg-bg-hover/50 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                <label className="space-y-2">
+                  <span className="text-sm font-semibold text-text-primary">Loại tài liệu</span>
+                  <select
+                    className="h-11 w-full rounded-md border border-border bg-bg-input px-3 text-sm"
+                    value={systemDocumentType}
+                    onChange={(event) => setSystemDocumentType(event.target.value as DocumentTemplateType)}
+                  >
+                    {PROJECT_GENERATED_DOCUMENTS.map((document) => (
+                      <option key={document.type} value={document.type}>
+                        {document.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-text-primary">Nguồn dữ liệu</p>
+                  <div className="rounded-xl border border-border/50 bg-white px-3 py-2 text-sm text-text-secondary">
+                    {systemDocumentSourceLabel}
+                  </div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                disabled={renderDocument.isPending || systemDocumentDisabled}
+                onClick={handleGenerateSystemDocument}
+              >
+                {renderDocument.isPending ? "Đang sinh PDF..." : "Sinh & mở PDF"}
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-text-muted">
+              Hệ thống tự chọn đúng nguồn dữ liệu theo template: báo giá dùng quote mới nhất, nhóm triển khai dùng hợp đồng, NDA/đối chiếu công nợ dùng khách hàng.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Uploaded / Received</p>
@@ -2019,7 +2177,7 @@ function GeneratedDocumentRow({ document }: { document: GeneratedProjectDocument
         <div>
           <p className="font-semibold text-text-primary">{documentNumber}</p>
           <p className="text-text-secondary">
-            {document.type} · {document.renderedAt ? formatDateTime(document.renderedAt) : formatDateTime(document.createdAt)}
+            {GENERATED_DOCUMENT_LABELS[document.type] ?? document.type} · {document.renderedAt ? formatDateTime(document.renderedAt) : formatDateTime(document.createdAt)}
           </p>
           <p className="mt-1 text-xs text-text-muted">Nguồn chuẩn: endpoint tải lại document đã render, không sinh version mới.</p>
         </div>

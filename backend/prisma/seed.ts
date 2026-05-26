@@ -409,6 +409,7 @@ async function main() {
         paidAt: monthOffset(-5, 18),
         method: "Chuyển khoản",
         reference: "UNC-2401",
+        projectId: completedProject.id,
         contractId: contractCompleted.id
       },
       {
@@ -416,6 +417,7 @@ async function main() {
         paidAt: monthOffset(-4, 20),
         method: "Chuyển khoản",
         reference: "UNC-2410",
+        projectId: completedProject.id,
         contractId: contractCompleted.id
       },
       {
@@ -423,6 +425,7 @@ async function main() {
         paidAt: monthOffset(-1, 12),
         method: "Chuyển khoản",
         reference: "UNC-2491",
+        projectId: completedProject.id,
         contractId: contractCompleted.id
       },
       {
@@ -430,6 +433,7 @@ async function main() {
         paidAt: monthOffset(-2, 25),
         method: "Chuyển khoản",
         reference: "UNC-2520",
+        projectId: deliveringProject.id,
         contractId: contractDelivering.id
       },
       {
@@ -437,6 +441,7 @@ async function main() {
         paidAt: monthOffset(0, 8),
         method: "Chuyển khoản",
         reference: "UNC-2608",
+        projectId: deliveringProject.id,
         contractId: contractDelivering.id
       }
     ]

@@ -16,7 +16,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { DocumentActions } from "@/components/shared/document-actions";
 import { useAiDraftEmail } from "@/hooks/use-ai";
 import { toast } from "@/hooks/use-toast";
-import { useRuntimeDocumentTemplateVariants, useDocumentPreviewQuery } from "@/hooks/use-documents";
+import {
+  useDownloadDocument,
+  useRuntimeDocumentTemplateVariants,
+  useDocumentPreviewQuery,
+  useRenderDocument
+} from "@/hooks/use-documents";
 import { InlinePreviewOverlay } from "@/components/shared/inline-preview-overlay";
 import { useDuplicateQuote, useQuote, useUpdateQuote, useUpdateQuoteStatus } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -83,6 +88,8 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const duplicateQuoteMutation = useDuplicateQuote();
   const updateQuoteMutation = useUpdateQuote(quoteId);
   const updateQuoteStatusMutation = useUpdateQuoteStatus();
+  const renderDocumentMutation = useRenderDocument();
+  const downloadDocumentMutation = useDownloadDocument();
   const previewLang = quoteQuery.data?.project.customer.language === "vi-en" ? "vi-en" : "vi";
   const previewQuery = useDocumentPreviewQuery({
     type: "QUOTATION",
@@ -91,6 +98,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
     templateVariantId: selectedTemplateVariantId || undefined,
     enabled: showPreview && Boolean(quoteQuery.data),
   });
+  const isPreviewPdfRendering = renderDocumentMutation.isPending || downloadDocumentMutation.isPending;
 
   if (quoteQuery.isLoading) {
     return (
@@ -152,6 +160,23 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
       ? `${activeTemplateVariant.name} · v${activeTemplateVariant.version} · active`
       : "Mẫu mặc định / fallback hệ thống";
 
+  const handleRenderPreviewPdf = async () => {
+    const rendered = await renderDocumentMutation.mutateAsync({
+      type: "QUOTATION",
+      entityId: quote.id,
+      payload: {
+        language: previewLang === "vi-en" ? "vi-en" : "vi",
+        templateVariantId: selectedTemplateVariantId || undefined
+      }
+    });
+
+    await downloadDocumentMutation.mutateAsync({
+      downloadUrl: rendered.downloadUrl,
+      filename: rendered.number
+    });
+    toast("Đã tạo và tải xuống PDF báo giá.");
+  };
+
   return (
     <div className="space-y-8">
       {showPreview && (
@@ -176,6 +201,17 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                     variant: "destructive"
                   });
                 }
+              });
+            }
+          }}
+          isRenderingPdf={isPreviewPdfRendering}
+          onRenderPdf={async () => {
+            try {
+              await handleRenderPreviewPdf();
+            } catch (error) {
+              toast({
+                title: getApiErrorMessage(error, "Không thể tạo PDF báo giá."),
+                variant: "destructive"
               });
             }
           }}

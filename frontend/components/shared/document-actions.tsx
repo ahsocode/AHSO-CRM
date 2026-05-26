@@ -163,6 +163,8 @@ export function DocumentActions({
           isLoading={previewQuery.isLoading}
           error={previewQuery.error as Error | null}
           title={selectedType?.label ?? "Xem trước tài liệu"}
+          isRenderingPdf={isWorking}
+          onRenderPdf={handleDownload}
           onClose={() => setShowPreview(false)}
         />
       )}

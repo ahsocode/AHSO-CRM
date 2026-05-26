@@ -17,6 +17,8 @@ interface InlinePreviewOverlayProps {
     isSaving?: boolean;
     onSave: (widths: QuoteTableColumnWidths) => void;
   };
+  isRenderingPdf?: boolean;
+  onRenderPdf?: () => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -128,6 +130,25 @@ function removeQuoteResizeLayers(documentRef: Document) {
   documentRef.querySelectorAll("[data-quote-column-resize-layer]").forEach((node) => node.remove());
 }
 
+function ensureQuotePrintStyles(documentRef: Document) {
+  if (documentRef.getElementById("ahso-quote-print-style")) {
+    return;
+  }
+
+  const style = documentRef.createElement("style");
+  style.id = "ahso-quote-print-style";
+  style.textContent = `
+    @media print {
+      [data-quote-column-resize-layer],
+      [data-quote-column-resize-handle] {
+        display: none !important;
+        visibility: hidden !important;
+      }
+    }
+  `;
+  documentRef.head.appendChild(style);
+}
+
 function findQuotationLineItemTables(documentRef: Document) {
   const candidates = Array.from(
     documentRef.querySelectorAll<HTMLTableElement>(".schema-document__table, table.line-items")
@@ -187,6 +208,7 @@ function applyQuoteColumnResizeControls({
     return;
   }
 
+  ensureQuotePrintStyles(documentRef);
   removeQuoteResizeLayers(documentRef);
 
   const lineItemTables = findQuotationLineItemTables(documentRef);
@@ -320,6 +342,8 @@ export function InlinePreviewOverlay({
   error,
   title = "Xem trước tài liệu",
   quoteColumnResize,
+  isRenderingPdf = false,
+  onRenderPdf,
   onClose,
 }: InlinePreviewOverlayProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -331,6 +355,21 @@ export function InlinePreviewOverlay({
   const hasUnsavedColumnWidths = quoteColumnResize
     ? !areQuoteTableWidthsEqual(normalizedDraftColumnWidths, savedColumnWidths)
     : false;
+
+  const handleRenderPdf = async () => {
+    if (onRenderPdf) {
+      await onRenderPdf();
+      return;
+    }
+
+    const iframe = iframeRef.current;
+    const documentRef = iframe?.contentDocument;
+    if (documentRef) {
+      removeQuoteResizeLayers(documentRef);
+      ensureQuotePrintStyles(documentRef);
+    }
+    iframe?.contentWindow?.print();
+  };
 
   useEffect(() => {
     setDraftColumnWidths(normalizeQuoteTableWidths(quoteColumnResize?.initialWidths));
@@ -419,11 +458,11 @@ export function InlinePreviewOverlay({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => iframeRef.current?.contentWindow?.print()}
-              disabled={!html}
+              onClick={() => void handleRenderPdf()}
+              disabled={!html || isRenderingPdf}
             >
               <AppIcon name="description" className="mr-1.5 h-3.5 w-3.5" />
-              In / Lưu PDF
+              {isRenderingPdf ? "Đang tạo PDF..." : "In / Lưu PDF"}
             </Button>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <AppIcon name="close" className="h-4 w-4" />

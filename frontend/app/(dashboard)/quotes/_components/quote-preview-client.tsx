@@ -197,10 +197,24 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
   );
   const hasUnsavedColumnWidths = !areQuoteTableWidthsEqual(tableWidths, savedTableWidths);
   const canDragColumns = !updateTableLayoutMutation.isPending;
+  const handleDownloadPdf = () => {
+    if (downloadMutation.isPending || hasUnsavedColumnWidths) {
+      return;
+    }
+
+    downloadMutation.mutate(quote.id, {
+      onSuccess: ({ blob, filename }) => {
+        downloadBlob(blob, filename);
+      },
+      onError: (downloadError) => {
+        showError(getApiErrorMessage(downloadError, "Không thể tải PDF báo giá."));
+      }
+    });
+  };
 
   return (
     <div className="space-y-8 print:space-y-0">
-      <style>{`@media print { @page { size: A4; margin: 0; } }`}</style>
+      <style>{`@media print { @page { size: A4; margin: 0; } .quote-column-resize-layer, .quote-column-resize-handle { display: none !important; visibility: hidden !important; } }`}</style>
       <PageHeader
         className="print:hidden"
         eyebrow="Quotation Preview"
@@ -215,21 +229,16 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
               type="button"
               variant="outline"
               disabled={downloadMutation.isPending || hasUnsavedColumnWidths}
-              onClick={() => {
-                downloadMutation.mutate(quote.id, {
-                  onSuccess: ({ blob, filename }) => {
-                    downloadBlob(blob, filename);
-                  },
-                  onError: (downloadError) => {
-                    showError(getApiErrorMessage(downloadError, "Không thể tải PDF báo giá."));
-                  }
-                });
-              }}
+              onClick={handleDownloadPdf}
             >
               {downloadMutation.isPending ? "Đang tạo PDF..." : "Tải PDF"}
             </Button>
-            <Button onClick={() => window.print()} type="button">
-              In / Lưu PDF
+            <Button
+              onClick={handleDownloadPdf}
+              type="button"
+              disabled={downloadMutation.isPending || hasUnsavedColumnWidths}
+            >
+              {downloadMutation.isPending ? "Đang tạo PDF..." : "In / Lưu PDF"}
             </Button>
           </div>
         }
@@ -417,13 +426,13 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
               </tbody>
             </table>
             {canDragColumns ? (
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-12 print:hidden">
+              <div className="quote-column-resize-layer pointer-events-none absolute inset-x-0 top-0 h-12 print:hidden">
                 {QUOTE_TABLE_COLUMNS.slice(0, -1).map((column, index) => (
                   <button
                     key={column.key}
                     type="button"
                     aria-label={`Kéo để chỉnh cột ${column.label}`}
-                    className="pointer-events-auto absolute top-0 flex h-full w-5 -translate-x-1/2 cursor-col-resize items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/80"
+                    className="quote-column-resize-handle pointer-events-auto absolute top-0 flex h-full w-5 -translate-x-1/2 cursor-col-resize items-center justify-center focus:outline-none focus:ring-2 focus:ring-white/80"
                     style={{ left: `${getColumnDividerPosition(tableWidths, index)}%` }}
                     onPointerDown={(event) => {
                       event.preventDefault();

@@ -23,7 +23,7 @@ import {
   Strikethrough,
   Underline as UnderlineIcon
 } from "lucide-react";
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const FONT_FAMILIES = [
@@ -73,6 +73,14 @@ export function RichTextEditor({ content = "", placeholder = "Nội dung email..
       }
     }
   });
+
+  useEffect(() => {
+    if (!editor || editor.getHTML() === content) {
+      return;
+    }
+
+    editor.commands.setContent(content, { emitUpdate: false });
+  }, [content, editor]);
 
   const handleInsertLink = useCallback(() => {
     if (!editor) return;

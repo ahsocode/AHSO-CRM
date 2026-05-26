@@ -143,9 +143,17 @@ export default function MailboxPage() {
 
   const handleBulkAction = async (action: "markRead" | "markUnread" | "star" | "unstar" | "delete") => {
     if (!selectedIds.size) return;
-    await bulkAction.mutateAsync({ ids: Array.from(selectedIds), action });
+    const result = await bulkAction.mutateAsync({ ids: Array.from(selectedIds), action });
     setSelectedIds(new Set());
     if (action === "delete" && selectedIds.has(selectedMessageId ?? "")) setSelectedMessageId(null);
+
+    if (result?.success === false) {
+      toast({
+        title: "Một số email chưa xử lý được",
+        description: result.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const handleFolderSelect = (f: string) => {

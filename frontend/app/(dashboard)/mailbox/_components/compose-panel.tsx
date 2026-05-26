@@ -185,7 +185,11 @@ export function ComposeWindow({
     : "";
   const initialContent = sigHtml + quotedHtml;
 
-  const [bodyHtml, setBodyHtml] = useState("");
+  const [bodyHtml, setBodyHtml] = useState(initialContent);
+
+  useEffect(() => {
+    setBodyHtml((current) => current.trim() ? current : initialContent);
+  }, [initialContent]);
 
   const autoSaveStateRef = useRef({ to, cc, bcc, subject, saveDraft });
   autoSaveStateRef.current = { to, cc, bcc, subject, saveDraft };
@@ -233,7 +237,12 @@ export function ComposeWindow({
     const attachmentPaths = attachedFiles.filter((a) => a.path).map((a) => a.path!);
     try {
       if ((mode === "reply" || mode === "replyAll") && replyTo) {
-        await replyEmail.mutateAsync({ messageId: replyTo.id, bodyHtml, replyAll: mode === "replyAll" });
+        await replyEmail.mutateAsync({
+          messageId: replyTo.id,
+          bodyHtml,
+          replyAll: mode === "replyAll",
+          attachments: attachmentPaths
+        });
       } else {
         const payload: SendEmailInput = { to, cc, bcc, subject, bodyHtml, attachments: attachmentPaths };
         await sendEmail.mutateAsync(payload);
@@ -305,7 +314,7 @@ export function ComposeWindow({
           />
 
           <div className="flex-1 overflow-auto px-1 pt-1">
-            <RichTextEditor content={initialContent} placeholder="Nội dung email..." onChange={handleBodyChange} />
+            <RichTextEditor content={bodyHtml} placeholder="Nội dung email..." onChange={handleBodyChange} />
           </div>
 
           {attachedFiles.length > 0 && (

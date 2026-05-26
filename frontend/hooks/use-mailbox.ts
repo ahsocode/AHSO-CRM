@@ -42,9 +42,15 @@ export interface ReplyEmailInput {
   bodyHtml: string;
   bodyText?: string;
   replyAll?: boolean;
+  attachments?: string[];
 }
 
 type MailboxPageMeta = MailboxMessagesResponse["meta"];
+
+export interface BulkMailboxActionResult extends ActionResponse {
+  affected: number;
+  failed: Array<{ id: string; message: string }>;
+}
 
 const DEFAULT_MAILBOX_META: MailboxPageMeta = {
   total: 0,
@@ -402,7 +408,7 @@ export function useBulkMailboxAction() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { ids: string[]; action: "markRead" | "markUnread" | "star" | "unstar" | "delete" }) => {
-      const response = await apiClient.post<ApiResponse<ActionResponse>>("/mailbox/messages/bulk", payload);
+      const response = await apiClient.post<ApiResponse<BulkMailboxActionResult>>("/mailbox/messages/bulk", payload);
       return response.data.data;
     },
     onSuccess: async () => {

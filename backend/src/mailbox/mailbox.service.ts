@@ -32,6 +32,11 @@ type SendEmailPayload = SendEmailDto & {
   references?: string[];
 };
 
+type BulkMailboxActionFailure = {
+  id: string;
+  message: string;
+};
+
 @Injectable()
 export class MailboxService {
   constructor(
@@ -164,7 +169,14 @@ export class MailboxService {
   async testAccountConnection(accountId: string) {
     const account = await this.prisma.emailAccount.findUnique({ where: { id: accountId } });
     if (!account) throw new Error("Không tìm thấy tài khoản email");
-    const ok = await this.imapService.verifyCredentials(account.email, account.password, account.imapHost);
+    if (!account.isActive) {
+      return {
+        success: false,
+        message: "Tài khoản email chưa được người dùng nhập mật khẩu"
+      };
+    }
+
+    const ok = await this.imapService.verifyCredentials(account.email, decrypt(account.password), account.imapHost);
     return {
       success: ok,
       message: ok ? "Kết nối IMAP thành công" : "Không thể kết nối — kiểm tra lại mật khẩu và host",
@@ -442,7 +454,7 @@ export class MailboxService {
       subject: original.subject?.startsWith("Re:") ? original.subject : `Re: ${original.subject ?? ""}`,
       bodyHtml: dto.bodyHtml,
       bodyText: dto.bodyText,
-      attachments: [],
+      attachments: dto.attachments,
       inReplyTo: original.messageId,
       references: [original.inReplyTo, original.messageId].filter((value): value is string => Boolean(value))
     });
@@ -465,9 +477,10 @@ export class MailboxService {
   async deleteMessage(userId: string, messageId: string) {
     const message = await this.requireUserMessage(userId, messageId);
     const client = await this.imapService.getOrCreateConnection(message.account);
+    const trashFolder = await this.resolveTrashFolder(message.account);
     await client.mailboxOpen(message.folder);
-    await client.messageMove([message.uid], "Trash", { uid: true });
-    await this.prisma.emailMessage.update({ where: { id: messageId }, data: { folder: "Trash" } });
+    await client.messageMove([message.uid], trashFolder, { uid: true });
+    await this.prisma.emailMessage.update({ where: { id: messageId }, data: { folder: trashFolder } });
     return { success: true };
   }
 
@@ -558,6 +571,27 @@ export class MailboxService {
       await client.messageFlagsAdd([uid], [flag], { uid: true });
     } else {
       await client.messageFlagsRemove([uid], [flag], { uid: true });
+    }
+  }
+
+  private async resolveTrashFolder(account: EmailAccount) {
+    const client = await this.imapService.getOrCreateConnection(account);
+
+    try {
+      const folders = await client.list();
+      const specialTrash = folders.find((folder) => folder.specialUse === "\\Trash");
+      if (specialTrash) {
+        return specialTrash.path;
+      }
+
+      const commonTrash = folders.find((folder) => {
+        const normalized = folder.path.toLowerCase();
+        return ["trash", "deleted messages", "deleted items", "thùng rác"].includes(normalized);
+      });
+
+      return commonTrash?.path ?? "Trash";
+    } catch {
+      return "Trash";
     }
   }
 
@@ -686,8 +720,10 @@ export class MailboxService {
   async bulkAction(userId: string, dto: BulkActionDto) {
     await this.requireUserAccount(userId);
 
-    try {
-      for (const messageId of dto.ids) {
+    const failures: BulkMailboxActionFailure[] = [];
+
+    for (const messageId of dto.ids) {
+      try {
         switch (dto.action) {
           case "markRead":
             await this.markRead(userId, messageId, true);
@@ -705,12 +741,23 @@ export class MailboxService {
             await this.deleteMessage(userId, messageId);
             break;
         }
+      } catch (error) {
+        failures.push({
+          id: messageId,
+          message: this.getErrorMessage(error)
+        });
       }
-    } catch {
-      throw new BadRequestException("Không thể đồng bộ thao tác với máy chủ email. Vui lòng thử lại.");
     }
 
-    return { success: true, affected: dto.ids.length };
+    const affected = dto.ids.length - failures.length;
+    return {
+      success: failures.length === 0,
+      affected,
+      failed: failures,
+      message: failures.length === 0
+        ? `Đã xử lý ${affected} email`
+        : `Đã xử lý ${affected}/${dto.ids.length} email. ${failures.length} email chưa đồng bộ được với máy chủ.`
+    };
   }
 
   // ─── Attachment upload ────────────────────────────────────────────────────
@@ -758,5 +805,9 @@ export class MailboxService {
 
   private stripHtml(html: string) {
     return html.replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<[^>]+>/g, " ").trim();
+  }
+
+  private getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : "Không thể đồng bộ email";
   }
 }

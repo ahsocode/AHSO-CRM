@@ -1,9 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
 import { EmailAccount, Prisma } from "@prisma/client";
-import nodemailer from "nodemailer";
+import nodemailer, { SendMailOptions } from "nodemailer";
 import { JwtUser, isAdmin } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { decrypt, encrypt } from "../common/utils/crypto.util";
@@ -20,6 +18,19 @@ import { UpdateSignatureDto } from "./dto/update-signature.dto";
 import { ImapService } from "./imap.service";
 import { MailboxSyncService } from "./mailbox-sync.service";
 import { FolderInfo, MailboxAddress } from "./mailbox.types";
+
+type ResolvedEmailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType: string;
+  filePath: string;
+  size: number;
+};
+
+type SendEmailPayload = SendEmailDto & {
+  inReplyTo?: string | null;
+  references?: string[];
+};
 
 @Injectable()
 export class MailboxService {
@@ -176,10 +187,6 @@ export class MailboxService {
       _count: { _all: true }
     });
 
-    if (rows.length === 0) {
-      return [];
-    }
-
     const unreadRows = await this.prisma.emailMessage.groupBy({
       by: ["folder"],
       where: { accountId: account.id, isRead: false },
@@ -188,8 +195,8 @@ export class MailboxService {
 
     const unreadMap = new Map(unreadRows.map((r) => [r.folder, r._count._all]));
 
-    const FOLDER_ORDER = ["INBOX", "Sent", "Drafts", "Trash", "Spam", "Junk"];
-    return rows
+    if (rows.length > 0) {
+      return this.sortFolders(rows
       .map((r) => ({
         name: r.folder.split("/").pop() ?? r.folder,
         path: r.folder,
@@ -197,15 +204,35 @@ export class MailboxService {
         specialUse: null,
         total: r._count._all,
         unread: unreadMap.get(r.folder) ?? 0
-      }))
-      .sort((a, b) => {
-        const ai = FOLDER_ORDER.indexOf(a.path);
-        const bi = FOLDER_ORDER.indexOf(b.path);
-        if (ai !== -1 && bi !== -1) return ai - bi;
-        if (ai !== -1) return -1;
-        if (bi !== -1) return 1;
-        return a.path.localeCompare(b.path);
-      });
+      })));
+    }
+
+    const client = await this.imapService.getOrCreateConnection(account);
+    const folders = await client.list();
+    const folderInfos = await Promise.all(folders.map(async (folder) => {
+      const delimiter = folder.delimiter || "/";
+      let total = 0;
+      let unread = 0;
+
+      try {
+        const status = await client.status(folder.path, { messages: true, unseen: true });
+        total = status.messages ?? 0;
+        unread = status.unseen ?? 0;
+      } catch {
+        // Some special-use folders may reject STATUS. Keep folder visible anyway.
+      }
+
+      return {
+        name: folder.path.split(delimiter).pop() ?? folder.path,
+        path: folder.path,
+        delimiter,
+        specialUse: folder.specialUse ?? null,
+        total,
+        unread
+      };
+    }));
+
+    return this.sortFolders(folderInfos);
   }
 
   async getThreads(userId: string, query: GetThreadsDto) {
@@ -329,7 +356,7 @@ export class MailboxService {
     return this.requireUserMessage(userId, messageId);
   }
 
-  async sendEmail(userId: string, dto: SendEmailDto) {
+  async sendEmail(userId: string, dto: SendEmailPayload) {
     const account = await this.requireUserAccount(userId);
     const password = decrypt(account.password);
     const bodyText = dto.bodyText ?? this.stripHtml(dto.bodyHtml);
@@ -346,21 +373,26 @@ export class MailboxService {
 
     const attachmentPayloads = await this.resolveAttachments(dto.attachments);
 
-    const mailOptions = {
+    const domain = account.email.includes("@") ? account.email.split("@")[1] : "ahso.local";
+    const messageId = `<${randomUUID()}@${domain}>`;
+    const mailOptions: SendMailOptions = {
       from: account.email,
       to: dto.to.join(", "),
       cc: dto.cc.join(", ") || undefined,
       bcc: dto.bcc.join(", ") || undefined,
       subject: dto.subject,
+      messageId,
+      inReplyTo: dto.inReplyTo ?? undefined,
+      references: dto.references && dto.references.length > 0 ? dto.references : undefined,
       html: dto.bodyHtml,
       text: bodyText,
       ...(attachmentPayloads.length > 0 && { attachments: attachmentPayloads })
     };
 
-    const sent = await transporter.sendMail(mailOptions as Parameters<typeof transporter.sendMail>[0]);
+    const sent = await transporter.sendMail(mailOptions);
 
     const client = await this.imapService.getOrCreateConnection(account);
-    const raw = this.buildRawEmail(account.email, dto, bodyText, sent.messageId);
+    const raw = await this.buildRawEmail(mailOptions);
     const appendResult = await client.append("Sent", raw, ["\\Seen"], new Date());
 
     await this.prisma.emailMessage.create({
@@ -368,7 +400,7 @@ export class MailboxService {
         accountId: account.id,
         uid: appendResult && appendResult.uid ? appendResult.uid : Date.now(),
         folder: "Sent",
-        messageId: typeof sent.messageId === "string" ? sent.messageId : null,
+        messageId: typeof sent.messageId === "string" ? sent.messageId : messageId,
         fromEmail: account.email,
         toAddresses: this.toJsonAddresses(dto.to),
         ccAddresses: this.toJsonAddresses(dto.cc),
@@ -379,7 +411,18 @@ export class MailboxService {
         snippet: bodyText.slice(0, 200),
         isRead: true,
         size: Buffer.byteLength(raw),
-        receivedAt: new Date()
+        receivedAt: new Date(),
+        hasAttachments: attachmentPayloads.length > 0,
+        attachments: attachmentPayloads.length > 0
+          ? {
+              create: attachmentPayloads.map((attachment) => ({
+                filename: attachment.filename,
+                mimeType: attachment.contentType,
+                size: attachment.size,
+                filePath: attachment.filePath
+              }))
+            }
+          : undefined
       }
     });
 
@@ -399,7 +442,9 @@ export class MailboxService {
       subject: original.subject?.startsWith("Re:") ? original.subject : `Re: ${original.subject ?? ""}`,
       bodyHtml: dto.bodyHtml,
       bodyText: dto.bodyText,
-      attachments: []
+      attachments: [],
+      inReplyTo: original.messageId,
+      references: [original.inReplyTo, original.messageId].filter((value): value is string => Boolean(value))
     });
   }
 
@@ -535,19 +580,16 @@ export class MailboxService {
       .filter((email): email is string => Boolean(email));
   }
 
-  private buildRawEmail(from: string, dto: SendEmailDto, bodyText: string, messageId?: string | false) {
-    const headers = [
-      `From: ${from}`,
-      `To: ${dto.to.join(", ")}`,
-      dto.cc.length > 0 ? `Cc: ${dto.cc.join(", ")}` : null,
-      `Subject: ${dto.subject}`,
-      messageId ? `Message-ID: ${messageId}` : null,
-      "MIME-Version: 1.0",
-      'Content-Type: text/html; charset="utf-8"',
-      "Content-Transfer-Encoding: 8bit"
-    ].filter((header): header is string => Boolean(header));
-
-    return `${headers.join("\r\n")}\r\n\r\n${dto.bodyHtml || bodyText}`;
+  private async buildRawEmail(mailOptions: SendMailOptions) {
+    const transport = nodemailer.createTransport({
+      streamTransport: true,
+      buffer: true,
+      newline: "windows"
+    });
+    const compiled = await transport.sendMail(mailOptions);
+    return Buffer.isBuffer(compiled.message)
+      ? compiled.message
+      : Buffer.from(String(compiled.message ?? ""));
   }
 
   // ─── Signature ────────────────────────────────────────────────────────────
@@ -642,25 +684,30 @@ export class MailboxService {
   // ─── Bulk actions ─────────────────────────────────────────────────────────
 
   async bulkAction(userId: string, dto: BulkActionDto) {
-    const account = await this.requireUserAccount(userId);
-    const where: Prisma.EmailMessageWhereInput = { id: { in: dto.ids }, accountId: account.id };
+    await this.requireUserAccount(userId);
 
-    switch (dto.action) {
-      case "markRead":
-        await this.prisma.emailMessage.updateMany({ where, data: { isRead: true } });
-        break;
-      case "markUnread":
-        await this.prisma.emailMessage.updateMany({ where, data: { isRead: false } });
-        break;
-      case "star":
-        await this.prisma.emailMessage.updateMany({ where, data: { isStarred: true } });
-        break;
-      case "unstar":
-        await this.prisma.emailMessage.updateMany({ where, data: { isStarred: false } });
-        break;
-      case "delete":
-        await this.prisma.emailMessage.deleteMany({ where });
-        break;
+    try {
+      for (const messageId of dto.ids) {
+        switch (dto.action) {
+          case "markRead":
+            await this.markRead(userId, messageId, true);
+            break;
+          case "markUnread":
+            await this.markRead(userId, messageId, false);
+            break;
+          case "star":
+            await this.starMessage(userId, messageId, true);
+            break;
+          case "unstar":
+            await this.starMessage(userId, messageId, false);
+            break;
+          case "delete":
+            await this.deleteMessage(userId, messageId);
+            break;
+        }
+      }
+    } catch {
+      throw new BadRequestException("Không thể đồng bộ thao tác với máy chủ email. Vui lòng thử lại.");
     }
 
     return { success: true, affected: dto.ids.length };
@@ -674,25 +721,39 @@ export class MailboxService {
     return { path: saved.url, filename: file.originalname, size: file.size, mimeType: file.mimetype };
   }
 
-  private async resolveAttachments(paths: string[]) {
+  private async resolveAttachments(paths: string[]): Promise<ResolvedEmailAttachment[]> {
     if (!paths.length) return [];
 
-    const uploadRoot = process.env.UPLOAD_DIR ?? "./uploads";
-    const results: { filename: string; content: Buffer; contentType: string }[] = [];
+    const results: ResolvedEmailAttachment[] = [];
 
     for (const p of paths) {
-      try {
-        const relative = p.startsWith("/uploads/") ? p.slice("/uploads/".length) : p;
-        const abs = resolve(join(uploadRoot, relative));
-        const content = await readFile(abs);
-        const filename = relative.split("/").pop() ?? "attachment";
-        results.push({ filename, content, contentType: "application/octet-stream" });
-      } catch {
-        // skip unreadable files
+      const stored = await this.uploadService.readStoredFile(p);
+      if (!stored) {
+        continue;
       }
+      const filename = p.split("/").pop() ?? "attachment";
+      results.push({
+        filename,
+        content: stored.buffer,
+        contentType: stored.mimeType,
+        filePath: p,
+        size: stored.buffer.byteLength
+      });
     }
 
     return results;
+  }
+
+  private sortFolders(folders: FolderInfo[]) {
+    const folderOrder = ["INBOX", "Sent", "Drafts", "Trash", "Spam", "Junk"];
+    return folders.sort((a, b) => {
+      const ai = folderOrder.indexOf(a.path);
+      const bi = folderOrder.indexOf(b.path);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return a.path.localeCompare(b.path);
+    });
   }
 
   private stripHtml(html: string) {

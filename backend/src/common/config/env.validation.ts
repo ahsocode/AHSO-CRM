@@ -31,7 +31,6 @@ const envSchema = z
     THROTTLE_LIMIT: z.coerce.number().int().min(1).default(100),
     UPLOAD_DIR: z.string().trim().default("./uploads"),
     LOG_LEVEL: z.enum(["error", "warn", "info", "debug", "verbose"]).default("debug"),
-    DOCUMENT_PDF_ENGINE: z.enum(["puppeteer", "weasyprint"]).default("puppeteer"),
     AI_PROVIDER: z.enum(["anthropic", "openai", "gemini"]).default("anthropic"),
     AI_AUTH_MODE: z.enum(["api_key", "oauth"]).default("api_key"),
     AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(30000),
@@ -77,8 +76,7 @@ const envSchema = z
     VAPID_PUBLIC_KEY: optionalString,
     VAPID_PRIVATE_KEY: optionalString,
     VAPID_SUBJECT: optionalString,
-    DEBUG_RESET: z.enum(["true", "false"]).default("false"),
-    PUPPETEER_EXECUTABLE_PATH: optionalString
+    DEBUG_RESET: z.enum(["true", "false"]).default("false")
   })
   .superRefine((env, context) => {
     const isProduction = env.NODE_ENV === "production";

@@ -7,6 +7,7 @@ import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { CreatePaymentDto } from "../contracts/dto/create-payment.dto";
+import { DecimalLike, decimalToNumber, sumDecimal, toDecimal } from "../common/utils/decimal";
 import { BulkProjectDto } from "./dto/bulk-project.dto";
 import { CreateProjectHandoverDto } from "./dto/create-project-handover.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
@@ -1340,9 +1341,9 @@ export class ProjectsService {
         }
 
         this.assertPaymentLimit({
-          currentPaid: contract.payments.reduce((sum, payment) => sum + Number(payment.amount), 0),
+          currentPaid: sumDecimal(contract.payments.map((payment) => payment.amount)),
           nextAmount: dto.amount,
-          limit: Number(contract.value),
+          limit: contract.value,
           sourceLabel: `hợp đồng ${contract.contractNo}`
         });
 
@@ -1373,9 +1374,9 @@ export class ProjectsService {
         }
 
         this.assertPaymentLimit({
-          currentPaid: quote.payments.reduce((sum, payment) => sum + Number(payment.amount), 0),
+          currentPaid: sumDecimal(quote.payments.map((payment) => payment.amount)),
           nextAmount: dto.amount,
-          limit: Number(quote.total),
+          limit: quote.total,
           sourceLabel: `báo giá ${quote.quoteNo}`
         });
 
@@ -1383,11 +1384,11 @@ export class ProjectsService {
         sourceType = "quote";
         sourceLabel = quote.quoteNo;
       } else {
-        const projectValue = Number(project.estimatedValue ?? 0);
+        const projectValue = toDecimal(project.estimatedValue);
 
-        if (projectValue > 0) {
+        if (projectValue.greaterThan(0)) {
           this.assertPaymentLimit({
-            currentPaid: project.payments.reduce((sum, payment) => sum + Number(payment.amount), 0),
+            currentPaid: sumDecimal(project.payments.map((payment) => payment.amount)),
             nextAmount: dto.amount,
             limit: projectValue,
             sourceLabel: `dự án ${project.code}`
@@ -1837,24 +1838,25 @@ export class ProjectsService {
     limit,
     sourceLabel
   }: {
-    currentPaid: number;
-    nextAmount: number;
-    limit: number;
+    currentPaid: DecimalLike;
+    nextAmount: DecimalLike;
+    limit: DecimalLike;
     sourceLabel: string;
   }) {
-    const nextPaidAmount = currentPaid + nextAmount;
+    const nextPaidAmount = toDecimal(currentPaid).plus(toDecimal(nextAmount));
+    const paymentLimit = toDecimal(limit);
 
-    if (nextPaidAmount > limit) {
+    if (nextPaidAmount.greaterThan(paymentLimit)) {
       throw new BadRequestException(
-        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị ${sourceLabel} (${this.formatNumber(limit)} VND)`
+        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị ${sourceLabel} (${this.formatNumber(paymentLimit)} VND)`
       );
     }
   }
 
-  private formatNumber(value: number) {
+  private formatNumber(value: DecimalLike) {
     return new Intl.NumberFormat("vi-VN", {
       maximumFractionDigits: 0
-    }).format(value);
+    }).format(decimalToNumber(value));
   }
 
   private buildWhere(filters: Partial<ProjectFilterDto>, user: JwtUser): Prisma.ProjectWhereInput {

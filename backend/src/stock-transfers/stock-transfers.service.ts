@@ -93,7 +93,7 @@ export class StockTransfersService {
           items: {
             create: dto.items.map((item) => ({
               materialId: item.materialId,
-              quantity: item.quantity,
+              quantity: new Decimal(item.quantity),
             })),
           },
         },
@@ -124,7 +124,7 @@ export class StockTransfersService {
             deleteMany: {},
             create: dto.items.map((item) => ({
               materialId: item.materialId,
-              quantity: item.quantity,
+              quantity: new Decimal(item.quantity),
             })),
           },
         },

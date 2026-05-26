@@ -1200,6 +1200,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
   const selectedPlanKey = [...selectedPlanTypes].sort().join("|");
   const hasUnsavedPlanChanges = savedPlanKey !== selectedPlanKey;
   const latestQuote = project.quotes[0] ?? null;
+  const acceptedQuote = project.quotes.find((quote) => quote.status === "ACCEPTED") ?? null;
   const generatedDocumentsByType = generatedDocuments.reduce<Record<string, GeneratedProjectDocument[]>>((acc, document) => {
     acc[document.type] = [...(acc[document.type] ?? []), document];
     return acc;
@@ -1250,16 +1251,24 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
 
     if (document.entity === "quote") {
       return {
-        sourceLabel: latestQuote ? `Báo giá ${latestQuote.quoteNo} · v${latestQuote.version}` : "Chưa có báo giá",
-        canGenerate: Boolean(latestQuote),
-        missingReason: "Cần tạo báo giá trước khi sinh tài liệu này."
+        sourceLabel: acceptedQuote ? `Báo giá ${acceptedQuote.quoteNo} · v${acceptedQuote.version}` : "Chưa có báo giá đã chấp nhận",
+        canGenerate: Boolean(acceptedQuote),
+        missingReason: "Cần có báo giá đã chấp nhận trước khi sinh tài liệu này."
+      };
+    }
+
+    if (project.contract) {
+      return {
+        sourceLabel: `Hợp đồng ${project.contract.contractNo}`,
+        canGenerate: true,
+        missingReason: ""
       };
     }
 
     return {
-      sourceLabel: project.contract ? `Hợp đồng ${project.contract.contractNo}` : "Chưa có hợp đồng",
-      canGenerate: Boolean(project.contract),
-      missingReason: "Cần tạo hợp đồng trước khi sinh tài liệu này."
+      sourceLabel: acceptedQuote ? `Báo giá ${acceptedQuote.quoteNo} · tham chiếu` : "Chưa có hợp đồng hoặc báo giá đã chấp nhận",
+      canGenerate: Boolean(acceptedQuote),
+      missingReason: "Cần có hợp đồng hoặc báo giá đã chấp nhận trước khi sinh tài liệu này."
     };
   }
 

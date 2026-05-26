@@ -1,7 +1,6 @@
 {{!-- Running footer with page number + tiny brand line.
-       Puppeteer doesn't render arbitrary HTML in the header/footer template
-       unless explicitly configured, so this partial is usually placed at the
-       document tail rather than as a per-page running footer. --}}
+       WeasyPrint handles page counters through CSS paged media, so this
+       partial is kept as a document-tail fallback for template variants. --}}
 <footer class="page-footer">
   <div class="page-footer__brand">{{company.name}}{{#if company.website}} · {{company.website}}{{/if}}</div>
   <div class="page-footer__meta">

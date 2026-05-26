@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { PrismaService } from "../common/prisma.service";
+import { decimalToNumber, sumDecimal, toDecimal } from "../common/utils/decimal";
 import { InventoryBalanceFilterDto } from "./dto/inventory-balance-filter.dto";
 
 @Injectable()
@@ -103,11 +104,11 @@ export class InventoryBalanceService {
       materialId: b.materialId,
       material: {
         ...b.material,
-        minStock: b.material.minStock !== null ? Number(b.material.minStock) : null,
-        costPrice: Number(b.material.costPrice),
+        minStock: b.material.minStock !== null ? decimalToNumber(b.material.minStock) : null,
+        costPrice: decimalToNumber(b.material.costPrice),
       },
-      quantity: Number(b.quantity),
-      isLowStock: b.material.minStock !== null ? Number(b.quantity) < Number(b.material.minStock) : false,
+      quantity: decimalToNumber(b.quantity),
+      isLowStock: b.material.minStock !== null ? toDecimal(b.quantity).lessThan(b.material.minStock) : false,
       updatedAt: b.updatedAt,
     });
 
@@ -175,10 +176,10 @@ export class InventoryBalanceService {
             name: row.materialName,
             code: row.materialCode,
             unit: row.materialUnit,
-            minStock: Number(row.minStock),
-            costPrice: Number(row.costPrice),
+            minStock: decimalToNumber(row.minStock),
+            costPrice: decimalToNumber(row.costPrice),
           },
-          quantity: Number(row.quantity),
+          quantity: decimalToNumber(row.quantity),
           isLowStock: true,
           updatedAt: row.updatedAt,
         })),
@@ -215,17 +216,17 @@ export class InventoryBalanceService {
       ]);
 
     const totalValue = balances.reduce(
-      (sum, b) => sum + Number(b.quantity) * Number(b.material.costPrice),
-      0
+      (sum, b) => sum.plus(toDecimal(b.quantity).mul(b.material.costPrice)),
+      new Decimal(0)
     );
 
     const lowStockCount = lowStockMaterials.filter((m) => {
-      const total = m.stockBalances.reduce((s, b) => s + Number(b.quantity), 0);
-      return total < Number(m.minStock);
+      const total = sumDecimal(m.stockBalances.map((balance) => balance.quantity));
+      return total.lessThan(m.minStock ?? 0);
     }).length;
 
     return {
-      totalValue: Math.round(totalValue),
+      totalValue: decimalToNumber(totalValue.toDecimalPlaces(0)),
       lowStockCount,
       draftDocsCount: draftReceipts + draftIssues + draftTransfers + draftCounts,
       warehouseCount,

@@ -86,6 +86,7 @@ dto/                     Zod schemas + inferred TypeScript types
 
 **Auth flow:**
 - `POST /api/auth/login` → issues `accessToken` (JWT, 15 m) + sets `ahso_refresh_token` HttpOnly cookie (7 d)
+- Single-session policy: each user may have only one active login session at a time. A successful login invalidates all previous sessions for that user and notifies displaced sessions over WebSocket.
 - `POST /api/auth/refresh` → rotates both tokens (old refresh token is invalidated)
 - `POST /api/auth/logout` → clears refresh token from DB and clears cookie
 - Access token is validated per-request by `JwtStrategy` (`passport-jwt`, Bearer header)
@@ -100,7 +101,7 @@ dto/                     Zod schemas + inferred TypeScript types
 
 **WebSocket** — Socket.IO at `/events` namespace. On connect, verifies Bearer token from handshake, joins rooms `user:{id}` and `admin` (for ADMIN role). `DomainEventsService` publishes to these rooms.
 
-**Documents / PDF** — Handlebars templates compiled at `onModuleInit`, rendered to HTML, then to PDF via Puppeteer (`chromium`). Template registry at `src/documents/template-registry.ts`.
+**Documents / PDF** — Handlebars/layout templates compiled at `onModuleInit`, rendered to HTML, then to PDF via WeasyPrint. Template registry at `src/documents/template-registry.ts`.
 
 **Decorators quick reference:**
 ```typescript

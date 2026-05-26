@@ -113,7 +113,7 @@ export class DocumentLayoutRendererService {
     return `
 /* Each .schema-document__page is exactly one A4 sheet.
    @page margin: 0 overrides base.css so the 210×297 mm div maps 1-to-1
-   to the PDF page without any Puppeteer/CSS margin stacking. */
+   to the PDF page without CSS margin stacking. */
 @page {
   size: A4;
   margin: 0;

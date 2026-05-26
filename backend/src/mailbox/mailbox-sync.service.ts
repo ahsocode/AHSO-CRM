@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnApplicationBootstrap, forwardRef, Inject } from "@nestjs/common";
 import { EmailAccount, Prisma } from "@prisma/client";
-import { FetchMessageObject, MessageAddressObject, MessageStructureObject } from "imapflow";
+import { FetchMessageObject, MessageAddressObject } from "imapflow";
+import { ParsedMail, ParsedMailAddressObject, ParsedMailAttachment, simpleParser } from "mailparser";
 import { setTimeout as delay } from "node:timers/promises";
 import { PrismaService } from "../common/prisma.service";
 import { UploadService } from "../upload/upload.service";
@@ -8,14 +9,6 @@ import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { ImapService } from "./imap.service";
 import { MailboxSyncQueue } from "./mailbox-sync.queue";
 import { MailboxAddress, ParsedMailboxMessage } from "./mailbox.types";
-
-interface AttachmentPart {
-  part: string;
-  filename: string;
-  mimeType: string;
-  size: number;
-  cid?: string | null;
-}
 
 @Injectable()
 export class MailboxSyncService implements OnApplicationBootstrap {
@@ -89,8 +82,7 @@ export class MailboxSyncService implements OnApplicationBootstrap {
           flags: true,
           internalDate: true,
           size: true,
-          source: true,
-          bodyStructure: true
+          source: true
         }, { uid: true })) {
           const saved = await this.saveFetchedMessage(account, folder, message);
           await this.linkEmailToCustomer(saved.id);
@@ -220,9 +212,7 @@ export class MailboxSyncService implements OnApplicationBootstrap {
   }
 
   private async saveFetchedMessage(account: EmailAccount, folder: string, message: FetchMessageObject) {
-    const parsed = this.parseFetchedMessage(folder, message);
-    const attachmentParts = this.collectAttachments(message.bodyStructure);
-    const attachmentCreates = await this.downloadAttachments(account, folder, message.uid, attachmentParts);
+    const { parsed, attachmentCreates } = await this.parseFetchedMessage(folder, message);
 
     return this.prisma.emailMessage.upsert({
       where: {
@@ -262,155 +252,111 @@ export class MailboxSyncService implements OnApplicationBootstrap {
     });
   }
 
-  private async downloadAttachments(
-    account: EmailAccount,
+  private async parseFetchedMessage(
     folder: string,
-    uid: number,
-    parts: AttachmentPart[]
-  ): Promise<Prisma.EmailAttachmentCreateWithoutMessageInput[]> {
-    if (parts.length === 0) {
-      return [];
+    message: FetchMessageObject
+  ): Promise<{
+    parsed: ParsedMailboxMessage;
+    attachmentCreates: Prisma.EmailAttachmentCreateWithoutMessageInput[];
+  }> {
+    let mail: ParsedMail | null = null;
+    if (message.source) {
+      try {
+        mail = await simpleParser(message.source);
+      } catch (error) {
+        this.logger.warn(`Không thể parse MIME message ${message.uid}: ${this.getErrorMessage(error)}`);
+      }
     }
+    const parsedFrom = this.firstParsedAddress(mail?.from);
+    const from = parsedFrom ?? this.firstAddress(message.envelope?.from);
+    const bodyHtml = typeof mail?.html === "string" ? mail.html : null;
+    const bodyText = mail?.text ?? this.stripHtml(bodyHtml ?? "");
+    const snippet = bodyText ? bodyText.replace(/\s+/g, " ").trim().slice(0, 200) : null;
+    const attachmentCreates = await this.createAttachmentsFromParsed(mail?.attachments ?? []);
 
-    const client = await this.imapService.getOrCreateConnection(account);
-    await client.mailboxOpen(folder);
-    const downloads = await client.downloadMany(String(uid), parts.map((part) => part.part), { uid: true });
+    return {
+      parsed: {
+        uid: message.uid,
+        folder,
+        messageId: mail?.messageId ?? message.envelope?.messageId ?? null,
+        inReplyTo: mail?.inReplyTo ?? message.envelope?.inReplyTo ?? null,
+        fromName: from.name ?? null,
+        fromEmail: from.email,
+        toAddresses: this.normalizeParsedAddresses(mail?.to, message.envelope?.to),
+        ccAddresses: this.normalizeParsedAddresses(mail?.cc, message.envelope?.cc),
+        bccAddresses: this.normalizeParsedAddresses(mail?.bcc, message.envelope?.bcc),
+        subject: mail?.subject ?? message.envelope?.subject ?? null,
+        bodyText: bodyText || null,
+        bodyHtml,
+        snippet,
+        isRead: Boolean(message.flags?.has("\\Seen")),
+        isStarred: Boolean(message.flags?.has("\\Flagged")),
+        isDraft: folder.toLowerCase().includes("draft"),
+        hasAttachments: attachmentCreates.length > 0,
+        size: message.size ?? message.source?.byteLength ?? 0,
+        receivedAt: mail?.date ?? this.resolveReceivedAt(message)
+      },
+      attachmentCreates
+    };
+  }
+
+  private async createAttachmentsFromParsed(
+    attachments: ParsedMailAttachment[]
+  ): Promise<Prisma.EmailAttachmentCreateWithoutMessageInput[]> {
     const creates: Prisma.EmailAttachmentCreateWithoutMessageInput[] = [];
 
-    for (const part of parts) {
-      const download = downloads[part.part];
-      if (!download?.content) {
-        creates.push({
-          filename: part.filename,
-          mimeType: part.mimeType,
-          size: part.size,
-          cid: part.cid
-        });
+    for (const attachment of attachments) {
+      const filename = attachment.filename ?? "attachment";
+      const mimeType = attachment.contentType ?? "application/octet-stream";
+      const size = attachment.size ?? attachment.content?.byteLength ?? 0;
+      const cid = attachment.cid?.replace(/^<|>$/g, "") ?? null;
+
+      if (!attachment.content || attachment.content.byteLength === 0) {
+        creates.push({ filename, mimeType, size, cid });
         continue;
       }
 
-      const saved = await this.uploadService.saveBuffer(download.content, {
-        originalName: part.filename,
-        mimeType: part.mimeType,
-        size: part.size,
+      const saved = await this.uploadService.saveBuffer(attachment.content, {
+        originalName: filename,
+        mimeType,
+        size,
         subfolder: "email-attachments"
       });
 
       creates.push({
-        filename: part.filename,
-        mimeType: part.mimeType,
+        filename,
+        mimeType,
         size: saved.size,
         filePath: saved.url,
-        cid: part.cid
+        cid
       });
     }
 
     return creates;
   }
 
-  private parseFetchedMessage(folder: string, message: FetchMessageObject): ParsedMailboxMessage {
-    const from = this.firstAddress(message.envelope?.from);
-    const body = this.extractBodies(message.source);
-    const bodyText = body.text ?? this.stripHtml(body.html ?? "");
-    const snippet = bodyText ? bodyText.replace(/\s+/g, " ").trim().slice(0, 200) : null;
+  private normalizeParsedAddresses(
+    parsedAddresses?: ParsedMailAddressObject | ParsedMailAddressObject[],
+    fallback?: MessageAddressObject[]
+  ): MailboxAddress[] {
+    const addressObjects = Array.isArray(parsedAddresses)
+      ? parsedAddresses
+      : parsedAddresses
+        ? [parsedAddresses]
+        : [];
+    const addresses = addressObjects.flatMap((addressObject) => addressObject.value ?? []);
+    const normalized = addresses
+      .filter((address) => Boolean(address.address))
+      .map((address) => ({
+        name: address.name ?? null,
+        email: String(address.address).toLowerCase()
+      }));
 
-    return {
-      uid: message.uid,
-      folder,
-      messageId: message.envelope?.messageId ?? null,
-      inReplyTo: message.envelope?.inReplyTo ?? null,
-      fromName: from.name ?? null,
-      fromEmail: from.email,
-      toAddresses: this.normalizeAddresses(message.envelope?.to),
-      ccAddresses: this.normalizeAddresses(message.envelope?.cc),
-      bccAddresses: this.normalizeAddresses(message.envelope?.bcc),
-      subject: message.envelope?.subject ?? null,
-      bodyText: bodyText || null,
-      bodyHtml: body.html ?? null,
-      snippet,
-      isRead: Boolean(message.flags?.has("\\Seen")),
-      isStarred: Boolean(message.flags?.has("\\Flagged")),
-      isDraft: folder.toLowerCase().includes("draft"),
-      hasAttachments: this.collectAttachments(message.bodyStructure).length > 0,
-      size: message.size ?? message.source?.byteLength ?? 0,
-      receivedAt: this.resolveReceivedAt(message)
-    };
+    return normalized.length > 0 ? normalized : this.normalizeAddresses(fallback);
   }
 
-  private collectAttachments(structure?: MessageStructureObject): AttachmentPart[] {
-    if (!structure) {
-      return [];
-    }
-
-    const current: AttachmentPart[] = [];
-    const filename = structure.dispositionParameters?.filename ?? structure.parameters?.name;
-    const isAttachment = structure.disposition?.toLowerCase() === "attachment" || Boolean(filename);
-
-    if (isAttachment && structure.part) {
-      current.push({
-        part: structure.part,
-        filename: filename ?? "attachment",
-        mimeType: structure.type,
-        size: structure.size ?? 0,
-        cid: structure.id ?? null
-      });
-    }
-
-    return current.concat(...(structure.childNodes ?? []).map((child) => this.collectAttachments(child)));
-  }
-
-  private extractBodies(source?: Buffer) {
-    if (!source) {
-      return { text: null, html: null };
-    }
-
-    const raw = source.toString("utf8");
-    const parts = raw.split(/\r?\n\r?\n/);
-    const headers = parts.shift() ?? "";
-    const body = parts.join("\n\n");
-    const htmlMatch = raw.match(/Content-Type:\s*text\/html[\s\S]*?\r?\n\r?\n([\s\S]*?)(?:\r?\n--|$)/i);
-    const textMatch = raw.match(/Content-Type:\s*text\/plain[\s\S]*?\r?\n\r?\n([\s\S]*?)(?:\r?\n--|$)/i);
-    const isHtml = /Content-Type:\s*text\/html/i.test(headers);
-    const isText = /Content-Type:\s*text\/plain/i.test(headers);
-
-    // Detect Content-Transfer-Encoding for each part; fall back to top-level header.
-    const topEncoding = (headers.match(/Content-Transfer-Encoding:\s*(\S+)/i)?.[1] ?? "").toLowerCase();
-    const htmlEncoding = this.getPartTransferEncoding(raw, "text/html") || topEncoding;
-    const textEncoding = this.getPartTransferEncoding(raw, "text/plain") || topEncoding;
-
-    return {
-      text: this.decodeTransferPayload(textMatch?.[1] ?? (isText ? body : null), textEncoding),
-      html: this.decodeTransferPayload(htmlMatch?.[1] ?? (isHtml ? body : null), htmlEncoding)
-    };
-  }
-
-  private getPartTransferEncoding(raw: string, contentType: string): string {
-    // Locate the MIME part for this content-type and read its transfer encoding.
-    const regex = new RegExp(
-      `Content-Type:\\s*${contentType}[\\s\\S]*?Content-Transfer-Encoding:\\s*(\\S+)`,
-      "i"
-    );
-    return (raw.match(regex)?.[1] ?? "").toLowerCase();
-  }
-
-  private decodeTransferPayload(value?: string | null, encoding = "") {
-    if (!value) {
-      return null;
-    }
-
-    if (encoding === "base64") {
-      try {
-        return Buffer.from(value.replace(/[\r\n\s]/g, ""), "base64").toString("utf8");
-      } catch {
-        return value;
-      }
-    }
-
-    // quoted-printable (and plain 7bit/8bit — safe to apply soft-wrap strip)
-    return value
-      .replace(/=\r?\n/g, "")
-      .replace(/=([0-9A-F]{2})/gi, (_, hex: string) => String.fromCharCode(Number.parseInt(hex, 16)))
-      .trim();
+  private firstParsedAddress(addresses?: ParsedMailAddressObject): MailboxAddress | null {
+    return this.normalizeParsedAddresses(addresses)[0] ?? null;
   }
 
   private normalizeAddresses(addresses?: MessageAddressObject[]): MailboxAddress[] {

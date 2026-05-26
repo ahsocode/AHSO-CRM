@@ -12,7 +12,9 @@ import {
   useMailboxThreads,
   useSyncMailbox,
 } from "@/hooks/use-mailbox";
-import { EmailMessage, EmailThread } from "@/lib/types";
+import { toast } from "@/hooks/use-toast";
+import { apiClient, getApiErrorMessage } from "@/lib/api-client";
+import { ApiResponse, EmailMessage, EmailThread } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ComposeMode, ComposeWindow, SignatureEditor } from "./_components/compose-panel";
 import { FolderSidebar } from "./_components/folder-sidebar";
@@ -110,19 +112,18 @@ export default function MailboxPage() {
 
   const openCompose = useCallback((mode: ComposeMode, replyTo?: EmailMessage) => setCompose({ mode, replyTo }), []);
 
-  const handleThreadReply = useCallback((mode: ComposeMode, messageId: string) => {
-    // Load full message for reply context — find it in the already-loaded thread
-    const root = allThreads.find((t) => t.id === messageId);
-    const reply = selectedThread?.replies.find((r) => r.id === messageId);
-    if (root) {
-      openCompose(mode);
-    } else if (reply) {
-      // For reply items we only have snippet — open compose in basic reply mode
-      openCompose(mode);
-    } else {
-      openCompose(mode);
+  const handleThreadReply = useCallback(async (mode: ComposeMode, messageId: string) => {
+    try {
+      const response = await apiClient.get<ApiResponse<EmailMessage>>(`/mailbox/messages/${messageId}`);
+      openCompose(mode, response.data.data);
+    } catch (error) {
+      toast({
+        title: "Không mở được nội dung trả lời",
+        description: getApiErrorMessage(error),
+        variant: "destructive"
+      });
     }
-  }, [allThreads, selectedThread, openCompose]);
+  }, [openCompose]);
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) => {

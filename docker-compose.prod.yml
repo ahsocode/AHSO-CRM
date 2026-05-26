@@ -62,8 +62,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: "postgresql://${POSTGRES_USER:-ahso}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ahso_crm}?schema=public"
       REDIS_URL: "redis://redis:6379"
-      # Cap Node.js V8 heap. Chromium (Puppeteer) gets memory outside this heap,
-      # so leave headroom for PDF generation spikes (~300 MB per render).
+      # Cap Node.js V8 heap while leaving container memory headroom for PDF generation.
       NODE_OPTIONS: "--max-old-space-size=512"
     ports:
       - "${BACKEND_BIND:-127.0.0.1:3001}:3001"

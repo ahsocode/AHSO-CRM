@@ -4,23 +4,13 @@ import { mkdtemp, readFile, rm, stat, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 
-export interface PdfRenderOptions {
-  pageSize?: "A4" | "Letter";
-  margins?: {
-    top?: string;
-    right?: string;
-    bottom?: string;
-    left?: string;
-  };
-}
-
 @Injectable()
 export class PdfRendererService {
-  async render(html: string, _options: PdfRenderOptions = {}): Promise<Buffer> {
-    return this.renderWithWeasyPrint(html);
+  async render(html: string): Promise<Buffer> {
+    return this.renderHtmlWithWeasyPrint(html);
   }
 
-  private async renderWithWeasyPrint(html: string): Promise<Buffer> {
+  private async renderHtmlWithWeasyPrint(html: string): Promise<Buffer> {
     const tempDir = await mkdtemp(join(tmpdir(), "ahso-weasyprint-"));
     const inputPath = join(tempDir, "input.html");
     const outputPath = join(tempDir, "output.pdf");

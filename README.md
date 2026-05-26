@@ -71,7 +71,7 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 ### Platform
 - **Real-time** — WebSocket (Socket.io) for live data updates across all clients
 - **Notifications** — In-app bell (persistent + real-time), Web Push to mobile
-- **Session Management** — View active sessions across devices, revoke individual sessions (target device is logged out in real-time via WebSocket)
+- **Single Active Session** — Each user can be logged in on only one device/browser session at a time. A new login invalidates previous sessions in real time via WebSocket.
 - **Webhooks** — Outbound HTTP webhooks on domain events with delivery logs
 - **Search** — Global full-text search across customers, projects, quotes, contracts, activities
 - **AI Insights** — Customer activity summaries, suggested follow-ups, email drafting, project win probability, pipeline revenue forecast
@@ -430,17 +430,19 @@ AHSO-CRM/
 POST /api/auth/login
   → accessToken (JWT, 15 min) stored in sessionStorage
   → ahso_refresh_token (7 day) stored as HttpOnly cookie
+  → invalidates all previous sessions for the same user
 
 On 401:
   apiClient → POST /api/auth/refresh (cookie auto-sent)
   → new accessToken + rotated cookie
   → retry original request
 
-Remote session revocation:
-  Device A calls DELETE /api/auth/sessions/:id
-  → DB session deleted
+Single-session enforcement:
+  Device A is logged in
+  → Device B logs in with the same user
+  → DB sessions for Device A are deleted
   → WebSocket emits auth:session-invalidated with sessionId
-  → Device B receives event, matches its own sessionId, logs out immediately
+  → Device A receives event, matches its own sessionId, logs out immediately
 ```
 
 ---

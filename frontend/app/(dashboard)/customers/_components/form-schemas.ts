@@ -70,6 +70,7 @@ export const defaultCustomerFormValues: CustomerFormValues = {
 export const contactFormSchema = z.object({
   name: z.string().trim().min(2, "Tên liên hệ phải có ít nhất 2 ký tự").max(120),
   title: optionalString(120),
+  department: optionalString(80),
   email: z.preprocess(
     emptyToUndefined,
     z.string().trim().email("Email liên hệ không hợp lệ").optional()
@@ -84,6 +85,7 @@ export type ContactFormValues = z.infer<typeof contactFormSchema>;
 export const defaultContactFormValues: ContactFormValues = {
   name: "",
   title: "",
+  department: "",
   email: "",
   phone: "",
   isPrimary: false,

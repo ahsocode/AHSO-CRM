@@ -456,6 +456,7 @@ export interface CustomerUpsertInput {
 export interface ContactUpsertInput {
   name: string;
   title?: string;
+  department?: string;
   email?: string;
   phone?: string;
   isPrimary: boolean;
@@ -466,6 +467,7 @@ export interface CustomerContact {
   id: string;
   name: string;
   title?: string | null;
+  department?: string | null;
   email?: string | null;
   phone?: string | null;
   isPrimary: boolean;

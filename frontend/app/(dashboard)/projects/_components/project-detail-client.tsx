@@ -202,6 +202,55 @@ const PROJECT_GENERATED_DOCUMENTS: Array<{
   { type: "AR_RECONCILIATION", label: "Biên bản đối chiếu công nợ", entity: "customer" }
 ];
 
+const DOCUMENT_GROUPS: Array<{
+  label: string;
+  types: DocumentTemplateType[];
+}> = [
+  {
+    label: "Trước ký hợp đồng",
+    types: ["SURVEY_REPORT", "PROPOSAL", "QUOTATION", "CONTRACT", "CONTRACT_ADDENDUM", "NDA"]
+  },
+  {
+    label: "Triển khai",
+    types: ["DELIVERY_NOTE", "DOC_HANDOVER", "INSTALLATION_REPORT"]
+  },
+  {
+    label: "Nghiệm thu",
+    types: ["ACCEPTANCE_REPORT", "PARTIAL_ACCEPTANCE", "WARRANTY_CERT", "MAINTENANCE_RECORD"]
+  },
+  {
+    label: "Tài chính",
+    types: ["PAYMENT_REQUEST", "PAYMENT_RECEIPT", "AR_RECONCILIATION"]
+  }
+];
+
+const DOCUMENT_PRESETS: Array<{
+  label: string;
+  description: string;
+  types: DocumentTemplateType[];
+}> = [
+  {
+    label: "Dự án có hợp đồng",
+    description: "Khảo sát → Báo giá → HĐ → Lắp đặt → Nghiệm thu → Bảo hành → Thu tiền",
+    types: [
+      "SURVEY_REPORT", "QUOTATION", "CONTRACT",
+      "INSTALLATION_REPORT", "DELIVERY_NOTE",
+      "ACCEPTANCE_REPORT", "WARRANTY_CERT",
+      "PAYMENT_REQUEST", "PAYMENT_RECEIPT"
+    ]
+  },
+  {
+    label: "Dự án nhỏ / không HĐ",
+    description: "Khảo sát → Báo giá → Nghiệm thu → Thu tiền",
+    types: ["SURVEY_REPORT", "QUOTATION", "ACCEPTANCE_REPORT", "PAYMENT_RECEIPT"]
+  },
+  {
+    label: "Bảo trì định kỳ",
+    description: "Biên bản bảo trì + thanh toán dịch vụ",
+    types: ["MAINTENANCE_RECORD", "PAYMENT_REQUEST", "PAYMENT_RECEIPT"]
+  }
+];
+
 const SURVEY_NOTE_LABELS: Record<SurveyNoteType, string> = {
   GENERAL: "Ghi chú chung",
   TECHNICAL_REQUIREMENT: "Yêu cầu kỹ thuật",
@@ -1504,66 +1553,140 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
           <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Project Document Plan</p>
-              <CardTitle>Cấu hình hồ sơ cần sinh</CardTitle>
+              <CardTitle>Bộ hồ sơ dự án</CardTitle>
             </div>
-            <Badge variant={hasUnsavedPlanChanges ? "warning" : "info"}>
-              {selectedPlanTypes.length} tài liệu được chọn
-            </Badge>
+            {/* Progress summary */}
+            {(() => {
+              const total = selectedPlanTypes.length;
+              const generated = selectedPlanTypes.filter((t) => (generatedDocumentsByType[t] ?? []).length > 0).length;
+              const missing = selectedPlanTypes.filter((t) => {
+                const doc = PROJECT_GENERATED_DOCUMENTS.find((d) => d.type === t);
+                const src = doc ? getSystemDocumentSourceInfo(doc) : null;
+                return src?.canGenerate && (generatedDocumentsByType[t] ?? []).length === 0;
+              }).length;
+              if (total === 0) return <Badge variant="neutral">Chưa cấu hình</Badge>;
+              if (generated === total) return <Badge variant="success">Hoàn tất · {total}/{total}</Badge>;
+              if (missing > 0) return <Badge variant="warning">{generated}/{total} đã sinh · {missing} chờ</Badge>;
+              return <Badge variant="info">{generated}/{total} đã sinh</Badge>;
+            })()}
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {PROJECT_GENERATED_DOCUMENTS.map((document) => {
-                const sourceInfo = getSystemDocumentSourceInfo(document);
-                const isSelected = selectedPlanTypes.includes(document.type);
-                const generatedForType = generatedDocumentsByType[document.type] ?? [];
-                const latestGenerated = generatedForType[0];
+          <CardContent className="space-y-5">
 
-                return (
+            {/* Preset quick-select */}
+            <div className="rounded-2xl border border-border/60 bg-bg-subtle p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                Chọn nhanh theo loại dự án
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {DOCUMENT_PRESETS.map((preset) => (
                   <button
-                    key={document.type}
+                    key={preset.label}
                     type="button"
-                    onClick={() => togglePlanType(document.type)}
-                    className={cn(
-                      "rounded-2xl border p-3 text-left transition",
-                      isSelected
-                        ? "border-primary bg-primary-bg"
-                        : "border-border/60 bg-white hover:border-primary/30 hover:bg-bg-hover"
-                    )}
+                    title={preset.description}
+                    onClick={() => setSelectedPlanTypes(preset.types)}
+                    className="rounded-xl border border-border/60 bg-white px-3 py-1.5 text-sm font-medium text-text-primary transition hover:border-primary/40 hover:bg-primary-bg hover:text-primary"
                   >
-                    <div className="flex items-start gap-3">
-                      <span
-                        className={cn(
-                          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs font-bold",
-                          isSelected ? "border-primary bg-primary text-white" : "border-border bg-white text-transparent"
-                        )}
-                      >
-                        ✓
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-text-primary">{document.label}</span>
-                        <span className="mt-1 block text-xs text-text-secondary">{sourceInfo.sourceLabel}</span>
-                        {latestGenerated ? (
-                          <span className="mt-2 inline-flex rounded-full bg-success-bg px-2 py-0.5 text-[11px] font-semibold text-success">
-                            Đã sinh: {latestGenerated.number}
-                          </span>
-                        ) : sourceInfo.canGenerate ? (
-                          <span className="mt-2 inline-flex rounded-full bg-bg-hover px-2 py-0.5 text-[11px] font-semibold text-text-muted">
-                            Chưa sinh
-                          </span>
-                        ) : (
-                          <span className="mt-2 inline-flex rounded-full bg-warning-bg px-2 py-0.5 text-[11px] font-semibold text-warning">
-                            {sourceInfo.missingReason}
-                          </span>
-                        )}
-                      </span>
-                    </div>
+                    {preset.label}
                   </button>
+                ))}
+                {selectedPlanTypes.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlanTypes([])}
+                    className="rounded-xl border border-border/40 bg-white px-3 py-1.5 text-sm text-text-muted transition hover:border-danger/40 hover:text-danger"
+                  >
+                    Bỏ chọn tất cả
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Document groups */}
+            <div className="space-y-5">
+              {DOCUMENT_GROUPS.map((group) => {
+                const groupDocs = PROJECT_GENERATED_DOCUMENTS.filter((d) => group.types.includes(d.type));
+                const selectedCount = groupDocs.filter((d) => selectedPlanTypes.includes(d.type)).length;
+                return (
+                  <div key={group.label}>
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                        {group.label}
+                      </span>
+                      {selectedCount > 0 ? (
+                        <span className="rounded-full bg-primary-bg px-2 py-0.5 text-[11px] font-semibold text-primary">
+                          {selectedCount} chọn
+                        </span>
+                      ) : null}
+                      <div className="h-px flex-1 bg-border/40" />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      {groupDocs.map((document) => {
+                        const sourceInfo = getSystemDocumentSourceInfo(document);
+                        const isSelected = selectedPlanTypes.includes(document.type);
+                        const generatedForType = generatedDocumentsByType[document.type] ?? [];
+                        const latestGenerated = generatedForType[0];
+
+                        return (
+                          <button
+                            key={document.type}
+                            type="button"
+                            onClick={() => togglePlanType(document.type)}
+                            className={cn(
+                              "rounded-xl border p-3 text-left transition",
+                              isSelected
+                                ? "border-primary bg-primary-bg"
+                                : "border-border/60 bg-white hover:border-primary/30 hover:bg-bg-hover"
+                            )}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <span
+                                className={cn(
+                                  "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold",
+                                  isSelected ? "border-primary bg-primary text-white" : "border-border bg-white text-transparent"
+                                )}
+                              >
+                                ✓
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-semibold text-text-primary leading-snug">
+                                  {document.label}
+                                </span>
+                                <span className="mt-0.5 block text-[11px] text-text-muted">
+                                  {sourceInfo.sourceLabel}
+                                </span>
+                                {latestGenerated ? (
+                                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-success-bg px-1.5 py-0.5 text-[10px] font-semibold text-success">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                                    {latestGenerated.number}
+                                  </span>
+                                ) : sourceInfo.canGenerate ? (
+                                  <span className="mt-1.5 inline-flex rounded-full bg-bg-hover px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">
+                                    Chưa sinh
+                                  </span>
+                                ) : (
+                                  <span className="mt-1.5 inline-flex rounded-full bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning">
+                                    {sourceInfo.missingReason}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-bg-hover/50 p-4">
+
+            {/* Action bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-bg-hover/50 px-4 py-3">
               <p className="text-sm text-text-secondary">
-                Mỗi dự án có một bộ hồ sơ riêng. Sau khi lưu cấu hình, hệ thống sẽ sinh những PDF còn thiếu theo danh sách đã chọn.
+                {hasUnsavedPlanChanges
+                  ? "Cấu hình chưa lưu — nhấn Lưu trước khi sinh tài liệu."
+                  : selectedPlanTypes.length === 0
+                  ? "Chọn các loại hồ sơ cần có hoặc dùng preset ở trên."
+                  : `${selectedPlanTypes.length} loại hồ sơ · sinh tài liệu còn thiếu.`}
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button

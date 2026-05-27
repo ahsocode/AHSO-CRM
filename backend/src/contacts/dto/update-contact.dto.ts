@@ -13,6 +13,7 @@ export const updateContactSchema = z
   .object({
     name: z.string().trim().min(2, "Tên liên hệ phải có ít nhất 2 ký tự").max(120).optional(),
     title: z.preprocess(emptyToUndefined, z.string().trim().max(120).optional()),
+    department: z.preprocess(emptyToUndefined, z.string().trim().max(80).optional()),
     email: z.preprocess(
       emptyToUndefined,
       z.string().trim().email("Email liên hệ không hợp lệ").optional()

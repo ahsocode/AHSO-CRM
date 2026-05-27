@@ -214,6 +214,7 @@ model Contact {
   id         String    @id @default(cuid())
   name       String
   title      String?
+  department String?
   email      String?
   phone      String?
   isPrimary  Boolean   @default(false)

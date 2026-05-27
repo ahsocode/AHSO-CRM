@@ -227,6 +227,7 @@ export class CustomersService {
         id: contact.id,
         name: contact.name,
         title: contact.title,
+        department: contact.department,
         email: contact.email,
         phone: contact.phone,
         isPrimary: contact.isPrimary,

@@ -380,24 +380,11 @@ export class DocumentDataLoaderService {
 
   async loadForSurveyReport(entityId: string): Promise<Record<string, unknown>> {
     const project = await this.prisma.project.findUnique({
-      where: { id: entityId },
+      where: { id: entityId, deletedAt: null },
       include: {
         customer: {
           include: {
-            contacts: {
-              where: { isPrimary: true },
-              take: 1
-            }
-          }
-        },
-        activities: {
-          where: { type: "SURVEY" },
-          orderBy: { scheduledAt: "desc" },
-          take: 1,
-          include: {
-            user: {
-              select: { name: true }
-            }
+            contacts: { where: { isPrimary: true }, take: 1 }
           }
         }
       }
@@ -407,23 +394,48 @@ export class DocumentDataLoaderService {
       throw new NotFoundException(`Không tìm thấy dự án với ID: ${entityId}`);
     }
 
-    const surveyActivity = project.activities[0] || null;
+    // Load most recent survey for this project with its notes
+    const survey = await this.prisma.survey.findFirst({
+      where: { projectId: entityId },
+      orderBy: { surveyedAt: "desc" },
+      include: {
+        notes: { orderBy: { createdAt: "asc" } },
+        createdBy: { select: { name: true } }
+      }
+    });
 
-    // In a real app, findings might come from a specific relation or JSON field on activity.
-    // For Phase 3, we structure mock/fallback data based on the plan.
-    const findings = [
-      { id: 1, title: "Hạ tầng mạng hiện tại", description: "Hệ thống cáp mạng cũ, tủ rack chưa được tối ưu, ảnh hưởng đến hiệu suất và an toàn." }
-    ];
+    const NOTE_TYPE_LABELS: Record<string, string> = {
+      TECHNICAL_REQUIREMENT: "Yêu cầu kỹ thuật",
+      COMMERCIAL_REQUIREMENT: "Yêu cầu thương mại",
+      SITE_CONSTRAINT: "Ràng buộc thực địa",
+      RISK: "Rủi ro",
+      DECISION: "Quyết định",
+      OPEN_QUESTION: "Câu hỏi mở",
+      GENERAL: "Ghi chú chung"
+    };
+
+    const findings = survey?.notes?.map((note, index) => ({
+      id: index + 1,
+      type: note.type,
+      typeLabel: NOTE_TYPE_LABELS[note.type as string] ?? String(note.type),
+      title: NOTE_TYPE_LABELS[note.type as string] ?? String(note.type),
+      description: note.content,
+      isImportant: note.isImportant
+    })) ?? [];
 
     return {
       title: "BÁO CÁO KHẢO SÁT / SURVEY REPORT",
       project,
       customer: project.customer,
-      primaryContact: project.customer.contacts[0] || null,
-      surveyActivity,
-      surveyorName: surveyActivity?.user?.name || "Bộ phận Kỹ thuật AHSO",
-      surveyDate: surveyActivity?.doneAt || surveyActivity?.scheduledAt || new Date(),
-      findings
+      primaryContact: project.customer.contacts[0] ?? null,
+      survey: survey ?? null,
+      surveyorName: survey?.createdBy?.name ?? "Bộ phận Kỹ thuật AHSO",
+      surveyDate: survey?.surveyedAt ?? new Date(),
+      location: survey?.location ?? "",
+      objectives: survey?.objectives ?? "",
+      summary: survey?.summary ?? "",
+      findings,
+      hasSurveyData: !!survey && findings.length > 0
     };
   }
 
@@ -648,13 +660,18 @@ export class DocumentDataLoaderService {
     const reference = await this.loadContractOrQuoteReference(entityId);
 
     const warrantyMonths = 12;
-    const warrantyEndDate = new Date();
+    // Anchor warranty start to contract delivery date or project completion, not today
+    const warrantyStartDate =
+      (reference.contract as Record<string, unknown>).endDate as Date | null ??
+      (reference.project as Record<string, unknown>).completedAt as Date | null ??
+      new Date();
+    const warrantyEndDate = new Date(warrantyStartDate);
     warrantyEndDate.setMonth(warrantyEndDate.getMonth() + warrantyMonths);
 
     return {
       title: "GIẤY CHỨNG NHẬN BẢO HÀNH / WARRANTY CERTIFICATE",
       ...reference,
-      warrantyDate: new Date(),
+      warrantyDate: warrantyStartDate,
       warrantyPeriodMonths: warrantyMonths,
       warrantyEndDate
     };
@@ -680,10 +697,24 @@ export class DocumentDataLoaderService {
 
   async loadForPaymentRequest(entityId: string): Promise<Record<string, unknown>> {
     const reference = await this.loadContractOrQuoteReference(entityId);
+    const companyInfo = await this.settingsService.getCompanyInfo();
 
-    // Usually payment request is for a specific milestone or total
-    const paymentAmount = reference.contract.value ? Number(reference.contract.value) * 0.3 : 0; // Requesting 30% for demo
-    const paymentReason = "Thanh toán tạm ứng đợt 1 theo hợp đồng (30%)";
+    // Find the first PENDING milestone with a paymentAmount (sorted by dueDate asc)
+    const milestones = reference.milestones as Array<{
+      name: string;
+      status: string;
+      paymentAmount: number | null;
+      dueDate: Date | null;
+    }>;
+    const nextMilestone = milestones
+      .filter((m) => m.status === "PENDING" && m.paymentAmount != null)
+      .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0))[0] ?? null;
+
+    const contractValue = Number((reference.contract as Record<string, unknown>).value ?? 0);
+    const paymentAmount = nextMilestone?.paymentAmount ?? contractValue * 0.3;
+    const paymentReason = nextMilestone
+      ? `Thanh toán "${nextMilestone.name}" theo HĐ số ${(reference.contract as Record<string, unknown>).contractNo}`
+      : `Thanh toán theo hợp đồng số ${(reference.contract as Record<string, unknown>).contractNo}`;
 
     return {
       title: "GIẤY ĐỀ NGHỊ THANH TOÁN / PAYMENT REQUEST",
@@ -691,28 +722,42 @@ export class DocumentDataLoaderService {
       requestDate: new Date(),
       paymentAmount,
       paymentReason,
-      bankName: "Ngân hàng TMCP Ngoại thương Việt Nam (Vietcombank)",
-      bankAccountNo: "0123456789",
-      bankAccountName: "CONG TY TNHH AHSO"
+      bankName: (companyInfo as Record<string, unknown>).bankName ?? "",
+      bankAccountNo: (companyInfo as Record<string, unknown>).bankAccount ?? "",
+      bankAccountName: (companyInfo as Record<string, unknown>).bankAccountName ?? "",
+      bankBranch: (companyInfo as Record<string, unknown>).bankBranch ?? "",
+      milestone: nextMilestone
     };
   }
 
   async loadForPaymentReceipt(entityId: string): Promise<Record<string, unknown>> {
     const reference = await this.loadContractOrQuoteReference(entityId);
+    const companyInfo = await this.settingsService.getCompanyInfo();
 
-    const receiptAmount = reference.contract.value ? Number(reference.contract.value) * 0.3 : 0;
-    const paymentMethod = "Chuyển khoản (Bank Transfer)";
-    const receiptReason = `Thu tiền tạm ứng HĐ số ${reference.contract.contractNo}`;
+    // Load the most recent payment recorded for this contract
+    const latestPayment = (reference as Record<string, unknown>).isQuoteReference
+      ? null
+      : await this.prisma.payment.findFirst({
+          where: { contractId: (reference.contract as Record<string, unknown>).id as string },
+          orderBy: { paidAt: "desc" }
+        });
+
+    const contractValue = Number((reference.contract as Record<string, unknown>).value ?? 0);
+    const receiptAmount = latestPayment ? Number(latestPayment.amount) : contractValue * 0.3;
+    const paymentMethod = latestPayment?.method ?? "Chuyển khoản (Bank Transfer)";
+    const receiptReason = latestPayment?.notes
+      ?? `Thu tiền HĐ số ${(reference.contract as Record<string, unknown>).contractNo}`;
 
     return {
       title: "PHIẾU THU / PAYMENT RECEIPT",
       ...reference,
-      receiptDate: new Date(),
+      receiptDate: latestPayment?.paidAt ?? new Date(),
       receiptAmount,
       paymentMethod,
       receiptReason,
-      cashier: "Nguyễn Thu Ngân",
-      payerName: reference.primaryContact?.name || "Đại diện khách hàng"
+      cashier: (companyInfo as Record<string, unknown>).contactName ?? "Kế toán công ty",
+      payerName: (reference.primaryContact as Record<string, unknown> | null)?.name ?? "Đại diện khách hàng",
+      payment: latestPayment
     };
   }
 
@@ -733,6 +778,23 @@ export class DocumentDataLoaderService {
     if (!customer) {
       throw new NotFoundException(`Không tìm thấy khách hàng với ID: ${entityId}`);
     }
+
+    // Load actual payment sums per contract in one query
+    const contractIds = customer.projects
+      .map((p) => p.contract?.id)
+      .filter((id): id is string => Boolean(id));
+
+    const paymentSums = contractIds.length > 0
+      ? await this.prisma.payment.groupBy({
+          by: ["contractId"],
+          where: { contractId: { in: contractIds } },
+          _sum: { amount: true }
+        })
+      : [];
+
+    const paidByContract = new Map(
+      paymentSums.map((p) => [p.contractId, Number(p._sum.amount ?? 0)])
+    );
 
     // Build AR line items from all contracts
     const lineItems: Array<{
@@ -757,8 +819,10 @@ export class DocumentDataLoaderService {
       }
 
       const contractValue = Number(contract.value ?? 0);
-      const invoiced = contractValue * 0.7;
-      const paid = contractValue * 0.3;
+      // invoiced = full contract value (entire contract is the receivable)
+      const invoiced = contractValue;
+      // paid = sum of actual Payment records for this contract
+      const paid = paidByContract.get(contract.id) ?? 0;
       const outstanding = invoiced - paid;
 
       lineItems.push({

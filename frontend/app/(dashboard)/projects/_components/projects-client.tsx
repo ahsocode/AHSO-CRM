@@ -258,12 +258,13 @@ export function ProjectsClient() {
         description="Điều phối cơ hội từ khảo sát, báo giá, đàm phán đến triển khai với kanban kéo thả và dữ liệu đồng bộ."
         action={
           <div className="flex flex-wrap items-center gap-3">
+            {/* View toggle: visible on all screens */}
             <div className="inline-flex rounded-md border border-border bg-white p-1">
               {(["kanban", "list"] as const).map((mode) => (
                 <button
                   key={mode}
                   className={cn(
-                    "rounded-md px-4 py-2 text-sm font-semibold transition",
+                    "rounded-md px-3 py-1.5 text-sm font-semibold transition md:px-4 md:py-2",
                     view === mode
                       ? "bg-primary text-white"
                       : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
@@ -275,16 +276,18 @@ export function ProjectsClient() {
                 </button>
               ))}
             </div>
+            {/* Primary CTA: always visible */}
             <Link href="/projects/new" className={cn(buttonVariants({ variant: "primary" }))}>
               Tạo dự án
             </Link>
-            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
+            {/* Desktop-only power actions */}
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)} className="hidden md:inline-flex">
               Import CSV
             </Button>
-            <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)}>
+            <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)} className="hidden md:inline-flex">
               {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
             </Button>
-            <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }))}>
+            <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }), "hidden md:inline-flex")}>
               Về dashboard
             </Link>
           </div>

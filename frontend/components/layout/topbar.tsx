@@ -110,7 +110,18 @@ export function Topbar({
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{context.current}</span>
       </div>
 
-      <div className="relative min-w-0 flex-1 max-w-[520px]">
+      {/* Mobile: compact search icon button */}
+      <button
+        type="button"
+        onClick={openCommandPalette}
+        className="flex shrink-0 items-center justify-center rounded-xl p-2 text-text-secondary transition hover:bg-bg-subtle hover:text-primary md:hidden"
+        aria-label="Tìm kiếm"
+      >
+        <AppIcon name="search" className="text-[22px]" />
+      </button>
+
+      {/* Desktop: full search bar */}
+      <div className="relative hidden min-w-0 flex-1 max-w-[520px] md:block">
         <AppIcon
           name="search"
           className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted"

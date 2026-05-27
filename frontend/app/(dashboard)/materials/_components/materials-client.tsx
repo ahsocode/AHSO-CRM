@@ -87,7 +87,7 @@ export function MaterialsClient() {
               type="button"
               onClick={handleExport}
               disabled={isExporting}
-              className={cn(buttonVariants({ variant: "outline" }))}
+              className={cn(buttonVariants({ variant: "outline" }), "hidden md:inline-flex")}
             >
               {isExporting ? "Đang xuất..." : "Xuất Excel"}
             </button>

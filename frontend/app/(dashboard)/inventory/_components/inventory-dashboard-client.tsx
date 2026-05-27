@@ -109,7 +109,7 @@ export function InventoryDashboardClient() {
                 }));
                 await downloadExcelRows("ton-kho-thap.xlsx", rows);
               }}
-              className={cn(buttonVariants({ variant: "outline" }), "text-sm")}
+              className={cn(buttonVariants({ variant: "outline" }), "hidden text-sm md:inline-flex")}
             >
               Xuất Excel
             </button>

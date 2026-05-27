@@ -23,7 +23,7 @@ export default function DashboardPage() {
   const activityQuery = useRecentActivity();
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 md:space-y-5">
       <PageHeader
         eyebrow="Tổng quan"
         title="Dashboard điều phối"
@@ -31,14 +31,24 @@ export default function DashboardPage() {
 
       <KpiCards data={kpisQuery.data} isLoading={kpisQuery.isLoading} />
 
-      <div className="grid gap-5 xl:grid-cols-[1.65fr_1fr]">
+      {/* Mobile priority: tasks + activity first */}
+      <div className="grid gap-4 md:hidden">
+        <TaskChecklist data={tasksQuery.data} isLoading={tasksQuery.isLoading} />
+        <ActivityFeed data={activityQuery.data} isLoading={activityQuery.isLoading} />
+      </div>
+
+      {/* Desktop: charts */}
+      <div className="hidden md:grid gap-5 xl:grid-cols-[1.65fr_1fr]">
         <RevenueChart data={revenueChartQuery.data} isLoading={revenueChartQuery.isLoading} />
         <ProjectDonut data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
       </div>
 
-      <PipelinePreview data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
+      <div className="hidden md:block">
+        <PipelinePreview data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
+      </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_1.4fr]">
+      {/* Desktop: tasks + activity */}
+      <div className="hidden md:grid gap-5 xl:grid-cols-[1fr_1.4fr]">
         <TaskChecklist data={tasksQuery.data} isLoading={tasksQuery.isLoading} />
         <ActivityFeed data={activityQuery.data} isLoading={activityQuery.isLoading} />
       </div>

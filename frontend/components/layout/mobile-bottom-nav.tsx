@@ -19,10 +19,10 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-white/96 px-2 pt-2 shadow-[0_-10px_30px_rgba(21,67,96,0.12)] backdrop-blur-xl print:hidden md:hidden"
-      style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-white/96 px-1 pt-1.5 shadow-[0_-8px_24px_rgba(21,67,96,0.10)] backdrop-blur-xl print:hidden md:hidden"
+      style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
     >
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-5">
         {MOBILE_ITEMS.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
 
@@ -31,12 +31,20 @@ export function MobileBottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition",
-                isActive ? "bg-primary/10 text-primary" : "text-text-secondary hover:bg-bg-hover"
+                "flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[10px] font-semibold transition-colors",
+                isActive ? "text-primary" : "text-text-muted hover:text-text-secondary"
               )}
             >
-              <AppIcon name={item.icon} className="h-[18px] w-[18px]" />
-              <span className="truncate">{item.label}</span>
+              {/* Icon with pill indicator for active state */}
+              <span
+                className={cn(
+                  "flex h-8 w-12 items-center justify-center rounded-2xl transition-all",
+                  isActive ? "bg-primary/12" : ""
+                )}
+              >
+                <AppIcon name={item.icon} className={cn("transition-all", isActive ? "text-[22px]" : "text-[20px]")} />
+              </span>
+              <span className="truncate leading-none">{item.label}</span>
             </Link>
           );
         })}

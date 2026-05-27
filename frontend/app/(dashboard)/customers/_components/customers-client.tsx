@@ -239,18 +239,20 @@ export function CustomersClient() {
         description="Quản lý danh sách khách hàng và lead của AHSO."
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => setImportOpen(true)}>
-              <AppIcon name="arrow-right" className="h-4 w-4 -rotate-90" />
-              Nhập CSV
-            </Button>
+            {/* Mobile: only primary CTA */}
             <Link href="/customers/new" className={cn(buttonVariants({ variant: "primary" }))}>
               <AppIcon name="plus" className="h-4 w-4" />
               Thêm khách hàng
             </Link>
-            <Button type="button" variant="outline" onClick={() => setDedupeOpen(true)}>
+            {/* Desktop-only power actions */}
+            <Button type="button" variant="outline" onClick={() => setImportOpen(true)} className="hidden md:inline-flex">
+              <AppIcon name="arrow-right" className="h-4 w-4 -rotate-90" />
+              Nhập CSV
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setDedupeOpen(true)} className="hidden md:inline-flex">
               Xử lý trùng lặp
             </Button>
-            <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)}>
+            <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)} className="hidden md:inline-flex">
               {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
             </Button>
           </div>

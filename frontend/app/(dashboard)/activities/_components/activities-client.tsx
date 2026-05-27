@@ -41,6 +41,7 @@ export function ActivitiesClient() {
             type="button"
             variant={showDeleted ? "primary" : "outline"}
             onClick={() => setShowDeleted((value) => !value)}
+            className="hidden md:inline-flex"
           >
             {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
           </Button>

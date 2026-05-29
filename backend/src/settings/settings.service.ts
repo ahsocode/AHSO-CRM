@@ -184,7 +184,9 @@ export class SettingsService {
     return {
       enabled: stored.enabled ?? DEFAULT_NOTIFICATION_SETTINGS.enabled,
       sendHour: stored.sendHour ?? DEFAULT_NOTIFICATION_SETTINGS.sendHour,
+      milestoneEnabled: stored.milestoneEnabled ?? DEFAULT_NOTIFICATION_SETTINGS.milestoneEnabled,
       milestoneDaysAhead: stored.milestoneDaysAhead ?? DEFAULT_NOTIFICATION_SETTINGS.milestoneDaysAhead,
+      paymentEnabled: stored.paymentEnabled ?? DEFAULT_NOTIFICATION_SETTINGS.paymentEnabled,
       paymentDaysAhead: stored.paymentDaysAhead ?? DEFAULT_NOTIFICATION_SETTINGS.paymentDaysAhead,
     };
   }

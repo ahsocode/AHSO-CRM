@@ -83,7 +83,9 @@ export interface Policies {
 export interface NotificationSettings {
   enabled: boolean;
   sendHour: number;
+  milestoneEnabled: boolean;
   milestoneDaysAhead: number;
+  paymentEnabled: boolean;
   paymentDaysAhead: number;
 }
 

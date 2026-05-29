@@ -74,7 +74,9 @@ export type PolicySettingInput = z.infer<typeof PolicySettingSchema>;
 export const NotificationSettingSchema = z.object({
   enabled: z.boolean(),
   sendHour: z.number().int().min(0).max(23),
+  milestoneEnabled: z.boolean(),
   milestoneDaysAhead: z.number().int().min(1).max(30),
+  paymentEnabled: z.boolean(),
   paymentDaysAhead: z.number().int().min(1).max(30),
 });
 
@@ -83,7 +85,9 @@ export type NotificationSettingInput = z.infer<typeof NotificationSettingSchema>
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettingInput = {
   enabled: true,
   sendHour: 8,
+  milestoneEnabled: true,
   milestoneDaysAhead: 2,
+  paymentEnabled: true,
   paymentDaysAhead: 3,
 };
 

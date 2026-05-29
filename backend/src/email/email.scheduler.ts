@@ -30,8 +30,8 @@ export class EmailSchedulerService {
     }
 
     await Promise.all([
-      this.sendMilestoneReminders(settings.milestoneDaysAhead),
-      this.sendPaymentReminders(settings.paymentDaysAhead),
+      settings.milestoneEnabled ? this.sendMilestoneReminders(settings.milestoneDaysAhead) : Promise.resolve(),
+      settings.paymentEnabled ? this.sendPaymentReminders(settings.paymentDaysAhead) : Promise.resolve(),
     ]);
   }
 

@@ -2,8 +2,8 @@ import { config } from "dotenv";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createServer } from "./server.js";
 
-// Load .env nếu có (development)
-config();
+// Load .env nếu có (development) — quiet để không in ra stdout làm lỗi MCP stdio
+config({ quiet: true } as Parameters<typeof config>[0]);
 
 // Validate required env vars
 const required = ["CRM_EMAIL", "CRM_PASSWORD"];

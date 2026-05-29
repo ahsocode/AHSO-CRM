@@ -80,6 +80,13 @@ export interface Policies {
   service?: string | null;
 }
 
+export interface NotificationSettings {
+  enabled: boolean;
+  sendHour: number;
+  milestoneDaysAhead: number;
+  paymentDaysAhead: number;
+}
+
 export type PolicyItemType = "PAYMENT_TERMS" | "DELIVERY_TERMS";
 
 export interface PolicyItem {

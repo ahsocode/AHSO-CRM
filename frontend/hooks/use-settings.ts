@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
-import { ApiResponse, CompanyInfo, Policies, PolicyItem, PolicyItemType } from "@/lib/types";
+import { ApiResponse, CompanyInfo, NotificationSettings, Policies, PolicyItem, PolicyItemType } from "@/lib/types";
 
 interface SettingsBundle {
   company: CompanyInfo;
@@ -85,6 +85,32 @@ export function useUpdatePolicies() {
         queryClient.invalidateQueries({ queryKey: ["settings"] }),
         queryClient.invalidateQueries({ queryKey: ["settings", "policies"] })
       ]);
+    }
+  });
+}
+
+// ── Notification Settings ─────────────────────────────────────
+
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: ["settings", "notifications"],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<NotificationSettings>>("/settings/notifications");
+      return response.data.data;
+    }
+  });
+}
+
+export function useUpdateNotificationSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: NotificationSettings) => {
+      const response = await apiClient.patch<ApiResponse<NotificationSettings>>("/settings/notifications", payload);
+      return response.data.data;
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData<NotificationSettings>(["settings", "notifications"], updated);
     }
   });
 }

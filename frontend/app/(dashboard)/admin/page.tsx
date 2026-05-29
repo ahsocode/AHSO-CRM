@@ -64,6 +64,12 @@ const ADMIN_CARDS = [
     title: "Backup & Restore",
     description: "Sao lưu toàn bộ hệ thống lên Google Drive và khôi phục khi cần.",
     icon: "cloud-upload" as const
+  },
+  {
+    href: "/admin/notifications" as Route,
+    title: "Nhắc lịch Email",
+    description: "Bật/tắt và cấu hình giờ gửi, ngưỡng ngày nhắc milestone và thanh toán tự động qua email.",
+    icon: "mail" as const
   }
 ];
 

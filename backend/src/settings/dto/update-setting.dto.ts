@@ -70,6 +70,23 @@ export const PolicySettingSchema = z.object({
 
 export type PolicySettingInput = z.infer<typeof PolicySettingSchema>;
 
+// Notification settings schema
+export const NotificationSettingSchema = z.object({
+  enabled: z.boolean(),
+  sendHour: z.number().int().min(0).max(23),
+  milestoneDaysAhead: z.number().int().min(1).max(30),
+  paymentDaysAhead: z.number().int().min(1).max(30),
+});
+
+export type NotificationSettingInput = z.infer<typeof NotificationSettingSchema>;
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettingInput = {
+  enabled: true,
+  sendHour: 8,
+  milestoneDaysAhead: 2,
+  paymentDaysAhead: 3,
+};
+
 // Generic update setting DTO
 export class UpdateSettingDto {
   value!: string; // JSON-stringified

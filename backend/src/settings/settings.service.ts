@@ -1,7 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "src/common/prisma.service";
 import { UploadService } from "src/upload/upload.service";
-import { CompanySettingInput, PolicySettingInput } from "./dto/update-setting.dto";
+import {
+  CompanySettingInput,
+  DEFAULT_NOTIFICATION_SETTINGS,
+  NotificationSettingInput,
+  PolicySettingInput,
+} from "./dto/update-setting.dto";
 
 const PUBLIC_COMPANY_FIELDS = [
   "name",
@@ -169,6 +174,30 @@ export class SettingsService {
    */
   async getPolicies() {
     return this.getSettingsByPrefix("policy:");
+  }
+
+  /**
+   * Get notification/email-reminder settings with defaults applied
+   */
+  async getNotificationSettings(): Promise<NotificationSettingInput> {
+    const stored = await this.getSettingsByPrefix("notification:");
+    return {
+      enabled: stored.enabled ?? DEFAULT_NOTIFICATION_SETTINGS.enabled,
+      sendHour: stored.sendHour ?? DEFAULT_NOTIFICATION_SETTINGS.sendHour,
+      milestoneDaysAhead: stored.milestoneDaysAhead ?? DEFAULT_NOTIFICATION_SETTINGS.milestoneDaysAhead,
+      paymentDaysAhead: stored.paymentDaysAhead ?? DEFAULT_NOTIFICATION_SETTINGS.paymentDaysAhead,
+    };
+  }
+
+  /**
+   * Update notification/email-reminder settings
+   */
+  async updateNotificationSettings(input: NotificationSettingInput): Promise<NotificationSettingInput> {
+    const updates = Object.entries(input).map(([key, value]) =>
+      this.upsertSetting(`notification:${key}`, value, `Notification ${key}`)
+    );
+    await Promise.all(updates);
+    return this.getNotificationSettings();
   }
 
   private async getSettingsByPrefix(prefix: string) {

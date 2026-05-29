@@ -9,8 +9,10 @@ import { SettingsService } from "./settings.service";
 import {
   CompanySettingInput,
   CompanySettingSchema,
+  NotificationSettingInput,
+  NotificationSettingSchema,
   PolicySettingInput,
-  PolicySettingSchema
+  PolicySettingSchema,
 } from "./dto/update-setting.dto";
 
 @ApiTags("settings")
@@ -103,6 +105,32 @@ export class SettingsController {
   @Get("logo")
   async getLogoUrl() {
     return this.settingsService.getLogoUrl();
+  }
+
+  /**
+   * GET /settings/notifications
+   * Get notification/email-reminder settings
+   */
+  @ApiOperation({ summary: "GET /api/settings/notifications" })
+  @Get("notifications")
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions("settings.view")
+  async getNotificationSettings() {
+    return this.settingsService.getNotificationSettings();
+  }
+
+  /**
+   * PATCH /settings/notifications
+   * Update notification/email-reminder settings (admin-only)
+   */
+  @ApiOperation({ summary: "PATCH /api/settings/notifications" })
+  @Patch("notifications")
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions("settings.edit")
+  async updateNotificationSettings(
+    @Body(new ZodValidationPipe(NotificationSettingSchema)) input: NotificationSettingInput
+  ) {
+    return this.settingsService.updateNotificationSettings(input);
   }
 
   /**

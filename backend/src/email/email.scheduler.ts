@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron, CronExpression } from "@nestjs/schedule";
+import { Cron } from "@nestjs/schedule";
 import { PrismaService } from "../common/prisma.service";
+import { SettingsService } from "../settings/settings.service";
 import { EmailService } from "./email.service";
 
 @Injectable()
@@ -9,29 +10,39 @@ export class EmailSchedulerService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    private readonly settingsService: SettingsService
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  // Run every hour on the hour; the handler checks whether the current hour
+  // matches the configured sendHour so admins can change the time without a restart.
+  @Cron("0 * * * *")
   async sendDailyReminders() {
-    await Promise.all([this.sendMilestoneReminders(), this.sendPaymentReminders()]);
+    const settings = await this.settingsService.getNotificationSettings();
+
+    if (!settings.enabled) {
+      return;
+    }
+
+    const currentHour = new Date().getHours();
+    if (currentHour !== settings.sendHour) {
+      return;
+    }
+
+    await Promise.all([
+      this.sendMilestoneReminders(settings.milestoneDaysAhead),
+      this.sendPaymentReminders(settings.paymentDaysAhead),
+    ]);
   }
 
-  private async sendMilestoneReminders() {
+  private async sendMilestoneReminders(daysAhead: number) {
     const now = new Date();
-    const nextTwoDays = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const cutoff = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
     const milestones = await this.prisma.milestone.findMany({
       where: {
-        dueDate: {
-          gte: now,
-          lte: nextTwoDays
-        },
-        status: {
-          in: ["PENDING", "IN_PROGRESS"]
-        },
-        contractId: {
-          not: null
-        }
+        dueDate: { gte: now, lte: cutoff },
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+        contractId: { not: null },
       },
       include: {
         project: {
@@ -41,30 +52,19 @@ export class EmailSchedulerService {
             customer: {
               select: {
                 name: true,
-                assignedTo: {
-                  select: {
-                    email: true,
-                    name: true
-                  }
-                }
-              }
-            }
-          }
+                assignedTo: { select: { email: true, name: true } },
+              },
+            },
+          },
         },
-        contract: {
-          select: {
-            contractNo: true
-          }
-        }
-      }
+        contract: { select: { contractNo: true } },
+      },
     });
 
     await Promise.allSettled(
       milestones.map(async (milestone) => {
         const recipient = milestone.project.customer.assignedTo.email;
-        if (!recipient) {
-          return;
-        }
+        if (!recipient) return;
 
         await this.emailService.sendEmail(
           recipient,
@@ -77,7 +77,7 @@ export class EmailSchedulerService {
             projectCode: milestone.project.code,
             projectName: milestone.project.name,
             customerName: milestone.project.customer.name,
-            contractNo: milestone.contract?.contractNo ?? "Chưa có"
+            contractNo: milestone.contract?.contractNo ?? "Chưa có",
           }
         );
       })
@@ -88,24 +88,15 @@ export class EmailSchedulerService {
     }
   }
 
-  private async sendPaymentReminders() {
+  private async sendPaymentReminders(daysAhead: number) {
     const now = new Date();
-    const nextThreeDays = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const cutoff = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
     const milestones = await this.prisma.milestone.findMany({
       where: {
-        dueDate: {
-          gte: now,
-          lte: nextThreeDays
-        },
-        paymentAmount: {
-          not: null
-        },
-        status: {
-          notIn: ["DONE", "ACCEPTED"]
-        },
-        contractId: {
-          not: null
-        }
+        dueDate: { gte: now, lte: cutoff },
+        paymentAmount: { not: null },
+        status: { notIn: ["DONE", "ACCEPTED"] },
+        contractId: { not: null },
       },
       include: {
         project: {
@@ -115,44 +106,28 @@ export class EmailSchedulerService {
             customer: {
               select: {
                 name: true,
-                assignedTo: {
-                  select: {
-                    email: true,
-                    name: true
-                  }
-                },
+                assignedTo: { select: { email: true, name: true } },
                 contacts: {
-                  where: {
-                    isPrimary: true
-                  },
-                  select: {
-                    email: true,
-                    name: true
-                  },
-                  take: 1
-                }
-              }
-            }
-          }
+                  where: { isPrimary: true },
+                  select: { email: true, name: true },
+                  take: 1,
+                },
+              },
+            },
+          },
         },
-        contract: {
-          select: {
-            contractNo: true
-          }
-        }
-      }
+        contract: { select: { contractNo: true } },
+      },
     });
 
     await Promise.allSettled(
       milestones.map(async (milestone) => {
         const recipients = [
           milestone.project.customer.assignedTo.email,
-          milestone.project.customer.contacts[0]?.email
+          milestone.project.customer.contacts[0]?.email,
         ].filter((value): value is string => Boolean(value));
 
-        if (recipients.length === 0) {
-          return;
-        }
+        if (recipients.length === 0) return;
 
         await this.emailService.sendEmail(
           recipients,
@@ -168,7 +143,7 @@ export class EmailSchedulerService {
             projectCode: milestone.project.code,
             projectName: milestone.project.name,
             customerName: milestone.project.customer.name,
-            contractNo: milestone.contract?.contractNo ?? "Chưa có"
+            contractNo: milestone.contract?.contractNo ?? "Chưa có",
           }
         );
       })

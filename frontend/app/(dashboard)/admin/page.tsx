@@ -70,6 +70,12 @@ const ADMIN_CARDS = [
     title: "Nhắc lịch Email",
     description: "Bật/tắt và cấu hình giờ gửi, ngưỡng ngày nhắc milestone và thanh toán tự động qua email.",
     icon: "mail" as const
+  },
+  {
+    href: "/admin/webhooks" as Route,
+    title: "Webhooks",
+    description: "Tích hợp hệ thống ngoài bằng cách gửi sự kiện thời gian thực qua HTTP POST tới endpoint tùy chỉnh.",
+    icon: "external-link" as const
   }
 ];
 

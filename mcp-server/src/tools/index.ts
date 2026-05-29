@@ -12,3 +12,4 @@ export { reportTools } from "./report.tools.js";
 export { quoteTools } from "./quote.tools.js";
 export { contractTools } from "./contract.tools.js";
 export { activityTools } from "./activity.tools.js";
+export { searchTools } from "./search.tools.js";

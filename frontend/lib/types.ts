@@ -2114,3 +2114,39 @@ export interface SurveyListFilter {
   dateFrom?: string;
   dateTo?: string;
 }
+
+// ============================================================
+// WEBHOOKS
+// ============================================================
+
+export interface Webhook {
+  id: string;
+  url: string;
+  events: string[];
+  isActive: boolean;
+  createdAt: string;
+  failCount?: number;
+  lastDeliveredAt?: string | null;
+}
+
+export interface WebhookLog {
+  id: string;
+  event: string;
+  statusCode: number | null;
+  success: boolean;
+  durationMs: number | null;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface WebhookCreateInput {
+  url: string;
+  events: string[];
+  isActive?: boolean;
+}
+
+export interface WebhookUpdateInput {
+  url?: string;
+  events?: string[];
+  isActive?: boolean;
+}

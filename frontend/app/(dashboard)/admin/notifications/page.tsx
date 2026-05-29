@@ -8,6 +8,7 @@ import { useNotificationSettings, useUpdateNotificationSettings } from "@/hooks/
 import { NotificationSettings } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { NotificationForm } from "./_components/notification-form";
+import { PushNotificationCard } from "./_components/push-notification-card";
 
 export default function NotificationsPage() {
   const query = useNotificationSettings();
@@ -34,6 +35,8 @@ export default function NotificationsPage() {
           </Link>
         }
       />
+
+      <PushNotificationCard />
 
       <NotificationForm
         initialValues={query.data}

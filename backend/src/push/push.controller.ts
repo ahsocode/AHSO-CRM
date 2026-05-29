@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
+import { Public } from "../common/decorators/public.decorator";
 import { JwtUser } from "../auth/auth.types";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
@@ -16,6 +17,13 @@ import { PushService } from "./push.service";
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PushController {
   constructor(private readonly pushService: PushService) {}
+
+  @Public()
+  @ApiOperation({ summary: "GET /api/push/subscriptions/vapid-public-key — trả VAPID public key cho browser subscribe" })
+  @Get("vapid-public-key")
+  getVapidPublicKey() {
+    return this.pushService.getVapidPublicKey();
+  }
 
   @RequirePermissions("notifications.edit")
   @ApiOperation({ summary: "POST /api/push/subscriptions" })

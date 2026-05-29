@@ -22,6 +22,11 @@ export class PushService {
     }
   }
 
+  getVapidPublicKey() {
+    const publicKey = this.configService.get<string>("VAPID_PUBLIC_KEY");
+    return { publicKey: publicKey ?? null };
+  }
+
   async saveSubscription(userId: string, dto: PushSubscriptionDto, userAgent?: string | null) {
     return this.prisma.pushSubscription.upsert({
       where: {

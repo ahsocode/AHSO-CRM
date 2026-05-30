@@ -30,6 +30,7 @@ function extractRefreshCookie(setCookieHeaders: string[] | string | undefined): 
 
 export class TokenManager {
   private state: TokenState | null = null;
+  private loginPromise: Promise<void> | null = null;
   private refreshPromise: Promise<void> | null = null;
 
   private get baseUrl(): string {
@@ -44,7 +45,12 @@ export class TokenManager {
 
   async getValidAccessToken(): Promise<string> {
     if (!this.state) {
-      await this.login();
+      if (!this.loginPromise) {
+        this.loginPromise = this.login().finally(() => {
+          this.loginPromise = null;
+        });
+      }
+      await this.loginPromise;
       return this.state!.accessToken;
     }
 

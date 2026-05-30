@@ -174,24 +174,31 @@ export const reportTools: McpTool[] = [
       const client = getApiClient();
       const days = (args["days"] as number) ?? 30;
 
-      // Lấy khách hàng đang active + sort theo lastActivity
-      const res = await client.get<unknown>("/customers", {
-        params: {
-          limit: 50,
-          page: 1,
-          status: "ACTIVE",
-          sortBy: "lastActivityAt",
-          sortOrder: "asc",
-        },
-      });
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - days);
+      const cutoffStr = cutoffDate.toISOString().slice(0, 10);
 
-      const items = extractData<CustomerWithActivity[]>(res.data);
-      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      // 2 queries song song: tất cả KH active + activities trong N ngày gần đây
+      const [customersRes, activitiesRes] = await Promise.all([
+        client.get<unknown>("/customers", {
+          params: { limit: 100, page: 1, status: "ACTIVE" },
+        }),
+        client.get<unknown>("/activities", {
+          params: { limit: 200, page: 1, dateFrom: cutoffStr },
+        }),
+      ]);
 
-      const overdue = items.filter((c) => {
-        const lastAt = c.lastActivityAt ? new Date(c.lastActivityAt).getTime() : 0;
-        return lastAt < cutoff;
-      });
+      const customers = extractData<CustomerBase[]>(customersRes.data);
+      const recentActivities = extractData<ActivityRef[]>(activitiesRes.data);
+
+      // Set KH đã có hoạt động trong N ngày
+      const activeIds = new Set(
+        recentActivities.flatMap((a) => (a.customerId ? [a.customerId] : []))
+      );
+
+      const overdue = customers
+        .filter((c) => !activeIds.has(c.id))
+        .sort((a, b) => new Date(a.updatedAt ?? 0).getTime() - new Date(b.updatedAt ?? 0).getTime());
 
       if (!overdue.length) {
         return `✅ Tất cả khách hàng đều đã được liên hệ trong vòng ${days} ngày. Tốt lắm!`;
@@ -199,15 +206,10 @@ export const reportTools: McpTool[] = [
 
       const lines = overdue
         .slice(0, 15)
-        .map((c) => {
-          const lastAt = c.lastActivityAt
-            ? `${Math.floor((Date.now() - new Date(c.lastActivityAt).getTime()) / (24 * 60 * 60 * 1000))} ngày trước`
-            : "Chưa bao giờ";
-          return `  • **${c.name}** — Liên hệ cuối: ${lastAt} | ID: ${c.id}`;
-        });
+        .map((c) => `  • **${c.name}** (${c.code ?? "—"}) | ID: ${c.id}`);
 
       return (
-        `⚠️ **${overdue.length} khách hàng chưa liên hệ hơn ${days} ngày:**\n\n` +
+        `⚠️ **${overdue.length} khách hàng chưa có hoạt động trong ${days} ngày qua:**\n\n` +
         lines.join("\n") +
         (overdue.length > 15 ? `\n  ... và ${overdue.length - 15} KH khác` : "") +
         `\n\n💡 Dùng add_activity_note để ghi nhận liên lạc, hoặc create_task để lên lịch follow-up.`
@@ -305,10 +307,16 @@ interface PipelineReport {
   byStage?: Array<{ stage: string; count: number; totalValue: number }>;
 }
 
-interface CustomerWithActivity {
+interface CustomerBase {
   id: string;
   name: string;
-  lastActivityAt?: string;
+  code?: string;
+  updatedAt?: string;
+}
+
+interface ActivityRef {
+  id: string;
+  customerId?: string | null;
 }
 
 interface ContractWithDebt {

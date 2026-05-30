@@ -63,7 +63,8 @@ export class EmailSchedulerService {
 
     await Promise.allSettled(
       milestones.map(async (milestone) => {
-        const recipient = milestone.project.customer.assignedTo.email;
+        const assignedTo = milestone.project.customer.assignedTo;
+        const recipient = assignedTo?.email;
         if (!recipient) return;
 
         await this.emailService.sendEmail(
@@ -71,7 +72,7 @@ export class EmailSchedulerService {
           `Nhắc việc milestone sắp đến hạn - ${milestone.project.code}`,
           "milestone-reminder",
           {
-            recipientName: milestone.project.customer.assignedTo.name,
+            recipientName: assignedTo.name,
             milestoneName: milestone.name,
             dueDate: milestone.dueDate?.toLocaleDateString("vi-VN") ?? "Chưa xác định",
             projectCode: milestone.project.code,

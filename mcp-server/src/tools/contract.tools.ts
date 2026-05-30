@@ -131,6 +131,125 @@ export const contractTools: McpTool[] = [
       return out;
     },
   },
+
+  {
+    name: "create_contract",
+    description:
+      "Tạo hợp đồng mới cho một dự án. " +
+      "Dùng khi: 'Tạo hợp đồng cho AHSO-307 giá trị 2.5 tỷ', 'Ký hợp đồng với Sabeco, ký ngày 15/06/2026'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "ID dự án" },
+        value: { type: "number", description: "Giá trị hợp đồng (VND)" },
+        quoteId: { type: "string", description: "ID báo giá (tuỳ chọn)" },
+        signedAt: { type: "string", description: "Ngày ký hợp đồng (ISO date string)" },
+        startDate: { type: "string", description: "Ngày bắt đầu" },
+        endDate: { type: "string", description: "Ngày kết thúc" },
+        notes: { type: "string", description: "Ghi chú" },
+        internalNote: { type: "string", description: "Ghi chú nội bộ" },
+      },
+      required: ["projectId", "value"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {
+        projectId: args["projectId"],
+        value: args["value"],
+      };
+      if (args["quoteId"]) payload["quoteId"] = args["quoteId"];
+      if (args["signedAt"]) payload["signedAt"] = args["signedAt"];
+      if (args["startDate"]) payload["startDate"] = args["startDate"];
+      if (args["endDate"]) payload["endDate"] = args["endDate"];
+      if (args["notes"]) payload["notes"] = args["notes"];
+      if (args["internalNote"]) payload["internalNote"] = args["internalNote"];
+
+      const res = await client.post<unknown>("/contracts", payload);
+      const c = extractData<{ id: string; contractNo: string; project?: { code?: string; name?: string } }>(res.data);
+
+      return (
+        `✅ Đã tạo hợp đồng:\n` +
+        `📃 ${c.contractNo} — 📝 Bản nháp\n` +
+        `📁 Dự án: ${c.project?.code ?? "—"} — ${c.project?.name ?? "—"}\n` +
+        `💰 Giá trị: ${formatVND(args["value"] as number)}\n` +
+        `ID: ${c.id}\n` +
+        `💡 Dùng update_milestone_status để cập nhật tiến độ.`
+      );
+    },
+  },
+
+  {
+    name: "update_milestone_status",
+    description:
+      "Cập nhật trạng thái của một milestone trong hợp đồng. " +
+      "Lưu ý: milestoneId lấy từ kết quả get_contract_detail — nếu response không có id thì hướng dẫn user vào CRM để lấy. " +
+      "Dùng khi: 'Đánh dấu milestone Triển khai của HĐ-2026-003 đã xong', 'Cập nhật trạng thái bàn giao'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        milestoneId: { type: "string", description: "ID milestone" },
+        status: {
+          type: "string",
+          enum: ["PENDING", "IN_PROGRESS", "DONE", "ACCEPTED"],
+          description: "Trạng thái mới",
+        },
+        notes: { type: "string", description: "Ghi chú" },
+      },
+      required: ["milestoneId", "status"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = { status: args["status"] };
+      if (args["notes"]) payload["notes"] = args["notes"];
+
+      const res = await client.patch<unknown>(`/milestones/${args["milestoneId"] as string}`, payload);
+      const m = extractData<{ name: string; status: string }>(res.data);
+      const msStatus = MILESTONE_STATUS_LABEL[m.status] ?? m.status;
+
+      return `✅ Milestone "${m.name}" → ${msStatus}`;
+    },
+  },
+
+  {
+    name: "record_payment",
+    description:
+      "Ghi nhận thanh toán cho hợp đồng. " +
+      "Dùng khi: 'Ghi nhận Sabeco đã chuyển 300 triệu hôm nay', 'Log thanh toán đợt 2 HĐ Vinamilk'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        contractId: { type: "string", description: "ID hợp đồng" },
+        amount: { type: "number", description: "Số tiền thanh toán (VND)" },
+        paidAt: { type: "string", description: "Ngày thanh toán (ISO date), mặc định hôm nay" },
+        method: {
+          type: "string",
+          enum: ["CASH", "BANK_TRANSFER", "CHECK"],
+          description: "Phương thức thanh toán (mặc định BANK_TRANSFER)",
+        },
+        notes: { type: "string", description: "Ghi chú" },
+      },
+      required: ["contractId", "amount"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {
+        amount: args["amount"],
+        paidAt: args["paidAt"] ?? new Date().toISOString(),
+        method: args["method"] ?? "BANK_TRANSFER",
+      };
+      if (args["notes"]) payload["notes"] = args["notes"];
+
+      const res = await client.post<unknown>(`/contracts/${args["contractId"] as string}/payments`, payload);
+      const data = extractData<{ contract?: { contractNo?: string }; outstanding?: number; amount: number; method: string; paidAt: string }>(res.data);
+
+      let out = `✅ Đã ghi nhận thanh toán:\n`;
+      out += `💸 ${formatVND(args["amount"] as number)} — ${payload.method as string} — ${formatDate(payload.paidAt as string)}\n`;
+      if (data.contract?.contractNo) out += `📃 Hợp đồng: ${data.contract.contractNo}\n`;
+      if (data.outstanding !== undefined) out += `💰 Còn lại: ${formatVND(data.outstanding)}\n`;
+
+      return out;
+    },
+  },
 ];
 
 // Interfaces
@@ -154,6 +273,7 @@ interface ContractDetail {
   endDate?: string;
   project?: { name: string; customer?: { name: string } };
   milestones?: Array<{
+    id: string;
     name: string;
     status?: string;
     dueDate?: string;

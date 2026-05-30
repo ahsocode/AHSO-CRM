@@ -1,4 +1,4 @@
-import { getApiClient, extractData } from "../auth/api-client.js";
+import { getApiClient, extractData, extractMeta } from "../auth/api-client.js";
 import { formatVND, formatVNDShort, formatDate, stageLabel } from "../formatters/common.formatter.js";
 import type { McpTool } from "./index.js";
 
@@ -178,17 +178,26 @@ export const reportTools: McpTool[] = [
       cutoffDate.setDate(cutoffDate.getDate() - days);
       const cutoffStr = cutoffDate.toISOString().slice(0, 10);
 
-      // 2 queries song song: tất cả KH active + activities trong N ngày gần đây
-      const [customersRes, activitiesRes] = await Promise.all([
-        client.get<unknown>("/customers", {
-          params: { limit: 100, page: 1, status: "ACTIVE" },
-        }),
-        client.get<unknown>("/activities", {
-          params: { limit: 200, page: 1, dateFrom: cutoffStr },
-        }),
-      ]);
+      // Lấy tất cả KH active bằng pagination loop
+      const allCustomers: CustomerBase[] = [];
+      let page = 1;
+      const PAGE_SIZE = 100;
+      while (true) {
+        const res = await client.get<unknown>("/customers", {
+          params: { limit: PAGE_SIZE, page, status: "ACTIVE" },
+        });
+        const items = extractData<CustomerBase[]>(res.data);
+        allCustomers.push(...items);
+        const meta = extractMeta(res.data);
+        if (!meta || page >= meta.totalPages) break;
+        page++;
+      }
+      const customers = allCustomers;
 
-      const customers = extractData<CustomerBase[]>(customersRes.data);
+      // Lấy activities trong N ngày gần đây
+      const activitiesRes = await client.get<unknown>("/activities", {
+        params: { limit: 200, page: 1, dateFrom: cutoffStr },
+      });
       const recentActivities = extractData<ActivityRef[]>(activitiesRes.data);
 
       // Set KH đã có hoạt động trong N ngày

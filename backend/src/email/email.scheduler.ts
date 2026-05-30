@@ -124,7 +124,7 @@ export class EmailSchedulerService {
     await Promise.allSettled(
       milestones.map(async (milestone) => {
         const recipients = [
-          milestone.project.customer.assignedTo.email,
+          milestone.project.customer.assignedTo?.email,
           milestone.project.customer.contacts[0]?.email,
         ].filter((value): value is string => Boolean(value));
 
@@ -137,7 +137,7 @@ export class EmailSchedulerService {
           {
             recipientName:
               milestone.project.customer.contacts[0]?.name ??
-              milestone.project.customer.assignedTo.name,
+              milestone.project.customer.assignedTo?.name ?? "Khách hàng",
             milestoneName: milestone.name,
             dueDate: milestone.dueDate?.toLocaleDateString("vi-VN") ?? "Chưa xác định",
             amount: Number(milestone.paymentAmount ?? 0).toLocaleString("vi-VN"),

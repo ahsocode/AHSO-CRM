@@ -32,6 +32,8 @@ export const activityFilterSchema = paginationSchema.extend({
       return value;
     }, z.boolean().optional())
     .optional(),
+  dateFrom: z.string().datetime({ offset: true }).optional().or(z.string().optional()),
+  dateTo: z.string().datetime({ offset: true }).optional().or(z.string().optional()),
 });
 
 export type ActivityFilterDto = z.infer<typeof activityFilterSchema>;

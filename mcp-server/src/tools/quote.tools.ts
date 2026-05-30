@@ -105,6 +105,68 @@ export const quoteTools: McpTool[] = [
       return out;
     },
   },
+
+  {
+    name: "update_quote_status",
+    description:
+      "Cập nhật trạng thái báo giá (đã gửi, khách chấp nhận, từ chối). " +
+      "Dùng khi: 'Đánh dấu BG-2026-012 đã gửi cho KH', 'KH Sabeco từ chối báo giá BG-2026-008'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        quoteId: { type: "string", description: "ID báo giá" },
+        status: {
+          type: "string",
+          enum: ["SENT", "ACCEPTED", "REJECTED", "EXPIRED"],
+          description: "Trạng thái mới",
+        },
+        notes: { type: "string", description: "Lý do từ chối, ghi chú khi gửi..." },
+      },
+      required: ["quoteId", "status"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = { status: args["status"] };
+      if (args["notes"]) payload["notes"] = args["notes"];
+
+      const res = await client.patch<unknown>(`/quotes/${args["quoteId"] as string}/status`, payload);
+      const q = extractData<{ quoteNo: string; status: string }>(res.data);
+      const statusMap: Record<string, string> = {
+        SENT: "📤 Đã gửi",
+        ACCEPTED: "✅ KH chấp nhận",
+        REJECTED: "❌ KH từ chối",
+        EXPIRED: "⏰ Hết hạn",
+      };
+
+      const status = statusMap[q.status] ?? q.status;
+      return `✅ Báo giá ${q.quoteNo} → ${status}`;
+    },
+  },
+
+  {
+    name: "duplicate_quote",
+    description:
+      "Nhân bản một báo giá hiện có. " +
+      "Dùng khi: 'Nhân bản BG-2026-008 để làm phiên bản v2', 'Copy báo giá cũ cho dự án mới'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        quoteId: { type: "string", description: "ID báo giá cần nhân bản" },
+        projectId: { type: "string", description: "ID dự án (nếu muốn nhân bản sang dự án khác)" },
+      },
+      required: ["quoteId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {};
+      if (args["projectId"]) payload["projectId"] = args["projectId"];
+
+      const res = await client.post<unknown>(`/quotes/${args["quoteId"] as string}/duplicate`, payload);
+      const q = extractData<{ id: string; quoteNo: string }>(res.data);
+
+      return `✅ Đã nhân bản → ${q.quoteNo} [Bản nháp] | ID: ${q.id}`;
+    },
+  },
 ];
 
 // Interfaces

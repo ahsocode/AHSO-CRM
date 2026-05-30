@@ -35,16 +35,26 @@ export class SettingsService {
     private readonly uploadService: UploadService
   ) {}
 
+  private _settingsCache: Record<string, string> | null = null;
+  private _settingsCacheExpiresAt = 0;
+
   /**
    * Get all settings as key-value pairs
    */
-  async getFlatSettings() {
+  async getFlatSettings(): Promise<Record<string, any>> {
+    if (this._settingsCache && Date.now() < this._settingsCacheExpiresAt) {
+      return this._settingsCache;
+    }
+
     const settings = await this.prisma.setting.findMany();
     const result: Record<string, any> = {};
 
     for (const setting of settings) {
       result[setting.key] = this.parseSettingValue(setting.value);
     }
+
+    this._settingsCache = result;
+    this._settingsCacheExpiresAt = Date.now() + 5 * 60 * 1000; // 5 phút
 
     return result;
   }
@@ -91,7 +101,7 @@ export class SettingsService {
   async upsertSetting(key: string, value: any, description?: string) {
     const serializedValue = JSON.stringify(value ?? null);
 
-    return this.prisma.setting.upsert({
+    const result = await this.prisma.setting.upsert({
       where: { key },
       create: {
         key,
@@ -103,6 +113,9 @@ export class SettingsService {
         ...(description && { description }),
       },
     });
+    
+    this._settingsCache = null;
+    return result;
   }
 
   /**

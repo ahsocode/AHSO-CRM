@@ -80,7 +80,10 @@ export const pipelineTools: McpTool[] = [
       }
 
       const total = meta?.total ?? items.length;
-      const header = `📊 Pipeline: ${total} dự án\n\n`;
+      const truncated = total > items.length;
+      const header = truncated
+        ? `📊 Pipeline: ${total} dự án ⚠️ (đang hiển thị ${items.length}/${total} — dùng filter theo giai đoạn để xem đầy đủ)\n\n`
+        : `📊 Pipeline: ${total} dự án\n\n`;
       return header + sections.join("\n\n");
     },
   },
@@ -221,6 +224,40 @@ export const pipelineTools: McpTool[] = [
         `${emoji} **${p.name}** (${p.code})\n` +
         `Giai đoạn mới: **${stageLabel(p.status)}**`
       );
+    },
+  },
+
+  {
+    name: "update_project",
+    description:
+      "Cập nhật thông tin dự án hiện có. " +
+      "Dùng khi: 'Cập nhật giá trị ước tính AHSO-307 thành 2.5 tỷ', 'Ghi chú dự án Sabeco: khách yêu cầu giao hàng trước Q3'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "ID dự án" },
+        name: { type: "string", description: "Tên dự án" },
+        estimatedValue: { type: "number", description: "Giá trị ước tính (VND)" },
+        description: { type: "string", description: "Mô tả" },
+        assignedToId: { type: "string", description: "ID nhân viên phụ trách" },
+        notes: { type: "string", description: "Ghi chú thêm" },
+      },
+      required: ["projectId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {};
+      const fields = ["name", "estimatedValue", "description", "assignedToId", "notes"];
+      for (const field of fields) {
+        if (args[field] !== undefined && args[field] !== null) {
+          payload[field] = args[field];
+        }
+      }
+
+      const res = await client.patch<unknown>(`/projects/${args["projectId"] as string}`, payload);
+      const p = extractData<{ code: string; name: string }>(res.data);
+
+      return `✅ Đã cập nhật dự án ${p.code} — ${p.name}`;
     },
   },
 ];

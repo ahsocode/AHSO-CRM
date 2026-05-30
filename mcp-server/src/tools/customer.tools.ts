@@ -209,6 +209,82 @@ export const customerTools: McpTool[] = [
       );
     },
   },
+
+  {
+    name: "update_customer",
+    description:
+      "Cập nhật thông tin khách hàng hiện có. " +
+      "Dùng khi: 'Cập nhật email KH Sabeco', 'Đổi trạng thái Vinamilk sang Không hoạt động'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        customerId: { type: "string", description: "ID khách hàng" },
+        name: { type: "string", description: "Tên công ty" },
+        phone: { type: "string", description: "Số điện thoại" },
+        email: { type: "string", description: "Email" },
+        address: { type: "string", description: "Địa chỉ" },
+        taxCode: { type: "string", description: "Mã số thuế" },
+        industry: { type: "string", description: "Ngành nghề" },
+        notes: { type: "string", description: "Ghi chú" },
+        status: {
+          type: "string",
+          enum: ["ACTIVE", "INACTIVE", "PROSPECT"],
+          description: "Trạng thái hoạt động",
+        },
+      },
+      required: ["customerId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {};
+      const fields = ["name", "phone", "email", "address", "taxCode", "industry", "notes", "status"];
+      for (const field of fields) {
+        if (args[field] !== undefined && args[field] !== null) {
+          payload[field] = args[field];
+        }
+      }
+
+      const res = await client.patch<unknown>(`/customers/${args["customerId"] as string}`, payload);
+      const c = extractData<{ id: string; name: string; code: string }>(res.data);
+
+      return `✅ Đã cập nhật ${c.name} — Mã: ${c.code}`;
+    },
+  },
+
+  {
+    name: "add_contact",
+    description:
+      "Thêm người liên hệ mới vào khách hàng. " +
+      "Dùng khi: 'Thêm liên hệ mới: Nguyễn Văn A, GĐ Mua hàng, Sabeco'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        customerId: { type: "string", description: "ID khách hàng" },
+        name: { type: "string", description: "Tên người liên hệ" },
+        title: { type: "string", description: "Chức vụ" },
+        phone: { type: "string", description: "Số điện thoại" },
+        email: { type: "string", description: "Email" },
+        isPrimary: { type: "boolean", description: "Là liên hệ chính (mặc định false)" },
+      },
+      required: ["customerId", "name"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {
+        customerId: args["customerId"],
+        name: args["name"],
+      };
+      if (args["title"]) payload["title"] = args["title"];
+      if (args["phone"]) payload["phone"] = args["phone"];
+      if (args["email"]) payload["email"] = args["email"];
+      if (args["isPrimary"] !== undefined) payload["isPrimary"] = args["isPrimary"];
+
+      const res = await client.post<unknown>("/contacts", payload);
+      const c = extractData<NewContact>(res.data);
+
+      return `✅ Đã thêm liên hệ ${c.name}${c.title ? ` (${c.title})` : ""} vào KH ${c.customer?.name ?? ""}`;
+    },
+  },
 ];
 
 // Interfaces
@@ -243,4 +319,12 @@ interface CustomerStats {
   quoteCount?: number;
   contractCount?: number;
   totalContractValue?: number;
+}
+
+interface NewContact {
+  id: string;
+  name: string;
+  title?: string;
+  customerId: string;
+  customer?: { name: string };
 }

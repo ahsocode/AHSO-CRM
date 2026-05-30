@@ -13,3 +13,7 @@ export { quoteTools } from "./quote.tools.js";
 export { contractTools } from "./contract.tools.js";
 export { activityTools } from "./activity.tools.js";
 export { searchTools } from "./search.tools.js";
+export { calendarTools } from "./calendar.tools.js";
+export { notificationTools } from "./notification.tools.js";
+export { userTools } from "./user.tools.js";
+export { surveyTools } from "./survey.tools.js";

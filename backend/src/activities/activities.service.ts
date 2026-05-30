@@ -48,6 +48,13 @@ export class ActivitiesService {
       where.OR = [{ title: { contains: filters.search, mode: 'insensitive' } }, { content: { contains: filters.search, mode: 'insensitive' } }];
     }
 
+    if (filters.dateFrom) {
+      where.createdAt = { ...(where.createdAt as any), gte: new Date(filters.dateFrom) };
+    }
+    if (filters.dateTo) {
+      where.createdAt = { ...(where.createdAt as any), lte: new Date(filters.dateTo) };
+    }
+
     return where;
   }
 

@@ -60,7 +60,7 @@ export const taskTools: McpTool[] = [
       if (period === "overdue") params["completed"] = false;
       if (args["assignedTo"]) params["assignedTo"] = args["assignedTo"];
 
-      const res = await client.get<unknown>("/calendar", { params });
+      const res = await client.get<unknown>("/calendar/events", { params });
       const items = extractData<CalendarEvent[]>(res.data);
       const meta = extractMeta(res.data);
 
@@ -74,9 +74,9 @@ export const taskTools: McpTool[] = [
         return `✅ Không có công việc ${periodLabel[period] ?? period}.`;
       }
 
-      // Tách completed và pending
-      const pending = items.filter((e) => !e.isCompleted && !e.isDone);
-      const done = items.filter((e) => e.isCompleted || e.isDone);
+      // Tách completed và pending (API trả scheduledAt / anchorAt thay vì dueDate/startDate)
+      const pending = items.filter((e) => !e.isCompleted);
+      const done = items.filter((e) => e.isCompleted);
 
       let out = `📅 **Công việc ${periodLabel[period] ?? period}** (${meta?.total ?? items.length} tổng):\n\n`;
 
@@ -84,7 +84,7 @@ export const taskTools: McpTool[] = [
         out += `⏳ **Chờ xử lý (${pending.length}):**\n`;
         out += pending
           .map((e) => {
-            const due = e.dueDate ?? e.startDate;
+            const due = e.scheduledAt ?? e.anchorAt;
             const overdue =
               due && new Date(due) < new Date() && period !== "today" ? " ⚠️ QUÁ HẠN" : "";
             return (
@@ -131,23 +131,23 @@ export const taskTools: McpTool[] = [
     },
     async handler(args) {
       const client = getApiClient();
+      // Không có type TASK — dùng FOLLOWUP là phù hợp nhất cho công việc cần theo dõi
       const payload: Record<string, unknown> = {
         title: args["title"],
-        type: "TASK",
-        priority: (args["priority"] as string) ?? "normal",
+        type: "FOLLOWUP",
       };
-      if (args["dueDate"]) payload["dueDate"] = args["dueDate"];
+      if (args["dueDate"]) payload["scheduledAt"] = args["dueDate"];
       if (args["customerId"]) payload["customerId"] = args["customerId"];
       if (args["projectId"]) payload["projectId"] = args["projectId"];
-      if (args["notes"]) payload["notes"] = args["notes"];
+      if (args["notes"]) payload["content"] = args["notes"];
 
-      const res = await client.post<unknown>("/calendar", payload);
-      const e = extractData<{ id: string; title: string; dueDate?: string }>(res.data);
+      const res = await client.post<unknown>("/activities", payload);
+      const e = extractData<{ id: string; title: string; scheduledAt?: string }>(res.data);
 
       return (
         `✅ Đã tạo task:\n` +
         `📋 **${e.title}**\n` +
-        (e.dueDate ? `📅 Hạn: ${formatDateTime(e.dueDate)}\n` : "") +
+        (e.scheduledAt ? `📅 Hạn: ${formatDateTime(e.scheduledAt)}\n` : "") +
         `ID: ${e.id}`
       );
     },
@@ -169,12 +169,12 @@ export const taskTools: McpTool[] = [
       const client = getApiClient();
       const id = args["taskId"] as string;
 
-      const res = await client.patch<unknown>(`/calendar/${id}/complete`, {});
-      const e = extractData<{ title: string; completedAt?: string }>(res.data);
+      const res = await client.patch<unknown>(`/activities/${id}`, { isCompleted: true });
+      const e = extractData<{ title: string; doneAt?: string }>(res.data);
 
       return (
         `✅ Đã hoàn thành: **${e.title}**\n` +
-        (e.completedAt ? `⏰ Lúc: ${formatDateTime(e.completedAt)}` : "")
+        (e.doneAt ? `⏰ Lúc: ${formatDateTime(e.doneAt)}` : "")
       );
     },
   },
@@ -204,14 +204,13 @@ export const taskTools: McpTool[] = [
     async handler(args) {
       const client = getApiClient();
       const payload: Record<string, unknown> = {};
-      const fields = ["title", "dueDate", "priority", "projectId", "customerId", "notes"];
-      for (const field of fields) {
-        if (args[field] !== undefined && args[field] !== null) {
-          payload[field] = args[field];
-        }
-      }
+      if (args["title"]) payload["title"] = args["title"];
+      if (args["dueDate"]) payload["scheduledAt"] = args["dueDate"];
+      if (args["projectId"]) payload["projectId"] = args["projectId"];
+      if (args["customerId"]) payload["customerId"] = args["customerId"];
+      if (args["notes"]) payload["content"] = args["notes"];
 
-      const res = await client.patch<unknown>(`/calendar/${args["taskId"] as string}`, payload);
+      const res = await client.patch<unknown>(`/activities/${args["taskId"] as string}`, payload);
       const e = extractData<{ title: string }>(res.data);
 
       return `✅ Đã cập nhật task "${e.title}" kèm thay đổi`;
@@ -232,7 +231,7 @@ export const taskTools: McpTool[] = [
     },
     async handler(args) {
       const client = getApiClient();
-      const res = await client.delete<unknown>(`/calendar/${args["taskId"] as string}`);
+      const res = await client.delete<unknown>(`/activities/${args["taskId"] as string}`);
       const e = extractData<{ title: string }>(res.data);
 
       return `✅ Đã xóa task "${e.title ?? args["taskId"]}"`;
@@ -265,7 +264,7 @@ export const taskTools: McpTool[] = [
       if (args["dateFrom"]) params["dateFrom"] = args["dateFrom"];
       if (args["dateTo"]) params["dateTo"] = args["dateTo"];
 
-      const res = await client.get<unknown>("/calendar", { params });
+      const res = await client.get<unknown>("/calendar/events", { params });
       const items = extractData<CalendarEvent[]>(res.data);
       const meta = extractMeta(res.data);
 
@@ -273,8 +272,8 @@ export const taskTools: McpTool[] = [
         return `✅ Không tìm thấy công việc nào phù hợp.`;
       }
 
-      const pending = items.filter((e) => !e.isCompleted && !e.isDone);
-      const done = items.filter((e) => e.isCompleted || e.isDone);
+      const pending = items.filter((e) => !e.isCompleted);
+      const done = items.filter((e) => e.isCompleted);
 
       let out = `📅 **Công việc Team** (${meta?.total ?? items.length} tổng):\n\n`;
 
@@ -282,8 +281,8 @@ export const taskTools: McpTool[] = [
         out += `⏳ **Chờ xử lý (${pending.length}):**\n`;
         out += pending
           .map((e) => {
-            const due = e.dueDate ?? e.startDate;
-            const assignee = e.assignedTo?.name ?? e.assignedTo?.email ?? "Chưa phân công";
+            const due = e.scheduledAt ?? e.anchorAt;
+            const assignee = e.user?.name ?? "Chưa phân công";
             return (
               `  • [${assignee}] ${e.title}\n` +
               `    📅 ${due ? formatDateTime(due) : "Chưa có hạn"}` +
@@ -298,7 +297,7 @@ export const taskTools: McpTool[] = [
         out += `\n\n✅ **Đã hoàn thành (${done.length}):**\n`;
         out += done
           .map((e) => {
-            const assignee = e.assignedTo?.name ?? e.assignedTo?.email ?? "Chưa phân công";
+            const assignee = e.user?.name ?? "Chưa phân công";
             return `  • ~~[${assignee}] ${e.title}~~`;
           })
           .join("\n");
@@ -314,12 +313,11 @@ export const taskTools: McpTool[] = [
 interface CalendarEvent {
   id: string;
   title: string;
-  startDate?: string;
-  dueDate?: string;
+  scheduledAt?: string;
+  anchorAt?: string;
+  doneAt?: string;
   isCompleted?: boolean;
-  isDone?: boolean;
-  priority?: string;
   customer?: { name: string };
   project?: { name: string };
-  assignedTo?: { name?: string; email?: string };
+  user?: { name?: string; email?: string };
 }

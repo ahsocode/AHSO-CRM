@@ -97,41 +97,28 @@ export const searchTools: McpTool[] = [
     },
     async handler() {
       const client = getApiClient();
-      const res = await client.get<unknown>("/dashboard");
+      const res = await client.get<unknown>("/dashboard/kpis");
       const data = extractData<DashboardKpi>(res.data);
 
       let out = `📊 **Dashboard AHSO CRM:**\n\n`;
 
-      if (data.revenue != null) {
-        const growth = data.revenueGrowth;
-        const growthText =
-          growth != null
-            ? growth >= 0
-              ? ` ↑ +${growth.toFixed(1)}%`
-              : ` ↓ ${growth.toFixed(1)}%`
-            : "";
-        out += `💰 Doanh thu tháng này: **${formatVND(data.revenue)}**${growthText}\n`;
+      if (data.monthlyRevenue != null) {
+        const change = data.monthlyRevenue.changePercent;
+        const changeText = change != null
+          ? change >= 0 ? ` ↑ +${change}%` : ` ↓ ${change}%`
+          : "";
+        out += `💰 Doanh thu tháng này: **${formatVND(data.monthlyRevenue.value)}**${changeText}\n`;
       }
       if (data.activeProjects != null) {
-        out += `📁 Dự án đang chạy: **${data.activeProjects}**\n`;
+        out += `📁 Dự án đang chạy: **${data.activeProjects.value}**\n`;
       }
-      if (data.pendingQuotesValue != null) {
-        out += `📄 Báo giá chờ phản hồi: **${formatVND(data.pendingQuotesValue)}**`;
-        if (data.pendingQuotesCount != null) out += ` (${data.pendingQuotesCount} BG)`;
+      if (data.pendingQuotes != null) {
+        out += `📄 Báo giá chờ phản hồi: **${data.pendingQuotes.value} BG** — ${formatVND(data.pendingQuotes.totalValue)}\n`;
+      }
+      if (data.outstandingDebt != null) {
+        out += `💳 Công nợ chưa thu: **${formatVND(data.outstandingDebt.value)}**`;
+        if (data.outstandingDebt.overdueCustomers) out += ` (${data.outstandingDebt.overdueCustomers} KH quá hạn)`;
         out += "\n";
-      }
-      if (data.activeContractsValue != null) {
-        out += `📃 Hợp đồng đang hiệu lực: **${formatVND(data.activeContractsValue)}**\n`;
-      }
-      if (data.overdueTasksCount != null && data.overdueTasksCount > 0) {
-        out += `⚠️ Task quá hạn: **${data.overdueTasksCount}**\n`;
-      }
-
-      if (data.pipeline?.length) {
-        out += `\n📈 Pipeline:\n`;
-        out += data.pipeline
-          .map((s) => `  ${stageLabel(s.status)}: ${s.count} deal — ${formatVND(s.value)}`)
-          .join("\n");
       }
 
       return out;
@@ -212,10 +199,8 @@ interface SearchResult {
 interface DashboardKpi {
   revenue?: number;
   revenueGrowth?: number;
-  activeProjects?: number;
-  pendingQuotesValue?: number;
-  pendingQuotesCount?: number;
-  activeContractsValue?: number;
-  overdueTasksCount?: number;
-  pipeline?: Array<{ status: string; count: number; value: number }>;
+  monthlyRevenue?: { value: number; changePercent?: number };
+  activeProjects?: { value: number };
+  pendingQuotes?: { value: number; totalValue: number };
+  outstandingDebt?: { value: number; overdueCustomers?: number };
 }

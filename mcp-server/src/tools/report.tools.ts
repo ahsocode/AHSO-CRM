@@ -70,39 +70,22 @@ export const reportTools: McpTool[] = [
       const period = args["period"] as string;
       const params = periodParams(period);
 
-      const res = await client.get<unknown>("/reports/revenue", { params });
-      const data = extractData<RevenueReport>(res.data);
+      // /reports/revenue-trend trả array [{month, revenue, target}]
+      const res = await client.get<unknown>("/reports/revenue-trend", { params });
+      const monthly = extractData<Array<{ month: string; revenue: number; target: number }>>(res.data);
 
       const label = PERIOD_LABEL[period] ?? period;
       let out = `💰 **Báo cáo doanh thu ${label}:**\n\n`;
 
-      if (data.totalRevenue != null) {
-        out += `📈 Tổng doanh thu: **${formatVND(data.totalRevenue)}**\n`;
-      }
-      if (data.totalContracts != null) {
-        out += `📃 Hợp đồng hoàn thành: ${data.totalContracts}\n`;
-      }
-      if (data.totalPayments != null) {
-        out += `💸 Tổng đã thu: **${formatVND(data.totalPayments)}**\n`;
-      }
-      if (data.growth != null) {
-        const growthSign = data.growth >= 0 ? "+" : "";
-        out += `📊 Tăng trưởng so với kỳ trước: ${growthSign}${data.growth.toFixed(1)}%\n`;
-      }
-
-      if (data.monthly?.length) {
-        out += `\n📅 **Theo tháng:**\n`;
-        out += data.monthly
+      if (monthly?.length) {
+        const total = monthly.reduce((s, m) => s + m.revenue, 0);
+        out += `📈 Tổng doanh thu: **${formatVND(total)}**\n\n`;
+        out += `📅 **Theo tháng:**\n`;
+        out += monthly
           .map((m) => `  ${m.month}: ${formatVNDShort(m.revenue)}`)
           .join("\n");
-      }
-
-      if (data.topCustomers?.length) {
-        out += `\n\n🏆 **Top khách hàng:**\n`;
-        out += data.topCustomers
-          .slice(0, 5)
-          .map((c, i) => `  ${i + 1}. ${c.name}: ${formatVND(c.revenue)}`)
-          .join("\n");
+      } else {
+        out += "Chưa có dữ liệu doanh thu trong kỳ này.";
       }
 
       return out;
@@ -129,32 +112,25 @@ export const reportTools: McpTool[] = [
         Object.assign(params, range);
       }
 
-      const res = await client.get<unknown>("/reports/pipeline", { params });
-      const data = extractData<PipelineReport>(res.data);
+      // /reports/funnel trả array [{id, label, value, totalValue}]
+      const res = await client.get<unknown>("/reports/funnel", { params });
+      const stages = extractData<Array<{ id: string; label: string; value: number; totalValue: number }>>(res.data);
 
       let out = `📊 **Thống kê Pipeline:**\n\n`;
 
-      if (data.winRate != null) {
-        out += `🎯 Tỷ lệ thắng: **${data.winRate.toFixed(1)}%**\n`;
-      }
-      if (data.totalPipelineValue != null) {
-        out += `💰 Tổng giá trị pipeline: **${formatVND(data.totalPipelineValue)}**\n`;
-      }
-      if (data.avgDealSize != null) {
-        out += `📏 Giá trị deal trung bình: ${formatVND(data.avgDealSize)}\n`;
-      }
-
-      if (data.byStage?.length) {
-        out += `\n📈 **Theo giai đoạn:**\n`;
-        out += data.byStage
-          .map(
-            (s) =>
-              `  ${stageLabel(s.stage)}: ${s.count} deal — ${formatVNDShort(s.totalValue)}`
-          )
+      if (stages?.length) {
+        const totalDeals = stages.reduce((s, st) => s + st.value, 0);
+        const totalValue = stages.reduce((s, st) => s + st.totalValue, 0);
+        out += `💰 Tổng giá trị pipeline: **${formatVND(totalValue)}** — ${totalDeals} deal\n\n`;
+        out += `📈 **Theo giai đoạn:**\n`;
+        out += stages
+          .map((s) => `  ${s.label}: ${s.value} deal — ${formatVNDShort(s.totalValue)}`)
           .join("\n");
+      } else {
+        out += "Chưa có dữ liệu pipeline.";
       }
 
-      return out || "📊 Chưa có dữ liệu pipeline.";
+      return out;
     },
   },
 

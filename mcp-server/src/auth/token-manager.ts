@@ -129,6 +129,18 @@ export class TokenManager {
       this.state = { ...this.state, expiresAt: 0 };
     }
   }
+
+  getCurrentUserId(): string | null {
+    if (!this.state?.accessToken) return null;
+    try {
+      const payload = this.state.accessToken.split(".")[1];
+      if (!payload) return null;
+      const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { sub?: string };
+      return decoded.sub ?? null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 export const tokenManager = new TokenManager();

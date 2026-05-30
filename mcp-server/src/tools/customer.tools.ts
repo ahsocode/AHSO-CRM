@@ -1,4 +1,5 @@
 import { getApiClient, extractData, extractMeta } from "../auth/api-client.js";
+import { tokenManager } from "../auth/token-manager.js";
 import {
   formatVND,
   formatDate,
@@ -138,12 +139,19 @@ export const customerTools: McpTool[] = [
         address: { type: "string", description: "Địa chỉ" },
         taxCode: { type: "string", description: "Mã số thuế" },
         notes: { type: "string", description: "Ghi chú thêm" },
+        assignedToId: { type: "string", description: "ID người phụ trách (mặc định: người đang dùng)" },
       },
       required: ["name"],
     },
     async handler(args) {
       const client = getApiClient();
-      const payload: Record<string, unknown> = { name: args["name"] };
+      // assignedToId là required bởi backend — mặc định là user hiện tại
+      // Đảm bảo token đã được lấy trước khi đọc userId từ JWT
+      await tokenManager.getValidAccessToken();
+      const assignedToId = (args["assignedToId"] as string | undefined)
+        ?? tokenManager.getCurrentUserId()
+        ?? "";
+      const payload: Record<string, unknown> = { name: args["name"], assignedToId };
       if (args["industry"]) payload["industry"] = args["industry"];
       if (args["phone"]) payload["phone"] = args["phone"];
       if (args["email"]) payload["email"] = args["email"];

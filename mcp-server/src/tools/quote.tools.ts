@@ -107,6 +107,84 @@ export const quoteTools: McpTool[] = [
   },
 
   {
+    name: "add_quote_items",
+    description:
+      "Thêm hoặc thay thế danh sách hạng mục trong báo giá (chỉ DRAFT). " +
+      "Dùng khi: 'Thêm 3 thiết bị vào BG-2026-012', 'Cập nhật hạng mục báo giá AHSO-331'. " +
+      "Lưu ý: thao tác này THAY THẾ toàn bộ items — hãy liệt kê đủ tất cả hạng mục muốn giữ lại.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        quoteId: { type: "string", description: "ID báo giá (phải ở trạng thái DRAFT)" },
+        items: {
+          type: "array",
+          description: "Danh sách hạng mục (tối đa 50)",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Tên hạng mục (bắt buộc)" },
+              quantity: { type: "number", description: "Số lượng (bắt buộc, > 0)" },
+              unitPrice: { type: "number", description: "Đơn giá VND (bắt buộc, >= 0)" },
+              unit: { type: "string", description: "Đơn vị: cái, bộ, m, kg... (tuỳ chọn)" },
+              description: { type: "string", description: "Mô tả chi tiết (tuỳ chọn)" },
+            },
+            required: ["name", "quantity", "unitPrice"],
+          },
+        },
+      },
+      required: ["quoteId", "items"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const quoteId = args["quoteId"] as string;
+
+      // Lấy projectId và validate trạng thái DRAFT
+      const quoteRes = await client.get<unknown>(`/quotes/${quoteId}`);
+      const quote = extractData<QuoteDetail>(quoteRes.data);
+
+      if (quote.status && !["DRAFT", "REJECTED"].includes(quote.status)) {
+        return `❌ Báo giá **${quote.quoteNo}** đang ở trạng thái "${quote.status}" — chỉ có thể sửa khi DRAFT hoặc bị từ chối.`;
+      }
+
+      const projectId = quote.project?.id;
+      if (!projectId) {
+        return `❌ Không lấy được projectId từ báo giá ${quoteId}.`;
+      }
+
+      const items = args["items"] as Array<{
+        name: string;
+        quantity: number;
+        unitPrice: number;
+        unit?: string;
+        description?: string;
+      }>;
+
+      if (!items?.length) {
+        return `❌ Phải có ít nhất 1 hạng mục.`;
+      }
+
+      await client.patch<unknown>(`/quotes/${quoteId}`, { projectId, items });
+
+      // Đọc lại để hiển thị kết quả
+      const updatedRes = await client.get<unknown>(`/quotes/${quoteId}`);
+      const updated = extractData<QuoteDetail>(updatedRes.data);
+      const updatedItems = updated.items ?? [];
+
+      let out = `✅ Đã cập nhật báo giá **${updated.quoteNo}** — ${updatedItems.length} hạng mục:\n\n`;
+      updatedItems.forEach((item, i) => {
+        out += `  ${i + 1}. ${item.name}`;
+        if (item.quantity && item.unitPrice) {
+          out += ` — ${item.quantity} ${item.unit ?? ""} × ${formatVND(item.unitPrice)} = **${formatVND(item.total)}**`;
+        }
+        out += "\n";
+      });
+      if (updated.total) out += `\n💰 **Tổng: ${formatVND(updated.total)}**`;
+
+      return out;
+    },
+  },
+
+  {
     name: "update_quote_status",
     description:
       "Cập nhật trạng thái báo giá (đã gửi, khách chấp nhận, từ chối). " +
@@ -184,15 +262,17 @@ interface QuoteDetail {
   id: string;
   quoteNo: string;
   status?: string;
+  total?: number | string;
   totalAmount?: number | string;
   vatRate?: number;
   createdAt?: string;
   sentAt?: string;
   notes?: string;
-  project?: { name: string; customer?: { name: string } };
+  project?: { id: string; name: string; customer?: { name: string } };
   items?: Array<{
     name: string;
-    qty: number;
+    quantity?: number;
+    qty?: number;
     unit?: string;
     unitPrice: number | string;
     total: number | string;

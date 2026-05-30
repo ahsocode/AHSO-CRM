@@ -150,6 +150,8 @@ export const searchTools: McpTool[] = [
         title: { type: "string", description: "Tiêu đề báo giá" },
         validDays: { type: "number", description: "Hiệu lực (ngày, mặc định 30)" },
         notes: { type: "string", description: "Ghi chú thêm (tuỳ chọn)" },
+        itemName: { type: "string", description: "Tên hạng mục đầu tiên (tuỳ chọn, mặc định 'Hạng mục báo giá')" },
+        itemPrice: { type: "number", description: "Đơn giá hạng mục đầu tiên (tuỳ chọn)" },
       },
       required: ["projectId"],
     },
@@ -166,14 +168,21 @@ export const searchTools: McpTool[] = [
       const validUntil = new Date();
       validUntil.setDate(validUntil.getDate() + validDays);
 
+      // Backend yêu cầu ít nhất 1 hạng mục — tạo placeholder nếu không có
+      const firstItem = {
+        name: (args["itemName"] as string) || "Hạng mục báo giá",
+        quantity: 1,
+        unitPrice: (args["itemPrice"] as number) ?? 0,
+      };
+
       const payload: Record<string, unknown> = {
         projectId: args["projectId"],
-        title: (args["title"] as string) || `Báo giá — ${project.name}`,
         validUntil: validUntil.toISOString(),
         status: "DRAFT",
-        items: [],
+        taxRate: 10,
+        items: [firstItem],
       };
-      if (args["notes"]) payload["notes"] = args["notes"];
+      if (args["notes"]) payload["internalNote"] = args["notes"];
 
       const res = await client.post<unknown>("/quotes", payload);
       const q = extractData<{ id: string; quoteNo: string; status: string }>(res.data);

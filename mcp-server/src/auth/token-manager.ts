@@ -6,16 +6,20 @@ interface TokenState {
   expiresAt: number;
 }
 
-function parseJwtExpiry(token: string): number {
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
-    const payload = token.split(".")[1];
-    if (!payload) return 0;
-    const decoded = Buffer.from(payload, "base64url").toString("utf8");
-    const parsed = JSON.parse(decoded) as { exp?: number };
-    return parsed.exp ? parsed.exp * 1000 : 0;
+    const segment = token.split(".")[1];
+    if (!segment) return null;
+    return JSON.parse(Buffer.from(segment, "base64url").toString("utf8")) as Record<string, unknown>;
   } catch {
-    return 0;
+    return null;
   }
+}
+
+function parseJwtExpiry(token: string): number {
+  const payload = decodeJwtPayload(token);
+  const exp = payload?.["exp"];
+  return typeof exp === "number" ? exp * 1000 : 0;
 }
 
 function extractRefreshCookie(setCookieHeaders: string[] | string | undefined): string | null {
@@ -132,14 +136,9 @@ export class TokenManager {
 
   getCurrentUserId(): string | null {
     if (!this.state?.accessToken) return null;
-    try {
-      const payload = this.state.accessToken.split(".")[1];
-      if (!payload) return null;
-      const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { sub?: string };
-      return decoded.sub ?? null;
-    } catch {
-      return null;
-    }
+    const payload = decodeJwtPayload(this.state.accessToken);
+    const sub = payload?.["sub"];
+    return typeof sub === "string" && sub.length > 0 ? sub : null;
   }
 }
 

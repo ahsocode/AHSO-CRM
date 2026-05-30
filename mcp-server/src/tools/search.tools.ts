@@ -197,8 +197,6 @@ interface SearchResult {
 }
 
 interface DashboardKpi {
-  revenue?: number;
-  revenueGrowth?: number;
   monthlyRevenue?: { value: number; changePercent?: number };
   activeProjects?: { value: number };
   pendingQuotes?: { value: number; totalValue: number };

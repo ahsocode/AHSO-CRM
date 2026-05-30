@@ -120,11 +120,6 @@ export const taskTools: McpTool[] = [
         dueDate: { type: "string", description: "Ngày hạn (ISO 8601: 2026-06-01T09:00:00)" },
         customerId: { type: "string", description: "ID khách hàng liên quan (tuỳ chọn)" },
         projectId: { type: "string", description: "ID dự án liên quan (tuỳ chọn)" },
-        priority: {
-          type: "string",
-          enum: ["low", "normal", "high"],
-          description: "Mức ưu tiên (mặc định: normal)",
-        },
         notes: { type: "string", description: "Ghi chú thêm" },
       },
       required: ["title"],
@@ -190,11 +185,6 @@ export const taskTools: McpTool[] = [
         taskId: { type: "string", description: "ID task" },
         title: { type: "string", description: "Tiêu đề task" },
         dueDate: { type: "string", description: "Ngày hạn (ISO datetime)" },
-        priority: {
-          type: "string",
-          enum: ["low", "normal", "high"],
-          description: "Mức ưu tiên",
-        },
         projectId: { type: "string", description: "ID dự án" },
         customerId: { type: "string", description: "ID khách hàng" },
         notes: { type: "string", description: "Ghi chú" },

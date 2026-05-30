@@ -50,7 +50,7 @@ export const quoteTools: McpTool[] = [
         const status = QUOTE_STATUS_LABEL[q.status ?? ""] ?? q.status ?? "—";
         return (
           `  • **${q.quoteNo}** ${status} | ID: \`${q.id}\`\n` +
-          `    KH: ${q.project?.customer?.name ?? "—"} | ${formatVND(q.totalAmount)} | ${formatDate(q.createdAt)}`
+          `    KH: ${q.project?.customer?.name ?? "—"} | ${formatVND(q.total)} | ${formatDate(q.createdAt)}`
         );
       });
 
@@ -84,7 +84,7 @@ export const quoteTools: McpTool[] = [
       if (q.project?.name) out += `📁 Dự án: ${q.project.name}\n`;
       out += `📅 Ngày tạo: ${formatDate(q.createdAt)}`;
       if (q.sentAt) out += ` | Đã gửi: ${formatDate(q.sentAt)}`;
-      out += `\n💰 **Tổng tiền: ${formatVND(q.totalAmount)}**`;
+      out += `\n💰 **Tổng tiền: ${formatVND(q.total)}**`;
       if (q.vatRate) out += ` (VAT ${q.vatRate}%)`;
       out += "\n";
 
@@ -163,7 +163,15 @@ export const quoteTools: McpTool[] = [
         return `❌ Phải có ít nhất 1 hạng mục.`;
       }
 
-      await client.patch<unknown>(`/quotes/${quoteId}`, { projectId, items });
+      // Bao gồm các fields hiện có để tránh backend ghi đè về undefined
+      // (updateQuoteSchema = createQuoteSchema không phải PartialType)
+      const patchBody: Record<string, unknown> = { projectId, items };
+      if (quote.validUntil != null) patchBody["validUntil"] = quote.validUntil;
+      if (quote.taxRate != null) patchBody["taxRate"] = quote.taxRate;
+      if (quote.terms != null) patchBody["terms"] = quote.terms;
+      if (quote.deliveryTerms != null) patchBody["deliveryTerms"] = quote.deliveryTerms;
+      if (quote.internalNote != null) patchBody["internalNote"] = quote.internalNote;
+      await client.patch<unknown>(`/quotes/${quoteId}`, patchBody);
 
       // Đọc lại để hiển thị kết quả
       const updatedRes = await client.get<unknown>(`/quotes/${quoteId}`);
@@ -173,12 +181,12 @@ export const quoteTools: McpTool[] = [
       let out = `✅ Đã cập nhật báo giá **${updated.quoteNo}** — ${updatedItems.length} hạng mục:\n\n`;
       updatedItems.forEach((item, i) => {
         out += `  ${i + 1}. ${item.name}`;
-        if (item.quantity && item.unitPrice) {
+        if (item.quantity != null && item.unitPrice != null) {
           out += ` — ${item.quantity} ${item.unit ?? ""} × ${formatVND(item.unitPrice)} = **${formatVND(item.total)}**`;
         }
         out += "\n";
       });
-      if (updated.total) out += `\n💰 **Tổng: ${formatVND(updated.total)}**`;
+      if (updated.total != null) out += `\n💰 **Tổng: ${formatVND(updated.total)}**`;
 
       return out;
     },
@@ -253,7 +261,7 @@ interface QuoteListItem {
   id: string;
   quoteNo: string;
   status?: string;
-  totalAmount?: number | string;
+  total?: number | string;
   createdAt?: string;
   project?: { name?: string; customer?: { name: string } };
 }
@@ -263,8 +271,12 @@ interface QuoteDetail {
   quoteNo: string;
   status?: string;
   total?: number | string;
-  totalAmount?: number | string;
+  taxRate?: number;
   vatRate?: number;
+  validUntil?: string;
+  terms?: string;
+  deliveryTerms?: string;
+  internalNote?: string;
   createdAt?: string;
   sentAt?: string;
   notes?: string;

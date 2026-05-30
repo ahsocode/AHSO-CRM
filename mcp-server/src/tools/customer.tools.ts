@@ -149,8 +149,10 @@ export const customerTools: McpTool[] = [
       // Đảm bảo token đã được lấy trước khi đọc userId từ JWT
       await tokenManager.getValidAccessToken();
       const assignedToId = (args["assignedToId"] as string | undefined)
-        ?? tokenManager.getCurrentUserId()
-        ?? "";
+        ?? tokenManager.getCurrentUserId();
+      if (!assignedToId) {
+        return `❌ Không thể xác định người dùng hiện tại — vui lòng cung cấp assignedToId.`;
+      }
       const payload: Record<string, unknown> = { name: args["name"], assignedToId };
       if (args["industry"]) payload["industry"] = args["industry"];
       if (args["phone"]) payload["phone"] = args["phone"];

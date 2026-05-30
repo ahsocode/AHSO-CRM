@@ -196,7 +196,7 @@ export const reportTools: McpTool[] = [
 
       // Lấy activities trong N ngày gần đây
       const activitiesRes = await client.get<unknown>("/activities", {
-        params: { limit: 200, page: 1, dateFrom: cutoffStr },
+        params: { limit: 100, page: 1, dateFrom: cutoffStr },
       });
       const recentActivities = extractData<ActivityRef[]>(activitiesRes.data);
 

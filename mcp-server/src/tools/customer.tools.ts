@@ -278,16 +278,15 @@ export const customerTools: McpTool[] = [
     },
     async handler(args) {
       const client = getApiClient();
-      const payload: Record<string, unknown> = {
-        customerId: args["customerId"],
-        name: args["name"],
-      };
+      const customerId = args["customerId"] as string;
+      const payload: Record<string, unknown> = { name: args["name"] };
       if (args["title"]) payload["title"] = args["title"];
       if (args["phone"]) payload["phone"] = args["phone"];
       if (args["email"]) payload["email"] = args["email"];
       if (args["isPrimary"] !== undefined) payload["isPrimary"] = args["isPrimary"];
 
-      const res = await client.post<unknown>("/contacts", payload);
+      // Endpoint: POST /customers/:id/contacts (không phải /contacts)
+      const res = await client.post<unknown>(`/customers/${customerId}/contacts`, payload);
       const c = extractData<NewContact>(res.data);
 
       return `✅ Đã thêm liên hệ ${c.name}${c.title ? ` (${c.title})` : ""} vào KH ${c.customer?.name ?? ""}`;

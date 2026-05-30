@@ -47,7 +47,7 @@ export const activityTools: McpTool[] = [
 
       const lines = items.map(
         (a) =>
-          `• ${activityTypeLabel(a.type)} **${a.title}**\n` +
+          `• ${activityTypeLabel(a.type)} **${a.title}** | ID: \`${a.id}\`\n` +
           `  ${formatDateTime(a.createdAt)}` +
           (a.customer ? ` | 🏢 ${a.customer.name}` : "") +
           (a.content ? `\n  📝 ${truncate(a.content, 80)}` : "")

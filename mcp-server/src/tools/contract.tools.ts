@@ -54,7 +54,7 @@ export const contractTools: McpTool[] = [
       const lines = items.map((c) => {
         const status = CONTRACT_STATUS_LABEL[c.status ?? ""] ?? c.status ?? "—";
         return (
-          `  • **${c.contractNo}** ${status}\n` +
+          `  • **${c.contractNo}** ${status} | ID: \`${c.id}\`\n` +
           `    KH: ${c.project?.customer?.name ?? "—"} | ${formatVND(c.value)} | Ký: ${formatDate(c.signedAt)}`
         );
       });

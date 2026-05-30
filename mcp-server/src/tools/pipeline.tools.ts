@@ -73,7 +73,8 @@ export const pipelineTools: McpTool[] = [
               .map(
                 (p) =>
                   `  • ${p.code} — ${p.name}${p.customer ? ` [${p.customer.name}]` : ""}` +
-                  (p.estimatedValue ? ` — ${formatVNDShort(Number(p.estimatedValue))}` : "")
+                  (p.estimatedValue ? ` — ${formatVNDShort(Number(p.estimatedValue))}` : "") +
+                  ` | ID: \`${p.id}\``
               )
               .join("\n")
         );

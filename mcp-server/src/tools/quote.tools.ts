@@ -49,7 +49,7 @@ export const quoteTools: McpTool[] = [
       const lines = items.map((q) => {
         const status = QUOTE_STATUS_LABEL[q.status ?? ""] ?? q.status ?? "—";
         return (
-          `  • **${q.quoteNo}** ${status}\n` +
+          `  • **${q.quoteNo}** ${status} | ID: \`${q.id}\`\n` +
           `    KH: ${q.project?.customer?.name ?? "—"} | ${formatVND(q.totalAmount)} | ${formatDate(q.createdAt)}`
         );
       });

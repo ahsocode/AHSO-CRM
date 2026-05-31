@@ -272,6 +272,50 @@ export const reportTools: McpTool[] = [
       return out;
     },
   },
+
+  {
+    name: "get_top_customers",
+    description:
+      "Xem top khách hàng theo doanh thu. " +
+      "Dùng khi: 'Khách hàng lớn nhất năm nay?', 'Top 5 KH doanh thu cao nhất quý này?'",
+    inputSchema: {
+      type: "object",
+      properties: {
+        period: {
+          type: "string",
+          enum: ["this_month", "last_month", "this_quarter", "this_year"],
+          description: "Khoảng thời gian",
+        },
+        limit: { type: "number", description: "Số kết quả (mặc định 10)" },
+      },
+      required: ["period"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const period = args["period"] as string;
+      const params: Record<string, unknown> = {
+        ...periodParams(period),
+        limit: args["limit"] ?? 10,
+      };
+
+      const res = await client.get<unknown>("/reports/top-customers", { params });
+      const items = extractData<Array<{ id: string; name: string; revenue: number; contractCount?: number }>>(res.data);
+
+      const label = PERIOD_LABEL[period] ?? period;
+      if (!items?.length) return `📭 Chưa có dữ liệu doanh thu ${label}.`;
+
+      let out = `🏆 **Top khách hàng doanh thu ${label}:**\n\n`;
+      out += items
+        .map(
+          (c, i) =>
+            `  ${i + 1}. **${c.name}** — ${formatVND(c.revenue)}` +
+            (c.contractCount ? ` (${c.contractCount} HĐ)` : "")
+        )
+        .join("\n");
+
+      return out;
+    },
+  },
 ];
 
 // Interfaces

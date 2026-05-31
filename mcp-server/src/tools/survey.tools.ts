@@ -63,6 +63,85 @@ export const surveyTools: McpTool[] = [
   },
 
   {
+    name: "create_survey",
+    description:
+      "Tạo bản khảo sát mới cho khách hàng hoặc dự án. " +
+      "Dùng khi: 'Tạo khảo sát hiện trường cho Sabeco ngày 20/06', 'Ghi nhận kết quả khảo sát dự án AHSO-307'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Tiêu đề khảo sát" },
+        customerId: { type: "string", description: "ID khách hàng (bắt buộc)" },
+        projectId: { type: "string", description: "ID dự án liên quan (tuỳ chọn)" },
+        surveyedAt: { type: "string", description: "Ngày khảo sát (ISO date)" },
+        location: { type: "string", description: "Địa điểm khảo sát" },
+        objectives: { type: "string", description: "Mục tiêu khảo sát" },
+        summary: { type: "string", description: "Tóm tắt kết quả" },
+        nextStep: { type: "string", description: "Bước tiếp theo" },
+        customerParticipants: { type: "string", description: "Người tham dự phía khách hàng" },
+      },
+      required: ["title", "customerId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {
+        title: args["title"],
+        customerId: args["customerId"],
+      };
+      if (args["projectId"]) payload["projectId"] = args["projectId"];
+      if (args["surveyedAt"]) payload["surveyedAt"] = args["surveyedAt"];
+      if (args["location"]) payload["location"] = args["location"];
+      if (args["objectives"]) payload["objectives"] = args["objectives"];
+      if (args["summary"]) payload["summary"] = args["summary"];
+      if (args["nextStep"]) payload["nextStep"] = args["nextStep"];
+      if (args["customerParticipants"]) payload["customerParticipants"] = args["customerParticipants"];
+
+      const res = await client.post<unknown>("/surveys", payload);
+      const s = extractData<{ id: string; title: string }>(res.data);
+
+      return (
+        `✅ Đã tạo khảo sát:\n` +
+        `🔍 **${s.title}**\n` +
+        `ID: ${s.id}\n\n` +
+        `💡 Dùng add_survey_note để ghi chú yêu cầu kỹ thuật, rủi ro, quyết định.`
+      );
+    },
+  },
+
+  {
+    name: "update_survey",
+    description:
+      "Cập nhật thông tin bản khảo sát. " +
+      "Dùng khi: 'Cập nhật tóm tắt khảo sát Sabeco', 'Thêm bước tiếp theo cho khảo sát'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        surveyId: { type: "string", description: "ID khảo sát" },
+        title: { type: "string", description: "Tiêu đề" },
+        surveyedAt: { type: "string", description: "Ngày khảo sát (ISO date)" },
+        location: { type: "string", description: "Địa điểm" },
+        objectives: { type: "string", description: "Mục tiêu" },
+        summary: { type: "string", description: "Tóm tắt kết quả" },
+        nextStep: { type: "string", description: "Bước tiếp theo" },
+        customerParticipants: { type: "string", description: "Người tham dự phía khách hàng" },
+      },
+      required: ["surveyId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {};
+      const fields = ["title", "surveyedAt", "location", "objectives", "summary", "nextStep", "customerParticipants"];
+      for (const field of fields) {
+        if (args[field] !== undefined && args[field] !== null) payload[field] = args[field];
+      }
+
+      const res = await client.patch<unknown>(`/surveys/${args["surveyId"] as string}`, payload);
+      const s = extractData<{ title: string }>(res.data);
+      return `✅ Đã cập nhật khảo sát "${s.title}"`;
+    },
+  },
+
+  {
     name: "get_survey_detail",
     description:
       "Xem chi tiết bản khảo sát và các phát hiện/ghi chú (findings). " +

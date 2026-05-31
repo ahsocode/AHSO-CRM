@@ -102,6 +102,56 @@ export const activityTools: McpTool[] = [
   },
 
   {
+    name: "update_activity",
+    description:
+      "Cập nhật nội dung hoặc lịch hẹn của một hoạt động. " +
+      "Dùng khi: 'Sửa nội dung ghi chú cuộc gọi Sabeco hôm qua', 'Dời lịch demo sang 15:00'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        activityId: { type: "string", description: "ID hoạt động (lấy từ list_activities)" },
+        title: { type: "string", description: "Tiêu đề mới" },
+        content: { type: "string", description: "Nội dung mới" },
+        scheduledAt: { type: "string", description: "Thời gian mới (ISO datetime)" },
+        isCompleted: { type: "boolean", description: "Đánh dấu hoàn thành" },
+      },
+      required: ["activityId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {};
+      if (args["title"]) payload["title"] = args["title"];
+      if (args["content"]) payload["content"] = args["content"];
+      if (args["scheduledAt"]) payload["scheduledAt"] = args["scheduledAt"];
+      if (args["isCompleted"] !== undefined) payload["isCompleted"] = args["isCompleted"];
+
+      const res = await client.patch<unknown>(`/activities/${args["activityId"] as string}`, payload);
+      const a = extractData<{ title: string }>(res.data);
+      return `✅ Đã cập nhật hoạt động "${a.title}"`;
+    },
+  },
+
+  {
+    name: "delete_activity",
+    description:
+      "Xoá một hoạt động/ghi chú khỏi hệ thống. " +
+      "Dùng khi: 'Xoá ghi chú nhầm vừa tạo', 'Xoá activity trùng lặp'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        activityId: { type: "string", description: "ID hoạt động cần xoá" },
+      },
+      required: ["activityId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const res = await client.delete<unknown>(`/activities/${args["activityId"] as string}`);
+      const a = extractData<{ title: string }>(res.data);
+      return `✅ Đã xoá hoạt động "${a.title ?? args["activityId"]}"`;
+    },
+  },
+
+  {
     name: "get_activity_detail",
     description:
       "Xem chi tiết đầy đủ một hoạt động ghi chú. " +

@@ -261,6 +261,26 @@ export const pipelineTools: McpTool[] = [
       return `✅ Đã cập nhật dự án ${p.code} — ${p.name}`;
     },
   },
+
+  {
+    name: "delete_project",
+    description:
+      "Xoá dự án/deal khỏi pipeline. " +
+      "Dùng khi: 'Xoá deal test', 'Xoá dự án nhập nhầm khách hàng'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "ID dự án cần xoá" },
+      },
+      required: ["projectId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const res = await client.delete<unknown>(`/projects/${args["projectId"] as string}`);
+      const p = extractData<{ code: string; name: string }>(res.data);
+      return `✅ Đã xoá dự án "${p.code} — ${p.name}"`;
+    },
+  },
 ];
 
 // Interfaces

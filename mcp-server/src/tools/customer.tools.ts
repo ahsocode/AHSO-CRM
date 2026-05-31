@@ -262,6 +262,80 @@ export const customerTools: McpTool[] = [
   },
 
   {
+    name: "delete_customer",
+    description:
+      "Xoá khách hàng khỏi hệ thống (soft delete). " +
+      "Dùng khi: 'Xoá KH Công ty ABC đã giải thể', 'Xoá khách hàng trùng lặp'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        customerId: { type: "string", description: "ID khách hàng cần xoá" },
+      },
+      required: ["customerId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const res = await client.delete<unknown>(`/customers/${args["customerId"] as string}`);
+      const c = extractData<{ name: string }>(res.data);
+      return `✅ Đã xoá khách hàng "${c.name ?? args["customerId"]}"`;
+    },
+  },
+
+  {
+    name: "update_contact",
+    description:
+      "Cập nhật thông tin người liên hệ của khách hàng. " +
+      "Dùng khi: 'Cập nhật SĐT liên hệ anh Minh bên Sabeco', 'Đổi email liên hệ chính KH Vinamilk'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        contactId: { type: "string", description: "ID người liên hệ (lấy từ get_customer_detail)" },
+        name: { type: "string", description: "Tên người liên hệ" },
+        title: { type: "string", description: "Chức vụ" },
+        department: { type: "string", description: "Phòng ban" },
+        phone: { type: "string", description: "Số điện thoại" },
+        email: { type: "string", description: "Email" },
+        isPrimary: { type: "boolean", description: "Là liên hệ chính" },
+        notes: { type: "string", description: "Ghi chú" },
+      },
+      required: ["contactId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {};
+      const fields = ["name", "title", "department", "phone", "email", "notes"];
+      for (const field of fields) {
+        if (args[field] !== undefined && args[field] !== null) payload[field] = args[field];
+      }
+      if (args["isPrimary"] !== undefined) payload["isPrimary"] = args["isPrimary"];
+
+      const res = await client.patch<unknown>(`/contacts/${args["contactId"] as string}`, payload);
+      const c = extractData<{ name: string; title?: string }>(res.data);
+      return `✅ Đã cập nhật liên hệ "${c.name}"${c.title ? ` (${c.title})` : ""}`;
+    },
+  },
+
+  {
+    name: "delete_contact",
+    description:
+      "Xoá người liên hệ khỏi khách hàng. " +
+      "Dùng khi: 'Xoá liên hệ anh X đã nghỉ việc bên Sabeco'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        contactId: { type: "string", description: "ID người liên hệ (lấy từ get_customer_detail)" },
+      },
+      required: ["contactId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const res = await client.delete<unknown>(`/contacts/${args["contactId"] as string}`);
+      const c = extractData<{ name: string }>(res.data);
+      return `✅ Đã xoá liên hệ "${c.name ?? args["contactId"]}"`;
+    },
+  },
+
+  {
     name: "add_contact",
     description:
       "Thêm người liên hệ mới vào khách hàng. " +

@@ -230,6 +230,26 @@ export const quoteTools: McpTool[] = [
   },
 
   {
+    name: "delete_quote",
+    description:
+      "Xoá báo giá khỏi hệ thống. Chỉ xoá được báo giá ở trạng thái DRAFT hoặc REJECTED. " +
+      "Dùng khi: 'Xoá báo giá nháp nhầm', 'Dọn dẹp báo giá bị từ chối cũ'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        quoteId: { type: "string", description: "ID báo giá cần xoá" },
+      },
+      required: ["quoteId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const res = await client.delete<unknown>(`/quotes/${args["quoteId"] as string}`);
+      const q = extractData<{ quoteNo: string }>(res.data);
+      return `✅ Đã xoá báo giá "${q.quoteNo ?? args["quoteId"]}"`;
+    },
+  },
+
+  {
     name: "duplicate_quote",
     description:
       "Nhân bản một báo giá hiện có. " +

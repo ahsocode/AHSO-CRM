@@ -179,6 +179,110 @@ export const contractTools: McpTool[] = [
   },
 
   {
+    name: "update_contract",
+    description:
+      "Cập nhật thông tin hợp đồng: giá trị, ngày ký, ngày bắt đầu/kết thúc, trạng thái. " +
+      "Dùng khi: 'Cập nhật giá trị HĐ Sabeco thành 3 tỷ', 'Đổi trạng thái HĐ Vinamilk sang Hoàn thành'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        contractId: { type: "string", description: "ID hợp đồng" },
+        value: { type: "number", description: "Giá trị hợp đồng (VND)" },
+        status: {
+          type: "string",
+          enum: ["ACTIVE", "SUSPENDED", "COMPLETED", "CANCELLED"],
+          description: "Trạng thái mới",
+        },
+        signDate: { type: "string", description: "Ngày ký (ISO date)" },
+        startDate: { type: "string", description: "Ngày bắt đầu (ISO date)" },
+        endDate: { type: "string", description: "Ngày kết thúc (ISO date)" },
+        notes: { type: "string", description: "Ghi chú" },
+      },
+      required: ["contractId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = {};
+      if (args["value"] !== undefined) payload["value"] = args["value"];
+      if (args["status"]) payload["status"] = args["status"];
+      if (args["signDate"]) payload["signDate"] = args["signDate"];
+      if (args["startDate"]) payload["startDate"] = args["startDate"];
+      if (args["endDate"]) payload["endDate"] = args["endDate"];
+      if (args["notes"]) payload["notes"] = args["notes"];
+
+      const res = await client.patch<unknown>(`/contracts/${args["contractId"] as string}`, payload);
+      const c = extractData<{ contractNo: string; status?: string }>(res.data);
+      const status = CONTRACT_STATUS_LABEL[c.status ?? ""] ?? c.status ?? "—";
+      return `✅ Đã cập nhật hợp đồng **${c.contractNo}** — ${status}`;
+    },
+  },
+
+  {
+    name: "create_milestone",
+    description:
+      "Thêm milestone mới vào hợp đồng. " +
+      "Dùng khi: 'Thêm milestone Nghiệm thu vào HĐ Sabeco, hạn 30/09, giá trị 500 triệu'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        contractId: { type: "string", description: "ID hợp đồng" },
+        name: { type: "string", description: "Tên milestone" },
+        dueDate: { type: "string", description: "Ngày hạn (ISO date)" },
+        paymentAmount: { type: "number", description: "Giá trị thanh toán của milestone (VND)" },
+        status: {
+          type: "string",
+          enum: ["PENDING", "IN_PROGRESS", "DONE", "ACCEPTED"],
+          description: "Trạng thái ban đầu (mặc định: PENDING)",
+        },
+        description: { type: "string", description: "Mô tả chi tiết" },
+        notes: { type: "string", description: "Ghi chú" },
+      },
+      required: ["contractId", "name"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const payload: Record<string, unknown> = { name: args["name"] };
+      if (args["dueDate"]) payload["dueDate"] = args["dueDate"];
+      if (args["paymentAmount"] !== undefined) payload["paymentAmount"] = args["paymentAmount"];
+      if (args["status"]) payload["status"] = args["status"];
+      if (args["description"]) payload["description"] = args["description"];
+      if (args["notes"]) payload["notes"] = args["notes"];
+
+      const res = await client.post<unknown>(
+        `/contracts/${args["contractId"] as string}/milestones`,
+        payload
+      );
+      const m = extractData<{ id: string; name: string; dueDate?: string; paymentAmount?: number }>(res.data);
+
+      let out = `✅ Đã thêm milestone **${m.name}**\n`;
+      if (m.dueDate) out += `📅 Hạn: ${formatDate(m.dueDate)}\n`;
+      if (m.paymentAmount) out += `💰 Giá trị: ${formatVND(m.paymentAmount)}\n`;
+      out += `ID: ${m.id}`;
+      return out;
+    },
+  },
+
+  {
+    name: "delete_contract",
+    description:
+      "Xoá hợp đồng khỏi hệ thống. " +
+      "Dùng khi: 'Xoá hợp đồng nhập nhầm', 'Xoá HĐ bị huỷ và không cần lưu trữ'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        contractId: { type: "string", description: "ID hợp đồng cần xoá" },
+      },
+      required: ["contractId"],
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const res = await client.delete<unknown>(`/contracts/${args["contractId"] as string}`);
+      const c = extractData<{ contractNo: string }>(res.data);
+      return `✅ Đã xoá hợp đồng "${c.contractNo ?? args["contractId"]}"`;
+    },
+  },
+
+  {
     name: "update_milestone_status",
     description:
       "Cập nhật trạng thái của một milestone trong hợp đồng. " +

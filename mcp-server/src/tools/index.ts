@@ -17,3 +17,6 @@ export { calendarTools } from "./calendar.tools.js";
 export { notificationTools } from "./notification.tools.js";
 export { userTools } from "./user.tools.js";
 export { surveyTools } from "./survey.tools.js";
+export { supplierTools } from "./supplier.tools.js";
+export { materialTools } from "./material.tools.js";
+export { inventoryTools } from "./inventory.tools.js";

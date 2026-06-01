@@ -1,4 +1,4 @@
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { PrismaService } from "../common/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { ActivitiesService } from "./activities.service";
@@ -101,5 +101,33 @@ describe("ActivitiesService", () => {
       id: "activity-1",
       title: "Gọi xác nhận nhu cầu"
     });
+  });
+
+  it("rejects activity creation when selected project belongs to another customer", async () => {
+    prisma.customer.findUnique.mockResolvedValue({
+      id: "customer-1",
+      assignedToId: staffUser.sub
+    });
+    prisma.project.findUnique.mockResolvedValue({
+      id: "project-1",
+      customerId: "customer-2",
+      customer: {
+        assignedToId: staffUser.sub
+      }
+    });
+
+    await expect(
+      service.create(
+        {
+          type: "CALL",
+          title: "Gọi xác nhận nhu cầu",
+          customerId: "customer-1",
+          projectId: "project-1"
+        },
+        staffUser
+      )
+    ).rejects.toThrow(new BadRequestException("Dự án không thuộc khách hàng đã chọn"));
+
+    expect(prisma.activity.create).not.toHaveBeenCalled();
   });
 });

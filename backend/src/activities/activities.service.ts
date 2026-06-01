@@ -210,6 +210,8 @@ export class ActivitiesService {
   }
 
   async create(input: CreateActivityDto, user: JwtUser) {
+    let requestedCustomerId: string | null = null;
+
     // Verify customer access if customerId is provided
     if (input.customerId) {
       const customer = await this.prisma.customer.findUnique({
@@ -224,6 +226,8 @@ export class ActivitiesService {
       if (isStaff(user) && customer.assignedToId !== user.sub) {
         throw new ForbiddenException('Bạn chỉ có thể tạo hoạt động cho khách hàng được giao cho bạn');
       }
+
+      requestedCustomerId = customer.id;
     }
 
     // Verify project access if projectId is provided
@@ -240,6 +244,10 @@ export class ActivitiesService {
       // STAFF can only create activities for projects of their assigned customers
       if (isStaff(user) && project.customer.assignedToId !== user.sub) {
         throw new ForbiddenException('Bạn chỉ có thể tạo hoạt động cho dự án của khách hàng được giao cho bạn');
+      }
+
+      if (requestedCustomerId && project.customerId !== requestedCustomerId) {
+        throw new BadRequestException('Dự án không thuộc khách hàng đã chọn');
       }
     }
 

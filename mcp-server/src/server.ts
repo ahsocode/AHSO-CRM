@@ -19,6 +19,9 @@ import {
   notificationTools,
   userTools,
   surveyTools,
+  supplierTools,
+  materialTools,
+  inventoryTools,
 } from "./tools/index.js";
 import { SYSTEM_PROMPT } from "./prompts/system.prompt.js";
 
@@ -35,6 +38,9 @@ const ALL_TOOLS: McpTool[] = [
   ...notificationTools,
   ...userTools,
   ...surveyTools,
+  ...supplierTools,
+  ...materialTools,
+  ...inventoryTools,
 ];
 
 const TOOL_MAP = new Map<string, McpTool>(ALL_TOOLS.map((t) => [t.name, t]));

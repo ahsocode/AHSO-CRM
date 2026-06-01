@@ -3,6 +3,7 @@ import { ModuleRef } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { decimalToNumber, sumDecimal } from "../common/utils/decimal";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { EmailService } from "../email/email.service";
 import { BulkQuoteDto } from "./dto/bulk-quote.dto";
@@ -527,7 +528,11 @@ export class QuotesService {
         }
       });
 
-      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status, Number(quote.total));
+      const projectQuoteTotal = dto.status === "ACCEPTED"
+        ? this.calculateAcceptedQuoteTotal(quote.items, quote.taxRate, resolvedAcceptedItemIds, quote.total)
+        : Number(quote.total);
+
+      await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status, projectQuoteTotal);
 
       return {
         updatedQuote,
@@ -1040,6 +1045,30 @@ export class QuotesService {
       },
       data: nextData
     });
+  }
+
+  private calculateAcceptedQuoteTotal(
+    quoteItems: Array<{
+      id: string;
+      total: Prisma.Decimal;
+    }>,
+    taxRate: Prisma.Decimal,
+    acceptedItemIds: string[],
+    fallbackTotal: Prisma.Decimal
+  ) {
+    const acceptedIds = new Set(acceptedItemIds);
+    const scopedItems = acceptedIds.size > 0
+      ? quoteItems.filter((item) => acceptedIds.has(item.id))
+      : quoteItems;
+
+    if (scopedItems.length === 0) {
+      return decimalToNumber(fallbackTotal);
+    }
+
+    const subtotal = sumDecimal(scopedItems.map((item) => item.total));
+    const taxAmount = subtotal.mul(taxRate).div(100).round();
+
+    return decimalToNumber(subtotal.plus(taxAmount));
   }
 }
 

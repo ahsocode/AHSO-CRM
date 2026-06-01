@@ -82,7 +82,7 @@ Hoặc dùng `npm run dev` để test với stdio transport:
 }
 ```
 
-## Danh sách Tools (20 tools)
+## Danh sách Tools chính
 
 ### Khách hàng
 
@@ -139,6 +139,35 @@ Hoặc dùng `npm run dev` để test với stdio transport:
 |------|--------|----------------|
 | `list_activities` | Lịch sử hoạt động | "Cuộc gọi tuần này", "Lịch sử Sabeco" |
 
+### Nhà cung cấp, vật tư, kho hàng
+
+| Tool | Mô tả | Ví dụ câu lệnh |
+|------|--------|----------------|
+| `list_suppliers` | Tìm kiếm nhà cung cấp, trả ID nội bộ | "Tìm NCC Horiba" |
+| `get_supplier_detail` | Chi tiết nhà cung cấp | "Chi tiết NCC [ID]" |
+| `create_supplier` / `update_supplier` | Tạo/cập nhật nhà cung cấp | "Tạo NCC ABC mã NCC-ABC" |
+| `list_materials` | Tìm kiếm vật tư, trả ID nội bộ | "Tìm vật tư camera", "Vật tư dưới tồn min" |
+| `get_material_detail` | Chi tiết vật tư, tồn kho, NCC | "Vật tư [ID] còn ở kho nào?" |
+| `create_material` / `update_material` | Tạo/cập nhật vật tư | "Tạo vật tư mã CAM-001..." |
+| `list_warehouses` | Danh sách kho, trả ID nội bộ | "Danh sách kho đang hoạt động" |
+| `get_warehouse_detail` | Chi tiết kho và top tồn kho | "Chi tiết kho [ID]" |
+| `create_warehouse` / `update_warehouse` | Tạo/cập nhật kho hàng | "Tạo kho KHO-HN tên Kho Hà Nội" |
+| `get_inventory_balances` | Tra cứu tồn kho theo kho/vật tư | "Kho chính còn bao nhiêu motor?" |
+| `get_inventory_summary` | Tổng quan giá trị tồn, tồn thấp, phiếu nháp | "Tổng quan kho hiện tại?" |
+| `list_stock_receipts` / `get_stock_receipt_detail` | Danh sách/chi tiết phiếu nhập kho | "Phiếu nhập nháp gần đây" |
+| `create_stock_receipt` | Tạo phiếu nhập kho nháp | "Tạo phiếu nhập 10 camera vào kho chính" |
+| `confirm_stock_receipt` | Xác nhận phiếu nhập để tăng tồn kho | "Xác nhận phiếu nhập [ID]" |
+| `cancel_stock_receipt` | Huỷ phiếu nhập nháp | "Huỷ phiếu nhập [ID]" |
+| `list_stock_issues` / `get_stock_issue_detail` | Danh sách/chi tiết phiếu xuất kho | "Phiếu xuất kho của dự án [ID]" |
+| `create_stock_issue` | Tạo phiếu xuất kho nháp | "Tạo phiếu xuất 2 motor cho dự án [ID]" |
+| `confirm_stock_issue` / `cancel_stock_issue` | Xác nhận hoặc huỷ phiếu xuất nháp | "Xác nhận phiếu xuất [ID]" |
+| `list_stock_transfers` / `get_stock_transfer_detail` | Danh sách/chi tiết phiếu chuyển kho | "Phiếu chuyển kho gần đây" |
+| `create_stock_transfer` | Tạo phiếu chuyển kho nháp | "Chuyển 5 cảm biến từ kho A sang kho B" |
+| `confirm_stock_transfer` / `cancel_stock_transfer` | Xác nhận hoặc huỷ phiếu chuyển nháp | "Xác nhận phiếu chuyển [ID]" |
+| `list_stock_counts` / `get_stock_count_detail` | Danh sách/chi tiết phiếu kiểm kho | "Phiếu kiểm kho kho chính" |
+| `create_stock_count` | Tạo phiếu kiểm kho nháp | "Tạo kiểm kho kho chính, camera thực tế 8" |
+| `confirm_stock_count` / `cancel_stock_count` | Xác nhận hoặc huỷ phiếu kiểm kho nháp | "Xác nhận phiếu kiểm kho [ID]" |
+
 ## Tạo service account trong CRM
 
 1. Đăng nhập CRM với quyền ADMIN
@@ -154,6 +183,9 @@ Hoặc dùng `npm run dev` để test với stdio transport:
    activities.view, activities.create
    quotes.view
    contracts.view
+   suppliers.view, suppliers.create, suppliers.edit, suppliers.delete
+   materials.view, materials.create, materials.edit, materials.delete
+   inventory.view, inventory.create, inventory.edit, inventory.delete
    ai.use
    ```
 
@@ -188,6 +220,9 @@ src/
 │   ├── quote.tools.ts
 │   ├── contract.tools.ts
 │   ├── activity.tools.ts
+│   ├── supplier.tools.ts
+│   ├── material.tools.ts
+│   ├── inventory.tools.ts
 │   └── index.ts
 ├── formatters/
 │   └── common.formatter.ts  # formatVND, formatDate, ...

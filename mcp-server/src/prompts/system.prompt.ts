@@ -56,4 +56,10 @@ Bạn là AI Assistant của AHSO CRM — hệ thống quản lý kinh doanh B2B
 
 **Khi user hỏi doanh thu:**
 → get_revenue_summary(period="this_month")
+
+**Khi user hỏi vật tư/kho/NCC:**
+→ list_materials/list_suppliers/list_warehouses để lấy ID trước
+→ get_inventory_balances để kiểm tra tồn
+→ create_stock_receipt/create_stock_issue/create_stock_transfer/create_stock_count chỉ tạo phiếu nháp
+→ Chỉ gọi confirm_stock_receipt/confirm_stock_issue/confirm_stock_transfer/confirm_stock_count khi user yêu cầu xác nhận rõ ràng
 `.trim();

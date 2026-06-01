@@ -204,8 +204,18 @@ describe("QuotesService", () => {
       sentAt: null,
       acceptedAt: null,
       total: 275,
+      taxRate: 10,
       projectId: "project-1",
-      items: [],
+      items: [
+        {
+          id: "quote-item-1",
+          total: 100
+        },
+        {
+          id: "quote-item-2",
+          total: 150
+        }
+      ],
       project: {
         status: "NEGOTIATING",
         contract: null
@@ -239,7 +249,7 @@ describe("QuotesService", () => {
       },
       data: {
         status: "ACCEPTED",
-        acceptedItemIds: [],
+        acceptedItemIds: ["quote-item-1", "quote-item-2"],
         sentAt: expect.any(Date),
         acceptedAt: expect.any(Date)
       },
@@ -257,6 +267,63 @@ describe("QuotesService", () => {
       data: {
         status: "WON",
         estimatedValue: 275
+      }
+    });
+  });
+
+  it("syncs the project value from accepted quote items only", async () => {
+    const acceptedAt = new Date("2026-04-18T08:00:00.000Z");
+    tx.quote.findFirst.mockResolvedValue({
+      id: "quote-1",
+      status: "SENT",
+      sentAt: null,
+      acceptedAt: null,
+      total: 660,
+      taxRate: 10,
+      projectId: "project-1",
+      items: [
+        {
+          id: "quote-item-1",
+          total: 100
+        },
+        {
+          id: "quote-item-2",
+          total: 500
+        }
+      ],
+      project: {
+        status: "NEGOTIATING",
+        contract: null
+      }
+    });
+    tx.quote.update.mockResolvedValue({
+      id: "quote-1",
+      status: "ACCEPTED",
+      sentAt: acceptedAt,
+      acceptedAt
+    });
+
+    await service.updateStatus(
+      "quote-1",
+      {
+        status: "ACCEPTED",
+        acceptedItemIds: ["quote-item-2"]
+      },
+      user
+    );
+
+    expect(tx.quote.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        acceptedItemIds: ["quote-item-2"]
+      })
+    }));
+    expect(tx.project.update).toHaveBeenCalledWith({
+      where: {
+        id: "project-1"
+      },
+      data: {
+        status: "WON",
+        estimatedValue: 550
       }
     });
   });

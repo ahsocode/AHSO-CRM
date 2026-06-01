@@ -79,16 +79,18 @@ export class CustomersService {
     ]);
 
     const customerIds = matchingCustomers.map((customer) => customer.id);
-    const contractIds = await this.getContractIdsByCustomerIds(customerIds);
 
-    const quarterlyRevenue = contractIds.length > 0
+    const quarterlyRevenue = customerIds.length > 0
       ? await this.prisma.payment.aggregate({
           _sum: {
             amount: true
           },
           where: {
-            contractId: {
-              in: contractIds
+            project: {
+              customerId: {
+                in: customerIds
+              },
+              deletedAt: null
             },
             paidAt: {
               gte: quarterStart
@@ -937,32 +939,6 @@ export class CustomersService {
     if (existingCustomer) {
       throw new ConflictException("Mã số thuế đã tồn tại trong hệ thống");
     }
-  }
-
-  private async getContractIdsByCustomerIds(customerIds: string[]) {
-    if (customerIds.length === 0) {
-      return [];
-    }
-
-    const projects = await this.prisma.project.findMany({
-      where: {
-        customerId: {
-          in: customerIds
-        },
-        deletedAt: null
-      },
-      select: {
-        contract: {
-          select: {
-            id: true
-          }
-        }
-      }
-    });
-
-    return projects
-      .map((project) => project.contract?.id)
-      .filter((id): id is string => Boolean(id));
   }
 
   private getQuarterStart() {

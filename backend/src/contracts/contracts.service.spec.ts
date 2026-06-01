@@ -114,6 +114,7 @@ describe("ContractsService", () => {
       quotes: [
         {
           id: "quote-accepted",
+          taxRate: 0,
           items: [
             {
               id: "quote-item-1",
@@ -214,6 +215,106 @@ describe("ContractsService", () => {
       data: {
         status: "DELIVERING",
         estimatedValue: 5_000_000
+      }
+    });
+  });
+
+  it("derives contract value from selected quote items instead of trusting the request value", async () => {
+    const currentYear = new Date().getFullYear();
+    tx.project.findFirst.mockResolvedValue({
+      id: "project-1",
+      status: "WON",
+      contract: null,
+      quotes: [
+        {
+          id: "quote-accepted",
+          taxRate: 10,
+          items: [
+            {
+              id: "quote-item-1",
+              order: 1,
+              name: "Hạng mục loại bỏ",
+              description: null,
+              unit: "Bộ",
+              quantity: 1,
+              unitPrice: 100,
+              total: 100
+            },
+            {
+              id: "quote-item-2",
+              order: 2,
+              name: "Hạng mục triển khai",
+              description: null,
+              unit: "Bộ",
+              quantity: 1,
+              unitPrice: 500,
+              total: 500
+            }
+          ]
+        }
+      ]
+    });
+    tx.contract.findFirst.mockResolvedValue({
+      contractNo: `HD-${currentYear}-004`
+    });
+    tx.contract.create.mockResolvedValue({
+      id: "contract-1",
+      contractNo: `HD-${currentYear}-005`,
+      status: "ACTIVE"
+    });
+    prisma.contract.findUnique.mockResolvedValue({
+      id: "contract-1",
+      contractNo: `HD-${currentYear}-005`,
+      projectId: "project-1",
+      status: "ACTIVE",
+      value: 550,
+      project: {
+        name: "Dự án A",
+        customer: {
+          id: "customer-1",
+          name: "Công ty A",
+          assignedTo: {
+            email: "manager@ahso.vn",
+            name: "Manager"
+          },
+          contacts: []
+        }
+      }
+    });
+
+    await service.create(
+      {
+        projectId: "project-1",
+        sourceQuoteId: "quote-accepted",
+        sourceQuoteItemIds: ["quote-item-2"],
+        value: 999_999,
+        status: "ACTIVE",
+        customFieldValues: {}
+      },
+      user
+    );
+
+    expect(tx.contract.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        value: 550,
+        items: {
+          create: [
+            expect.objectContaining({
+              name: "Hạng mục triển khai",
+              quoteItemId: "quote-item-2",
+              total: 500
+            })
+          ]
+        }
+      })
+    }));
+    expect(tx.project.update).toHaveBeenCalledWith({
+      where: {
+        id: "project-1"
+      },
+      data: {
+        status: "DELIVERING",
+        estimatedValue: 550
       }
     });
   });

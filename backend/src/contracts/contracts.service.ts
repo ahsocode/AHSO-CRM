@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import type { MilestoneStatus, Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { decimalToNumber, sumDecimal } from "../common/utils/decimal";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { EmailService } from "../email/email.service";
@@ -174,6 +175,13 @@ export class ContractsService {
       const selectedQuoteItems = selectedSourceQuote
         ? this.resolveSelectedQuoteItems(selectedSourceQuote.items, dto.sourceQuoteItemIds)
         : [];
+      const resolvedContractValue = selectedSourceQuote
+        ? this.calculateContractValueFromQuoteItems(selectedQuoteItems, selectedSourceQuote.taxRate)
+        : dto.value;
+
+      if (resolvedContractValue <= 0) {
+        throw new BadRequestException("Giá trị hợp đồng theo hạng mục đã chọn phải lớn hơn 0");
+      }
 
       const contract = await tx.contract.create({
         data: {
@@ -181,7 +189,7 @@ export class ContractsService {
           signDate: dto.signDate,
           startDate: dto.startDate,
           endDate: dto.endDate,
-          value: dto.value,
+          value: resolvedContractValue,
           status: dto.status,
           fileUrl: dto.fileUrl,
           notes: dto.notes,
@@ -210,7 +218,7 @@ export class ContractsService {
         }
       });
 
-      await this.syncProjectStatusForContract(tx, project.id, project.status, dto.status, dto.value);
+      await this.syncProjectStatusForContract(tx, project.id, project.status, dto.status, resolvedContractValue);
 
       return contract;
     });
@@ -768,6 +776,7 @@ export class ContractsService {
           },
           select: {
             id: true,
+            taxRate: true,
             items: {
               select: {
                 id: true,
@@ -885,6 +894,18 @@ export class ContractsService {
     }
 
     return selectedItems;
+  }
+
+  private calculateContractValueFromQuoteItems(
+    quoteItems: Array<{
+      total: Prisma.Decimal;
+    }>,
+    taxRate: Prisma.Decimal
+  ) {
+    const subtotal = sumDecimal(quoteItems.map((item) => item.total));
+    const taxAmount = subtotal.mul(taxRate).div(100).round();
+
+    return decimalToNumber(subtotal.plus(taxAmount));
   }
 
   private mapContractItem(item: {
@@ -1065,6 +1086,8 @@ export class ContractsService {
     const nextProjectStatus =
       contractStatus === "COMPLETED"
         ? "COMPLETED"
+        : contractStatus === "CANCELLED"
+          ? "LOST"
         : contractStatus === "ACTIVE" || contractStatus === "SUSPENDED"
           ? "DELIVERING"
           : "WON";

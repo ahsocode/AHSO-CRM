@@ -41,6 +41,7 @@ export const notificationTools: McpTool[] = [
         if (item.type === "ERROR") icon = "❌";
 
         out += `${icon} **${item.title}** — ${formatRelative(item.createdAt)}\n`;
+        out += `  🆔 ID: ${item.id}\n`;
         if (item.body) {
           const body = item.body.length > 100 ? item.body.substring(0, 100) + "..." : item.body;
           out += `  ${body}\n`;

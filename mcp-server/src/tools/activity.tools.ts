@@ -97,7 +97,10 @@ export const activityTools: McpTool[] = [
       const res = await client.post<unknown>("/activities", payload);
       const a = extractData<{ id: string; type: string; title: string; createdAt: string }>(res.data);
 
-      return `✅ Đã ghi ${activityTypeLabel(a.type)}: "${a.title}" — ${formatDate(a.createdAt)}`;
+      return (
+        `✅ Đã ghi ${activityTypeLabel(a.type)}: "${a.title}" — ${formatDate(a.createdAt)}\n` +
+        `ID: ${a.id}`
+      );
     },
   },
 

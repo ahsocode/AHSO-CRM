@@ -113,7 +113,8 @@ export const contractTools: McpTool[] = [
                 : "";
             return (
               `  • ${msStatus} **${m.name}**${overdue}\n` +
-              (m.dueDate ? `    📅 Hạn: ${formatDate(m.dueDate)}` : "") +
+              `    🆔 ID: ${m.id}` +
+              (m.dueDate ? `\n    📅 Hạn: ${formatDate(m.dueDate)}` : "") +
               (m.paymentAmount ? ` | 💰 ${formatVND(m.paymentAmount)}` : "")
             );
           })
@@ -286,7 +287,7 @@ export const contractTools: McpTool[] = [
     name: "update_milestone_status",
     description:
       "Cập nhật trạng thái của một milestone trong hợp đồng. " +
-      "Lưu ý: milestoneId lấy từ kết quả get_contract_detail — nếu response không có id thì hướng dẫn user vào CRM để lấy. " +
+      "Lưu ý: milestoneId lấy từ kết quả get_contract_detail. " +
       "Dùng khi: 'Đánh dấu milestone Triển khai của HĐ-2026-003 đã xong', 'Cập nhật trạng thái bàn giao'.",
     inputSchema: {
       type: "object",

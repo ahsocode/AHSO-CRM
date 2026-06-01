@@ -1,5 +1,5 @@
 import { getApiClient, extractData, extractMeta } from "../auth/api-client.js";
-import { formatDate, formatDateTime, formatRelative } from "../formatters/common.formatter.js";
+import { formatDateTime } from "../formatters/common.formatter.js";
 import type { McpTool } from "./index.js";
 
 function periodToDateRange(period: string): { dateFrom?: string; dateTo?: string; filter?: string } {
@@ -29,6 +29,10 @@ function periodToDateRange(period: string): { dateFrom?: string; dateTo?: string
     default:
       return {};
   }
+}
+
+function taskIdLine(event: CalendarEvent): string {
+  return `    🆔 ID: ${event.id}`;
 }
 
 export const taskTools: McpTool[] = [
@@ -89,6 +93,7 @@ export const taskTools: McpTool[] = [
               due && new Date(due) < new Date() && period !== "today" ? " ⚠️ QUÁ HẠN" : "";
             return (
               `  • ${e.title}${overdue}\n` +
+              `${taskIdLine(e)}\n` +
               `    📅 ${due ? formatDateTime(due) : "Chưa có hạn"}` +
               (e.customer ? ` | 🏢 ${e.customer.name}` : "") +
               (e.project ? ` | ${e.project.name}` : "")
@@ -100,7 +105,7 @@ export const taskTools: McpTool[] = [
       if (done.length) {
         out += `\n\n✅ **Đã hoàn thành (${done.length}):**\n`;
         out += done
-          .map((e) => `  • ~~${e.title}~~`)
+          .map((e) => `  • ~~${e.title}~~\n${taskIdLine(e)}`)
           .join("\n");
       }
 
@@ -275,6 +280,7 @@ export const taskTools: McpTool[] = [
             const assignee = e.user?.name ?? "Chưa phân công";
             return (
               `  • [${assignee}] ${e.title}\n` +
+              `${taskIdLine(e)}\n` +
               `    📅 ${due ? formatDateTime(due) : "Chưa có hạn"}` +
               (e.customer ? ` | 🏢 ${e.customer.name}` : "") +
               (e.project ? ` | ${e.project.name}` : "")
@@ -288,7 +294,7 @@ export const taskTools: McpTool[] = [
         out += done
           .map((e) => {
             const assignee = e.user?.name ?? "Chưa phân công";
-            return `  • ~~[${assignee}] ${e.title}~~`;
+            return `  • ~~[${assignee}] ${e.title}~~\n${taskIdLine(e)}`;
           })
           .join("\n");
       }

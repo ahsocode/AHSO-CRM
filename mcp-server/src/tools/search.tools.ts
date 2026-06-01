@@ -41,7 +41,8 @@ export const searchTools: McpTool[] = [
                 (p) =>
                   `  • ${p.code} — ${p.name}` +
                   (p.status ? ` [${stageLabel(p.status)}]` : "") +
-                  (p.estimatedValue ? ` — ${formatVND(p.estimatedValue)}` : "")
+                  (p.estimatedValue ? ` — ${formatVND(p.estimatedValue)}` : "") +
+                  ` — ID: ${p.id}`
               )
               .join("\n")
         );
@@ -53,7 +54,8 @@ export const searchTools: McpTool[] = [
               .map(
                 (q) =>
                   `  • ${q.quoteNo} [${q.status ?? "—"}]` +
-                  (q.totalAmount ? ` — ${formatVND(q.totalAmount)}` : "")
+                  (q.totalAmount ? ` — ${formatVND(q.totalAmount)}` : "") +
+                  ` — ID: ${q.id}`
               )
               .join("\n")
         );
@@ -65,7 +67,8 @@ export const searchTools: McpTool[] = [
               .map(
                 (c) =>
                   `  • ${c.contractNo} [${c.status ?? "—"}]` +
-                  (c.value ? ` — ${formatVND(c.value)}` : "")
+                  (c.value ? ` — ${formatVND(c.value)}` : "") +
+                  ` — ID: ${c.id}`
               )
               .join("\n")
         );
@@ -73,7 +76,7 @@ export const searchTools: McpTool[] = [
       if (data.activities?.length) {
         sections.push(
           `📋 **Hoạt động (${data.activities.length}):**\n` +
-            data.activities.map((a) => `  • ${a.title} — ${truncate(a.content, 60)}`).join("\n")
+            data.activities.map((a) => `  • ${a.title} — ${truncate(a.content, 60)} — ID: ${a.id}`).join("\n")
         );
       }
 
@@ -179,7 +182,8 @@ export const searchTools: McpTool[] = [
         `📄 **${q.quoteNo}** [Bản nháp]\n` +
         `📁 Dự án: ${project.code} — ${project.name}\n` +
         `🏢 KH: ${project.customer?.name ?? "—"}\n` +
-        `⏳ Hiệu lực: ${validDays} ngày\n\n` +
+        `⏳ Hiệu lực: ${validDays} ngày\n` +
+        `ID: ${q.id}\n\n` +
         `💡 Mở CRM để thêm hạng mục và gửi báo giá.`
       );
     },

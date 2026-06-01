@@ -119,7 +119,7 @@ export const pipelineTools: McpTool[] = [
           .slice(0, 3)
           .map(
             (q) =>
-              `  • ${q.quoteNo} [${q.status}] — ${formatVND(q.totalAmount)} — ${formatDate(q.createdAt)}`
+              `  • ${q.quoteNo} [${q.status}] — ${formatVND(q.totalAmount)} — ${formatDate(q.createdAt)} | ID: ${q.id}`
           )
           .join("\n");
       }
@@ -130,7 +130,7 @@ export const pipelineTools: McpTool[] = [
           .slice(0, 2)
           .map(
             (c) =>
-              `  • ${c.contractNo} [${c.status}] — ${formatVND(c.value)} — Ký: ${formatDate(c.signedAt)}`
+              `  • ${c.contractNo} [${c.status}] — ${formatVND(c.value)} — Ký: ${formatDate(c.signedAt)} | ID: ${c.id}`
           )
           .join("\n");
       }
@@ -139,7 +139,7 @@ export const pipelineTools: McpTool[] = [
         out += `\n\n📋 **Hoạt động gần đây:**\n`;
         out += p.activities
           .slice(0, 3)
-          .map((a) => `  • ${a.title} — ${formatDate(a.createdAt)}`)
+          .map((a) => `  • ${a.title} — ${formatDate(a.createdAt)} | ID: ${a.id}`)
           .join("\n");
       }
 
@@ -303,7 +303,7 @@ interface ProjectDetail {
   description?: string;
   customer?: { name: string };
   assignedTo?: { name?: string; email: string };
-  quotes?: Array<{ quoteNo: string; status: string; totalAmount?: number; createdAt: string }>;
-  contracts?: Array<{ contractNo: string; status: string; value?: number; signedAt?: string }>;
-  activities?: Array<{ title: string; createdAt: string }>;
+  quotes?: Array<{ id: string; quoteNo: string; status: string; totalAmount?: number; createdAt: string }>;
+  contracts?: Array<{ id: string; contractNo: string; status: string; value?: number; signedAt?: string }>;
+  activities?: Array<{ id: string; title: string; createdAt: string }>;
 }

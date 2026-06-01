@@ -93,7 +93,7 @@ export const calendarTools: McpTool[] = [
           out += `  ${timeStr} ${icon} ${title}`;
           if (item.customer) out += ` — ${item.customer.name}`;
           if (item.project) out += ` [${item.project.code ?? item.project.name}]`;
-          out += "\n";
+          out += `\n    🆔 ID: ${item.id}\n`;
         }
         out += "\n";
       }
@@ -137,9 +137,13 @@ export const calendarTools: McpTool[] = [
       if (args["notes"]) payload["notes"] = args["notes"];
 
       const res = await client.post<unknown>("/calendar", payload);
-      const e = extractData<{ type: string; title: string; scheduledAt: string }>(res.data);
+      const e = extractData<{ id: string; type: string; title: string; scheduledAt: string }>(res.data);
 
-      return `✅ Đã lên lịch ${e.type}: "${e.title}" — ${formatDateTime(e.scheduledAt ?? args["scheduledAt"] as string)}`;
+      return (
+        `✅ Đã lên lịch ${e.type}: "${e.title}" — ` +
+        `${formatDateTime(e.scheduledAt ?? args["scheduledAt"] as string)}\n` +
+        `ID: ${e.id}`
+      );
     },
   },
 ];

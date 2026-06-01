@@ -92,12 +92,12 @@ export const customerTools: McpTool[] = [
           : null;
 
       const contacts = c.contacts
-        ?.map((ct) => `  • ${ct.name}${ct.title ? ` (${ct.title})` : ""} — ${ct.phone ?? ct.email ?? "—"}`)
+        ?.map((ct) => `  • ${ct.name}${ct.title ? ` (${ct.title})` : ""} — ${ct.phone ?? ct.email ?? "—"} | ID: ${ct.id}`)
         .join("\n");
 
       const projects = c.projects
         ?.slice(0, 5)
-        .map((p) => `  • ${p.code} — ${p.name} [${stageLabel(p.status)}]`)
+        .map((p) => `  • ${p.code} — ${p.name} [${stageLabel(p.status)}] | ID: ${p.id}`)
         .join("\n");
 
       let out = `🏢 **${c.name}**`;
@@ -215,7 +215,8 @@ export const customerTools: McpTool[] = [
       return (
         `✅ Đã ghi ${activityTypeLabel(a.type)}:\n` +
         `📝 "${a.title}"\n` +
-        `📅 ${formatDate(a.createdAt)}`
+        `📅 ${formatDate(a.createdAt)}\n` +
+        `ID: ${a.id}`
       );
     },
   },
@@ -365,7 +366,10 @@ export const customerTools: McpTool[] = [
       const res = await client.post<unknown>(`/customers/${customerId}/contacts`, payload);
       const c = extractData<NewContact>(res.data);
 
-      return `✅ Đã thêm liên hệ ${c.name}${c.title ? ` (${c.title})` : ""} vào KH ${c.customer?.name ?? ""}`;
+      return (
+        `✅ Đã thêm liên hệ ${c.name}${c.title ? ` (${c.title})` : ""} vào KH ${c.customer?.name ?? ""}\n` +
+        `ID: ${c.id}`
+      );
     },
   },
 ];
@@ -393,8 +397,8 @@ interface CustomerDetail {
   email?: string;
   website?: string;
   notes?: string;
-  contacts?: Array<{ name: string; title?: string; phone?: string; email?: string }>;
-  projects?: Array<{ code: string; name: string; status: string }>;
+  contacts?: Array<{ id: string; name: string; title?: string; phone?: string; email?: string }>;
+  projects?: Array<{ id: string; code: string; name: string; status: string }>;
 }
 
 interface CustomerStats {

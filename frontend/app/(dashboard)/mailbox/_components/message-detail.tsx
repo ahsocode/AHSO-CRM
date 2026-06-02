@@ -11,7 +11,7 @@ import { apiClient, getApiErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { EmailAttachment, EmailMessage } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { sanitizeEmailHtml } from "./email-sanitizer";
+import { replaceCidImageReferences, sanitizeEmailHtml } from "./email-sanitizer";
 
 function formatSize(size: number) {
   if (size >= 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
@@ -96,9 +96,7 @@ export function MessageDetail({
       const cidMap = results.filter((r): r is { cid: string; dataUrl: string } => r !== null);
       let html = message.bodyHtml ?? "";
       for (const { cid, dataUrl } of cidMap) {
-        const escaped = cid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        html = html.replace(new RegExp(`src="cid:${escaped}"`, "gi"), `src="${dataUrl}"`);
-        html = html.replace(new RegExp(`src='cid:${escaped}'`, "gi"), `src='${dataUrl}'`);
+        html = replaceCidImageReferences(html, cid, dataUrl);
       }
       setResolvedHtml(html);
     });

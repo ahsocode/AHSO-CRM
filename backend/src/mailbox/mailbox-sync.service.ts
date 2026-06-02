@@ -9,6 +9,7 @@ import { WebsocketGateway } from "../websocket/websocket.gateway";
 import { ImapService } from "./imap.service";
 import { MailboxSyncQueue } from "./mailbox-sync.queue";
 import { MailboxAddress, ParsedMailboxMessage } from "./mailbox.types";
+import { repairEmailText, repairMailboxAddressName } from "./mojibake.util";
 
 @Injectable()
 export class MailboxSyncService implements OnApplicationBootstrap {
@@ -269,8 +270,8 @@ export class MailboxSyncService implements OnApplicationBootstrap {
     }
     const parsedFrom = this.firstParsedAddress(mail?.from);
     const from = parsedFrom ?? this.firstAddress(message.envelope?.from);
-    const bodyHtml = typeof mail?.html === "string" ? mail.html : null;
-    const bodyText = mail?.text ?? this.stripHtml(bodyHtml ?? "");
+    const bodyHtml = repairEmailText(typeof mail?.html === "string" ? mail.html : null);
+    const bodyText = repairEmailText(mail?.text ?? this.stripHtml(bodyHtml ?? "")) ?? "";
     const snippet = bodyText ? bodyText.replace(/\s+/g, " ").trim().slice(0, 200) : null;
     const attachmentCreates = await this.createAttachmentsFromParsed(mail?.attachments ?? []);
 
@@ -285,7 +286,7 @@ export class MailboxSyncService implements OnApplicationBootstrap {
         toAddresses: this.normalizeParsedAddresses(mail?.to, message.envelope?.to),
         ccAddresses: this.normalizeParsedAddresses(mail?.cc, message.envelope?.cc),
         bccAddresses: this.normalizeParsedAddresses(mail?.bcc, message.envelope?.bcc),
-        subject: mail?.subject ?? message.envelope?.subject ?? null,
+        subject: repairEmailText(mail?.subject ?? message.envelope?.subject ?? null),
         bodyText: bodyText || null,
         bodyHtml,
         snippet,
@@ -306,7 +307,7 @@ export class MailboxSyncService implements OnApplicationBootstrap {
     const creates: Prisma.EmailAttachmentCreateWithoutMessageInput[] = [];
 
     for (const attachment of attachments) {
-      const filename = attachment.filename ?? "attachment";
+      const filename = repairEmailText(attachment.filename) ?? "attachment";
       const mimeType = attachment.contentType ?? "application/octet-stream";
       const size = attachment.size ?? attachment.content?.byteLength ?? 0;
       const cid = attachment.cid?.replace(/^<|>$/g, "") ?? null;
@@ -348,7 +349,7 @@ export class MailboxSyncService implements OnApplicationBootstrap {
     const normalized = addresses
       .filter((address) => Boolean(address.address))
       .map((address) => ({
-        name: address.name ?? null,
+        name: repairMailboxAddressName(address.name),
         email: String(address.address).toLowerCase()
       }));
 
@@ -363,7 +364,7 @@ export class MailboxSyncService implements OnApplicationBootstrap {
     return (addresses ?? [])
       .filter((address) => Boolean(address.address))
       .map((address) => ({
-        name: address.name ?? null,
+        name: repairMailboxAddressName(address.name),
         email: String(address.address).toLowerCase()
       }));
   }

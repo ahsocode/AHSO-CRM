@@ -1,5 +1,22 @@
 import DOMPurify from "dompurify";
 
+export function replaceCidImageReferences(html: string, cid: string, dataUrl: string): string {
+  const cleanCid = cid.replace(/^<|>$/g, "");
+  const variants = new Set([
+    cleanCid,
+    encodeURIComponent(cleanCid),
+    cleanCid.replace(/@/g, "%40")
+  ]);
+
+  let nextHtml = html;
+  for (const variant of variants) {
+    const escaped = variant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    nextHtml = nextHtml.replace(new RegExp(`cid:${escaped}`, "gi"), dataUrl);
+  }
+
+  return nextHtml;
+}
+
 export function sanitizeEmailHtml(html?: string | null, showImages = false): string {
   if (!html) return "";
 
@@ -30,6 +47,7 @@ export function sanitizeEmailHtml(html?: string | null, showImages = false): str
 
   const clean = DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
+    ADD_DATA_URI_TAGS: ["img"],
     FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "meta", "base"],
     // Keep inline styles (needed for email formatting) but filter via hook above
   });

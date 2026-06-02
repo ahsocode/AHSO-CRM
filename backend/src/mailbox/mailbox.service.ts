@@ -18,6 +18,7 @@ import { UpdateSignatureDto } from "./dto/update-signature.dto";
 import { ImapService } from "./imap.service";
 import { MailboxSyncService } from "./mailbox-sync.service";
 import { FolderInfo, MailboxAddress } from "./mailbox.types";
+import { repairEmailText, repairMailboxAddressName } from "./mojibake.util";
 
 type ResolvedEmailAttachment = {
   filename: string;
@@ -304,7 +305,13 @@ export class MailboxService {
         const latestAt = replies.length > 0
           ? replies[replies.length - 1].receivedAt
           : root.receivedAt;
-        return { ...root, replies, replyCount: replies.length, hasUnread, latestAt };
+        return this.repairEmailMessage({
+          ...root,
+          replies: replies.map((reply) => this.repairEmailMessage(reply)),
+          replyCount: replies.length,
+          hasUnread,
+          latestAt
+        });
       }),
     );
 
@@ -348,7 +355,7 @@ export class MailboxService {
     ]);
 
     return {
-      items,
+      items: items.map((message) => this.repairEmailMessage(message)),
       meta: {
         total,
         page: query.page,
@@ -365,7 +372,7 @@ export class MailboxService {
       await this.markRead(userId, messageId, true);
     }
 
-    return this.requireUserMessage(userId, messageId);
+    return this.repairEmailMessage(await this.requireUserMessage(userId, messageId));
   }
 
   async sendEmail(userId: string, dto: SendEmailPayload) {
@@ -486,11 +493,12 @@ export class MailboxService {
 
   async getCustomerEmails(userId: string, customerId: string) {
     const account = await this.requireUserAccount(userId);
-    return this.prisma.emailMessage.findMany({
+    const messages = await this.prisma.emailMessage.findMany({
       where: { accountId: account.id, customerId },
       include: { attachments: true },
       orderBy: { receivedAt: "desc" }
     });
+    return messages.map((message) => this.repairEmailMessage(message));
   }
 
   async syncAllAccounts(user: JwtUser) {
@@ -597,6 +605,58 @@ export class MailboxService {
 
   private toJsonAddresses(emails: string[]): Prisma.InputJsonArray {
     return emails.map((email) => ({ name: null, email }));
+  }
+
+  private repairEmailMessage<T extends {
+    subject?: string | null;
+    fromName?: string | null;
+    bodyText?: string | null;
+    bodyHtml?: string | null;
+    snippet?: string | null;
+    toAddresses?: Prisma.JsonValue;
+    ccAddresses?: Prisma.JsonValue;
+    bccAddresses?: Prisma.JsonValue;
+    attachments?: Array<{ filename: string }>;
+  }>(message: T): T {
+    const repaired = {
+      ...message,
+      subject: repairEmailText(message.subject),
+      fromName: repairMailboxAddressName(message.fromName),
+      bodyText: repairEmailText(message.bodyText),
+      bodyHtml: repairEmailText(message.bodyHtml),
+      snippet: repairEmailText(message.snippet),
+      toAddresses: this.repairJsonAddresses(message.toAddresses),
+      ccAddresses: this.repairJsonAddresses(message.ccAddresses),
+      bccAddresses: this.repairJsonAddresses(message.bccAddresses),
+      attachments: message.attachments?.map((attachment) => ({
+        ...attachment,
+        filename: repairEmailText(attachment.filename) ?? attachment.filename
+      }))
+    };
+
+    return repaired as T;
+  }
+
+  private repairJsonAddresses(value: Prisma.JsonValue | undefined): Prisma.JsonValue | undefined {
+    if (!Array.isArray(value)) {
+      return value;
+    }
+
+    return value.map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        return item;
+      }
+
+      const address = item as Prisma.JsonObject;
+      const name = typeof address["name"] === "string"
+        ? repairMailboxAddressName(address["name"])
+        : address["name"];
+
+      return {
+        ...address,
+        name
+      };
+    }) as Prisma.JsonValue;
   }
 
   private extractJsonEmails(value: Prisma.JsonValue) {

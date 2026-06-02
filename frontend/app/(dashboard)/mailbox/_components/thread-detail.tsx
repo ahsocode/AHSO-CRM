@@ -10,7 +10,7 @@ import { apiClient } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import { EmailThread } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { sanitizeEmailHtml } from "./email-sanitizer";
+import { replaceCidImageReferences, sanitizeEmailHtml } from "./email-sanitizer";
 
 type ComposeMode = "reply" | "replyAll" | "forward";
 
@@ -49,9 +49,7 @@ function MessageBody({ messageId, showImages }: { messageId: string; showImages:
       const cidMap = results.filter((r): r is { cid: string; dataUrl: string } => r !== null);
       let html = query.data?.bodyHtml ?? "";
       for (const { cid, dataUrl } of cidMap) {
-        const escaped = cid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        html = html.replace(new RegExp(`src="cid:${escaped}"`, "gi"), `src="${dataUrl}"`);
-        html = html.replace(new RegExp(`src='cid:${escaped}'`, "gi"), `src='${dataUrl}'`);
+        html = replaceCidImageReferences(html, cid, dataUrl);
       }
       setResolvedHtml(html);
     });

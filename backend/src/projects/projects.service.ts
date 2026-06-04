@@ -9,6 +9,7 @@ import { DomainEventsService } from "../domain-events/domain-events.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
 import { CreatePaymentDto } from "../contracts/dto/create-payment.dto";
 import { DecimalLike, decimalToNumber, sumDecimal, toDecimal } from "../common/utils/decimal";
+import { generateNextStockIssueNo } from "../common/utils/document-number";
 import { BulkProjectDto } from "./dto/bulk-project.dto";
 import { CreateProjectHandoverDto } from "./dto/create-project-handover.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
@@ -1472,6 +1473,7 @@ export class ProjectsService {
         purchaseInvoiceDate: { lte: salesInvoiceDate }
       },
       orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
+      take: dto.limit ?? 200,
       include: {
         warehouse: { select: { id: true, code: true, name: true } },
         material: { select: { id: true, code: true, name: true, unit: true } },
@@ -1602,6 +1604,9 @@ export class ProjectsService {
     await this.findAccessibleProjectRecord(id, user);
 
     return this.prisma.$transaction(async (tx) => {
+      // Serialize concurrent confirms for the same project to prevent double-deduction
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('confirm_material_alloc_' || ${id}))`;
+
       const allocation = await tx.projectMaterialAllocation.findFirst({
         where: { projectId: id, status: "DRAFT" },
         orderBy: { createdAt: "desc" },
@@ -1624,6 +1629,13 @@ export class ProjectsService {
         throw new BadRequestException("Phân bổ vật tư chưa có dòng vật tư");
       }
 
+      // Pass 1: validate balance sufficiency before any mutation
+      for (const item of allocation.items) {
+        const quantity = toDecimal(item.quantity);
+        await this.inventoryBalance.ensureSufficientStock(tx, item.warehouseId, item.materialId, quantity);
+      }
+
+      // Pass 2: deduct lots and adjust balance
       for (const item of allocation.items) {
         const quantity = toDecimal(item.quantity);
         const updated = await tx.stockLot.updateMany({
@@ -1643,7 +1655,6 @@ export class ProjectsService {
           );
         }
 
-        await this.inventoryBalance.ensureSufficientStock(tx, item.warehouseId, item.materialId, quantity);
         await this.inventoryBalance.adjustBalance(tx, item.warehouseId, item.materialId, quantity.negated());
       }
 
@@ -2599,18 +2610,8 @@ export class ProjectsService {
     };
   }
 
-  private async generateNextIssueNo(tx: Prisma.TransactionClient): Promise<string> {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('stock_issue_number'))`;
-    const year = new Date().getFullYear();
-    const prefix = `PX-${year}-`;
-    const latest = await tx.stockIssue.findFirst({
-      where: { issueNo: { startsWith: prefix } },
-      orderBy: { issueNo: "desc" },
-      select: { issueNo: true }
-    });
-    const seq = latest?.issueNo.split("-").at(-1);
-    const next = seq ? Number.parseInt(seq, 10) + 1 : 1;
-    return `${prefix}${String(next).padStart(3, "0")}`;
+  private generateNextIssueNo(tx: Prisma.TransactionClient): Promise<string> {
+    return generateNextStockIssueNo(tx);
   }
 
   private async findDeletedAccessibleProjectRecord(id: string, user: JwtUser) {

@@ -372,7 +372,7 @@ export class MailboxService {
       await this.markRead(userId, messageId, true);
     }
 
-    return this.repairEmailMessage(await this.requireUserMessage(userId, messageId));
+    return this.repairEmailMessage(message);
   }
 
   async sendEmail(userId: string, dto: SendEmailPayload) {
@@ -607,6 +607,10 @@ export class MailboxService {
     return emails.map((email) => ({ name: null, email }));
   }
 
+  // Applied on both write path (mailbox-sync.service.ts) and read path here as a migration
+  // fallback for messages stored before the mojibake fix was deployed. Safe to call twice
+  // because repairEmailText is idempotent: already-clean strings exit the guard immediately.
+  // TODO: Remove read-path calls after a one-time DB backfill migration repairs existing rows.
   private repairEmailMessage<T extends {
     subject?: string | null;
     fromName?: string | null;

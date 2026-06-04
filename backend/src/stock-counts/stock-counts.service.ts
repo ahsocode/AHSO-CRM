@@ -248,6 +248,7 @@ export class StockCountsService {
     return `${prefix}${String(next).padStart(3, "0")}`;
   }
 
+  // Delegates to InventoryBalanceService.consumeStockLots (shared FIFO logic)
   private async consumeStockLots(
     tx: Prisma.TransactionClient,
     warehouseId: string,
@@ -255,41 +256,7 @@ export class StockCountsService {
     quantity: Decimal,
     countDate: Date
   ) {
-    let remaining = quantity;
-    const lots = await tx.stockLot.findMany({
-      where: {
-        warehouseId,
-        materialId,
-        remainingQuantity: { gt: 0 },
-        purchaseInvoiceDate: { lte: countDate }
-      },
-      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
-      select: { id: true, remainingQuantity: true }
-    });
-
-    for (const lot of lots) {
-      if (remaining.lessThanOrEqualTo(0)) break;
-
-      const available = new Decimal(lot.remainingQuantity);
-      const consume = Decimal.min(available, remaining);
-      const updated = await tx.stockLot.updateMany({
-        where: {
-          id: lot.id,
-          remainingQuantity: { gte: consume }
-        },
-        data: { remainingQuantity: { decrement: consume } }
-      });
-
-      if (updated.count !== 1) {
-        throw new BadRequestException("Lô kiểm kê không còn đủ tồn");
-      }
-
-      remaining = remaining.minus(consume);
-    }
-
-    if (remaining.greaterThan(0)) {
-      throw new BadRequestException("Không tìm thấy đủ lô nhập hợp lệ để giảm tồn kiểm kê");
-    }
+    await this.inventoryBalance.consumeStockLots(tx, warehouseId, materialId, quantity, countDate);
   }
 
   private async createAdjustmentLot(

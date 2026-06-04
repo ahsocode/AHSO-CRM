@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { JwtUser } from "../auth/auth.types";
+import { generateNextStockIssueNo } from "../common/utils/document-number";
 import { PrismaService } from "../common/prisma.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
 import { CreateStockIssueDto } from "./dto/create-stock-issue.dto";
@@ -211,18 +212,8 @@ export class StockIssuesService {
     return where;
   }
 
-  private async generateNextIssueNo(tx: Prisma.TransactionClient): Promise<string> {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('stock_issue_number'))`;
-    const year = new Date().getFullYear();
-    const prefix = `PX-${year}-`;
-    const latest = await tx.stockIssue.findFirst({
-      where: { issueNo: { startsWith: prefix } },
-      orderBy: { issueNo: "desc" },
-      select: { issueNo: true },
-    });
-    const seq = latest?.issueNo.split("-").at(-1);
-    const next = seq ? Number.parseInt(seq, 10) + 1 : 1;
-    return `${prefix}${String(next).padStart(3, "0")}`;
+  private generateNextIssueNo(tx: Prisma.TransactionClient): Promise<string> {
+    return generateNextStockIssueNo(tx);
   }
 
   private calculateLineTotal(quantity: number, unitPrice: number) {
@@ -236,6 +227,7 @@ export class StockIssuesService {
     );
   }
 
+  // Delegates to InventoryBalanceService.consumeStockLots (shared FIFO logic)
   private async consumeStockLots(
     tx: Prisma.TransactionClient,
     warehouseId: string,
@@ -243,38 +235,6 @@ export class StockIssuesService {
     quantity: Decimal,
     issueDate: Date
   ) {
-    let remaining = quantity;
-    const lots = await tx.stockLot.findMany({
-      where: {
-        warehouseId,
-        materialId,
-        remainingQuantity: { gt: 0 },
-        purchaseInvoiceDate: { lte: issueDate }
-      },
-      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
-      select: { id: true, remainingQuantity: true }
-    });
-
-    for (const lot of lots) {
-      if (remaining.lessThanOrEqualTo(0)) break;
-
-      const available = new Decimal(lot.remainingQuantity);
-      const consume = Decimal.min(available, remaining);
-      const updated = await tx.stockLot.updateMany({
-        where: {
-          id: lot.id,
-          remainingQuantity: { gte: consume }
-        },
-        data: { remainingQuantity: { decrement: consume } }
-      });
-      if (updated.count !== 1) {
-        throw new NotFoundException("Lô xuất kho không còn đủ tồn");
-      }
-      remaining = remaining.minus(consume);
-    }
-
-    if (remaining.greaterThan(0)) {
-      throw new NotFoundException("Không tìm thấy đủ lô nhập hợp lệ để xuất kho");
-    }
+    await this.inventoryBalance.consumeStockLots(tx, warehouseId, materialId, quantity, issueDate);
   }
 }

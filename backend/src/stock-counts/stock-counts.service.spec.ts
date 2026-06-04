@@ -12,6 +12,7 @@ describe("StockCountsService", () => {
     adjustBalance: jest.Mock;
     updateAverageCostPrice: jest.Mock;
     ensureSufficientStock: jest.Mock;
+    consumeStockLots: jest.Mock;
   };
   let prisma: {
     $transaction: jest.Mock;
@@ -40,6 +41,7 @@ describe("StockCountsService", () => {
       adjustBalance: jest.fn().mockResolvedValue(undefined),
       updateAverageCostPrice: jest.fn().mockResolvedValue(undefined),
       ensureSufficientStock: jest.fn().mockResolvedValue(undefined),
+      consumeStockLots: jest.fn().mockResolvedValue(undefined),
     };
     prisma = {
       $transaction: jest.fn().mockImplementation((fnOrArr) => {

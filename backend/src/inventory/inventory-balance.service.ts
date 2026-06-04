@@ -241,4 +241,47 @@ export class InventoryBalanceService {
       warehouseCount,
     };
   }
+
+  // Shared FIFO lot consumption used by stock-issues, stock-counts, and projects.
+  // Deducts `quantity` from the oldest eligible lots (purchaseInvoiceDate <= referenceDate)
+  // in the given warehouse. Throws BadRequestException if stock is insufficient.
+  async consumeStockLots(
+    tx: Prisma.TransactionClient,
+    warehouseId: string,
+    materialId: string,
+    quantity: Decimal,
+    referenceDate: Date
+  ): Promise<void> {
+    let remaining = quantity;
+    const lots = await tx.stockLot.findMany({
+      where: {
+        warehouseId,
+        materialId,
+        remainingQuantity: { gt: 0 },
+        purchaseInvoiceDate: { lte: referenceDate }
+      },
+      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
+      select: { id: true, remainingQuantity: true }
+    });
+
+    for (const lot of lots) {
+      if (remaining.lessThanOrEqualTo(0)) break;
+
+      const available = new Decimal(lot.remainingQuantity);
+      const consume = Decimal.min(available, remaining);
+      const updated = await tx.stockLot.updateMany({
+        where: { id: lot.id, remainingQuantity: { gte: consume } },
+        data: { remainingQuantity: { decrement: consume } }
+      });
+
+      if (updated.count !== 1) {
+        throw new BadRequestException("Lô nhập không còn đủ tồn khi xử lý");
+      }
+      remaining = remaining.minus(consume);
+    }
+
+    if (remaining.greaterThan(0)) {
+      throw new BadRequestException("Không tìm thấy đủ lô nhập hợp lệ để trừ tồn kho");
+    }
+  }
 }

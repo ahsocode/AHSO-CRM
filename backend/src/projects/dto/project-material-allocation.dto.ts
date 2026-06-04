@@ -13,7 +13,8 @@ const optionalString = (maxLength: number) =>
   z.preprocess(emptyToUndefined, z.string().trim().max(maxLength).optional());
 
 export const eligibleStockLotsSchema = z.object({
-  salesInvoiceDate: z.preprocess(emptyToUndefined, z.coerce.date().optional())
+  salesInvoiceDate: z.preprocess(emptyToUndefined, z.coerce.date().optional()),
+  limit: z.coerce.number().int().min(1).max(500).default(200).optional()
 });
 
 export const projectMaterialAllocationItemSchema = z.object({

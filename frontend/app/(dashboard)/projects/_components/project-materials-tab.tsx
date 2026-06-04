@@ -156,6 +156,8 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
                 ) : (
                   rows.map((row, index) => {
                     const lot = lotById.get(row.stockLotId);
+                    // Lot not in eligible list means it's no longer available (fully consumed or date mismatch)
+                    const isLotUnavailable = row.stockLotId !== "" && !eligibleLots.data?.some(l => l.id === row.stockLotId);
                     return (
                       <div key={index} className="grid gap-3 rounded-lg border border-border/50 p-3 lg:grid-cols-[1fr_140px_84px]">
                         <Select
@@ -182,7 +184,8 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
                           type="number"
                           min={0.001}
                           step="0.001"
-                          max={lot?.remainingQuantity}
+                          max={isLotUnavailable ? undefined : lot?.remainingQuantity}
+                          disabled={isLotUnavailable}
                           value={row.quantity || ""}
                           onChange={(event) => {
                             const quantity = Number(event.target.value);
@@ -198,7 +201,11 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
                         >
                           Xóa
                         </Button>
-                        {lot ? (
+                        {isLotUnavailable ? (
+                          <div className="text-xs text-danger lg:col-span-3">
+                            ⚠️ Lô này không còn trong danh sách hợp lệ (đã hết tồn hoặc sai ngày) — xóa và chọn lô khác.
+                          </div>
+                        ) : lot ? (
                           <div className="text-xs text-text-secondary lg:col-span-3">
                             {lot.receipt ? `Phiếu nhập ${lot.receipt.receiptNo}` : "Lô điều chỉnh kiểm kê"}
                             {lot.purchaseInvoiceNo ? ` · HĐ mua ${lot.purchaseInvoiceNo}` : ""}

@@ -154,6 +154,14 @@ export class StockTransfersService {
       // Second pass: adjust balances
       for (const item of transfer.items) {
         const qty = new Decimal(item.quantity);
+        await this.moveStockLots(
+          tx,
+          transfer.fromWarehouseId,
+          transfer.toWarehouseId,
+          item.materialId,
+          qty,
+          transfer.date
+        );
         await this.inventoryBalance.adjustBalance(tx, transfer.fromWarehouseId, item.materialId, qty.negated());
         await this.inventoryBalance.adjustBalance(tx, transfer.toWarehouseId, item.materialId, qty);
       }
@@ -232,5 +240,72 @@ export class StockTransfersService {
     const seq = latest?.transferNo.split("-").at(-1);
     const next = seq ? Number.parseInt(seq, 10) + 1 : 1;
     return `${prefix}${String(next).padStart(3, "0")}`;
+  }
+
+  private async moveStockLots(
+    tx: Prisma.TransactionClient,
+    fromWarehouseId: string,
+    toWarehouseId: string,
+    materialId: string,
+    quantity: Decimal,
+    transferDate: Date
+  ) {
+    let remaining = quantity;
+    const lots = await tx.stockLot.findMany({
+      where: {
+        warehouseId: fromWarehouseId,
+        materialId,
+        remainingQuantity: { gt: 0 },
+        purchaseInvoiceDate: { lte: transferDate }
+      },
+      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        stockReceiptItemId: true,
+        purchaseInvoiceDate: true,
+        purchaseInvoiceNo: true,
+        remainingQuantity: true,
+        unitPrice: true
+      }
+    });
+
+    for (const lot of lots) {
+      if (remaining.lessThanOrEqualTo(0)) break;
+
+      const available = new Decimal(lot.remainingQuantity);
+      const moveQuantity = Decimal.min(available, remaining);
+      const updated = await tx.stockLot.updateMany({
+        where: {
+          id: lot.id,
+          remainingQuantity: { gte: moveQuantity }
+        },
+        data: {
+          remainingQuantity: { decrement: moveQuantity }
+        }
+      });
+
+      if (updated.count !== 1) {
+        throw new BadRequestException("Lô chuyển kho không còn đủ tồn");
+      }
+
+      await tx.stockLot.create({
+        data: {
+          stockReceiptItemId: lot.stockReceiptItemId,
+          warehouseId: toWarehouseId,
+          materialId,
+          purchaseInvoiceDate: lot.purchaseInvoiceDate,
+          purchaseInvoiceNo: lot.purchaseInvoiceNo,
+          receivedQuantity: moveQuantity,
+          remainingQuantity: moveQuantity,
+          unitPrice: lot.unitPrice
+        }
+      });
+
+      remaining = remaining.minus(moveQuantity);
+    }
+
+    if (remaining.greaterThan(0)) {
+      throw new BadRequestException("Không tìm thấy đủ lô nhập hợp lệ để chuyển kho");
+    }
   }
 }

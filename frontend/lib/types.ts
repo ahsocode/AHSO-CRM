@@ -629,6 +629,7 @@ export interface ProjectUpsertInput {
   startDate?: string;
   expectedEndDate?: string;
   completedAt?: string;
+  salesInvoiceDate?: string;
   notes?: string;
   customFieldValues?: CustomFieldValues;
 }
@@ -636,6 +637,7 @@ export interface ProjectUpsertInput {
 export interface ProjectStatusUpdateInput {
   status: ProjectStatus;
   completedAt?: string;
+  salesInvoiceDate?: string;
 }
 
 export interface ProjectDetailCustomer {
@@ -727,6 +729,7 @@ export interface ProjectDetail {
   startDate?: string | null;
   expectedEndDate?: string | null;
   completedAt?: string | null;
+  salesInvoiceDate?: string | null;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1987,6 +1990,7 @@ export interface StockReceiptListItem {
   id: string;
   receiptNo: string;
   date: string;
+  purchaseInvoiceNo?: string | null;
   status: StockDocStatus;
   totalAmount: number;
   warehouse: { id: string; name: string };
@@ -2031,6 +2035,61 @@ export interface StockIssueListMeta {
   page: number;
   limit: number;
   totalPages: number;
+}
+
+export type ProjectMaterialAllocationStatus = "DRAFT" | "CONFIRMED" | "CANCELLED";
+
+export interface EligibleStockLot {
+  id: string;
+  warehouseId: string;
+  warehouse: { id: string; code: string; name: string };
+  materialId: string;
+  material: { id: string; code: string; name: string; unit: string };
+  receipt: { id: string; receiptNo: string; date: string; purchaseInvoiceNo?: string | null } | null;
+  purchaseInvoiceDate: string;
+  purchaseInvoiceNo?: string | null;
+  receivedQuantity: number;
+  remainingQuantity: number;
+  unitPrice: number;
+  value: number;
+}
+
+export interface ProjectMaterialAllocationItem {
+  id: string;
+  stockLotId: string;
+  warehouseId: string;
+  warehouse: { id: string; code: string; name: string };
+  materialId: string;
+  material: { id: string; code: string; name: string; unit: string };
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  purchaseInvoiceDate: string;
+  purchaseInvoiceNo?: string | null;
+  receipt: { id: string; receiptNo: string; date: string; purchaseInvoiceNo?: string | null } | null;
+  remainingQuantity: number;
+}
+
+export interface ProjectMaterialAllocation {
+  id: string;
+  projectId: string;
+  salesInvoiceDate: string;
+  status: ProjectMaterialAllocationStatus;
+  notes?: string | null;
+  confirmedAt?: string | null;
+  cancelledAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  totalAmount: number;
+  items: ProjectMaterialAllocationItem[];
+  stockIssues: Array<{
+    id: string;
+    issueNo: string;
+    warehouseId: string;
+    date: string;
+    status: StockDocStatus;
+    totalAmount: number;
+  }>;
 }
 
 // Stock Transfers

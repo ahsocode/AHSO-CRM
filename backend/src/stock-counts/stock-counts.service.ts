@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { JwtUser } from "../auth/auth.types";
@@ -177,6 +177,11 @@ export class StockCountsService {
 
       for (const item of count.items) {
         const diff = new Decimal(item.diff);
+        if (diff.lessThan(0)) {
+          await this.consumeStockLots(tx, count.warehouseId, item.materialId, diff.abs(), count.date);
+        } else if (diff.greaterThan(0)) {
+          await this.createAdjustmentLot(tx, count.warehouseId, item.materialId, diff, count.date);
+        }
         await this.inventoryBalance.adjustBalance(tx, count.warehouseId, item.materialId, diff);
       }
 
@@ -241,5 +246,74 @@ export class StockCountsService {
     const seq = latest?.countNo.split("-").at(-1);
     const next = seq ? Number.parseInt(seq, 10) + 1 : 1;
     return `${prefix}${String(next).padStart(3, "0")}`;
+  }
+
+  private async consumeStockLots(
+    tx: Prisma.TransactionClient,
+    warehouseId: string,
+    materialId: string,
+    quantity: Decimal,
+    countDate: Date
+  ) {
+    let remaining = quantity;
+    const lots = await tx.stockLot.findMany({
+      where: {
+        warehouseId,
+        materialId,
+        remainingQuantity: { gt: 0 },
+        purchaseInvoiceDate: { lte: countDate }
+      },
+      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
+      select: { id: true, remainingQuantity: true }
+    });
+
+    for (const lot of lots) {
+      if (remaining.lessThanOrEqualTo(0)) break;
+
+      const available = new Decimal(lot.remainingQuantity);
+      const consume = Decimal.min(available, remaining);
+      const updated = await tx.stockLot.updateMany({
+        where: {
+          id: lot.id,
+          remainingQuantity: { gte: consume }
+        },
+        data: { remainingQuantity: { decrement: consume } }
+      });
+
+      if (updated.count !== 1) {
+        throw new BadRequestException("Lô kiểm kê không còn đủ tồn");
+      }
+
+      remaining = remaining.minus(consume);
+    }
+
+    if (remaining.greaterThan(0)) {
+      throw new BadRequestException("Không tìm thấy đủ lô nhập hợp lệ để giảm tồn kiểm kê");
+    }
+  }
+
+  private async createAdjustmentLot(
+    tx: Prisma.TransactionClient,
+    warehouseId: string,
+    materialId: string,
+    quantity: Decimal,
+    countDate: Date
+  ) {
+    const material = await tx.material.findUnique({
+      where: { id: materialId },
+      select: { costPrice: true }
+    });
+
+    await tx.stockLot.create({
+      data: {
+        warehouseId,
+        materialId,
+        purchaseInvoiceDate: countDate,
+        purchaseInvoiceNo: null,
+        receivedQuantity: quantity,
+        remainingQuantity: quantity,
+        unitPrice: material?.costPrice ?? 0
+      }
+    });
   }
 }

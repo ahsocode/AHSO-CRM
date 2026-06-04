@@ -42,6 +42,7 @@ const lineItemSchema = z.object({
 
 const receiptFormSchema = z.object({
   date: z.string().min(1, "Ngày là bắt buộc"),
+  purchaseInvoiceNo: z.string().max(100).optional(),
   warehouseId: z.string().min(1, "Chọn kho"),
   supplierId: z.string().optional(),
   notes: z.string().optional(),
@@ -70,6 +71,7 @@ export function StockReceiptFormScreen({
     resolver: zodResolver(receiptFormSchema),
     defaultValues: {
       date: new Date().toISOString().slice(0, 10),
+      purchaseInvoiceNo: "",
       warehouseId: "",
       supplierId: "",
       notes: "",
@@ -82,6 +84,7 @@ export function StockReceiptFormScreen({
       const r = receiptQuery.data;
       form.reset({
         date: r.date.slice(0, 10),
+        purchaseInvoiceNo: r.purchaseInvoiceNo ?? "",
         warehouseId: r.warehouse.id,
         supplierId: r.supplier?.id ?? "",
         notes: r.notes ?? "",
@@ -146,6 +149,7 @@ export function StockReceiptFormScreen({
         onSubmit={form.handleSubmit((values) => {
           const payload = {
             date: values.date,
+            purchaseInvoiceNo: values.purchaseInvoiceNo || undefined,
             warehouseId: values.warehouseId,
             supplierId: values.supplierId || undefined,
             notes: values.notes || undefined,
@@ -198,9 +202,20 @@ export function StockReceiptFormScreen({
               </Field>
 
               <Field>
-                <Label htmlFor="date">Ngày nhập *</Label>
+                <Label htmlFor="date">Ngày hóa đơn mua / ngày nhập *</Label>
                 <Input id="date" type="date" disabled={!isEditable} {...form.register("date")} />
                 <ErrorText message={form.formState.errors.date?.message} />
+              </Field>
+
+              <Field>
+                <Label htmlFor="purchaseInvoiceNo">Số hóa đơn mua</Label>
+                <Input
+                  id="purchaseInvoiceNo"
+                  disabled={!isEditable}
+                  placeholder="VD: 000123"
+                  {...form.register("purchaseInvoiceNo")}
+                />
+                <ErrorText message={form.formState.errors.purchaseInvoiceNo?.message} />
               </Field>
 
               <Field className="md:col-span-2">

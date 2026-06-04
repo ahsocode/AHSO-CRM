@@ -22,6 +22,11 @@ describe("StockTransfersService", () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+    stockLot: {
+      findMany: jest.Mock;
+      updateMany: jest.Mock;
+      create: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -41,6 +46,11 @@ describe("StockTransfersService", () => {
         count: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      stockLot: {
+        findMany: jest.fn(),
+        updateMany: jest.fn(),
+        create: jest.fn(),
       },
     };
     service = new StockTransfersService(
@@ -81,6 +91,7 @@ describe("StockTransfersService", () => {
         id: "t1",
         fromWarehouseId: "wh-from",
         toWarehouseId: "wh-to",
+        date: new Date("2026-05-05T00:00:00.000Z"),
         status: "DRAFT",
         items: [
           { materialId: "mat-1", quantity: new Decimal(10) },
@@ -94,6 +105,20 @@ describe("StockTransfersService", () => {
             ...prisma.stockTransfer,
             findFirst: jest.fn().mockResolvedValue(transfer),
             update: jest.fn().mockResolvedValue({ id: "t1", transferNo: "PCT-2026-001", status: "CONFIRMED", confirmedAt: new Date() }),
+          },
+          stockLot: {
+            findMany: jest.fn().mockResolvedValue([
+              {
+                id: "lot-1",
+                stockReceiptItemId: "ri-1",
+                purchaseInvoiceDate: new Date("2026-05-01T00:00:00.000Z"),
+                purchaseInvoiceNo: "HDM-001",
+                remainingQuantity: new Decimal(10),
+                unitPrice: new Decimal(50000),
+              },
+            ]),
+            updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+            create: jest.fn().mockResolvedValue({}),
           },
         };
         return fn(txMock);

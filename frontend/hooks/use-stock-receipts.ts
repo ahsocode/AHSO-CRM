@@ -29,6 +29,7 @@ export interface StockReceiptLineItemInput {
 
 export interface StockReceiptCreateInput {
   date: string;
+  purchaseInvoiceNo?: string;
   warehouseId: string;
   supplierId?: string;
   notes?: string;

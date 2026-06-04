@@ -90,7 +90,8 @@ export class StockReceiptsService {
           receiptNo,
           warehouseId: dto.warehouseId,
           supplierId: dto.supplierId,
-          date: dto.date,
+        date: dto.date,
+          purchaseInvoiceNo: dto.purchaseInvoiceNo,
           notes: dto.notes,
           totalAmount,
           createdById: user.sub,
@@ -125,6 +126,7 @@ export class StockReceiptsService {
           warehouseId: dto.warehouseId,
           supplierId: dto.supplierId,
           date: dto.date,
+          purchaseInvoiceNo: dto.purchaseInvoiceNo,
           notes: dto.notes,
           totalAmount,
           items: {
@@ -155,6 +157,18 @@ export class StockReceiptsService {
         const price = new Decimal(item.unitPrice);
         await this.inventoryBalance.adjustBalance(tx, receipt.warehouseId, item.materialId, qty);
         await this.inventoryBalance.updateAverageCostPrice(tx, item.materialId, qty, price);
+        await tx.stockLot.create({
+          data: {
+            stockReceiptItemId: item.id,
+            warehouseId: receipt.warehouseId,
+            materialId: item.materialId,
+            purchaseInvoiceDate: receipt.date,
+            purchaseInvoiceNo: receipt.purchaseInvoiceNo,
+            receivedQuantity: qty,
+            remainingQuantity: qty,
+            unitPrice: price
+          }
+        });
       }
 
       return tx.stockReceipt.update({

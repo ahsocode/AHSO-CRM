@@ -99,18 +99,26 @@ export class InventoryBalanceService {
 
     type BalanceRow = Prisma.StockBalanceGetPayload<{ include: typeof include }>;
 
-    const mapBalance = (b: BalanceRow) => ({
-      id: b.id, warehouseId: b.warehouseId, warehouse: b.warehouse,
-      materialId: b.materialId,
-      material: {
-        ...b.material,
-        minStock: b.material.minStock !== null ? decimalToNumber(b.material.minStock) : null,
-        costPrice: decimalToNumber(b.material.costPrice),
-      },
-      quantity: decimalToNumber(b.quantity),
-      isLowStock: b.material.minStock !== null ? toDecimal(b.quantity).lessThan(b.material.minStock) : false,
-      updatedAt: b.updatedAt,
-    });
+    const mapBalance = (b: BalanceRow) => {
+      const quantity = toDecimal(b.quantity);
+      const costPrice = toDecimal(b.material.costPrice);
+
+      return {
+        id: b.id,
+        warehouseId: b.warehouseId,
+        warehouse: b.warehouse,
+        materialId: b.materialId,
+        material: {
+          ...b.material,
+          minStock: b.material.minStock !== null ? decimalToNumber(b.material.minStock) : null,
+          costPrice: decimalToNumber(b.material.costPrice),
+        },
+        quantity: decimalToNumber(quantity),
+        value: decimalToNumber(quantity.mul(costPrice).toDecimalPlaces(0)),
+        isLowStock: b.material.minStock !== null ? quantity.lessThan(b.material.minStock) : false,
+        updatedAt: b.updatedAt,
+      };
+    };
 
     if (filters.lowStockOnly) {
       const filterSql = Prisma.sql`
@@ -180,6 +188,7 @@ export class InventoryBalanceService {
             costPrice: decimalToNumber(row.costPrice),
           },
           quantity: decimalToNumber(row.quantity),
+          value: decimalToNumber(toDecimal(row.quantity).mul(row.costPrice).toDecimalPlaces(0)),
           isLowStock: true,
           updatedAt: row.updatedAt,
         })),

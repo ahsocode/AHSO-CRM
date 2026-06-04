@@ -157,6 +157,7 @@ export class StockIssuesService {
 
       for (const item of issue.items) {
         const qty = new Decimal(item.quantity);
+        await this.consumeStockLots(tx, issue.warehouseId, item.materialId, qty, issue.date);
         await this.inventoryBalance.adjustBalance(tx, issue.warehouseId, item.materialId, qty.negated());
       }
 
@@ -233,5 +234,47 @@ export class StockIssuesService {
       (sum, item) => sum.plus(this.calculateLineTotal(item.quantity, item.unitPrice)),
       new Decimal(0)
     );
+  }
+
+  private async consumeStockLots(
+    tx: Prisma.TransactionClient,
+    warehouseId: string,
+    materialId: string,
+    quantity: Decimal,
+    issueDate: Date
+  ) {
+    let remaining = quantity;
+    const lots = await tx.stockLot.findMany({
+      where: {
+        warehouseId,
+        materialId,
+        remainingQuantity: { gt: 0 },
+        purchaseInvoiceDate: { lte: issueDate }
+      },
+      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
+      select: { id: true, remainingQuantity: true }
+    });
+
+    for (const lot of lots) {
+      if (remaining.lessThanOrEqualTo(0)) break;
+
+      const available = new Decimal(lot.remainingQuantity);
+      const consume = Decimal.min(available, remaining);
+      const updated = await tx.stockLot.updateMany({
+        where: {
+          id: lot.id,
+          remainingQuantity: { gte: consume }
+        },
+        data: { remainingQuantity: { decrement: consume } }
+      });
+      if (updated.count !== 1) {
+        throw new NotFoundException("Lô xuất kho không còn đủ tồn");
+      }
+      remaining = remaining.minus(consume);
+    }
+
+    if (remaining.greaterThan(0)) {
+      throw new NotFoundException("Không tìm thấy đủ lô nhập hợp lệ để xuất kho");
+    }
   }
 }

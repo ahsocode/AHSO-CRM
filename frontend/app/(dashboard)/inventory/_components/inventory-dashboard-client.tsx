@@ -24,6 +24,7 @@ const QUICK_LINKS: Array<{ href: Route; label: string; icon: "plus" | "delete" |
 
 export function InventoryDashboardClient() {
   const summary = useInventorySummary();
+  const balances = useInventoryBalances({ limit: 20 });
   const lowStock = useInventoryBalances({ lowStockOnly: true, limit: 10 });
 
   return (
@@ -85,6 +86,86 @@ export function InventoryDashboardClient() {
           </Link>
         ))}
       </div>
+
+      {/* Stock balance table */}
+      <Card className="border border-white/70">
+        <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="v2-label text-primary">Tồn kho</p>
+            <CardTitle>Tồn kho hiện có</CardTitle>
+          </div>
+          {(balances.data?.items.length ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={async () => {
+                const items = balances.data?.items ?? [];
+                const rows = items.map((item) => ({
+                  "Mã vật tư": item.material.code,
+                  "Tên vật tư": item.material.name,
+                  "Kho": item.warehouse.name,
+                  "Đơn vị": item.material.unit,
+                  "Tồn hiện tại": item.quantity,
+                  "Tồn tối thiểu": item.material.minStock ?? "",
+                  "Giá trị tồn": item.value,
+                  "Trạng thái": item.isLowStock ? "Tồn thấp" : "An toàn",
+                }));
+                await downloadExcelRows("ton-kho-hien-co.xlsx", rows);
+              }}
+              className={cn(buttonVariants({ variant: "outline" }), "hidden text-sm md:inline-flex")}
+            >
+              Xuất Excel
+            </button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {balances.isLoading ? (
+            <LoadingSkeleton className="h-48 w-full" />
+          ) : !balances.data?.items.length ? (
+            <p className="py-8 text-center text-sm text-text-secondary">
+              Chưa có tồn kho. Hãy xác nhận phiếu nhập kho hoặc kiểm kê để phát sinh số dư.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                    <th className="pb-3 pr-4">Vật tư</th>
+                    <th className="pb-3 pr-4">Kho</th>
+                    <th className="pb-3 pr-4 text-right">Tồn hiện tại</th>
+                    <th className="pb-3 pr-4 text-right">Tồn tối thiểu</th>
+                    <th className="pb-3 text-right">Giá trị</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {balances.data.items.map((item) => (
+                    <tr key={`${item.warehouseId}-${item.materialId}`} className={item.isLowStock ? "bg-accent-bg/30" : ""}>
+                      <td className="py-2.5 pr-4">
+                        <p className="font-semibold text-text-primary">{item.material.name}</p>
+                        <p className="text-xs text-text-muted">{item.material.code}</p>
+                      </td>
+                      <td className="py-2.5 pr-4 text-text-secondary">{item.warehouse.name}</td>
+                      <td className="py-2.5 pr-4 text-right font-semibold text-text-primary">
+                        {item.quantity} {item.material.unit}
+                      </td>
+                      <td className="py-2.5 pr-4 text-right text-text-secondary">
+                        {item.material.minStock ?? "—"} {item.material.unit}
+                      </td>
+                      <td className="py-2.5 text-right font-semibold text-primary">{formatVND(item.value)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {balances.data.meta.total > balances.data.items.length && (
+                <div className="mt-4 text-right">
+                  <Link href={"/materials" as Route} className="text-sm font-semibold text-primary hover:text-primary-dark">
+                    Xem tất cả vật tư
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Low stock table */}
       <Card className="border border-white/70">

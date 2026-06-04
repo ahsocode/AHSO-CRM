@@ -237,6 +237,7 @@ model Project {
   startDate         DateTime?
   expectedEndDate   DateTime?
   completedAt       DateTime?
+  salesInvoiceDate  DateTime?
   notes             String?
   deletedAt         DateTime?
   customer          Customer           @relation(fields: [customerId], references: [id])
@@ -254,6 +255,7 @@ model Project {
   handovers         ProjectHandover[]
   documentRequirements ProjectDocumentRequirement[]
   stockIssues       StockIssue[]
+  materialAllocations ProjectMaterialAllocation[]
   payments          Payment[]
 
   @@index([customerId, deletedAt])
@@ -864,6 +866,12 @@ enum StockDocStatus {
   CANCELLED
 }
 
+enum ProjectMaterialAllocationStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
 model Supplier {
   id          String    @id @default(cuid())
   code        String    @unique
@@ -917,8 +925,10 @@ model Material {
 
   suppliers          MaterialSupplier[]
   stockBalances      StockBalance[]
+  stockLots          StockLot[]
   stockReceiptItems  StockReceiptItem[]
   stockIssueItems    StockIssueItem[]
+  projectAllocationItems ProjectMaterialAllocationItem[]
   stockTransferItems StockTransferItem[]
   stockCountItems    StockCountItem[]
   quoteItems         QuoteItem[]
@@ -956,8 +966,10 @@ model Warehouse {
   updatedAt DateTime  @updatedAt
 
   stockBalances StockBalance[]
+  stockLots     StockLot[]
   receipts      StockReceipt[]
   issues        StockIssue[]
+  projectAllocationItems ProjectMaterialAllocationItem[]
   transfersFrom StockTransfer[] @relation("TransferFromWarehouse")
   transfersTo   StockTransfer[] @relation("TransferToWarehouse")
   stockCounts   StockCount[]
@@ -986,6 +998,7 @@ model StockReceipt {
   supplierId  String?
   supplier    Supplier?      @relation(fields: [supplierId], references: [id])
   date        DateTime
+  purchaseInvoiceNo String?
   status      StockDocStatus @default(DRAFT)
   notes       String?
   totalAmount Decimal        @default(0) @db.Decimal(15, 0)
@@ -1012,9 +1025,34 @@ model StockReceiptItem {
   quantity   Decimal      @db.Decimal(15, 3)
   unitPrice  Decimal      @db.Decimal(15, 0)
   total      Decimal      @db.Decimal(15, 0)
+  stockLots  StockLot[]
 
   @@index([receiptId])
   @@index([materialId])
+}
+
+model StockLot {
+  id                  String           @id @default(cuid())
+  stockReceiptItemId  String?
+  stockReceiptItem    StockReceiptItem? @relation(fields: [stockReceiptItemId], references: [id], onDelete: SetNull)
+  warehouseId         String
+  warehouse           Warehouse        @relation(fields: [warehouseId], references: [id])
+  materialId          String
+  material            Material         @relation(fields: [materialId], references: [id])
+  purchaseInvoiceDate DateTime
+  purchaseInvoiceNo   String?
+  receivedQuantity    Decimal          @db.Decimal(15, 3)
+  remainingQuantity   Decimal          @db.Decimal(15, 3)
+  unitPrice           Decimal          @db.Decimal(15, 0)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  allocationItems ProjectMaterialAllocationItem[]
+
+  @@index([stockReceiptItemId])
+  @@index([warehouseId])
+  @@index([materialId])
+  @@index([purchaseInvoiceDate])
 }
 
 model StockIssue {
@@ -1024,6 +1062,8 @@ model StockIssue {
   warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
   projectId   String?
   project     Project?       @relation(fields: [projectId], references: [id])
+  allocationId String?
+  allocation   ProjectMaterialAllocation? @relation(fields: [allocationId], references: [id])
   date        DateTime
   status      StockDocStatus @default(DRAFT)
   reason      String?
@@ -1042,6 +1082,7 @@ model StockIssue {
   @@index([status])
   @@index([warehouseId])
   @@index([projectId])
+  @@index([allocationId])
 }
 
 model StockIssueItem {
@@ -1055,6 +1096,45 @@ model StockIssueItem {
   total      Decimal    @db.Decimal(15, 0)
 
   @@index([issueId])
+  @@index([materialId])
+}
+
+model ProjectMaterialAllocation {
+  id               String                          @id @default(cuid())
+  projectId        String
+  project          Project                         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  salesInvoiceDate DateTime
+  status           ProjectMaterialAllocationStatus @default(DRAFT)
+  notes            String?
+  confirmedAt      DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime                        @default(now())
+  updatedAt        DateTime                        @updatedAt
+
+  items       ProjectMaterialAllocationItem[]
+  stockIssues StockIssue[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model ProjectMaterialAllocationItem {
+  id           String                    @id @default(cuid())
+  allocationId String
+  allocation   ProjectMaterialAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+  stockLotId   String
+  stockLot     StockLot                  @relation(fields: [stockLotId], references: [id])
+  warehouseId  String
+  warehouse    Warehouse                 @relation(fields: [warehouseId], references: [id])
+  materialId   String
+  material     Material                  @relation(fields: [materialId], references: [id])
+  quantity     Decimal                   @db.Decimal(15, 3)
+  unitPrice    Decimal                   @db.Decimal(15, 0)
+  total        Decimal                   @db.Decimal(15, 0)
+
+  @@unique([allocationId, stockLotId])
+  @@index([stockLotId])
+  @@index([warehouseId])
   @@index([materialId])
 }
 

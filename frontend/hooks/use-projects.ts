@@ -6,12 +6,14 @@ import { apiClient } from "@/lib/api-client";
 import {
   ApiResponse,
   ProjectDetail,
+  EligibleStockLot,
   ProjectFilters,
   ProjectHandover,
   ProjectHandoverInput,
   ProjectKanbanColumn,
   ProjectListItem,
   ProjectListMeta,
+  ProjectMaterialAllocation,
   ProjectDocuments360,
   ProjectDocumentPlanGenerateResult,
   ProjectOverview360,
@@ -126,6 +128,80 @@ export function useProjectDocuments(projectId: string) {
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<ProjectDocuments360>>(`/projects/${projectId}/documents`);
       return response.data.data;
+    }
+  });
+}
+
+export function useProjectMaterialAllocation(projectId: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "material-allocation"],
+    enabled: Boolean(projectId),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<ProjectMaterialAllocation | null>>(
+        `/projects/${projectId}/material-allocation`
+      );
+      return response.data.data;
+    }
+  });
+}
+
+export function useEligibleStockLots(projectId: string, salesInvoiceDate?: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "eligible-stock-lots", salesInvoiceDate],
+    enabled: Boolean(projectId && salesInvoiceDate),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<EligibleStockLot[]>>(
+        `/projects/${projectId}/eligible-stock-lots`,
+        { params: { salesInvoiceDate } }
+      );
+      return response.data.data;
+    }
+  });
+}
+
+export interface ProjectMaterialAllocationInput {
+  salesInvoiceDate: string;
+  notes?: string;
+  items: Array<{ stockLotId: string; quantity: number }>;
+}
+
+export function useSaveProjectMaterialAllocation(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ProjectMaterialAllocationInput) => {
+      const response = await apiClient.post<ApiResponse<ProjectMaterialAllocation>>(
+        `/projects/${projectId}/material-allocation`,
+        payload
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "material-allocation"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "eligible-stock-lots"] });
+    }
+  });
+}
+
+export function useConfirmProjectMaterialAllocation(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await apiClient.post<ApiResponse<ProjectMaterialAllocation>>(
+        `/projects/${projectId}/material-allocation/confirm`
+      );
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "material-allocation"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects", projectId, "eligible-stock-lots"] });
+      await queryClient.invalidateQueries({ queryKey: ["stock-issues"] });
+      await queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      await queryClient.invalidateQueries({ queryKey: ["materials"] });
     }
   });
 }

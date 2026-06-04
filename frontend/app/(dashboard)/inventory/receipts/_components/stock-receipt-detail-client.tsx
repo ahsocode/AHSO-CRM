@@ -102,6 +102,9 @@ export function StockReceiptDetailClient({ receiptId }: { receiptId: string }) {
         <InfoCard label="Nhà cung cấp">
           <p className="text-text-secondary">{r.supplier?.name ?? "Không xác định"}</p>
         </InfoCard>
+        <InfoCard label="Số hóa đơn mua">
+          <p className="text-text-secondary">{r.purchaseInvoiceNo ?? "Chưa ghi nhận"}</p>
+        </InfoCard>
         <InfoCard label="Tổng giá trị">
           <div className="font-heading text-xl font-bold text-primary">
             <CurrencyDisplay amount={r.totalAmount} />

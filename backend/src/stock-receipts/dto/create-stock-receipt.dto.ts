@@ -19,6 +19,7 @@ export const createStockReceiptSchema = z.object({
   warehouseId: z.string().trim().min(1, "Kho là bắt buộc"),
   supplierId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   date: z.coerce.date(),
+  purchaseInvoiceNo: optionalString(100),
   notes: optionalString(2000),
   items: z
     .array(stockReceiptItemSchema)

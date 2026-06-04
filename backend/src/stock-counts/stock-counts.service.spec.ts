@@ -25,6 +25,14 @@ describe("StockCountsService", () => {
     stockBalance: {
       findMany: jest.Mock;
     };
+    stockLot: {
+      findMany: jest.Mock;
+      updateMany: jest.Mock;
+      create: jest.Mock;
+    };
+    material: {
+      findUnique: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -47,6 +55,14 @@ describe("StockCountsService", () => {
       },
       stockBalance: {
         findMany: jest.fn(),
+      },
+      stockLot: {
+        findMany: jest.fn(),
+        updateMany: jest.fn(),
+        create: jest.fn(),
+      },
+      material: {
+        findUnique: jest.fn(),
       },
     };
     service = new StockCountsService(
@@ -95,6 +111,7 @@ describe("StockCountsService", () => {
       const count = {
         id: "cc1",
         warehouseId: "wh-1",
+        date: new Date("2026-05-05T00:00:00.000Z"),
         status: "DRAFT",
         items: [
           { materialId: "mat-1", diff: new Decimal(-5) },  // actual < system
@@ -109,6 +126,14 @@ describe("StockCountsService", () => {
             ...prisma.stockCount,
             findFirst: jest.fn().mockResolvedValue(count),
             update: jest.fn().mockResolvedValue({ id: "cc1", countNo: "KK-2026-001", status: "CONFIRMED", confirmedAt: new Date() }),
+          },
+          stockLot: {
+            findMany: jest.fn().mockResolvedValue([{ id: "lot-1", remainingQuantity: new Decimal(5) }]),
+            updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+            create: jest.fn().mockResolvedValue({}),
+          },
+          material: {
+            findUnique: jest.fn().mockResolvedValue({ costPrice: new Decimal(100000) }),
           },
         };
         return fn(txMock);

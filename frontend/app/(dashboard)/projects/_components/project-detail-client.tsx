@@ -469,10 +469,11 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             <p className="mt-5 max-w-3xl text-sm text-text-secondary">
               {project.description ?? project.notes ?? "Dự án chưa có mô tả kỹ thuật chi tiết."}
             </p>
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="mt-6 grid gap-4 md:grid-cols-4">
               <MiniPanel label="Bắt đầu" value={project.startDate ? formatDate(project.startDate) : "Chưa xác định"} />
               <MiniPanel label="Đích dự kiến" value={project.expectedEndDate ? formatDate(project.expectedEndDate) : "Chưa xác định"} />
               <MiniPanel label="Hoàn thành" value={project.completedAt ? formatDate(project.completedAt) : "Chưa hoàn thành"} />
+              <MiniPanel label="Hóa đơn bán ra" value={project.salesInvoiceDate ? formatDate(project.salesInvoiceDate) : "Chưa ghi nhận"} />
             </div>
             <ProjectStageStepper currentStatus={project.status} />
           </div>

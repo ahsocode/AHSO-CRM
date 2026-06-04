@@ -17,6 +17,12 @@ import {
   UpdateProjectDocumentPlanDto,
   updateProjectDocumentPlanSchema
 } from "./dto/project-document-plan.dto";
+import {
+  EligibleStockLotsDto,
+  UpsertProjectMaterialAllocationDto,
+  eligibleStockLotsSchema,
+  upsertProjectMaterialAllocationSchema
+} from "./dto/project-material-allocation.dto";
 import { UpdateProjectDto, updateProjectSchema } from "./dto/update-project.dto";
 import { UpdateProjectStatusDto, updateProjectStatusSchema } from "./dto/update-project-status.dto";
 import { ProjectsService } from "./projects.service";
@@ -175,6 +181,53 @@ export class ProjectsController {
     @CurrentUser() user: JwtUser
   ) {
     return this.projectsService.updateStatus(id, dto, user);
+  }
+
+  @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/material-allocation" })
+  @Get(":id/material-allocation")
+  getMaterialAllocation(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.getMaterialAllocation(id, user);
+  }
+
+  @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/eligible-stock-lots" })
+  @Get(":id/eligible-stock-lots")
+  getEligibleStockLots(
+    @Param("id") id: string,
+    @Query(new ZodValidationPipe(eligibleStockLotsSchema, "query")) dto: EligibleStockLotsDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.getEligibleStockLots(id, dto, user);
+  }
+
+  @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "POST /api/projects/:id/material-allocation" })
+  @Post(":id/material-allocation")
+  upsertMaterialAllocation(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(upsertProjectMaterialAllocationSchema)) dto: UpsertProjectMaterialAllocationDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.upsertMaterialAllocation(id, dto, user);
+  }
+
+  @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "PATCH /api/projects/:id/material-allocation" })
+  @Patch(":id/material-allocation")
+  patchMaterialAllocation(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(upsertProjectMaterialAllocationSchema)) dto: UpsertProjectMaterialAllocationDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.upsertMaterialAllocation(id, dto, user);
+  }
+
+  @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "POST /api/projects/:id/material-allocation/confirm" })
+  @Post(":id/material-allocation/confirm")
+  confirmMaterialAllocation(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.confirmMaterialAllocation(id, user);
   }
 
   @RequirePermissions("projects.delete")

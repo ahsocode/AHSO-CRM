@@ -109,6 +109,7 @@ export function ProjectFormScreen({
         startDate: projectQuery.data.startDate ? projectQuery.data.startDate.slice(0, 10) : "",
         expectedEndDate: projectQuery.data.expectedEndDate ? projectQuery.data.expectedEndDate.slice(0, 10) : "",
         completedAt: projectQuery.data.completedAt ? projectQuery.data.completedAt.slice(0, 10) : "",
+        salesInvoiceDate: projectQuery.data.salesInvoiceDate ? projectQuery.data.salesInvoiceDate.slice(0, 10) : "",
         contactId: projectQuery.data.contactId ?? undefined,
         notes: projectQuery.data.notes ?? ""
       });
@@ -141,6 +142,9 @@ export function ProjectFormScreen({
   useEffect(() => {
     if (watchedStatus !== "COMPLETED" && form.getValues("completedAt")) {
       form.setValue("completedAt", "");
+    }
+    if (watchedStatus !== "COMPLETED" && form.getValues("salesInvoiceDate")) {
+      form.setValue("salesInvoiceDate", "");
     }
   }, [form, watchedStatus]);
 
@@ -333,14 +337,24 @@ export function ProjectFormScreen({
             </Field>
 
             {watchedStatus === "COMPLETED" ? (
-              <Field>
-                <Label htmlFor="completedAt">Ngày hoàn thành</Label>
-                <Input id="completedAt" type="date" {...form.register("completedAt")} />
-                <p className="text-xs text-text-secondary">
-                  Doanh thu dự án sẽ được ghi nhận theo ngày này, không theo ngày cập nhật hồ sơ.
-                </p>
-                <ErrorText message={form.formState.errors.completedAt?.message} />
-              </Field>
+              <>
+                <Field>
+                  <Label htmlFor="completedAt">Ngày hoàn thành</Label>
+                  <Input id="completedAt" type="date" {...form.register("completedAt")} />
+                  <p className="text-xs text-text-secondary">
+                    Doanh thu dự án sẽ được ghi nhận theo ngày này, không theo ngày cập nhật hồ sơ.
+                  </p>
+                  <ErrorText message={form.formState.errors.completedAt?.message} />
+                </Field>
+                <Field>
+                  <Label htmlFor="salesInvoiceDate">Ngày hóa đơn bán ra *</Label>
+                  <Input id="salesInvoiceDate" type="date" {...form.register("salesInvoiceDate")} />
+                  <p className="text-xs text-text-secondary">
+                    Vật tư phân bổ chỉ được lấy từ lô nhập có ngày hóa đơn mua trước hoặc bằng ngày này.
+                  </p>
+                  <ErrorText message={form.formState.errors.salesInvoiceDate?.message} />
+                </Field>
+              </>
             ) : null}
 
             <Field className="md:col-span-2">
@@ -411,6 +425,10 @@ export function ProjectFormScreen({
                   <MiniInfo
                     label="Hoàn thành"
                     value={projectQuery.data.completedAt ? formatDateTime(projectQuery.data.completedAt) : "Chưa ghi nhận"}
+                  />
+                  <MiniInfo
+                    label="Hóa đơn bán ra"
+                    value={projectQuery.data.salesInvoiceDate ? formatDateTime(projectQuery.data.salesInvoiceDate) : "Chưa ghi nhận"}
                   />
                   <MiniInfo label="Cập nhật cuối" value={formatDateTime(projectQuery.data.updatedAt)} />
                 </>

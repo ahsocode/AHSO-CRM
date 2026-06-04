@@ -6,11 +6,13 @@ import { PrismaService } from "../common/prisma.service";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
+import { InventoryBalanceService } from "../inventory/inventory-balance.service";
 import { CreatePaymentDto } from "../contracts/dto/create-payment.dto";
 import { DecimalLike, decimalToNumber, sumDecimal, toDecimal } from "../common/utils/decimal";
 import { BulkProjectDto } from "./dto/bulk-project.dto";
 import { CreateProjectHandoverDto } from "./dto/create-project-handover.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
+import { EligibleStockLotsDto, UpsertProjectMaterialAllocationDto } from "./dto/project-material-allocation.dto";
 import { ProjectFilterDto } from "./dto/project-filter.dto";
 import { GenerateProjectDocumentPlanDto, UpdateProjectDocumentPlanDto } from "./dto/project-document-plan.dto";
 import { UpdateProjectDto } from "./dto/update-project.dto";
@@ -110,7 +112,8 @@ export class ProjectsService {
     private readonly prisma: PrismaService,
     private readonly customFieldsService: CustomFieldsService,
     private readonly domainEvents: DomainEventsService,
-    private readonly documentsService: DocumentsService
+    private readonly documentsService: DocumentsService,
+    private readonly inventoryBalance: InventoryBalanceService
   ) {}
 
   async findAll(filters: ProjectFilterDto, user: JwtUser) {
@@ -226,6 +229,7 @@ export class ProjectsService {
         startDate: dto.startDate,
         expectedEndDate: dto.expectedEndDate,
         completedAt: dto.status === "COMPLETED" ? dto.completedAt ?? new Date() : null,
+        salesInvoiceDate: dto.status === "COMPLETED" ? dto.salesInvoiceDate ?? null : null,
         notes: dto.notes
       }
     });
@@ -348,6 +352,7 @@ export class ProjectsService {
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
       completedAt: project.completedAt,
+      salesInvoiceDate: project.salesInvoiceDate,
       notes: project.notes,
       customFieldValues,
       createdAt: project.createdAt,
@@ -1453,6 +1458,242 @@ export class ProjectsService {
     };
   }
 
+  async getEligibleStockLots(id: string, dto: EligibleStockLotsDto, user: JwtUser) {
+    const project = await this.findAccessibleProjectRecord(id, user);
+    const salesInvoiceDate = dto.salesInvoiceDate ?? project.salesInvoiceDate;
+
+    if (!salesInvoiceDate) {
+      throw new BadRequestException("Cần nhập ngày hóa đơn bán ra trước khi phân bổ vật tư");
+    }
+
+    const lots = await this.prisma.stockLot.findMany({
+      where: {
+        remainingQuantity: { gt: 0 },
+        purchaseInvoiceDate: { lte: salesInvoiceDate }
+      },
+      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
+      include: {
+        warehouse: { select: { id: true, code: true, name: true } },
+        material: { select: { id: true, code: true, name: true, unit: true } },
+        stockReceiptItem: {
+          select: {
+            receipt: {
+              select: {
+                id: true,
+                receiptNo: true,
+                date: true,
+                purchaseInvoiceNo: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return lots.map((lot) => this.mapStockLot(lot));
+  }
+
+  async getMaterialAllocation(id: string, user: JwtUser) {
+    await this.findAccessibleProjectRecord(id, user);
+    const allocation = await this.prisma.projectMaterialAllocation.findFirst({
+      where: { projectId: id, status: { not: "CANCELLED" } },
+      orderBy: { createdAt: "desc" },
+      include: this.materialAllocationInclude()
+    });
+
+    return allocation ? this.mapMaterialAllocation(allocation) : null;
+  }
+
+  async upsertMaterialAllocation(id: string, dto: UpsertProjectMaterialAllocationDto, user: JwtUser) {
+    const project = await this.findAccessibleProjectRecord(id, user);
+    if (project.status !== "COMPLETED") {
+      throw new BadRequestException("Chỉ phân bổ vật tư sau khi dự án đã hoàn thành");
+    }
+
+    const stockLotIds = dto.items.map((item) => item.stockLotId);
+    if (new Set(stockLotIds).size !== stockLotIds.length) {
+      throw new BadRequestException("Không được chọn trùng một lô nhập trong cùng phân bổ");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const lots = await tx.stockLot.findMany({
+        where: { id: { in: stockLotIds } },
+        select: {
+          id: true,
+          warehouseId: true,
+          materialId: true,
+          purchaseInvoiceDate: true,
+          remainingQuantity: true,
+          unitPrice: true
+        }
+      });
+      const lotById = new Map(lots.map((lot) => [lot.id, lot]));
+
+      for (const item of dto.items) {
+        const lot = lotById.get(item.stockLotId);
+        if (!lot) {
+          throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
+        }
+        if (lot.purchaseInvoiceDate.getTime() > dto.salesInvoiceDate.getTime()) {
+          throw new BadRequestException("Không thể phân bổ lô nhập sau ngày hóa đơn bán ra");
+        }
+        if (toDecimal(lot.remainingQuantity).lessThan(item.quantity)) {
+          throw new BadRequestException("Số lượng phân bổ vượt quá tồn còn lại của lô nhập");
+        }
+      }
+
+      const existing = await tx.projectMaterialAllocation.findFirst({
+        where: { projectId: id, status: { not: "CANCELLED" } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, status: true }
+      });
+      if (existing?.status === "CONFIRMED") {
+        throw new BadRequestException("Phân bổ vật tư đã xác nhận, không thể chỉnh sửa");
+      }
+
+      await tx.project.update({
+        where: { id },
+        data: { salesInvoiceDate: dto.salesInvoiceDate }
+      });
+
+      const itemCreates = dto.items.map((item) => {
+        const lot = lotById.get(item.stockLotId);
+        if (!lot) throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
+        const quantity = toDecimal(item.quantity);
+        const unitPrice = toDecimal(lot.unitPrice);
+        return {
+          stockLotId: lot.id,
+          warehouseId: lot.warehouseId,
+          materialId: lot.materialId,
+          quantity,
+          unitPrice,
+          total: quantity.mul(unitPrice).toDecimalPlaces(0)
+        };
+      });
+
+      const allocation = existing
+        ? await tx.projectMaterialAllocation.update({
+            where: { id: existing.id },
+            data: {
+              salesInvoiceDate: dto.salesInvoiceDate,
+              notes: dto.notes,
+              items: {
+                deleteMany: {},
+                create: itemCreates
+              }
+            },
+            include: this.materialAllocationInclude()
+          })
+        : await tx.projectMaterialAllocation.create({
+            data: {
+              projectId: id,
+              salesInvoiceDate: dto.salesInvoiceDate,
+              notes: dto.notes,
+              items: { create: itemCreates }
+            },
+            include: this.materialAllocationInclude()
+          });
+
+      return this.mapMaterialAllocation(allocation);
+    });
+  }
+
+  async confirmMaterialAllocation(id: string, user: JwtUser) {
+    await this.findAccessibleProjectRecord(id, user);
+
+    return this.prisma.$transaction(async (tx) => {
+      const allocation = await tx.projectMaterialAllocation.findFirst({
+        where: { projectId: id, status: "DRAFT" },
+        orderBy: { createdAt: "desc" },
+        include: {
+          project: { select: { id: true, code: true, salesInvoiceDate: true } },
+          items: {
+            include: {
+              stockLot: true,
+              material: { select: { id: true, name: true, code: true, unit: true } },
+              warehouse: { select: { id: true, name: true, code: true } }
+            }
+          }
+        }
+      });
+
+      if (!allocation) {
+        throw new NotFoundException("Không tìm thấy phân bổ vật tư nháp");
+      }
+      if (allocation.items.length === 0) {
+        throw new BadRequestException("Phân bổ vật tư chưa có dòng vật tư");
+      }
+
+      for (const item of allocation.items) {
+        const quantity = toDecimal(item.quantity);
+        const updated = await tx.stockLot.updateMany({
+          where: {
+            id: item.stockLotId,
+            remainingQuantity: { gte: quantity },
+            purchaseInvoiceDate: { lte: allocation.salesInvoiceDate }
+          },
+          data: {
+            remainingQuantity: { decrement: quantity }
+          }
+        });
+
+        if (updated.count !== 1) {
+          throw new BadRequestException(
+            `Lô nhập của vật tư "${item.material.name}" không còn đủ tồn hoặc không hợp lệ theo ngày bán ra`
+          );
+        }
+
+        await this.inventoryBalance.ensureSufficientStock(tx, item.warehouseId, item.materialId, quantity);
+        await this.inventoryBalance.adjustBalance(tx, item.warehouseId, item.materialId, quantity.negated());
+      }
+
+      const itemsByWarehouse = new Map<string, typeof allocation.items>();
+      for (const item of allocation.items) {
+        const group = itemsByWarehouse.get(item.warehouseId) ?? [];
+        group.push(item);
+        itemsByWarehouse.set(item.warehouseId, group);
+      }
+
+      for (const [warehouseId, items] of itemsByWarehouse.entries()) {
+        const totalAmount = items.reduce(
+          (sum, item) => sum.plus(toDecimal(item.total)),
+          toDecimal(0)
+        );
+        await tx.stockIssue.create({
+          data: {
+            issueNo: await this.generateNextIssueNo(tx),
+            warehouseId,
+            projectId: id,
+            allocationId: allocation.id,
+            date: allocation.salesInvoiceDate,
+            status: "CONFIRMED",
+            reason: "Phân bổ vật tư khi hoàn thành dự án",
+            notes: allocation.notes,
+            totalAmount,
+            createdById: user.sub,
+            confirmedAt: new Date(),
+            items: {
+              create: items.map((item) => ({
+                materialId: item.materialId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.total
+              }))
+            }
+          }
+        });
+      }
+
+      const confirmed = await tx.projectMaterialAllocation.update({
+        where: { id: allocation.id },
+        data: { status: "CONFIRMED", confirmedAt: new Date() },
+        include: this.materialAllocationInclude()
+      });
+
+      return this.mapMaterialAllocation(confirmed);
+    });
+  }
+
   async update(id: string, dto: UpdateProjectDto, user: JwtUser) {
     const project = await this.findAccessibleProjectRecord(id, user);
     const nextStartDate = dto.startDate ?? project.startDate;
@@ -1492,6 +1733,7 @@ export class ProjectsService {
         ...(dto.estimatedValue !== undefined ? { estimatedValue: dto.estimatedValue } : {}),
         ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
         ...(dto.expectedEndDate !== undefined ? { expectedEndDate: dto.expectedEndDate } : {}),
+        ...(dto.salesInvoiceDate !== undefined ? { salesInvoiceDate: nextStatus === "COMPLETED" ? dto.salesInvoiceDate : null } : {}),
         ...this.buildCompletedAtUpdate({
           statusWasProvided: dto.status !== undefined,
           completedAtWasProvided: dto.completedAt !== undefined,
@@ -1526,7 +1768,8 @@ export class ProjectsService {
       },
       data: {
         status: dto.status,
-        completedAt
+        completedAt,
+        salesInvoiceDate: dto.status === "COMPLETED" ? dto.salesInvoiceDate ?? project.salesInvoiceDate : null
       }
     });
 
@@ -1545,7 +1788,8 @@ export class ProjectsService {
     return {
       id: updatedProject.id,
       status: updatedProject.status,
-      completedAt: updatedProject.completedAt
+      completedAt: updatedProject.completedAt,
+      salesInvoiceDate: updatedProject.salesInvoiceDate
     };
   }
 
@@ -2187,6 +2431,7 @@ export class ProjectsService {
         startDate: true,
         expectedEndDate: true,
         completedAt: true,
+        salesInvoiceDate: true,
         contract: {
           select: {
             id: true
@@ -2200,6 +2445,172 @@ export class ProjectsService {
     }
 
     return project;
+  }
+
+  private materialAllocationInclude() {
+    return {
+      items: {
+        include: {
+          stockLot: {
+            include: {
+              stockReceiptItem: {
+                select: {
+                  receipt: {
+                    select: {
+                      id: true,
+                      receiptNo: true,
+                      date: true,
+                      purchaseInvoiceNo: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          warehouse: { select: { id: true, code: true, name: true } },
+          material: { select: { id: true, code: true, name: true, unit: true } }
+        },
+        orderBy: { id: "asc" as const }
+      },
+      stockIssues: {
+        select: {
+          id: true,
+          issueNo: true,
+          warehouseId: true,
+          date: true,
+          status: true,
+          totalAmount: true
+        },
+        orderBy: { createdAt: "asc" as const }
+      }
+    } as const;
+  }
+
+  private mapStockLot(lot: {
+    id: string;
+    warehouseId: string;
+    warehouse: { id: string; code: string; name: string };
+    materialId: string;
+    material: { id: string; code: string; name: string; unit: string };
+    purchaseInvoiceDate: Date;
+    purchaseInvoiceNo: string | null;
+    receivedQuantity: DecimalLike;
+    remainingQuantity: DecimalLike;
+    unitPrice: DecimalLike;
+    stockReceiptItem: {
+      receipt: {
+        id: string;
+        receiptNo: string;
+        date: Date;
+        purchaseInvoiceNo: string | null;
+      };
+    } | null;
+  }) {
+    const receipt = lot.stockReceiptItem?.receipt ?? null;
+    return {
+      id: lot.id,
+      warehouseId: lot.warehouseId,
+      warehouse: lot.warehouse,
+      materialId: lot.materialId,
+      material: lot.material,
+      receipt,
+      purchaseInvoiceDate: lot.purchaseInvoiceDate,
+      purchaseInvoiceNo: lot.purchaseInvoiceNo ?? receipt?.purchaseInvoiceNo ?? null,
+      receivedQuantity: decimalToNumber(lot.receivedQuantity),
+      remainingQuantity: decimalToNumber(lot.remainingQuantity),
+      unitPrice: decimalToNumber(lot.unitPrice),
+      value: decimalToNumber(toDecimal(lot.remainingQuantity).mul(toDecimal(lot.unitPrice)).toDecimalPlaces(0))
+    };
+  }
+
+  private mapMaterialAllocation(allocation: {
+    id: string;
+    projectId: string;
+    salesInvoiceDate: Date;
+    status: string;
+    notes: string | null;
+    confirmedAt: Date | null;
+    cancelledAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    items: Array<{
+      id: string;
+      stockLotId: string;
+      warehouseId: string;
+      warehouse: { id: string; code: string; name: string };
+      materialId: string;
+      material: { id: string; code: string; name: string; unit: string };
+      quantity: DecimalLike;
+      unitPrice: DecimalLike;
+      total: DecimalLike;
+      stockLot: {
+        purchaseInvoiceDate: Date;
+        purchaseInvoiceNo: string | null;
+        remainingQuantity: DecimalLike;
+        stockReceiptItem: {
+          receipt: {
+            id: string;
+            receiptNo: string;
+            date: Date;
+            purchaseInvoiceNo: string | null;
+          };
+        } | null;
+      };
+    }>;
+    stockIssues: Array<{
+      id: string;
+      issueNo: string;
+      warehouseId: string;
+      date: Date;
+      status: string;
+      totalAmount: DecimalLike;
+    }>;
+  }) {
+    return {
+      id: allocation.id,
+      projectId: allocation.projectId,
+      salesInvoiceDate: allocation.salesInvoiceDate,
+      status: allocation.status,
+      notes: allocation.notes,
+      confirmedAt: allocation.confirmedAt,
+      cancelledAt: allocation.cancelledAt,
+      createdAt: allocation.createdAt,
+      updatedAt: allocation.updatedAt,
+      totalAmount: allocation.items.reduce((sum, item) => sum + decimalToNumber(item.total), 0),
+      items: allocation.items.map((item) => ({
+        id: item.id,
+        stockLotId: item.stockLotId,
+        warehouseId: item.warehouseId,
+        warehouse: item.warehouse,
+        materialId: item.materialId,
+        material: item.material,
+        quantity: decimalToNumber(item.quantity),
+        unitPrice: decimalToNumber(item.unitPrice),
+        total: decimalToNumber(item.total),
+        purchaseInvoiceDate: item.stockLot.purchaseInvoiceDate,
+        purchaseInvoiceNo: item.stockLot.purchaseInvoiceNo ?? item.stockLot.stockReceiptItem?.receipt.purchaseInvoiceNo ?? null,
+        receipt: item.stockLot.stockReceiptItem?.receipt ?? null,
+        remainingQuantity: decimalToNumber(item.stockLot.remainingQuantity)
+      })),
+      stockIssues: allocation.stockIssues.map((issue) => ({
+        ...issue,
+        totalAmount: decimalToNumber(issue.totalAmount)
+      }))
+    };
+  }
+
+  private async generateNextIssueNo(tx: Prisma.TransactionClient): Promise<string> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('stock_issue_number'))`;
+    const year = new Date().getFullYear();
+    const prefix = `PX-${year}-`;
+    const latest = await tx.stockIssue.findFirst({
+      where: { issueNo: { startsWith: prefix } },
+      orderBy: { issueNo: "desc" },
+      select: { issueNo: true }
+    });
+    const seq = latest?.issueNo.split("-").at(-1);
+    const next = seq ? Number.parseInt(seq, 10) + 1 : 1;
+    return `${prefix}${String(next).padStart(3, "0")}`;
   }
 
   private async findDeletedAccessibleProjectRecord(id: string, user: JwtUser) {

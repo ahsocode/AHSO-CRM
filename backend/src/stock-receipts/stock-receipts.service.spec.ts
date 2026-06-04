@@ -22,6 +22,9 @@ describe("StockReceiptsService", () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+    stockLot: {
+      create: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -41,6 +44,9 @@ describe("StockReceiptsService", () => {
         count: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      stockLot: {
+        create: jest.fn(),
       },
     };
     service = new StockReceiptsService(
@@ -86,10 +92,12 @@ describe("StockReceiptsService", () => {
       const receipt = {
         id: "r1",
         warehouseId: "wh-1",
+        date: new Date("2026-05-01T00:00:00.000Z"),
+        purchaseInvoiceNo: "INV-001",
         status: "DRAFT",
         items: [
-          { materialId: "mat-1", quantity: new Decimal(10), unitPrice: new Decimal(50000) },
-          { materialId: "mat-2", quantity: new Decimal(5), unitPrice: new Decimal(100000) },
+          { id: "ri-1", materialId: "mat-1", quantity: new Decimal(10), unitPrice: new Decimal(50000) },
+          { id: "ri-2", materialId: "mat-2", quantity: new Decimal(5), unitPrice: new Decimal(100000) },
         ],
       };
 
@@ -100,6 +108,9 @@ describe("StockReceiptsService", () => {
             ...prisma.stockReceipt,
             findFirst: jest.fn().mockResolvedValue(receipt),
             update: jest.fn().mockResolvedValue({ id: "r1", receiptNo: "PN-2026-001", status: "CONFIRMED", confirmedAt: new Date() }),
+          },
+          stockLot: {
+            create: jest.fn().mockResolvedValue({}),
           },
         };
         return fn(txMock);

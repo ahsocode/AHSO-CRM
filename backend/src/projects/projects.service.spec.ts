@@ -2,6 +2,7 @@ import { PrismaService } from "../common/prisma.service";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
+import { InventoryBalanceService } from "../inventory/inventory-balance.service";
 import { ProjectsService } from "./projects.service";
 
 describe("ProjectsService", () => {
@@ -35,6 +36,9 @@ describe("ProjectsService", () => {
     payment: {
       create: jest.Mock;
     };
+    stockLot: {
+      findMany: jest.Mock;
+    };
   };
   let customFieldsService: {
     saveValues: jest.Mock;
@@ -44,6 +48,10 @@ describe("ProjectsService", () => {
   };
   let documentsService: {
     renderPdf: jest.Mock;
+  };
+  let inventoryBalance: {
+    adjustBalance: jest.Mock;
+    ensureSufficientStock: jest.Mock;
   };
 
   beforeEach(() => {
@@ -69,6 +77,9 @@ describe("ProjectsService", () => {
       },
       payment: {
         create: jest.fn()
+      },
+      stockLot: {
+        findMany: jest.fn()
       }
     };
     customFieldsService = {
@@ -80,12 +91,17 @@ describe("ProjectsService", () => {
     documentsService = {
       renderPdf: jest.fn()
     };
+    inventoryBalance = {
+      adjustBalance: jest.fn(),
+      ensureSufficientStock: jest.fn()
+    };
 
     service = new ProjectsService(
       prisma as unknown as PrismaService,
       customFieldsService as unknown as CustomFieldsService,
       domainEvents as unknown as DomainEventsService,
-      documentsService as unknown as DocumentsService
+      documentsService as unknown as DocumentsService,
+      inventoryBalance as unknown as InventoryBalanceService
     );
   });
 
@@ -161,11 +177,13 @@ describe("ProjectsService", () => {
 
   it("sets completedAt when a project is completed", async () => {
     const completedAt = new Date("2026-05-25T00:00:00.000Z");
+    const salesInvoiceDate = new Date("2026-05-26T00:00:00.000Z");
     prisma.project.findFirst.mockResolvedValue({
       id: "project-1",
       customerId: "customer-1",
       status: "DELIVERING",
       completedAt: null,
+      salesInvoiceDate: null,
       startDate: null,
       expectedEndDate: null,
       contract: null
@@ -173,7 +191,8 @@ describe("ProjectsService", () => {
     prisma.project.update.mockResolvedValue({
       id: "project-1",
       status: "COMPLETED",
-      completedAt
+      completedAt,
+      salesInvoiceDate
     });
 
     await expect(
@@ -181,14 +200,16 @@ describe("ProjectsService", () => {
         "project-1",
         {
           status: "COMPLETED",
-          completedAt
+          completedAt,
+          salesInvoiceDate
         },
         user
       )
     ).resolves.toEqual({
       id: "project-1",
       status: "COMPLETED",
-      completedAt
+      completedAt,
+      salesInvoiceDate
     });
 
     expect(prisma.project.update).toHaveBeenCalledWith({
@@ -197,9 +218,58 @@ describe("ProjectsService", () => {
       },
       data: {
         status: "COMPLETED",
-        completedAt
+        completedAt,
+        salesInvoiceDate
       }
     });
+  });
+
+  it("lists only stock lots eligible by sales invoice date", async () => {
+    const salesInvoiceDate = new Date("2026-06-05T00:00:00.000Z");
+    prisma.project.findFirst.mockResolvedValue({
+      id: "project-1",
+      customerId: "customer-1",
+      status: "COMPLETED",
+      completedAt: new Date("2026-06-05T00:00:00.000Z"),
+      salesInvoiceDate,
+      startDate: null,
+      expectedEndDate: null,
+      contract: null
+    });
+    prisma.stockLot.findMany.mockResolvedValue([
+      {
+        id: "lot-1",
+        warehouseId: "wh-1",
+        warehouse: { id: "wh-1", code: "KHO", name: "Kho chính" },
+        materialId: "mat-1",
+        material: { id: "mat-1", code: "CAM", name: "Camera", unit: "cái" },
+        purchaseInvoiceDate: new Date("2026-05-01T00:00:00.000Z"),
+        purchaseInvoiceNo: "HDM-001",
+        receivedQuantity: 10,
+        remainingQuantity: 4,
+        unitPrice: 100000,
+        stockReceiptItem: {
+          receipt: {
+            id: "receipt-1",
+            receiptNo: "PN-2026-001",
+            date: new Date("2026-05-01T00:00:00.000Z"),
+            purchaseInvoiceNo: "HDM-001"
+          }
+        }
+      }
+    ]);
+
+    const result = await service.getEligibleStockLots("project-1", {}, user);
+
+    expect(prisma.stockLot.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          remainingQuantity: { gt: 0 },
+          purchaseInvoiceDate: { lte: salesInvoiceDate }
+        })
+      })
+    );
+    expect(result[0]).toEqual(expect.objectContaining({ id: "lot-1", remainingQuantity: 4, value: 400000 }));
   });
 
   it("does not reset completedAt when editing an already completed project", async () => {

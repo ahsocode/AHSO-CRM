@@ -307,7 +307,7 @@ export const contractTools: McpTool[] = [
       const payload: Record<string, unknown> = { status: args["status"] };
       if (args["notes"]) payload["notes"] = args["notes"];
 
-      const res = await client.patch<unknown>(`/milestones/${args["milestoneId"] as string}`, payload);
+      const res = await client.patch<unknown>(`/contracts/milestones/${args["milestoneId"] as string}`, payload);
       const m = extractData<{ name: string; status: string }>(res.data);
       const msStatus = MILESTONE_STATUS_LABEL[m.status] ?? m.status;
 

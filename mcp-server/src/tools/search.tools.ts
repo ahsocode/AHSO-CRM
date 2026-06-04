@@ -18,70 +18,52 @@ export const searchTools: McpTool[] = [
     },
     async handler(args) {
       const client = getApiClient();
+      // Backend /search/global returns a flat array: [{id, type, title, subtitle, href}]
       const res = await client.get<unknown>("/search/global", {
         params: { q: args["query"], limit: args["limit"] ?? 5 },
       });
-      const data = extractData<SearchResult>(res.data);
+      const items = extractData<SearchResultItem[]>(res.data);
+
+      if (!items?.length) {
+        return `🔍 Không tìm thấy kết quả nào cho "${args["query"] as string}".`;
+      }
+
+      const TYPE_EMOJI: Record<string, string> = {
+        customer: "🏢",
+        project: "📁",
+        quote: "📄",
+        contract: "📃",
+        activity: "📋",
+      };
+      const TYPE_LABEL: Record<string, string> = {
+        customer: "Khách hàng",
+        project: "Dự án",
+        quote: "Báo giá",
+        contract: "Hợp đồng",
+        activity: "Hoạt động",
+      };
+
+      // Group by type
+      const grouped = new Map<string, SearchResultItem[]>();
+      for (const item of items) {
+        const group = grouped.get(item.type) ?? [];
+        group.push(item);
+        grouped.set(item.type, group);
+      }
 
       const sections: string[] = [];
-
-      if (data.customers?.length) {
+      for (const [type, group] of grouped.entries()) {
+        const emoji = TYPE_EMOJI[type] ?? "🔹";
+        const label = TYPE_LABEL[type] ?? type;
         sections.push(
-          `🏢 **Khách hàng (${data.customers.length}):**\n` +
-            data.customers
-              .map((c) => `  • ${c.name}${c.shortName ? ` (${c.shortName})` : ""} — ID: ${c.id}`)
-              .join("\n")
-        );
-      }
-      if (data.projects?.length) {
-        sections.push(
-          `📁 **Dự án (${data.projects.length}):**\n` +
-            data.projects
+          `${emoji} **${label} (${group.length}):**\n` +
+            group
               .map(
-                (p) =>
-                  `  • ${p.code} — ${p.name}` +
-                  (p.status ? ` [${stageLabel(p.status)}]` : "") +
-                  (p.estimatedValue ? ` — ${formatVND(p.estimatedValue)}` : "") +
-                  ` — ID: ${p.id}`
+                (item) =>
+                  `  • ${item.title}${item.subtitle ? ` (${item.subtitle})` : ""} — ID: \`${item.id}\``
               )
               .join("\n")
         );
-      }
-      if (data.quotes?.length) {
-        sections.push(
-          `📄 **Báo giá (${data.quotes.length}):**\n` +
-            data.quotes
-              .map(
-                (q) =>
-                  `  • ${q.quoteNo} [${q.status ?? "—"}]` +
-                  (q.totalAmount ? ` — ${formatVND(q.totalAmount)}` : "") +
-                  ` — ID: ${q.id}`
-              )
-              .join("\n")
-        );
-      }
-      if (data.contracts?.length) {
-        sections.push(
-          `📃 **Hợp đồng (${data.contracts.length}):**\n` +
-            data.contracts
-              .map(
-                (c) =>
-                  `  • ${c.contractNo} [${c.status ?? "—"}]` +
-                  (c.value ? ` — ${formatVND(c.value)}` : "") +
-                  ` — ID: ${c.id}`
-              )
-              .join("\n")
-        );
-      }
-      if (data.activities?.length) {
-        sections.push(
-          `📋 **Hoạt động (${data.activities.length}):**\n` +
-            data.activities.map((a) => `  • ${a.title} — ${truncate(a.content, 60)} — ID: ${a.id}`).join("\n")
-        );
-      }
-
-      if (!sections.length) {
-        return `🔍 Không tìm thấy kết quả nào cho "${args["query"] as string}".`;
       }
 
       return `🔍 Kết quả tìm kiếm "${args["query"] as string}":\n\n` + sections.join("\n\n");
@@ -192,12 +174,13 @@ export const searchTools: McpTool[] = [
 
 // Interfaces
 
-interface SearchResult {
-  customers?: Array<{ id: string; name: string; shortName?: string }>;
-  projects?: Array<{ id: string; code: string; name: string; status?: string; estimatedValue?: number | string }>;
-  quotes?: Array<{ id: string; quoteNo: string; status?: string; totalAmount?: number | string }>;
-  contracts?: Array<{ id: string; contractNo: string; status?: string; value?: number | string }>;
-  activities?: Array<{ id: string; title: string; content?: string }>;
+// Backend /search/global returns a flat array of these items (NOT a grouped object)
+interface SearchResultItem {
+  id: string;
+  type: "customer" | "project" | "quote" | "contract" | "activity";
+  title: string;
+  subtitle?: string;
+  href: string;
 }
 
 interface DashboardKpi {

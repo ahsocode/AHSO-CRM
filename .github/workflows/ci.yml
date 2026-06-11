@@ -27,8 +27,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
       - name: Install backend dependencies
         run: npm ci
       - name: Prisma generate
@@ -58,19 +56,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
         run: npm ci
-      # Cache Next.js build output between runs — saves 1-2 min on code-only changes
-      - name: Cache Next.js build
-        uses: actions/cache@v4
-        with:
-          path: frontend/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/**/*.ts', 'frontend/**/*.tsx', 'frontend/**/*.js') }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}-
-            nextjs-${{ runner.os }}-
       - name: Lint frontend
         run: npm run lint
       - name: Typecheck frontend
@@ -91,24 +78,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
-      # Cache Playwright browsers — saves ~2 min per run
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install root dependencies
         run: npm ci
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-      - name: Install Playwright system deps only (cache hit)
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-      # Build Docker images with layer cache so only changed layers rebuild
+      # Do not use actions/cache or type=gha Docker layer cache here.
+      # The organization has a very small Actions storage quota; BuildKit GHA
+      # cache alone can grow past it after a few runs.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Prepare env files
@@ -116,22 +92,18 @@ jobs:
           echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)" > .env
           cp backend/.env.example backend/.env
           cp frontend/.env.local.example frontend/.env.local
-      - name: Build backend image (with layer cache)
+      - name: Build backend image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           load: true
           tags: ahso-crm-backend:latest
-          cache-from: type=gha,scope=e2e-backend
-          cache-to: type=gha,scope=e2e-backend,mode=max
-      - name: Build frontend image (with layer cache)
+      - name: Build frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           load: true
           tags: ahso-crm-frontend:latest
-          cache-from: type=gha,scope=e2e-frontend
-          cache-to: type=gha,scope=e2e-frontend,mode=max
       # Images are pre-built above with exactly the names docker-compose.yml expects,
       # so --no-build ensures compose uses them directly without re-building
       - name: Start stack
@@ -160,3 +132,4 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report
+          retention-days: 3

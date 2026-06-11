@@ -25,8 +25,9 @@ import {
 import { ReportBuilderConfig, ReportBuilderFilter, ReportBuilderMeasure, ReportChartType, ReportDataset, ReportTemplate } from "@/lib/types";
 import { ChartConfig } from "./chart-config";
 import { FieldSelector, REPORT_DATASET_FIELDS } from "./field-selector";
+import { CHART_CATEGORY_SERIES, CHART_COLORS } from "@/lib/constants";
 
-const CHART_COLORS = ["#1a5276", "#2e86ab", "#5dade2", "#f39c12", "#16a085", "#c0392b"];
+const SERIES_COLORS = [...CHART_CATEGORY_SERIES];
 
 const defaultConfig: ReportBuilderConfig = {
   dataset: "projects",
@@ -154,7 +155,7 @@ function ReportChart({
             <Legend />
             <Pie data={data} dataKey={measureKey} nameKey={categoryKey} innerRadius={70} outerRadius={120}>
               {data.map((entry, index) => (
-                <Cell key={`${String(entry[categoryKey])}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                <Cell key={`${String(entry[categoryKey])}-${index}`} fill={SERIES_COLORS[index % SERIES_COLORS.length]} />
               ))}
             </Pie>
           </PieChart>
@@ -169,18 +170,18 @@ function ReportChart({
     <div className="h-[360px]">
       <ResponsiveContainer width="100%" height="100%">
         <ChartComponent data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-          <XAxis dataKey={categoryKey} stroke="#64748b" />
-          <YAxis stroke="#64748b" />
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+          <XAxis dataKey={categoryKey} stroke={CHART_COLORS.axis} />
+          <YAxis stroke={CHART_COLORS.axis} />
           <Tooltip />
           <Legend />
           {measureKeys.map((key, index) =>
             chartType === "line" ? (
-              <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={2} />
+              <Line key={key} type="monotone" dataKey={key} stroke={SERIES_COLORS[index % SERIES_COLORS.length]} strokeWidth={2} />
             ) : chartType === "area" ? (
-              <Area key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[index % CHART_COLORS.length]} fill={CHART_COLORS[index % CHART_COLORS.length]} fillOpacity={0.18} />
+              <Area key={key} type="monotone" dataKey={key} stroke={SERIES_COLORS[index % SERIES_COLORS.length]} fill={SERIES_COLORS[index % SERIES_COLORS.length]} fillOpacity={0.18} />
             ) : (
-              <Bar key={key} dataKey={key} fill={CHART_COLORS[index % CHART_COLORS.length]} radius={[10, 10, 0, 0]} />
+              <Bar key={key} dataKey={key} fill={SERIES_COLORS[index % SERIES_COLORS.length]} radius={[10, 10, 0, 0]} />
             )
           )}
         </ChartComponent>

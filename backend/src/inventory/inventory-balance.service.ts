@@ -16,6 +16,35 @@ export class InventoryBalanceService {
     delta: Decimal.Value
   ): Promise<void> {
     const decimalDelta = new Decimal(delta);
+
+    // Negative delta: guard against concurrent over-consumption with a
+    // conditional decrement (quantity >= |delta|). Two concurrent confirms can
+    // both pass ensureSufficientStock (check-then-act under Read Committed),
+    // so the atomic conditional update here is the source of truth that
+    // prevents the balance from ever going negative.
+    if (decimalDelta.isNegative()) {
+      const required = decimalDelta.negated();
+      const updated = await tx.stockBalance.updateMany({
+        where: {
+          warehouseId,
+          materialId,
+          quantity: { gte: required },
+        },
+        data: { quantity: { increment: decimalDelta } },
+      });
+
+      if (updated.count !== 1) {
+        const mat = await tx.material.findUnique({
+          where: { id: materialId },
+          select: { name: true },
+        });
+        throw new BadRequestException(
+          `Không đủ tồn kho cho vật tư "${mat?.name ?? materialId}" (tồn kho đã thay đổi bởi thao tác khác). Vui lòng thử lại.`
+        );
+      }
+      return;
+    }
+
     await tx.stockBalance.upsert({
       where: { warehouseId_materialId: { warehouseId, materialId } },
       create: { warehouseId, materialId, quantity: decimalDelta },

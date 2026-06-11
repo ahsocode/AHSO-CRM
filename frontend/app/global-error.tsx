@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 
+// Hex literals are INTENTIONAL here (Token Rule exception): global-error
+// renders when the root layout (and globals.css variables) may have failed to load.
+
 export default function GlobalError({
   error,
   reset

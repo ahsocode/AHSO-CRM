@@ -28,7 +28,7 @@ export function ActivityFeed({
             {data.map((item) => (
               <li
                 key={item.id}
-                className="flex items-start gap-3 border-b border-border/20 py-2 last:border-0"
+                className="flex items-start gap-3 rounded-lg px-2 py-2 even:bg-bg-subtle/70"
               >
                 <span className="w-24 shrink-0 pt-0.5 text-[11px] leading-tight text-text-muted">
                   {formatDateTime(item.createdAt)}

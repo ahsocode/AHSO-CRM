@@ -129,6 +129,9 @@ export function useCreateActivity() {
       queryClient.invalidateQueries({ queryKey: ['activities'] });
       queryClient.invalidateQueries({ queryKey: ['calendar'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      // Customer/Project detail embed activity timelines — refresh them too
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast({
         title: 'Thành công',
         description: 'Đã tạo hoạt động',

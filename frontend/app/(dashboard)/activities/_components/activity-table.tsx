@@ -31,7 +31,7 @@ interface ActivityTableProps {
 export function ActivityTable({ activities, isLoading, meta, onPageChange }: ActivityTableProps) {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg p-8 text-center text-[#5D6D7E]">
+      <div className="bg-white rounded-lg p-8 text-center text-text-secondary">
         Đang tải...
       </div>
     );
@@ -39,14 +39,14 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
 
   if (activities.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-8 text-center text-[#5D6D7E]">
+      <div className="bg-white rounded-lg p-8 text-center text-text-secondary">
         Không có hoạt động nào
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-[#D5D8DC] overflow-hidden">
+    <div className="bg-white rounded-lg border border-border overflow-hidden">
       {/* Mobile card layout */}
       <div className="md:hidden divide-y divide-border-light">
         {activities.map((activity) => (
@@ -76,34 +76,34 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
       <div className="hidden md:block">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#F4F6F8] hover:bg-[#F4F6F8]">
-              <TableHead className="text-[#1C2833] font-semibold">Loại</TableHead>
-              <TableHead className="text-[#1C2833] font-semibold">Tiêu đề</TableHead>
-              <TableHead className="text-[#1C2833] font-semibold">Khách hàng</TableHead>
-              <TableHead className="text-[#1C2833] font-semibold">Dự án</TableHead>
-              <TableHead className="text-[#1C2833] font-semibold">Nhân viên</TableHead>
-              <TableHead className="text-[#1C2833] font-semibold">Thời gian dự kiến</TableHead>
-              <TableHead className="text-[#1C2833] font-semibold">Trạng thái</TableHead>
-              <TableHead className="text-right text-[#1C2833] font-semibold">Hành động</TableHead>
+            <TableRow className="bg-bg-page hover:bg-bg-page">
+              <TableHead className="text-text-primary font-semibold">Loại</TableHead>
+              <TableHead className="text-text-primary font-semibold">Tiêu đề</TableHead>
+              <TableHead className="text-text-primary font-semibold">Khách hàng</TableHead>
+              <TableHead className="text-text-primary font-semibold">Dự án</TableHead>
+              <TableHead className="text-text-primary font-semibold">Nhân viên</TableHead>
+              <TableHead className="text-text-primary font-semibold">Thời gian dự kiến</TableHead>
+              <TableHead className="text-text-primary font-semibold">Trạng thái</TableHead>
+              <TableHead className="text-right text-text-primary font-semibold">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {activities.map((activity) => (
-              <TableRow key={activity.id} className="hover:bg-[#EBF5FB]">
+              <TableRow key={activity.id} className="hover:bg-bg-subtle">
                 <TableCell>
                   <ActivityStatusBadge type={activity.type} />
                 </TableCell>
-                <TableCell className="max-w-xs truncate text-[#1C2833]">
+                <TableCell className="max-w-xs truncate text-text-primary">
                   {activity.title}
                 </TableCell>
-                <TableCell className="text-[#5D6D7E]">
+                <TableCell className="text-text-secondary">
                   {activity.customer?.name || '—'}
                 </TableCell>
-                <TableCell className="text-[#5D6D7E]">
+                <TableCell className="text-text-secondary">
                   {activity.project ? `${activity.project.code} - ${activity.project.name}` : '—'}
                 </TableCell>
-                <TableCell className="text-[#5D6D7E]">{activity.user?.name}</TableCell>
-                <TableCell className="text-[#5D6D7E]">
+                <TableCell className="text-text-secondary">{activity.user?.name}</TableCell>
+                <TableCell className="text-text-secondary">
                   {activity.scheduledAt
                     ? formatDistanceToNow(new Date(activity.scheduledAt), {
                         addSuffix: true,
@@ -123,7 +123,7 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-[#2E86C1] hover:text-[#1A5276] hover:bg-[#D6EAF8]"
+                      className="text-primary-light hover:text-primary-mid hover:bg-info-bg"
                     >
                       <Eye className="w-4 h-4" />
                     </Button>
@@ -136,8 +136,8 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
       </div>
 
       {meta && (
-        <div className="px-4 py-4 border-t border-[#D5D8DC] flex items-center justify-between gap-3">
-          <div className="text-sm text-[#5D6D7E]">
+        <div className="px-4 py-4 border-t border-border flex items-center justify-between gap-3">
+          <div className="text-sm text-text-secondary">
             <span className="hidden sm:inline">Hiển thị {(meta.page - 1) * meta.limit + 1} đến{' '}
             {Math.min(meta.page * meta.limit, meta.total)} của {meta.total} hoạt động</span>
             <span className="sm:hidden">{meta.total} hoạt động</span>
@@ -148,11 +148,11 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
               size="sm"
               disabled={meta.page <= 1}
               onClick={() => onPageChange?.(meta.page - 1)}
-              className="border-[#D5D8DC] text-[#1C2833]"
+              className="border-border text-text-primary"
             >
               Trước
             </Button>
-            <span className="text-sm text-[#5D6D7E] px-1">
+            <span className="text-sm text-text-secondary px-1">
               {meta.page}/{meta.totalPages}
             </span>
             <Button
@@ -160,7 +160,7 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
               size="sm"
               disabled={meta.page >= meta.totalPages}
               onClick={() => onPageChange?.(meta.page + 1)}
-              className="border-[#D5D8DC] text-[#1C2833]"
+              className="border-border text-text-primary"
             >
               Sau
             </Button>

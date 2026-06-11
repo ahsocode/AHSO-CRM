@@ -23,13 +23,15 @@ export class DashboardService {
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    // 6 tháng cho sparkline trên KPI card (Design Spec v2 mục 1.2)
+    const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
     const [completedProjects, activeProjects, pendingQuotes, contracts] = await Promise.all([
       this.prisma.project.findMany({
         where: {
           deletedAt: null,
           status: "COMPLETED",
-          completedAt: { gte: previousMonthStart, lt: nextMonthStart }
+          completedAt: { gte: trendStart, lt: nextMonthStart }
         },
         select: { completedAt: true, estimatedValue: true }
       }),
@@ -73,10 +75,19 @@ export class DashboardService {
     const overdueCustomers = outstandingContracts.filter((c) => c.remainingAmount > 0).length;
     const pendingQuoteValue = pendingQuotes.reduce((total, q) => total + Number(q.total), 0);
 
+    const revenueTrend = Array.from({ length: 6 }, (_, index) => {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - (4 - index), 1);
+      return completedProjects
+        .filter((p) => p.completedAt !== null && p.completedAt >= monthStart && p.completedAt < monthEnd)
+        .reduce((sum, p) => sum + Number(p.estimatedValue ?? 0), 0);
+    });
+
     return {
       monthlyRevenue: {
         value: currentMonthRevenue,
-        changePercent: revenueChange
+        changePercent: revenueChange,
+        trend: revenueTrend
       },
       activeProjects: {
         value: activeProjects

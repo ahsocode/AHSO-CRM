@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { Sparkline } from "@/components/shared/sparkline";
 import { V2MetricCard } from "@/components/shared/composite-cards";
 import { DashboardKpis } from "@/lib/types";
 
@@ -33,7 +34,21 @@ export function KpiCards({
     {
       label: "Doanh số tháng",
       value: <CurrencyDisplay amount={data.monthlyRevenue.value} short />,
-      hint: `${data.monthlyRevenue.changePercent >= 0 ? "+" : ""}${data.monthlyRevenue.changePercent}% tháng trước`,
+      // Sparkline 6 tháng + mũi tên trend theo Design Spec v2 mục 1.2
+      hint: (
+        <span className="flex items-center gap-2">
+          {data.monthlyRevenue.trend?.length >= 2 ? (
+            <span className={data.monthlyRevenue.changePercent >= 0 ? "text-success" : "text-danger"}>
+              <Sparkline data={data.monthlyRevenue.trend} />
+            </span>
+          ) : null}
+          <span className={data.monthlyRevenue.changePercent >= 0 ? "text-success" : "text-danger"}>
+            {data.monthlyRevenue.changePercent >= 0 ? "▲" : "▼"}{" "}
+            {Math.abs(data.monthlyRevenue.changePercent)}%
+          </span>
+          <span>tháng trước</span>
+        </span>
+      ),
       tone: "primary" as const
     },
     {

@@ -9,6 +9,7 @@ describe("InventoryBalanceService", () => {
     $transaction: jest.Mock;
     stockBalance: {
       upsert: jest.Mock;
+      updateMany: jest.Mock;
       findUnique: jest.Mock;
       findMany: jest.Mock;
     };
@@ -26,6 +27,7 @@ describe("InventoryBalanceService", () => {
       $transaction: jest.fn().mockImplementation((arr) => Promise.all(arr)),
       stockBalance: {
         upsert: jest.fn(),
+        updateMany: jest.fn(),
         findUnique: jest.fn(),
         findMany: jest.fn(),
       },
@@ -53,13 +55,27 @@ describe("InventoryBalanceService", () => {
       );
     });
 
-    it("accepts negative delta (for stock reduction)", async () => {
-      prisma.stockBalance.upsert.mockResolvedValue({});
+    it("uses conditional updateMany for negative delta (for stock reduction)", async () => {
+      prisma.stockBalance.updateMany.mockResolvedValue({ count: 1 });
 
       await service.adjustBalance(tx as any, "wh-1", "mat-1", -5);
 
-      const args = prisma.stockBalance.upsert.mock.calls[0][0];
-      expect(new Decimal(args.create.quantity).equals(-5)).toBe(true);
+      expect(prisma.stockBalance.updateMany).toHaveBeenCalledWith({
+        where: {
+          warehouseId: "wh-1",
+          materialId: "mat-1",
+          quantity: { gte: new Decimal(5) },
+        },
+        data: { quantity: { increment: new Decimal(-5) } },
+      });
+      expect(prisma.stockBalance.upsert).not.toHaveBeenCalled();
+    });
+
+    it("throws when conditional stock reduction loses the race", async () => {
+      prisma.stockBalance.updateMany.mockResolvedValue({ count: 0 });
+      prisma.material.findUnique.mockResolvedValue({ name: "Cáp điện" });
+
+      await expect(service.adjustBalance(tx as any, "wh-1", "mat-1", -5)).rejects.toThrow(BadRequestException);
     });
   });
 

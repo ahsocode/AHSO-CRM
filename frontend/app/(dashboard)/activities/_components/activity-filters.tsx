@@ -27,11 +27,11 @@ const ACTIVITY_TYPES = [
 
 export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersProps) {
   return (
-    <div className="bg-white rounded-lg p-4 border border-[#D5D8DC] space-y-4">
+    <div className="bg-white rounded-lg p-4 border border-border space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Type Filter */}
         <div>
-          <label className="text-sm font-medium text-[#1C2833] block mb-2">
+          <label className="text-sm font-medium text-text-primary block mb-2">
             Loại hoạt động
           </label>
           <SelectRoot
@@ -40,7 +40,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
               onFiltersChange({ ...filters, type: value === 'all' ? undefined : value, page: 1 })
             }
           >
-            <SelectTrigger className="border-[#D5D8DC]">
+            <SelectTrigger className="border-border">
               <SelectValue placeholder="Tất cả loại" />
             </SelectTrigger>
             <SelectContent>
@@ -56,7 +56,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
 
         {/* Completion Status */}
         <div>
-          <label className="text-sm font-medium text-[#1C2833] block mb-2">
+          <label className="text-sm font-medium text-text-primary block mb-2">
             Trạng thái
           </label>
           <SelectRoot
@@ -77,7 +77,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
               onFiltersChange({ ...filters, isCompleted, page: 1 });
             }}
           >
-            <SelectTrigger className="border-[#D5D8DC]">
+            <SelectTrigger className="border-border">
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
             <SelectContent>
@@ -90,7 +90,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
 
         {/* Search */}
         <div className="md:col-span-2">
-          <label className="text-sm font-medium text-[#1C2833] block mb-2">
+          <label className="text-sm font-medium text-text-primary block mb-2">
             Tìm kiếm
           </label>
           <Input
@@ -99,7 +99,7 @@ export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersPro
             onChange={(e) =>
               onFiltersChange({ ...filters, search: e.target.value, page: 1 })
             }
-            className="border-[#D5D8DC]"
+            className="border-border"
           />
         </div>
       </div>

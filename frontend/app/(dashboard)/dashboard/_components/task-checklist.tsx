@@ -35,7 +35,7 @@ export function TaskChecklist({
             {data.map((task) => (
               <li
                 key={task.id}
-                className="flex items-center gap-3 border-b border-border/30 py-2.5 last:border-0"
+                className="flex items-center gap-3 rounded-lg px-2 py-2.5 even:bg-bg-subtle/70"
               >
                 <span className="w-14 shrink-0 rounded-lg bg-primary-bg px-1.5 py-1 text-center text-xs font-semibold text-primary">
                   {formatTime(task.scheduledAt)}

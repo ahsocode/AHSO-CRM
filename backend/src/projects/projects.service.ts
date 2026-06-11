@@ -183,7 +183,11 @@ export class ProjectsService {
         include: projectListInclude
       });
 
-      const items = projects.map((project) => this.mapProjectListItem(project, now));
+      const upcomingIds = await this.getProjectIdsWithUpcomingActivity(
+        projects.map((project) => project.id),
+        now
+      );
+      const items = projects.map((project) => this.mapProjectListItem(project, now, upcomingIds));
 
       return {
         data: KANBAN_PROJECT_STATUSES.map((status) => {
@@ -209,10 +213,39 @@ export class ProjectsService {
       include: projectListInclude
     });
 
+    const upcomingIds = await this.getProjectIdsWithUpcomingActivity(
+      projects.map((project) => project.id),
+      now
+    );
+
     return {
-      items: projects.map((project) => this.mapProjectListItem(project, now)),
+      items: projects.map((project) => this.mapProjectListItem(project, now, upcomingIds)),
       meta
     };
+  }
+
+  // "Nguyên tắc Pipedrive": mọi deal đang mở phải có một hành động kế tiếp.
+  // Trả về tập projectId có activity chưa hoàn thành được lên lịch từ bây giờ.
+  private async getProjectIdsWithUpcomingActivity(projectIds: string[], now: Date): Promise<Set<string>> {
+    if (projectIds.length === 0) {
+      return new Set();
+    }
+
+    const rows = await this.prisma.activity.groupBy({
+      by: ["projectId"],
+      where: {
+        projectId: { in: projectIds },
+        isCompleted: false,
+        scheduledAt: { gte: now }
+      },
+      _count: { projectId: true }
+    });
+
+    return new Set(
+      rows
+        .map((row) => row.projectId)
+        .filter((projectId): projectId is string => Boolean(projectId))
+    );
   }
 
   async create(dto: CreateProjectDto, user: JwtUser) {
@@ -1740,6 +1773,7 @@ export class ProjectsService {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.status !== undefined ? { status: dto.status } : {}),
+        ...(dto.status !== undefined && dto.status !== project.status ? { stageChangedAt: new Date() } : {}),
         ...(dto.priority !== undefined ? { priority: dto.priority } : {}),
         ...(dto.estimatedValue !== undefined ? { estimatedValue: dto.estimatedValue } : {}),
         ...(dto.startDate !== undefined ? { startDate: dto.startDate } : {}),
@@ -1779,6 +1813,7 @@ export class ProjectsService {
       },
       data: {
         status: dto.status,
+        ...(dto.status !== project.status ? { stageChangedAt: new Date() } : {}),
         completedAt,
         salesInvoiceDate: dto.status === "COMPLETED" ? dto.salesInvoiceDate ?? project.salesInvoiceDate : null
       }
@@ -2252,8 +2287,15 @@ export class ProjectsService {
     return Number(project.contract?.value ?? project.estimatedValue ?? 0);
   }
 
-  private mapProjectListItem(project: ProjectListRecord, now: Date) {
+  private mapProjectListItem(project: ProjectListRecord, now: Date, upcomingActivityProjectIds?: Set<string>) {
     const estimatedValue = this.resolveProjectCommercialValue(project);
+    const isClosed = CLOSED_PROJECT_STATUSES.includes(
+      project.status as (typeof CLOSED_PROJECT_STATUSES)[number]
+    );
+    const daysInCurrentStage = Math.max(
+      0,
+      Math.floor((now.getTime() - project.stageChangedAt.getTime()) / (24 * 60 * 60 * 1000))
+    );
 
     return {
       id: project.id,
@@ -2268,6 +2310,10 @@ export class ProjectsService {
       expectedEndDate: project.expectedEndDate,
       completedAt: project.completedAt,
       updatedAt: project.updatedAt,
+      // Deal rotting (Kanban): số ngày deal nằm ở stage hiện tại
+      daysInCurrentStage: isClosed ? 0 : daysInCurrentStage,
+      // false = deal đang mở mà không có hành động kế tiếp nào được lên lịch
+      hasUpcomingActivity: isClosed ? true : (upcomingActivityProjectIds?.has(project.id) ?? true),
       lastActivityAt: project.activities[0]?.updatedAt ?? null,
       isOverdue: Boolean(
         project.expectedEndDate &&

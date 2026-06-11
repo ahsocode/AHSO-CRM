@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { EmptyState } from "@/components/shared/empty-state";
+import { QuickActivityLog } from "@/components/shared/quick-activity-log";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { AppIcon } from "@/components/shared/app-icon";
@@ -347,6 +348,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
                   </div>
                 </article>
               ) : null}
+              <QuickActivityLog customerId={customer.id} />
               {customer.activities.length === 0 ? (
                 <EmptyState
                   title="Chưa có hoạt động"

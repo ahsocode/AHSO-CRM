@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
+import { CustomerQuickCreateDialog } from "@/components/shared/customer-quick-create-dialog";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,6 +85,7 @@ export function ProjectFormScreen({
   const updateProjectMutation = useUpdateProject(projectId ?? "");
   const deleteProjectMutation = useDeleteProject(projectId ?? "");
   const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -240,7 +242,16 @@ export function ProjectFormScreen({
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <Field className="md:col-span-2">
-              <Label htmlFor="customerId">Khách hàng</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="customerId">Khách hàng</Label>
+                <button
+                  type="button"
+                  className="text-xs font-semibold text-primary-mid hover:text-primary"
+                  onClick={() => setQuickCreateOpen(true)}
+                >
+                  + Tạo khách hàng mới
+                </button>
+              </div>
               <Select id="customerId" disabled={customersQuery.isLoading} {...form.register("customerId")}>
                 <option value="">
                   {customersQuery.isLoading ? "Đang tải khách hàng..." : "Chọn khách hàng cho dự án"}
@@ -252,6 +263,13 @@ export function ProjectFormScreen({
                 ))}
               </Select>
               <ErrorText message={form.formState.errors.customerId?.message} />
+              <CustomerQuickCreateDialog
+                open={quickCreateOpen}
+                onOpenChange={setQuickCreateOpen}
+                onCreated={(customerId) => {
+                  form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
+                }}
+              />
             </Field>
 
             <Field className="md:col-span-2">

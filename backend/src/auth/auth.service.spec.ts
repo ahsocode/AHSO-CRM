@@ -100,7 +100,10 @@ describe("AuthService", () => {
       publishSessionInvalidated: jest.fn()
     };
 
-    const imapService = { verifyCredentials: jest.fn().mockResolvedValue(false) };
+    const imapService = {
+      verifyCredentials: jest.fn().mockResolvedValue(false),
+      verifyCredentialsDetailed: jest.fn().mockResolvedValue("invalid")
+    };
     const mailboxSyncService = { syncAccount: jest.fn(), startIdleWatch: jest.fn() };
 
     service = new AuthService(
@@ -238,7 +241,7 @@ describe("AuthService", () => {
         role: {
           id: "role-admin",
           name: "ADMIN",
-          permissions: []
+          permissions: [{ resource: "settings", action: "edit" }]
         }
       }
     };
@@ -274,6 +277,42 @@ describe("AuthService", () => {
     });
     expect(compareMock).toHaveBeenCalledTimes(1);
     expect(compareMock).toHaveBeenCalledWith(refreshToken, "stored-refresh-hash");
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      1,
+      {
+        sub: activeUser.id,
+        email: activeUser.email,
+        name: activeUser.name,
+        role: {
+          id: "role-admin",
+          name: "ADMIN",
+          permissions: []
+        },
+        permissions: []
+      },
+      {
+        secret: "jwt-secret",
+        expiresIn: "15m"
+      }
+    );
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      2,
+      {
+        sub: activeUser.id,
+        email: activeUser.email,
+        name: activeUser.name,
+        role: {
+          id: "role-admin",
+          name: "ADMIN",
+          permissions: []
+        },
+        permissions: []
+      },
+      {
+        secret: "refresh-secret",
+        expiresIn: "7d"
+      }
+    );
     expect(prisma.userSession.update).toHaveBeenCalledWith({
       where: { id: session.id },
       data: {

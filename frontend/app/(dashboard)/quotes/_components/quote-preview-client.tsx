@@ -306,7 +306,13 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
                       className="h-full w-full object-contain p-2"
                     />
                   ) : (
-                    <img src="/crm-logo.png" alt="AHSO CRM" className="h-full w-full object-contain" />
+                    <Image
+                      src="/crm-logo.png"
+                      alt="AHSO CRM"
+                      width={48}
+                      height={48}
+                      className="h-full w-full object-contain"
+                    />
                   )}
                 </div>
                 <div>

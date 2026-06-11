@@ -176,6 +176,10 @@ export async function clearServerSession() {
   }
 
   try {
+    // Intentionally raw fetch, NOT apiClient: logout must not trigger the
+    // 401-refresh interceptor (which would mint a new session while we are
+    // tearing this one down) and must fire even when the access token is
+    // already gone. Documented exception to the "always use apiClient" rule.
     await fetch(`${API_URL}/auth/logout`, {
       method: "POST",
       credentials: "include"

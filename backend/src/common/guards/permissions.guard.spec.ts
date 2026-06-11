@@ -85,7 +85,7 @@ describe("PermissionsGuard", () => {
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
-  it("uses embedded JWT permissions when available", async () => {
+  it("uses permissions already hydrated by JwtStrategy when available", async () => {
     mockRequiredPermissions(["customers.view"]);
 
     await expect(

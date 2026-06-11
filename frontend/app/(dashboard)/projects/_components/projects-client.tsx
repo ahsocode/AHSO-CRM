@@ -9,6 +9,7 @@ import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { DeletedRecordsPanel } from "@/components/shared/deleted-records-panel";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useBulkProjects, useCreateProject, useDeletedProjects, useProjectKanban, useProjects, useRestoreProject, useUpdateProjectStatus } from "@/hooks/use-projects";
 import { useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
@@ -59,9 +60,10 @@ const parseDateYMD = (value: string): string | undefined => {
 export function ProjectsClient() {
   const user = useAuthStore((state) => state.user);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<ProjectStatus | "">("");
-  const [priority, setPriority] = useState<Priority | "">("");
-  const [assignedToId, setAssignedToId] = useState("");
+  // Bộ lọc ghi nhớ qua localStorage; ô tìm kiếm cố ý không ghi nhớ.
+  const [status, setStatus] = usePersistentState<ProjectStatus | "">("crm:filters:projects:status", "");
+  const [priority, setPriority] = usePersistentState<Priority | "">("crm:filters:projects:priority", "");
+  const [assignedToId, setAssignedToId] = usePersistentState("crm:filters:projects:assignedToId", "");
   const [page, setPage] = useState(1);
   const [view, setView] = useState<ProjectViewMode>(getProjectViewFromUrl);
   const [importOpen, setImportOpen] = useState(false);

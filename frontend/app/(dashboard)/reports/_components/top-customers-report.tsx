@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatVNDShort } from "@/lib/format";
 import { ReportTopCustomer, ReportsOverview } from "@/lib/types";
 import { cn, downloadExcelRows } from "@/lib/utils";
+import { CHART_COLORS } from "@/lib/constants";
 
 export function TopCustomersReport({
   customers,
@@ -74,7 +75,7 @@ export function TopCustomersReport({
                   <XAxis
                     type="number"
                     tickFormatter={(value) => formatVNDShort(Number(value))}
-                    stroke="#5d6d7e"
+                    stroke={CHART_COLORS.axis}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -83,7 +84,7 @@ export function TopCustomersReport({
                     dataKey="name"
                     width={120}
                     tick={{ fontSize: 13 }}
-                    stroke="#5d6d7e"
+                    stroke={CHART_COLORS.axis}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -96,12 +97,12 @@ export function TopCustomersReport({
                     }}
                     formatter={(value: number) => formatVNDShort(Number(value))}
                   />
-                  <Bar dataKey="paidAmount" fill="#1a5276" radius={[0, 6, 6, 0]}>
+                  <Bar dataKey="paidAmount" fill={CHART_COLORS.primaryMid} radius={[0, 6, 6, 0]}>
                     <LabelList
                       dataKey="paidAmount"
                       position="right"
                       formatter={(value: number) => formatVNDShort(value)}
-                      style={{ fill: "#1c2833", fontSize: 11, fontWeight: 600 }}
+                      style={{ fill: CHART_COLORS.label, fontSize: 11, fontWeight: 600 }}
                     />
                   </Bar>
                 </BarChart>

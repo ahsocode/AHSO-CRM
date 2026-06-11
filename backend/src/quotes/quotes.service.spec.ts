@@ -191,7 +191,8 @@ describe("QuotesService", () => {
         id: "project-1"
       },
       data: {
-        status: "QUOTING"
+        status: "QUOTING",
+        stageChangedAt: expect.any(Date)
       }
     });
   });
@@ -266,7 +267,8 @@ describe("QuotesService", () => {
       },
       data: {
         status: "WON",
-        estimatedValue: 275
+        estimatedValue: 275,
+        stageChangedAt: expect.any(Date)
       }
     });
   });
@@ -323,7 +325,8 @@ describe("QuotesService", () => {
       },
       data: {
         status: "WON",
-        estimatedValue: 550
+        estimatedValue: 550,
+        stageChangedAt: expect.any(Date)
       }
     });
   });

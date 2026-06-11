@@ -104,6 +104,65 @@ export const ACTIVITY_TYPE_LABELS = {
   FOLLOWUP: "Theo dõi"
 } as const;
 
+/**
+ * Màu chart (Recharts/Nivo). SVG attribute không nhận var(--token) nên đây là
+ * NGOẠI LỆ Token Rule có kiểm soát: mọi màu chart PHẢI lấy từ đây, không
+ * hardcode hex trong component. Giá trị bám theo Design Spec v2 mục 4.
+ */
+export const CHART_COLORS = {
+  primary: "#003b5a",
+  primaryMid: "#1a5276",
+  primaryLight: "#2e86c1",
+  accent: "#e67e22",
+  success: "#1e8449",
+  danger: "#c0392b",
+  teal: "#00897b",
+  stageWon: "#2563eb",
+  axis: "#5d6d7e",
+  grid: "#e8eaec",
+  label: "#1c2833",
+  muted: "#78909c"
+} as const;
+
+/** Series màu theo thứ tự stage pipeline (SURVEY → ... → LOST) */
+export const CHART_STAGE_SERIES = [
+  CHART_COLORS.muted,
+  CHART_COLORS.primaryLight,
+  CHART_COLORS.accent,
+  CHART_COLORS.primaryMid,
+  CHART_COLORS.success,
+  CHART_COLORS.danger,
+  CHART_COLORS.axis
+] as const;
+
+/** Series màu cho chart phân loại tổng quát (report builder...) */
+export const CHART_CATEGORY_SERIES = [
+  CHART_COLORS.primaryMid,
+  CHART_COLORS.primaryLight,
+  CHART_COLORS.accent,
+  CHART_COLORS.teal,
+  CHART_COLORS.success,
+  CHART_COLORS.danger
+] as const;
+
+/**
+ * Nguồn duy nhất cho hiển thị loại hoạt động: label + AppIcon + token classes.
+ * Token Rule: chỉ dùng semantic class từ tailwind.config (map về CSS variables),
+ * không hardcode hex. Icon dùng AppIcon, không dùng emoji.
+ */
+export const ACTIVITY_TYPE_CONFIG: Record<
+  keyof typeof ACTIVITY_TYPE_LABELS,
+  { label: string; icon: string; className: string }
+> = {
+  CALL: { label: "Gọi điện", icon: "phone", className: "bg-info-bg text-primary-mid" },
+  EMAIL: { label: "Email", icon: "mail", className: "bg-bg-hover text-text-secondary" },
+  MEETING: { label: "Họp", icon: "groups", className: "bg-success-bg text-success" },
+  SURVEY: { label: "Khảo sát", icon: "map-pin", className: "bg-warning-bg text-warning" },
+  DEMO: { label: "Demo", icon: "monitor", className: "bg-info-bg text-info" },
+  NOTE: { label: "Ghi chú", icon: "description", className: "bg-bg-hover text-text-secondary" },
+  FOLLOWUP: { label: "Theo dõi", icon: "refresh", className: "bg-accent-bg text-accent" }
+} as const;
+
 export const STOCK_DOC_STATUS_LABELS: Record<StockDocStatus, string> = {
   DRAFT: "Bản nháp",
   CONFIRMED: "Đã xác nhận",

@@ -65,7 +65,7 @@ export function NotificationDropdown() {
       sideOffset={12}
       className="z-[60] w-[380px] rounded-3xl border-slate-200/80 p-0 shadow-[0_20px_60px_rgba(21,67,96,0.15)]"
     >
-      <div className="border-b border-border/60 px-4 py-4">
+      <div className="bg-bg-subtle px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <DropdownMenuLabel className="px-0 text-base font-bold text-text-primary">Thông báo</DropdownMenuLabel>

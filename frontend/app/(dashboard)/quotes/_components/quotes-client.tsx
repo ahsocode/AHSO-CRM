@@ -6,6 +6,7 @@ import { BulkActionsBar } from "@/components/shared/bulk-actions-bar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useBulkQuotes, useQuotes } from "@/hooks/use-quotes";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { useProjects } from "@/hooks/use-projects";
 import { useToast } from "@/hooks/use-toast";
@@ -22,8 +23,9 @@ const BULK_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "SENT", "ACCEPTED", "REJECT
 
 export function QuotesClient() {
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<QuoteStatus | "">("");
-  const [projectId, setProjectId] = useState("");
+  // Bộ lọc ghi nhớ qua localStorage; ô tìm kiếm cố ý không ghi nhớ.
+  const [status, setStatus] = usePersistentState<QuoteStatus | "">("crm:filters:quotes:status", "");
+  const [projectId, setProjectId] = usePersistentState("crm:filters:quotes:projectId", "");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<"status" | "send">("status");
@@ -117,9 +119,18 @@ export function QuotesClient() {
                   status: bulkAction === "status" ? bulkStatus : undefined
                 },
                 {
-                  onSuccess: () => {
+                  onSuccess: (data) => {
                     setSelectedIds([]);
-                    success(`Đã xử lý ${selectedIds.length} báo giá.`);
+                    const processedCount = data.processedCount ?? 0;
+                    const failedCount = data.failedCount ?? 0;
+
+                    if (failedCount > 0) {
+                      showError(
+                        `Đã xử lý ${processedCount} báo giá, ${failedCount} báo giá lỗi. ${data.errors?.[0]?.message ?? ""}`.trim()
+                      );
+                      return;
+                    }
+                    success(`Đã xử lý ${processedCount || selectedIds.length} báo giá.`);
                   },
                   onError: (error) => {
                     showError(error instanceof Error ? error.message : "Không thể thực hiện bulk action.");

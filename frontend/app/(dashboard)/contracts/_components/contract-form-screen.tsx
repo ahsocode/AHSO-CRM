@@ -24,7 +24,7 @@ import { useProject, useProjects } from "@/hooks/use-projects";
 import { useQuote } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { CONTRACT_STATUS_LABELS } from "@/lib/constants";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime, formatVND } from "@/lib/format";
 import { ContractStatus, CustomFieldValues } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ContractFileUploader } from "./contract-file-uploader";
@@ -371,7 +371,7 @@ export function ContractFormScreen({
                     </option>
                     {acceptedQuotes.map((quote) => (
                       <option key={quote.id} value={quote.id}>
-                        {quote.quoteNo} · v{quote.version} · {quote.total.toLocaleString("vi-VN")} VND
+                        {quote.quoteNo} · v{quote.version} · {formatVND(quote.total)}
                       </option>
                     ))}
                   </Select>

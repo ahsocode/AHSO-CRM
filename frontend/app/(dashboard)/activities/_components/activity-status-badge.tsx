@@ -1,23 +1,15 @@
 'use client';
 
+import { ComponentProps } from 'react';
+import { AppIcon } from '@/components/shared/app-icon';
 import { Badge } from '@/components/ui/badge';
+import { ACTIVITY_TYPE_CONFIG } from '@/lib/constants';
 
-const ACTIVITY_TYPE_CONFIG: Record<
-  string,
-  { label: string; className: string; icon: string }
-> = {
-  CALL: { label: 'Cuộc gọi', className: 'bg-[#D6EAF8] text-[#1A5276]', icon: '📞' },
-  EMAIL: { label: 'Email', className: 'bg-[#E8E8E8] text-[#4A4A4A]', icon: '📧' },
-  MEETING: { label: 'Họp mặt', className: 'bg-[#D5F5E3] text-[#1E5631]', icon: '👥' },
-  SURVEY: { label: 'Khảo sát', className: 'bg-[#FDEBD0] text-[#7D4E00]', icon: '📋' },
-  DEMO: { label: 'Demo', className: 'bg-[#E8DAEF] text-[#6C3483]', icon: '🎬' },
-  NOTE: { label: 'Ghi chú', className: 'bg-[#E8E8E8] text-[#4A4A4A]', icon: '📝' },
-  FOLLOWUP: { label: 'Theo dõi', className: 'bg-[#D0EFE8] text-[#0E6655]', icon: '↻' },
-};
-
+// Token Rule: màu lấy từ semantic class (CSS variables), icon dùng AppIcon —
+// không hardcode hex, không dùng emoji.
 const COMPLETION_CONFIG = {
-  true: { label: 'Hoàn tất', className: 'bg-[#D5F5E3] text-[#1E5631]' },
-  false: { label: 'Chưa xong', className: 'bg-[#FADBD8] text-[#922B21]' },
+  true: { label: 'Hoàn tất', className: 'bg-success-bg text-success' },
+  false: { label: 'Chưa xong', className: 'bg-danger-bg text-danger' },
 };
 
 interface ActivityStatusBadgeProps {
@@ -38,11 +30,18 @@ export function ActivityStatusBadge({
     return <Badge className={config.className}>{config.label}</Badge>;
   }
 
-  const config = ACTIVITY_TYPE_CONFIG[type] || { label: type, className: 'bg-gray-100', icon: '●' };
+  const config =
+    ACTIVITY_TYPE_CONFIG[type as keyof typeof ACTIVITY_TYPE_CONFIG] ??
+    ({ label: type, className: 'bg-bg-hover text-text-secondary', icon: 'activity' } as const);
 
   return (
     <Badge className={config.className}>
-      {showIcon && <span className="mr-1">{config.icon}</span>}
+      {showIcon ? (
+        <AppIcon
+          name={config.icon as ComponentProps<typeof AppIcon>['name']}
+          className="mr-1 h-3.5 w-3.5"
+        />
+      ) : null}
       {config.label}
     </Badge>
   );

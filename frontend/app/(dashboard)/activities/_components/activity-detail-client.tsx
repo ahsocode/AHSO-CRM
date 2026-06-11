@@ -47,7 +47,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg p-8 text-center text-[#5D6D7E]">
+      <div className="bg-white rounded-lg p-8 text-center text-text-secondary">
         <LoadingSkeleton className="h-12 w-48 mx-auto mb-4" />
         <LoadingSkeleton className="h-4 w-64 mx-auto mb-2" />
         <LoadingSkeleton className="h-4 w-64 mx-auto" />
@@ -58,9 +58,9 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
   if (!activity) {
     return (
       <div className="text-center py-12">
-        <p className="text-[#5D6D7E]">Hoạt động không tồn tại</p>
+        <p className="text-text-secondary">Hoạt động không tồn tại</p>
         <Link href="/activities">
-          <Button className="mt-4 bg-[#1A5276]">Quay lại danh sách</Button>
+          <Button className="mt-4 bg-primary-mid">Quay lại danh sách</Button>
         </Link>
       </div>
     );
@@ -71,7 +71,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
       <Button
         variant="ghost"
         onClick={() => router.back()}
-        className="text-[#2E86C1] hover:bg-[#D6EAF8]"
+        className="text-primary-light hover:bg-info-bg"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Quay lại
@@ -90,7 +90,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
                   isCompleted={activity.isCompleted}
                 />
               </div>
-              <CardTitle className="text-[#1C2833]">{activity.title}</CardTitle>
+              <CardTitle className="text-text-primary">{activity.title}</CardTitle>
               <CardDescription>
                 Tạo bởi {activity.user?.name} •{' '}
                 {formatDistanceToNow(new Date(activity.createdAt), {
@@ -103,10 +103,10 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className={`border-[#D5D8DC] ${
+                className={`border-border ${
                   activity.isCompleted
-                    ? 'text-[#1E5631] hover:bg-[#D5F5E3]'
-                    : 'text-[#5D6D7E] hover:bg-[#EBF5FB]'
+                    ? 'text-success hover:bg-success-bg'
+                    : 'text-text-secondary hover:bg-bg-subtle'
                 }`}
                 onClick={handleToggleCompletion}
                 disabled={updateMutation.isPending}
@@ -122,7 +122,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-[#D5D8DC] text-[#1C2833]"
+                  className="border-border text-text-primary"
                 >
                   <Edit className="w-4 h-4 mr-1" />
                   Chỉnh sửa
@@ -133,7 +133,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-[#C0392B] text-[#C0392B] hover:bg-[#FADBD8]"
+                    className="border-danger text-danger hover:bg-danger-bg"
                   >
                     <Trash2 className="w-4 h-4 mr-1" />
                     Xoá
@@ -148,7 +148,7 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
                     <AlertDialogCancel>Huỷ</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDelete}
-                      className="bg-[#C0392B] hover:bg-[#922B21]"
+                      className="bg-danger hover:bg-danger"
                     >
                       {deleteMutation.isPending ? 'Đang xoá...' : 'Xoá'}
                     </AlertDialogAction>
@@ -161,19 +161,19 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
         <CardContent className="space-y-6">
           {activity.content && (
             <div>
-              <h3 className="text-sm font-semibold text-[#1C2833] mb-2">Nội dung</h3>
-              <p className="text-[#5D6D7E] whitespace-pre-wrap">{activity.content}</p>
+              <h3 className="text-sm font-semibold text-text-primary mb-2">Nội dung</h3>
+              <p className="text-text-secondary whitespace-pre-wrap">{activity.content}</p>
             </div>
           )}
 
           {/* Metadata Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#D5D8DC]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border">
             {activity.customer && (
               <div>
-                <h3 className="text-sm font-semibold text-[#1C2833] mb-2">Khách hàng</h3>
+                <h3 className="text-sm font-semibold text-text-primary mb-2">Khách hàng</h3>
                 <Link
                   href={`/customers/${activity.customer.id}`}
-                  className="text-[#2E86C1] hover:underline"
+                  className="text-primary-light hover:underline"
                 >
                   {activity.customer.name}
                 </Link>
@@ -182,10 +182,10 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
 
             {activity.project && (
               <div>
-                <h3 className="text-sm font-semibold text-[#1C2833] mb-2">Dự án</h3>
+                <h3 className="text-sm font-semibold text-text-primary mb-2">Dự án</h3>
                 <Link
                   href={`/projects/${activity.project.id}`}
-                  className="text-[#2E86C1] hover:underline"
+                  className="text-primary-light hover:underline"
                 >
                   {activity.project.code} - {activity.project.name}
                 </Link>
@@ -193,16 +193,16 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
             )}
 
             <div>
-              <h3 className="text-sm font-semibold text-[#1C2833] mb-2">Người thực hiện</h3>
-              <p className="text-[#5D6D7E]">{activity.user?.name}</p>
+              <h3 className="text-sm font-semibold text-text-primary mb-2">Người thực hiện</h3>
+              <p className="text-text-secondary">{activity.user?.name}</p>
             </div>
 
             {activity.scheduledAt && (
               <div>
-                <h3 className="text-sm font-semibold text-[#1C2833] mb-2">
+                <h3 className="text-sm font-semibold text-text-primary mb-2">
                   Thời gian dự kiến
                 </h3>
-                <p className="text-[#5D6D7E]">
+                <p className="text-text-secondary">
                   {new Date(activity.scheduledAt).toLocaleString('vi-VN')}
                 </p>
               </div>
@@ -210,12 +210,12 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
 
             {activity.attachmentUrl && (
               <div>
-                <h3 className="text-sm font-semibold text-[#1C2833] mb-2">Tệp đính kèm</h3>
+                <h3 className="text-sm font-semibold text-text-primary mb-2">Tệp đính kèm</h3>
                 <a
                   href={activity.attachmentUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#2E86C1] hover:underline break-all"
+                  className="text-primary-light hover:underline break-all"
                 >
                   {activity.attachmentUrl}
                 </a>
@@ -223,8 +223,8 @@ export function ActivityDetailClient({ id }: ActivityDetailClientProps) {
             )}
 
             <div>
-              <h3 className="text-sm font-semibold text-[#1C2833] mb-2">Lần cập nhật cuối</h3>
-              <p className="text-[#5D6D7E]">
+              <h3 className="text-sm font-semibold text-text-primary mb-2">Lần cập nhật cuối</h3>
+              <p className="text-text-secondary">
                 {formatDistanceToNow(new Date(activity.updatedAt), {
                   addSuffix: true,
                   locale: vi,

@@ -20,7 +20,8 @@ const QUICK_ACTIONS: SearchResultItem[] = [
   { id: "dashboard", type: "activity", title: "Đi đến Dashboard", subtitle: "Tổng quan hệ thống", href: "/dashboard" },
   { id: "new-customer", type: "customer", title: "Tạo khách hàng mới", subtitle: "Mở form khách hàng", href: "/customers/new" },
   { id: "new-project", type: "project", title: "Tạo dự án mới", subtitle: "Mở form dự án", href: "/projects/new" },
-  { id: "new-quote", type: "quote", title: "Tạo báo giá mới", subtitle: "Mở form báo giá", href: "/quotes/new" }
+  { id: "new-quote", type: "quote", title: "Tạo báo giá mới", subtitle: "Mở form báo giá", href: "/quotes/new" },
+  { id: "new-activity", type: "activity", title: "Ghi nhanh hoạt động", subtitle: "Log cuộc gọi, ghi chú, cuộc họp", href: "/activities/new" }
 ];
 
 function isValidSearchResultItem(value: unknown): value is SearchResultItem {
@@ -48,10 +49,10 @@ function ResultRow({
   return (
     <button
       type="button"
-      className="flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left transition hover:bg-bg-hover"
+      className="flex w-full items-start gap-3 rounded-lg px-4 py-3 text-left transition hover:bg-bg-hover"
       onClick={() => onSelect(item)}
     >
-      <div className="mt-0.5 rounded-xl bg-primary/10 p-2 text-primary">
+      <div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary">
         <AppIcon
           name={
             item.type === "customer"
@@ -156,7 +157,7 @@ export function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-start justify-center bg-slate-900/35 px-4 pt-[12vh] backdrop-blur-sm">
-      <div className="w-full max-w-2xl overflow-hidden rounded-[32px] border border-white/70 bg-white shadow-[0_30px_80px_rgba(21,67,96,0.2)]">
+      <div className="w-full max-w-2xl overflow-hidden rounded-lg border border-white/70 bg-white shadow-[0_30px_80px_rgba(21,67,96,0.2)]">
         <div className="flex items-center gap-3 border-b border-border/60 px-4 py-4">
           <AppIcon name="search" className="h-5 w-5 text-primary" />
           <Input
@@ -188,7 +189,7 @@ export function CommandPalette() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border/70 bg-bg-hover/40 p-10 text-center">
+            <div className="rounded-lg border border-dashed border-border/70 bg-bg-hover/40 p-10 text-center">
               <p className="font-semibold text-text-primary">Không tìm thấy kết quả phù hợp</p>
               <p className="mt-2 text-sm text-text-secondary">Thử với từ khóa ngắn hơn hoặc dùng hành động nhanh phía dưới.</p>
             </div>

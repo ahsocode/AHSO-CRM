@@ -57,17 +57,29 @@ export class AuthService {
 
     if (isAhsoEmail) {
       // Primary: authenticate via iRedMail IMAP
-      const imapValid = await this.imapService.verifyCredentials(email, dto.password, ahsoImapHost);
+      const imapResult = await this.imapService.verifyCredentialsDetailed(email, dto.password, ahsoImapHost);
 
-      if (imapValid) {
+      if (imapResult === "valid") {
         user = await this.findOrCreateAhsoUser(email, dto.password);
         // Auto-connect mailbox in the background
         void this.autoConnectMailbox(user.id, email, dto.password);
       } else {
-        // Fallback: bcrypt for seeded/admin accounts without iRedMail account
+        // bcrypt fallback policy:
+        // - "unreachable": mail server down — allow fallback so the team is not
+        //   locked out by a mail outage.
+        // - "invalid": IMAP rejected the credentials. Only allow fallback for
+        //   accounts that have never connected a mailbox (seeded/admin users
+        //   without an iRedMail account). For known iRedMail users, falling
+        //   back here would let a STALE CRM password bypass a changed iRedMail
+        //   password.
         user = await this.findUserByEmail(email);
         if (user) {
-          const bcryptValid = await bcrypt.compare(dto.password, user.password);
+          const hasMailbox = await this.prisma.emailAccount.findUnique({
+            where: { userId: user.id },
+            select: { id: true }
+          });
+          const allowFallback = imapResult === "unreachable" || !hasMailbox;
+          const bcryptValid = allowFallback && (await bcrypt.compare(dto.password, user.password));
           if (!bcryptValid) {
             user = null;
           }
@@ -353,10 +365,6 @@ export class AuthService {
   }
 
   private buildPayload(user: AuthUserWithRole): JwtUser {
-    const permissions = user.role?.permissions?.map(
-      (permission: { resource: string; action: string }) => `${permission.resource}.${permission.action}`
-    ) ?? [];
-
     return {
       sub: user.id,
       email: user.email,
@@ -364,9 +372,12 @@ export class AuthService {
       role: {
         id: user.role?.id ?? "",
         name: user.role?.name || "STAFF",
-        permissions
+        // JWT payload intentionally does not embed permissions. JwtStrategy
+        // hydrates permissions from DB/cache on each request so role changes
+        // take effect without waiting for the access token to expire.
+        permissions: []
       },
-      permissions
+      permissions: []
     };
   }
 

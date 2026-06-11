@@ -306,6 +306,8 @@ export interface DashboardKpis {
   monthlyRevenue: {
     value: number;
     changePercent: number;
+    /** Doanh số 6 tháng gần nhất cho sparkline */
+    trend: number[];
   };
   activeProjects: {
     value: number;
@@ -574,6 +576,10 @@ export interface ProjectListItem {
   expectedEndDate?: string | null;
   completedAt?: string | null;
   updatedAt: string;
+  /** Số ngày deal nằm ở stage hiện tại — chỉ báo deal ứ đọng trên Kanban */
+  daysInCurrentStage: number;
+  /** false = deal đang mở nhưng chưa có hành động kế tiếp được lên lịch */
+  hasUpcomingActivity: boolean;
   lastActivityAt?: string | null;
   isOverdue: boolean;
   customer: ProjectListCustomer;

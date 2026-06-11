@@ -1,320 +1,370 @@
-# AHSO CRM — Current Branch Project Structure
+# AHSO CRM — Project Structure & AI Coding Guide
 
-This document describes the **actual structure and implementation direction** of the current branch `feature/backend-services-ai` as of **2026-04-24**. It is intended as the working architecture guide for future coding sessions.
+> **Dành cho AI/dev:** Đây là tài liệu tham chiếu chính cho cấu trúc hiện tại của AHSO CRM.
+> Trước khi sửa code, hãy đọc file này cùng `CLAUDE.md`.
+>
+> **Design system:** màu, font, spacing, radius, No-Line Rule và token UI nằm trong `CLAUDE.md`
+> và Design Spec v2. File này không lặp lại bảng màu để tránh lệch nguồn.
 
-## 1. Product Scope
+---
 
-AHSO CRM manages the B2B technical sales lifecycle:
+## 1. Thông Tin Dự Án
 
 ```text
-Lead / Customer
-→ Survey / site visit
-→ Project opportunity
-→ Quote
-→ Contract
-→ Delivery / milestones
-→ Acceptance
-→ Payment
-→ Project handover / history
+Tên:        AHSO CRM
+URL:        crm.ahso.vn
+Công ty:    AHSO — Tự động hoá & Phần mềm Doanh nghiệp
+Loại:       B2B CRM — quản lý vòng đời bán hàng kỹ thuật công nghiệp + kho vật tư
+Team:       4-10 người, self-hosted qua Docker/VPS
 ```
 
-The branch also includes:
-- Admin RBAC
-- Document template runtime/editor foundation
-- Project 360 knowledge hub
-- Notifications + realtime foundation
-- Health checks and CI hardening
+Luồng nghiệp vụ chính:
 
-## 2. Technology Stack
+```text
+Khách hàng/Lead
+→ Khảo sát
+→ Dự án/Cơ hội
+→ Báo giá
+→ Đàm phán
+→ Hợp đồng
+→ Triển khai
+→ Nghiệm thu
+→ Thu tiền
+→ Bàn giao/lưu hồ sơ
 
-### Frontend
-- Next.js 14 App Router
-- TypeScript strict
-- Tailwind CSS
-- shadcn/ui
-- TanStack Query
-- Zustand
-- React Hook Form + Zod
-
-### Backend
-- NestJS 10
-- Prisma 5
-- PostgreSQL 16
-- Redis 7
-- JWT auth
-- Zod request validation
-- Puppeteer
-
-### Runtime / delivery
-- Docker Compose
-- GitHub Actions
-- Winston + Sentry hooks
-
-## 3. Core Runtime Conventions
-
-### API shape
-- Default API responses are wrapped by `TransformInterceptor`
-- Standard JSON shape:
-
-```json
-{
-  "data": {},
-  "meta": null
-}
+Song song: kho vật tư, phiếu nhập/xuất/chuyển/kiểm kê, phân bổ lô FIFO theo dự án.
 ```
 
-- Exception:
-  - binary/document download routes may return raw file responses
+---
 
-### Validation
-- Backend validation uses **Zod**
-- Do not introduce `class-validator` patterns into new modules
+## 2. Tech Stack Đã Chốt
 
-### Auth
-- Access token is used by the frontend API client
-- Refresh token is issued/rotated through **HttpOnly cookie**
-- Core protected APIs use `JwtAuthGuard`
-- Authorization uses `PermissionsGuard`, with `RolesGuard` retained for backward compatibility
+| Tầng | Công nghệ | Ghi chú |
+|---|---|---|
+| Frontend | Next.js 14 App Router | TypeScript strict |
+| UI | shadcn/ui + Tailwind CSS | Token qua CSS variables |
+| State | Zustand + TanStack Query 5 | Zustand cho auth/global, Query cho server state |
+| Forms | React Hook Form + Zod | Validate client + server |
+| Drag/drop | @dnd-kit/core | Kanban, sắp xếp item |
+| Charts | Recharts + Nivo | Palette chung từ `frontend/lib/constants.ts` |
+| Backend | NestJS 10 | TypeScript strict |
+| ORM | Prisma 5 | `backend/prisma/schema.prisma` là source of truth |
+| Database | PostgreSQL 16 | Docker |
+| Cache/Queue | Redis 7 + BullMQ | |
+| Realtime | Socket.IO | Notification, session invalidation |
+| Auth | JWT access 15m + refresh 7d + bcrypt | IMAP-first login cho email `@ahso.vn` |
+| Email | imapflow + @nestjs-modules/mailer | Mailbox tích hợp CRM |
+| Push | web-push | Browser push |
+| AI | Anthropic/OpenAI/Gemini providers | AI agents, copilot, usage log |
+| PDF | HTML template → PDF | Báo giá, hợp đồng, hồ sơ |
+| Monitoring | Sentry + Winston | |
+| Deploy | Docker Compose | Self-hosted VPS |
+| Font | Be Vietnam Pro | Không dùng font khác |
 
-### Health / ops
-- Health endpoint: `GET /api/health`
-- Docker Compose uses service healthchecks
-- CI runs lint, typecheck, test, build, and Playwright smoke
+---
+
+## 3. Data Model — Domain Map
+
+Chi tiết field đọc trực tiếp trong `backend/prisma/schema.prisma`. Schema hiện tại lớn hơn nhiều so với bản tài liệu cũ, gồm auth động, CRM core, inventory, mailbox, AI agents, documents, reports, webhooks, push, custom fields và settings.
+
+### 3.1. Auth & Phân Quyền
+
+| Model | Vai trò |
+|---|---|
+| `User` | Nhân viên; trỏ tới `UserRole` qua `roleId` |
+| `UserRole` | Role động; ADMIN/MANAGER/STAFF là system roles |
+| `Permission` | Quyền dạng `resource.action`, gắn nhiều-nhiều với role |
+| `UserSession` | Refresh token rotation, hash, một session/user |
+
+Quy tắc runtime:
+
+- Không dùng enum role cũ trong Prisma.
+- Access/refresh JWT chỉ dùng làm identity payload; không nhúng quyền thật.
+- `JwtStrategy.validate()` hydrate `request.user` từ DB/cache 60s qua `AuthUserCache`.
+- Khóa user hoặc đổi role có hiệu lực trong tối đa 60s, và có thể invalidate ngay khi `UsersService`/`RolesService` update.
+- `PermissionsGuard` đọc permission từ `request.user`; ADMIN bypass.
+- STAFF scoping phải áp dụng ở mọi service có dữ liệu khách hàng: customer, project, quote, contract, activity, survey, search, report.
+- Login `@ahso.vn` ưu tiên IMAP/iRedMail. Fallback bcrypt chỉ được dùng khi mail server unreachable hoặc user chưa từng có mailbox.
+
+### 3.2. CRM Core
+
+| Model | Vai trò |
+|---|---|
+| `Customer` / `Contact` | Khách hàng và đầu mối, soft delete, VIP, dedupe |
+| `Project` | Cơ hội/dự án; có `stageChangedAt` cho deal rotting |
+| `Quote` / `QuoteItem` | Báo giá, versioning, accepted item subset, total tính server-side |
+| `Contract` / `ContractItem` / `Milestone` | Hợp đồng 1-1 với project, milestone nghiệm thu |
+| `Payment` | Thanh toán theo contract/project, guard không vượt giá trị |
+| `Activity` | CALL/EMAIL/MEETING/TASK/NOTE, gắn customer/project |
+| `Survey` / `SurveyMedia` / `SurveyNote` | Khảo sát thực địa, ảnh/file, ghi chú |
+| `BusinessDocument` / `ProjectHandover` / `Document*` | Hồ sơ nghiệp vụ, template, PDF artifacts |
+
+Luật chuyển trạng thái:
+
+- Quote ACCEPTED → Project WON + sync `estimatedValue`.
+- Contract ACTIVE → Project DELIVERING.
+- Contract COMPLETED → Project COMPLETED.
+- Contract CANCELLED → Project LOST.
+- Mọi nơi đổi `Project.status` phải set `stageChangedAt = new Date()`.
+
+### 3.3. Inventory
+
+| Model | Vai trò |
+|---|---|
+| `Supplier` / `MaterialCategory` / `Material` / `MaterialSupplier` | Danh mục vật tư, nhà cung cấp, giá |
+| `Warehouse` / `StockBalance` | Kho và tồn theo `(warehouseId, materialId)` |
+| `StockReceipt` / `StockReceiptItem` / `StockLot` | Phiếu nhập và lô FIFO |
+| `StockIssue` / `StockIssueItem` | Phiếu xuất, có thể gắn project |
+| `StockTransfer` / `StockTransferItem` | Chuyển kho |
+| `StockCount` / `StockCountItem` | Kiểm kê, điều chỉnh lệch |
+| `ProjectMaterialAllocation` / `ProjectMaterialAllocationItem` | Phân bổ lô vật tư vào dự án |
+
+Luật tồn kho:
+
+- DRAFT → CONFIRMED/CANCELLED; không có reversal tự động sau CONFIRMED.
+- `InventoryBalanceService.adjustBalance()` là cổng duy nhất thay đổi `StockBalance`.
+- Delta âm dùng conditional decrement `quantity >= |delta|`; throw nếu `updateMany.count !== 1`.
+- `ensureSufficientStock()` chỉ là pre-check để báo lỗi đẹp, không phải nguồn bảo vệ cuối.
+- Trừ lô FIFO qua `consumeStockLots()` và cũng dùng conditional `updateMany`.
+- Nhập kho cập nhật average cost sau khi đã cộng balance.
+
+### 3.4. Hệ Thống Mở Rộng
+
+| Nhóm | Models/module | Vai trò |
+|---|---|---|
+| Mailbox | `EmailAccount`, `EmailMessage`, `EmailAttachment` | IMAP sync, IDLE watch, password mã hóa 2 chiều |
+| AI providers | `AiProviderCredential`, `AiOAuthState`, `AiUsageLog` | Multi-provider, OAuth, usage log |
+| AI agents | `Agent`, `AgentRun`, `AgentMessage`, `AgentToolCall`, `AgentAction` | Agent chạy tool theo quyền user |
+| Reporting | `ReportTemplate`, dashboard/report services | Builder + KPI + chart |
+| Integration | `Webhook`, `WebhookLog` | Outbound events |
+| Notification | `Notification`, `PushSubscription` | Realtime + browser push |
+| Customization | `CustomField`, `CustomFieldValue`, `Setting`, `Logo`, `PolicyItem` | Field động, cấu hình, điều khoản |
+| Ops | `AuditLog`, backup, health | Audit và vận hành |
+
+---
 
 ## 4. Repository Layout
 
 ```text
 AHSO-CRM/
 ├── backend/
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   └── migrations/
+│   └── src/
 ├── frontend/
+│   ├── app/
+│   ├── components/
+│   ├── hooks/
+│   └── lib/
 ├── e2e/
 ├── docs/
+├── scripts/
 ├── docker-compose.yml
-├── .github/workflows/
 └── package.json
 ```
 
-## 5. Frontend Structure
-
-### App Router
+Backend modules under `backend/src/`:
 
 ```text
-frontend/app/
-├── (auth)/
-│   ├── login/
-│   ├── forgot-password/
-│   └── reset-password/
-├── (dashboard)/
-│   ├── dashboard/
-│   ├── customers/
-│   ├── projects/
-│   ├── quotes/
-│   ├── contracts/
-│   ├── activities/
-│   ├── calendar/
-│   ├── reports/
-│   ├── users/
-│   ├── notifications/
-│   └── admin/
-│       ├── company-info/
-│       ├── policies/
-│       ├── roles/
-│       ├── custom-fields/
-│       └── document-templates/
-├── documents/
-│   └── preview/
-├── layout.tsx
-├── page.tsx
-└── global-error.tsx
+auth/ users/ roles/ permissions/
+customers/ contacts/ projects/ quotes/ contracts/ activities/ surveys/
+business-documents/ documents/
+suppliers/ materials/ inventory/ stock-receipts/ stock-issues/ stock-transfers/ stock-counts/
+mailbox/ email/ sms/ push/
+ai/ ai-credentials/ agents/
+dashboard/ reports/ search/ calendar/
+notifications/ webhooks/ websocket/
+settings/ policy-items/ custom-fields/
+audit/ backup/ upload/ health/
+common/ domain-events/
 ```
 
-### Frontend shared layers
+Frontend structure:
 
 ```text
-frontend/components/
-├── layout/
-├── shared/
-└── ui/
-
+frontend/app/(auth)/
+frontend/app/(dashboard)/
+  dashboard/ customers/ projects/ quotes/ contracts/ activities/ calendar/
+  mailbox/ inventory/ materials/ suppliers/ surveys/ documents/ reports/
+  notifications/ agents/ users/ admin/
+frontend/components/layout/
+frontend/components/shared/
+frontend/components/ui/
 frontend/hooks/
-├── use-auth.ts
-├── use-customers.ts
-├── use-projects.ts
-├── use-quotes.ts
-├── use-contracts.ts
-├── use-activities.ts
-├── use-settings.ts
-├── use-roles.ts
-├── use-notifications.ts
-├── use-websocket.ts
-└── ...
-
 frontend/lib/
-├── api-client.ts
-├── auth.ts
-├── constants.ts
-├── format.ts
-├── types.ts
-└── utils.ts
 ```
 
-### Frontend architecture notes
-- Route groups:
-  - `(auth)` for guest pages
-  - `(dashboard)` for protected workspace pages
-- Shared shell concerns live in layout components:
-  - sidebar
-  - topbar
-  - dashboard shell
-- Server state should prefer TanStack Query
-- Local UI state should stay close to the component unless it is truly global
+---
 
-## 6. Backend Structure
+## 5. API & Data Patterns
 
-### Current modules under `backend/src`
+Response format chuẩn:
+
+```typescript
+{ data: {...}, meta: null }
+{ data: [...], meta: { total, page, limit, totalPages } }
+{ statusCode: 400, message: "...", errors: [...] }
+```
+
+Bulk action format:
+
+```typescript
+{
+  processedCount: number;
+  failedCount: number;
+  errors: Array<{ id?: string; name?: string; message: string }>;
+}
+```
+
+Quy tắc bắt buộc:
+
+```typescript
+// Mọi API call frontend qua apiClient.
+// Ngoại lệ duy nhất: logout trong lib/auth.ts, đã có comment giải thích.
+import { apiClient } from "@/lib/api-client";
+
+// Tiền VND luôn dùng helper.
+import { formatVND, formatVNDShort } from "@/lib/format";
+
+// Chart/SVG dùng palette tập trung, không hardcode hex trong component.
+import { CHART_COLORS, CHART_STAGE_SERIES } from "@/lib/constants";
+
+// Filter list ghi nhớ bằng hook chung; search input không cần persist.
+import { usePersistentState } from "@/hooks/use-persistent-state";
+```
+
+UX/component pattern đã có sẵn:
+
+| Pattern | Component |
+|---|---|
+| Quick-create customer trong form | `components/shared/customer-quick-create-dialog.tsx` |
+| Ghi nhanh hoạt động | `components/shared/quick-activity-log.tsx` |
+| Command palette | `components/shared/command-palette.tsx` |
+| Keyboard shortcuts | `components/shared/global-shortcuts.tsx` |
+| KPI sparkline | `components/shared/sparkline.tsx` |
+| Empty state có CTA | `components/shared/empty-state.tsx` |
+| Quote template MVP | `quotes/_components/quote-template-controls.tsx` |
+| Activity icon/token config | `frontend/lib/constants.ts` → `ACTIVITY_TYPE_CONFIG` |
+
+---
+
+## 6. Naming Conventions
 
 ```text
-activities
-ai
-audit
-auth
-business-documents
-calendar
-common
-contacts
-contracts
-custom-fields
-customers
-dashboard
-documents
-domain-events
-email
-health
-notifications
-permissions
-projects
-push
-quotes
-reports
-roles
-search
-settings
-sms
-surveys
-upload
-users
-webhooks
-websocket
+Files/folders:      kebab-case
+React components:   PascalCase
+Functions/vars:     camelCase
+Constants:          UPPER_SNAKE_CASE
+Types/interfaces:   PascalCase
+Prisma models:      PascalCase
+API endpoints:      kebab-case plural
+Enum values:        UPPER_SNAKE_CASE
 ```
 
-### Shared backend layers
+---
+
+## 7. Docker & Environment
+
+```bash
+docker-compose up -d
+cd backend && npm run start:dev
+cd frontend && npm run dev
+```
+
+Prisma:
+
+```bash
+npx prisma migrate dev --name <name>
+npx prisma generate
+npm run seed
+```
+
+Backend env quan trọng:
 
 ```text
-backend/src/common/
-├── decorators/
-├── dto/
-├── filters/
-├── guards/
-├── interceptors/
-├── logger/
-├── pipes/
-├── utils/
-└── prisma.service.ts
+DATABASE_URL
+REDIS_URL
+JWT_SECRET
+JWT_REFRESH_SECRET
+JWT_RESET_SECRET
+ENCRYPTION_KEY
+FRONTEND_URL
+SWAGGER_ENABLED
+SENTRY_DSN
+VAPID_*
+AHSO_IMAP_HOST
 ```
 
-### Backend architecture notes
-- Pattern:
-  - controller
-  - service
-  - Prisma via `PrismaService`
-- Keep orchestration in services, not in controllers
-- Preserve Vietnamese business-facing error messages
-- Reuse `PermissionsGuard` and `@RequirePermissions(...)` for new protected routes
+`ENCRYPTION_KEY` dùng mã hóa mailbox password, không commit và phải có quy trình rotate/backup riêng.
 
-## 7. Data Layer
+Migration hiện có trong plan 11/06/2026:
 
-### Source of truth
-- Prisma schema: `backend/prisma/schema.prisma`
+```text
+20260611080000_add_project_stage_changed_at
+```
 
-### Current migration state
-- Current branch has **9 migrations**
-- Do not describe the schema as “14 models / 3 migrations”; that is outdated
+Sau khi đổi schema phải chạy migration và `prisma generate`.
 
-### Current domain emphasis
-- Core CRM entities
-- RBAC entities
-- Settings/logo
-- Notifications + push subscriptions
-- Custom fields
-- Report templates
-- Document template variants
-- Surveys and business documents
+---
 
-## 8. Documents and Templates
+## 8. Workflow Khi Nhận Task
 
-### Documents v1
-- Runtime-ready document types:
-  - `QUOTATION`
-  - `CONTRACT`
-- Render semantics:
-  - render creates a new document version and stores a PDF artifact
-  - download by `documentId` fetches an existing artifact only
+### UI/UX
 
-### Template runtime
-- `/admin/document-templates` is the admin surface
-- Template runtime is production-ready only for:
-  - `QUOTATION`
-  - `CONTRACT`
-- Other template categories may exist in the registry/editor but remain beta/internal
+1. Đọc `CLAUDE.md` và Design Spec v2.
+2. Kiểm tra component tương tự trước khi tạo mới.
+3. Dùng token CSS, AppIcon, semantic constants.
+4. Không dùng emoji icon cho UI nghiệp vụ.
 
-## 9. Project 360
+### Frontend
 
-Project detail is not just a basic CRUD detail page anymore.
+1. Dùng `apiClient`.
+2. Dùng TanStack Query cho server state.
+3. Dùng React Hook Form + Zod cho form.
+4. Không dùng `any`.
+5. UI text cho người dùng cuối bằng tiếng Việt.
 
-Current branch direction:
-- Overview
-- Timeline
-- Surveys
-- Business documents
-- Handover context
-- Links back to related quote/contract/payment state
+### Backend
 
-When extending this area:
-- keep project as the central knowledge hub
-- do not scatter survey/document/handover logic into unrelated modules without a clear read model
+1. Đọc `backend/prisma/schema.prisma` trước khi sửa model.
+2. Schema đổi thì tạo migration và cập nhật mục domain trong file này.
+3. DTO validate bằng Zod.
+4. Controller chỉ orchestration mỏng; business logic trong service.
+5. Route protected dùng `JwtAuthGuard` + `PermissionsGuard` + `@RequirePermissions`.
+6. Nghiệp vụ đổi `Project.status` phải set `stageChangedAt`.
 
-## 10. Release Status by Area
+---
 
-### Stable enough for daily internal use
-- Core CRM modules
-- Admin settings/roles/permissions/users
-- Quote and contract runtime document flows
-- Health checks and CI baseline
+## 9. Không Bao Giờ Làm
 
-### Working with caveats / beta
-- Report builder and advanced reporting
-- Push notifications and SMS integrations
-- Non-quotation/non-contract document templates
-- Some Project 360 polish surfaces
+```text
+Không thêm npm package mới khi chưa có lý do rõ.
+Không sửa trực tiếp source shadcn trong components/ui nếu có thể wrap ở shared.
+Không đổi Prisma schema mà quên migration và docs.
+Không fetch trực tiếp thay apiClient, trừ logout.
+Không dùng any.
+Không hardcode hex trong component UI.
+Không dùng font khác ngoài Be Vietnam Pro.
+Không dùng tiếng Anh cho user-facing copy trừ technical labels.
+Không đổi Project.status mà quên stageChangedAt.
+Không trừ tồn kho ngoài InventoryBalanceService.
+Không bỏ qua partial failure trong bulk action.
+```
 
-### Deferred
-- Multi-tenant
-- Google/Microsoft OAuth
-- Offline mutation queue
-- Heavy mobile gesture workflows
+---
 
-## 11. Coding Guidance For Future Changes
+## 10. Verification Baseline
 
-- Read the current implementation first; do not rely on old handoff assumptions
-- Keep docs aligned with the branch after meaningful scope changes
-- Do not expand “beta” areas into “production-ready” docs until runtime, tests, and UX all match
-- Do not change Prisma schema casually:
-  - schema changes require migration review
-  - data/backfill implications must be explicit
-- Prefer small, reviewable commits by phase
+Trước khi coi một thay đổi là xong:
 
-## 12. Companion Documents
+```bash
+cd backend && npm run typecheck && npm run lint && npm test
+cd frontend && npm run typecheck && npm run lint && npm run test:unit
+```
 
-- `README.md`
-- `docs/COMPLETION_SUMMARY.md`
-- `docs/REVIEW_2026-04-24.md`
+Nếu chỉ sửa một module hẹp, vẫn chạy ít nhất typecheck + test/lint liên quan và ghi rõ phần chưa chạy.
+
+---
+
+*Cập nhật: 11/06/2026 — v2.0, đồng bộ theo code thực tế và kế hoạch fix 2026-06-11.*

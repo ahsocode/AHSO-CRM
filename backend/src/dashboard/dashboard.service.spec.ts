@@ -73,7 +73,8 @@ describe("DashboardService", () => {
     await expect(service.getKpis()).resolves.toEqual({
       monthlyRevenue: {
         value: 150_000_000,
-        changePercent: 50
+        changePercent: 50,
+        trend: [0, 0, 0, 0, 100_000_000, 150_000_000]
       },
       activeProjects: {
         value: 4

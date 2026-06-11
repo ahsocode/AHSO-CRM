@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { AuthUserCache } from "src/auth/auth-user-cache";
 import { PrismaService } from "src/common/prisma.service";
 import { CreateRoleInput } from "./dto/create-role.dto";
 import { UpdateRoleInput } from "./dto/update-role.dto";
@@ -176,6 +177,10 @@ export class RolesService {
         }
       },
     });
+
+    // Permission set changed — flush every user's cached auth context so the
+    // new permissions apply within the next request instead of after 60s.
+    AuthUserCache.invalidateAll();
 
     return updated;
   }

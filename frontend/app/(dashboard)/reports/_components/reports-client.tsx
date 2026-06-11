@@ -27,6 +27,7 @@ import { ReportRevenueTrend } from "./report-revenue-trend";
 import { ReportsOverviewCards } from "./reports-overview-cards";
 import { StatusBreakdown } from "./status-breakdown";
 import { TopCustomersReport } from "./top-customers-report";
+import { CHART_COLORS } from "@/lib/constants";
 
 const RANGE_OPTIONS = [
   { label: "3 tháng", value: 3 },
@@ -59,7 +60,7 @@ function CustomerJourneyCard({
               nodeOpacity={1}
               nodeThickness={18}
               nodeSpacing={24}
-              labelTextColor="#5d6d7e"
+              labelTextColor={CHART_COLORS.axis}
               linkOpacity={0.35}
               animate={false}
             />

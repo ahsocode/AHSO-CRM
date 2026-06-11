@@ -232,6 +232,8 @@ model Project {
   name              String
   description       String?
   status            ProjectStatus      @default(SURVEY)
+  // Thời điểm chuyển stage gần nhất — chỉ báo "deal ứ đọng" trên Kanban
+  stageChangedAt    DateTime           @default(now())
   priority          Priority           @default(NORMAL)
   estimatedValue    Decimal?           @db.Decimal(15, 0)
   startDate         DateTime?

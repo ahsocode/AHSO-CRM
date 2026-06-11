@@ -91,7 +91,7 @@ export function Topbar({
   };
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-14 items-center gap-4 border-b border-border-light bg-white/92 px-4 shadow-[0_1px_8px_rgba(0,59,90,0.05)] backdrop-blur-xl print:hidden md:px-6">
+    <header className="sticky top-0 z-30 flex min-h-14 items-center gap-4 bg-white/92 px-4 shadow-[0_1px_8px_rgba(0,59,90,0.05)] backdrop-blur-xl print:hidden md:px-6">
       {isSubPage ? (
         <button
           type="button"

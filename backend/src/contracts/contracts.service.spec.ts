@@ -214,7 +214,8 @@ describe("ContractsService", () => {
       },
       data: {
         status: "DELIVERING",
-        estimatedValue: 5_000_000
+        estimatedValue: 5_000_000,
+        stageChangedAt: expect.any(Date)
       }
     });
   });
@@ -314,7 +315,8 @@ describe("ContractsService", () => {
       },
       data: {
         status: "DELIVERING",
-        estimatedValue: 550
+        estimatedValue: 550,
+        stageChangedAt: expect.any(Date)
       }
     });
   });
@@ -425,7 +427,8 @@ describe("ContractsService", () => {
       },
       data: {
         status: "COMPLETED",
-        estimatedValue: 5_000_000
+        estimatedValue: 5_000_000,
+        stageChangedAt: expect.any(Date)
       }
     });
   });

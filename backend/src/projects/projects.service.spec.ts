@@ -27,6 +27,9 @@ describe("ProjectsService", () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    activity: {
+      groupBy: jest.Mock;
+    };
     contract: {
       findFirst: jest.Mock;
     };
@@ -68,6 +71,9 @@ describe("ProjectsService", () => {
         create: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn()
+      },
+      activity: {
+        groupBy: jest.fn().mockResolvedValue([])
       },
       contract: {
         findFirst: jest.fn()
@@ -219,7 +225,8 @@ describe("ProjectsService", () => {
       data: {
         status: "COMPLETED",
         completedAt,
-        salesInvoiceDate
+        salesInvoiceDate,
+        stageChangedAt: expect.any(Date)
       }
     });
   });
@@ -324,6 +331,7 @@ describe("ProjectsService", () => {
       estimatedValue: 100_000_000,
       startDate: null,
       expectedEndDate: null,
+      stageChangedAt: new Date("2026-04-01T00:00:00.000Z"),
       updatedAt: new Date("2026-04-01T00:00:00.000Z"),
       activities: [],
       customer: {

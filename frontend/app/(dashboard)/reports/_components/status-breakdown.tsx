@@ -6,10 +6,11 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatVNDShort } from "@/lib/format";
 import { ReportStatusBreakdown, ReportStatusBucket } from "@/lib/types";
+import { CHART_COLORS } from "@/lib/constants";
 
-const PROJECT_COLORS = ["#5d6d7e", "#2e86c1", "#e67e22", "#1a5276", "#c0392b", "#1e8449"];
-const QUOTE_COLORS = ["#5d6d7e", "#2e86c1", "#1e8449", "#c0392b"];
-const CONTRACT_COLORS = ["#e67e22", "#2e86c1", "#1e8449", "#5d6d7e"];
+const PROJECT_COLORS = [CHART_COLORS.axis, CHART_COLORS.primaryLight, CHART_COLORS.accent, CHART_COLORS.primaryMid, CHART_COLORS.danger, CHART_COLORS.success];
+const QUOTE_COLORS = [CHART_COLORS.axis, CHART_COLORS.primaryLight, CHART_COLORS.success, CHART_COLORS.danger];
+const CONTRACT_COLORS = [CHART_COLORS.accent, CHART_COLORS.primaryLight, CHART_COLORS.success, CHART_COLORS.axis];
 
 type DonutDatum = {
   id: string;

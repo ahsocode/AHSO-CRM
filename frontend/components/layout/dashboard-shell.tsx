@@ -6,6 +6,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPalette } from "@/components/shared/command-palette";
+import { GlobalShortcuts } from "@/components/shared/global-shortcuts";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { getAccessToken } from "@/lib/auth";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -84,6 +85,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <ContentArea>{children}</ContentArea>
       </div>
       <CommandPalette />
+      <GlobalShortcuts />
       <MobileBottomNav />
     </div>
   );

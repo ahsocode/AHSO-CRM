@@ -156,7 +156,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
 
   if (isLoadingActivity) {
     return (
-      <div className="bg-white rounded-lg p-8 text-center text-[#5D6D7E]">
+      <div className="bg-white rounded-lg p-8 text-center text-text-secondary">
         <LoadingSkeleton className="h-12 w-48 mx-auto mb-4" />
         <LoadingSkeleton className="h-4 w-64 mx-auto mb-2" />
         <LoadingSkeleton className="h-4 w-64 mx-auto" />
@@ -171,7 +171,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
       <Button
         variant="ghost"
         onClick={() => router.back()}
-        className="text-[#2E86C1] hover:bg-[#D6EAF8]"
+        className="text-primary-light hover:bg-info-bg"
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Quay lại
@@ -179,7 +179,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-[#1C2833]">
+          <CardTitle className="text-text-primary">
             {id ? 'Chỉnh sửa hoạt động' : 'Tạo hoạt động mới'}
           </CardTitle>
           <CardDescription>
@@ -195,10 +195,10 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[#1C2833]">Loại hoạt động *</FormLabel>
+                    <FormLabel className="text-text-primary">Loại hoạt động *</FormLabel>
                     <SelectRoot value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger className="border-[#D5D8DC]">
+                        <SelectTrigger className="border-border">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -221,11 +221,11 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[#1C2833]">Tiêu đề *</FormLabel>
+                    <FormLabel className="text-text-primary">Tiêu đề *</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Nhập tiêu đề hoạt động"
-                        className="border-[#D5D8DC] focus-visible:ring-[#2E86C1]"
+                        className="border-border focus-visible:ring-primary-light"
                         {...field}
                       />
                     </FormControl>
@@ -240,11 +240,11 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[#1C2833]">Nội dung</FormLabel>
+                    <FormLabel className="text-text-primary">Nội dung</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Nhập chi tiết hoạt động"
-                        className="border-[#D5D8DC] focus-visible:ring-[#2E86C1]"
+                        className="border-border focus-visible:ring-primary-light"
                         rows={4}
                         {...field}
                       />
@@ -261,7 +261,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                   name="customerId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[#1C2833]">Khách hàng</FormLabel>
+                      <FormLabel className="text-text-primary">Khách hàng</FormLabel>
                       <SelectRoot
                         value={field.value || 'none'}
                         onValueChange={(value) => {
@@ -275,7 +275,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                         disabled={isLoadingCustomers}
                       >
                         <FormControl>
-                          <SelectTrigger className="border-[#D5D8DC]">
+                          <SelectTrigger className="border-border">
                             <SelectValue
                               placeholder={
                                 isLoadingCustomers ? 'Đang tải...' : 'Chọn khách hàng (nếu có)'
@@ -303,7 +303,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                   name="projectId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[#1C2833]">Dự án</FormLabel>
+                      <FormLabel className="text-text-primary">Dự án</FormLabel>
                       <SelectRoot
                         value={field.value || 'none'}
                         onValueChange={(value) =>
@@ -312,7 +312,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                         disabled={!selectedCustomerId || isLoadingProjects}
                       >
                         <FormControl>
-                          <SelectTrigger className="border-[#D5D8DC]">
+                          <SelectTrigger className="border-border">
                             <SelectValue
                               placeholder={
                                 !selectedCustomerId
@@ -347,13 +347,13 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                 name="scheduledAt"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[#1C2833]">
+                    <FormLabel className="text-text-primary">
                       Thời gian dự kiến{isCalendarFlow ? ' *' : ''}
                     </FormLabel>
                     <FormControl>
                       <Input
                         type="datetime-local"
-                        className="border-[#D5D8DC] focus-visible:ring-[#2E86C1]"
+                        className="border-border focus-visible:ring-primary-light"
                         {...field}
                         value={field.value instanceof Date ? formatDateTimeLocalInput(field.value) : ''}
                         onChange={(e) => {
@@ -366,7 +366,7 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                       />
                     </FormControl>
                     {isCalendarFlow ? (
-                      <p className="text-xs text-[#5D6D7E]">
+                      <p className="text-xs text-text-secondary">
                         Hoạt động tạo từ lịch cần có thời gian để hiển thị đúng trên lịch công tác.
                       </p>
                     ) : null}
@@ -381,11 +381,11 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                 name="attachmentUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[#1C2833]">Liên kết tệp đính kèm</FormLabel>
+                    <FormLabel className="text-text-primary">Liên kết tệp đính kèm</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="https://..."
-                        className="border-[#D5D8DC]"
+                        className="border-border"
                         {...field}
                       />
                     </FormControl>
@@ -405,10 +405,10 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          className="border-[#D5D8DC]"
+                          className="border-border"
                         />
                       </FormControl>
-                      <FormLabel className="text-[#1C2833] cursor-pointer mb-0">
+                      <FormLabel className="text-text-primary cursor-pointer mb-0">
                         Đánh dấu là hoàn tất
                       </FormLabel>
                     </FormItem>
@@ -422,13 +422,13 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                   type="button"
                   variant="outline"
                   onClick={() => router.back()}
-                  className="border-[#D5D8DC] text-[#1C2833]"
+                  className="border-border text-text-primary"
                 >
                   Huỷ
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-[#1A5276] hover:bg-[#154360]"
+                  className="bg-primary-mid hover:bg-primary-hover"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Đang lưu...' : id ? 'Cập nhật' : 'Tạo'}

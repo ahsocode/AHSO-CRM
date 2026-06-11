@@ -630,11 +630,15 @@ export class QuotesService {
     }
 
     if (dto.action === "status" && dto.status) {
-      await Promise.allSettled(quotes.map((quote) => this.updateStatus(quote.id, { status: dto.status! }, user)));
+      const results = await Promise.allSettled(
+        quotes.map((quote) => this.updateStatus(quote.id, { status: dto.status! }, user))
+      );
+      return this.mapBulkMutationResult(dto.action, quotes, results);
     }
 
     if (dto.action === "send") {
-      await Promise.allSettled(quotes.map((quote) => this.send(quote.id, user)));
+      const results = await Promise.allSettled(quotes.map((quote) => this.send(quote.id, user)));
+      return this.mapBulkMutationResult(dto.action, quotes, results);
     }
 
     if (dto.action === "delete") {
@@ -647,6 +651,35 @@ export class QuotesService {
     return {
       action: dto.action,
       processedCount: quotes.length
+    };
+  }
+
+  // Surface per-quote failures instead of silently swallowing them — the user
+  // must know which quotes could not change status (e.g. ACCEPTED quotes).
+  private mapBulkMutationResult(
+    action: string,
+    quotes: Array<{ id: string; quoteNo: string }>,
+    results: PromiseSettledResult<unknown>[]
+  ) {
+    const errors = results.flatMap((result, index) => {
+      if (result.status === "fulfilled") {
+        return [];
+      }
+      const quote = quotes[index];
+      const reason = result.reason instanceof Error ? result.reason.message : "Không thể xử lý báo giá";
+      return [{ id: quote?.id, name: quote?.quoteNo, message: reason }];
+    });
+    const processedCount = results.length - errors.length;
+
+    if (results.length > 0 && processedCount === 0) {
+      throw new BadRequestException("Không xử lý được báo giá nào trong danh sách đã chọn.");
+    }
+
+    return {
+      action,
+      processedCount,
+      failedCount: errors.length,
+      errors
     };
   }
 
@@ -1033,6 +1066,10 @@ export class QuotesService {
 
     if (currentStatus === "SURVEY" && quoteStatus !== "ACCEPTED") {
       nextData.status = "QUOTING";
+    }
+
+    if (nextData.status !== undefined && nextData.status !== currentStatus) {
+      nextData.stageChangedAt = new Date();
     }
 
     if (Object.keys(nextData).length === 0) {

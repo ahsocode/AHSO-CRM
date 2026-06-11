@@ -5,6 +5,7 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatVNDShort } from "@/lib/format";
 import { RevenueChartPoint } from "@/lib/types";
+import { CHART_COLORS } from "@/lib/constants";
 
 export function ReportRevenueTrend({
   data,
@@ -28,9 +29,9 @@ export function ReportRevenueTrend({
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data}>
                   <CartesianGrid strokeDasharray="4 4" stroke="rgba(213,216,220,0.8)" vertical={false} />
-                  <XAxis dataKey="month" stroke="#5d6d7e" tickLine={false} axisLine={false} />
+                  <XAxis dataKey="month" stroke={CHART_COLORS.axis} tickLine={false} axisLine={false} />
                   <YAxis
-                    stroke="#5d6d7e"
+                    stroke={CHART_COLORS.axis}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value) => formatVNDShort(Number(value))}
@@ -42,11 +43,11 @@ export function ReportRevenueTrend({
                     }}
                     formatter={(value: number) => formatVNDShort(Number(value))}
                   />
-                  <Bar dataKey="revenue" fill="#1a5276" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="revenue" fill={CHART_COLORS.primaryMid} radius={[6, 6, 0, 0]} />
                   <Line
                     dataKey="target"
                     type="monotone"
-                    stroke="#e67e22"
+                    stroke={CHART_COLORS.accent}
                     strokeDasharray="5 5"
                     strokeWidth={2}
                     dot={false}

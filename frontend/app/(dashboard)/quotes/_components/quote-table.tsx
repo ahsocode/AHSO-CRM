@@ -68,7 +68,12 @@ export function QuoteTable({
         <CardContent>
           <EmptyState
             title="Chưa có báo giá phù hợp"
-            description="Thay đổi bộ lọc hoặc tạo báo giá mới từ dự án đang ở giai đoạn khảo sát/báo giá để tiếp tục kiểm tra flow."
+            description="Thay đổi bộ lọc hoặc tạo báo giá mới từ dự án đang ở giai đoạn khảo sát/báo giá."
+            action={
+              <Link href="/quotes/new" className="inline-flex">
+                <Button type="button">Tạo báo giá đầu tiên</Button>
+              </Link>
+            }
           />
         </CardContent>
       </Card>

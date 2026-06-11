@@ -28,15 +28,15 @@ export class ShellErrorBoundary extends Component<Props, State> {
   override render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-[#eef4f8] px-6 py-12">
+        <div className="flex min-h-screen items-center justify-center bg-bg-page px-6 py-12">
           <div className="w-full max-w-xl rounded-[32px] border border-white/70 bg-white p-8 shadow-[0_24px_70px_rgba(21,67,96,0.12)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#1a5276]">AHSO CRM</p>
-            <h1 className="mt-4 text-2xl font-bold text-[#1f2933]">Giao diện gặp sự cố</h1>
-            <p className="mt-3 text-sm leading-6 text-[#5b6776]">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary-mid">AHSO CRM</p>
+            <h1 className="mt-4 text-2xl font-bold text-text-primary">Giao diện gặp sự cố</h1>
+            <p className="mt-3 text-sm leading-6 text-text-secondary">
               Một lỗi xảy ra khi tải giao diện chính. Hãy thử tải lại trang để tiếp tục.
             </p>
             {this.state.error?.message ? (
-              <p className="mt-3 rounded-xl bg-[#fef2f2] px-3 py-2 font-mono text-xs text-[#b91c1c]">
+              <p className="mt-3 rounded-xl bg-danger-bg px-3 py-2 font-mono text-xs text-danger">
                 {this.state.error.message}
               </p>
             ) : null}
@@ -47,13 +47,13 @@ export class ShellErrorBoundary extends Component<Props, State> {
                   this.setState({ hasError: false, error: null });
                   window.location.reload();
                 }}
-                className="rounded-2xl bg-[#154360] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f334a]"
+                className="rounded-2xl bg-primary-hover px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary"
               >
                 Tải lại trang
               </button>
               <a
                 href="/login"
-                className="rounded-2xl border border-[#cbd5df] px-5 py-3 text-sm font-semibold text-[#1f2933] transition hover:bg-[#f4f7fa]"
+                className="rounded-2xl border border-border px-5 py-3 text-sm font-semibold text-text-primary transition hover:bg-bg-subtle"
               >
                 Đăng nhập lại
               </a>

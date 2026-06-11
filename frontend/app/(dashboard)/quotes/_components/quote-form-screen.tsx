@@ -37,6 +37,7 @@ import {
   type QuoteFormValues
 } from "./form-schemas";
 import { PolicyItemSelect } from "./policy-item-select";
+import { QuoteTemplateControls } from "./quote-template-controls";
 import {
   DndContext,
   type DragEndEvent,
@@ -353,8 +354,29 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-accent">Line Items</p>
-              <CardTitle>Danh mục chào giá</CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="v2-label text-accent">Line Items</p>
+                  <CardTitle>Danh mục chào giá</CardTitle>
+                </div>
+                <QuoteTemplateControls
+                  disabled={!isEditableQuote}
+                  getSnapshot={() => ({
+                    items: form.getValues("items"),
+                    terms: form.getValues("terms"),
+                    deliveryTerms: form.getValues("deliveryTerms")
+                  })}
+                  onApply={(template) => {
+                    itemsFieldArray.replace(template.items);
+                    if (template.terms) {
+                      form.setValue("terms", template.terms, { shouldDirty: true });
+                    }
+                    if (template.deliveryTerms) {
+                      form.setValue("deliveryTerms", template.deliveryTerms, { shouldDirty: true });
+                    }
+                  }}
+                />
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>

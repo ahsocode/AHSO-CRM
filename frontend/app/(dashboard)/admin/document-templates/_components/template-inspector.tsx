@@ -227,7 +227,7 @@ export function TemplateInspector({
 
   // Auto-switch to settings tab when a box is selected
   useEffect(() => {
-    if (selectedBox) {
+    if (selectedBox?.id) {
       setActiveTab("settings");
     }
   }, [selectedBox?.id]);

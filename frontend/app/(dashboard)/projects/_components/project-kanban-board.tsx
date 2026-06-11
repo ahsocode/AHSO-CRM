@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
-import { PRIORITY_LABELS, PROJECT_STATUS_LABELS } from "@/lib/constants";
+import { CHART_COLORS, PRIORITY_LABELS, PROJECT_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { Priority, ProjectKanbanColumn, ProjectListItem, ProjectListMeta, ProjectStatus } from "@/lib/types";
 
@@ -35,14 +35,19 @@ const PRIORITY_VARIANTS: Record<Priority, "neutral" | "info" | "warning"> = {
   HIGH: "warning"
 };
 
+// Ngưỡng cảnh báo deal ứ đọng (số ngày ở một stage)
+const STAGE_ROTTING_WARNING_DAYS = 14;
+const STAGE_ROTTING_DANGER_DAYS = 30;
+
+// Màu lấy từ CHART_COLORS (ngoại lệ Token Rule cho SVG/inline style)
 const STAGE_COLORS: Record<ProjectStatus, string> = {
-  SURVEY: "#78909c",
-  QUOTING: "#2e86c1",
-  NEGOTIATING: "#e67e22",
-  WON: "#2563eb",
-  LOST: "#c0392b",
-  DELIVERING: "#00897b",
-  COMPLETED: "#1e8449"
+  SURVEY: CHART_COLORS.muted,
+  QUOTING: CHART_COLORS.primaryLight,
+  NEGOTIATING: CHART_COLORS.accent,
+  WON: CHART_COLORS.stageWon,
+  LOST: CHART_COLORS.danger,
+  DELIVERING: CHART_COLORS.teal,
+  COMPLETED: CHART_COLORS.success
 };
 
 // Pure card content — used both in normal mode and DragOverlay
@@ -77,6 +82,15 @@ function ProjectCardContent({
         <Badge variant={PRIORITY_VARIANTS[project.priority]}>
           {PRIORITY_LABELS[project.priority]}
         </Badge>
+        {/* Deal rotting: cảnh báo deal nằm quá lâu ở một stage (chuẩn Pipedrive) */}
+        {project.daysInCurrentStage >= STAGE_ROTTING_DANGER_DAYS ? (
+          <Badge variant="danger">{project.daysInCurrentStage} ngày ở stage</Badge>
+        ) : project.daysInCurrentStage >= STAGE_ROTTING_WARNING_DAYS ? (
+          <Badge variant="warning">{project.daysInCurrentStage} ngày ở stage</Badge>
+        ) : null}
+        {!project.hasUpcomingActivity ? (
+          <Badge variant="warning">Chưa có việc kế tiếp</Badge>
+        ) : null}
       </div>
 
       <div className="mt-4 flex items-start gap-3">

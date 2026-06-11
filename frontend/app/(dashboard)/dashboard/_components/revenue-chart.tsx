@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { formatVNDShort } from "@/lib/format";
 import { RevenueChartPoint } from "@/lib/types";
+import { CHART_COLORS } from "@/lib/constants";
 
 export function RevenueChart({
   data,
@@ -37,9 +38,9 @@ export function RevenueChart({
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data}>
                   <CartesianGrid strokeDasharray="4 4" stroke="rgba(213,216,220,0.5)" vertical={false} />
-                  <XAxis dataKey="month" stroke="#5d6d7e" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                  <XAxis dataKey="month" stroke={CHART_COLORS.axis} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                   <YAxis
-                    stroke="#5d6d7e"
+                    stroke={CHART_COLORS.axis}
                     tickLine={false}
                     axisLine={false}
                     tick={{ fontSize: 12 }}
@@ -52,15 +53,15 @@ export function RevenueChart({
                   <Area
                     dataKey="revenue"
                     type="monotone"
-                    stroke="#1a5276"
+                    stroke={CHART_COLORS.primaryMid}
                     strokeWidth={2}
-                    fill="#1a5276"
+                    fill={CHART_COLORS.primaryMid}
                     fillOpacity={0.1}
                   />
                   <Line
                     dataKey="target"
                     type="monotone"
-                    stroke="#e67e22"
+                    stroke={CHART_COLORS.accent}
                     strokeDasharray="5 5"
                     strokeWidth={1.5}
                     dot={false}

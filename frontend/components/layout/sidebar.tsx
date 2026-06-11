@@ -1,6 +1,7 @@
 "use client";
 
 import type { Route } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -83,9 +84,9 @@ export function Sidebar() {
 
   return (
     <aside className="hidden border-border-light bg-white/92 text-text-primary shadow-[1px_0_12px_rgba(0,59,90,0.06)] backdrop-blur-xl print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-[220px] md:min-w-[220px] md:flex-col md:overflow-y-auto md:border-r">
-      <div className="flex h-14 items-center gap-3 px-4 md:border-b md:border-border-light">
+      <div className="flex h-14 items-center gap-3 px-4">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg shadow-[0_4px_12px_rgba(0,59,90,0.20)]">
-          <img src="/crm-logo.png" alt="AHSO CRM" className="h-full w-full object-contain" />
+          <Image src="/crm-logo.png" alt="AHSO CRM" width={36} height={36} className="h-full w-full object-contain" />
         </div>
         <div className="min-w-0">
           <div className="font-heading text-sm font-bold leading-tight tracking-[-0.02em] text-text-primary">AHSO CRM</div>

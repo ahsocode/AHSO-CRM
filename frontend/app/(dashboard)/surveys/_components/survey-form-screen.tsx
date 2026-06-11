@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft } from "lucide-react";
+import { CustomerQuickCreateDialog } from "@/components/shared/customer-quick-create-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -29,6 +30,7 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
 
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({ page: 1, limit: 100 });
   const customers = customersData?.items ?? [];
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
 
   const form = useForm<SurveyFormValues>({
     resolver: zodResolver(surveyFormSchema),
@@ -141,7 +143,16 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
                   name="customerId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Khách hàng *</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Khách hàng *</FormLabel>
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-primary-mid hover:text-primary"
+                          onClick={() => setQuickCreateOpen(true)}
+                        >
+                          + Tạo mới
+                        </button>
+                      </div>
                       <SelectRoot
                         value={field.value || "none"}
                         onValueChange={(v) => {
@@ -165,6 +176,14 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
                         </SelectContent>
                       </SelectRoot>
                       <FormMessage />
+                      <CustomerQuickCreateDialog
+                        open={quickCreateOpen}
+                        onOpenChange={setQuickCreateOpen}
+                        onCreated={(customerId) => {
+                          form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
+                          form.setValue("projectId", "");
+                        }}
+                      />
                     </FormItem>
                   )}
                 />

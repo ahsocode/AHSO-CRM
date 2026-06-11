@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PipelineStage } from "@/lib/types";
 import { formatVNDShort } from "@/lib/format";
+import { CHART_STAGE_SERIES } from "@/lib/constants";
 
-const STAGE_COLORS = ["#78909c", "#2e86c1", "#e67e22", "#1a5276", "#1e8449", "#c0392b", "#5d6d7e"];
+const STAGE_COLORS = [...CHART_STAGE_SERIES];
 
 export function ProjectDonut({
   data,

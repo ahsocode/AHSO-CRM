@@ -62,6 +62,19 @@ export class ImapService implements OnModuleDestroy {
   }
 
   async verifyCredentials(email: string, password: string, host = "mail90168.maychuemail.com"): Promise<boolean> {
+    return (await this.verifyCredentialsDetailed(email, password, host)) === "valid";
+  }
+
+  /**
+   * Three-state verification so callers can distinguish "wrong password"
+   * (auth must NOT fall back to a stale bcrypt password) from "mail server
+   * unreachable" (fallback is acceptable to avoid locking everyone out).
+   */
+  async verifyCredentialsDetailed(
+    email: string,
+    password: string,
+    host = "mail90168.maychuemail.com"
+  ): Promise<"valid" | "invalid" | "unreachable"> {
     const client = new ImapFlow({
       host,
       port: 993,
@@ -74,9 +87,15 @@ export class ImapService implements OnModuleDestroy {
     try {
       await client.connect();
       await client.logout();
-      return true;
-    } catch {
-      return false;
+      return "valid";
+    } catch (error: unknown) {
+      const err = error as { authenticationFailed?: boolean; responseStatus?: string; code?: string };
+      // ImapFlow marks credential rejections; network/TLS/timeout errors do not
+      // carry these flags and mean the server could not be reached.
+      if (err?.authenticationFailed === true || err?.responseStatus === "NO") {
+        return "invalid";
+      }
+      return "unreachable";
     }
   }
 

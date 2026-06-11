@@ -8,9 +8,55 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select } from "@/components/ui/select";
+import { useInlineUpdateCustomer } from "@/hooks/use-customers";
+import { useToast } from "@/hooks/use-toast";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
-import { CustomerListItem, CustomerListMeta } from "@/lib/types";
+import { CustomerListItem, CustomerListMeta, CustomerStatus } from "@/lib/types";
+
+const INLINE_STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
+  { value: "LEAD", label: "Tiềm năng" },
+  { value: "PROSPECT", label: "Tiềm năng+" },
+  { value: "ACTIVE", label: "Đang HĐ" },
+  { value: "INACTIVE", label: "Không HĐ" }
+];
+
+// Inline edit kiểu HubSpot: đổi trạng thái ngay trên row, không cần mở chi tiết
+function InlineStatusCell({ customer }: { customer: CustomerListItem }) {
+  const inlineUpdate = useInlineUpdateCustomer();
+  const { error: showError } = useToast();
+
+  return (
+    <Select
+      aria-label="Đổi trạng thái khách hàng"
+      className="h-8 w-32 text-xs"
+      value={customer.status}
+      disabled={inlineUpdate.isPending}
+      onChange={(event) => {
+        const nextStatus = event.target.value as CustomerStatus;
+        if (nextStatus === customer.status) {
+          return;
+        }
+        inlineUpdate.mutate(
+          { id: customer.id, payload: { status: nextStatus } },
+          {
+            onError: (error) => {
+              showError(getApiErrorMessage(error, "Không thể đổi trạng thái khách hàng."));
+            }
+          }
+        );
+      }}
+    >
+      {INLINE_STATUS_OPTIONS.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </Select>
+  );
+}
 
 export function CustomerTable({
   items,
@@ -209,7 +255,7 @@ export function CustomerTable({
                   </td>
 
                   <td className="px-4 py-3 align-middle">
-                    <StatusBadge status={customer.status} />
+                    <InlineStatusCell customer={customer} />
                   </td>
 
                   <td className="px-4 py-3 align-middle">

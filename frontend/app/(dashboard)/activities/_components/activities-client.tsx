@@ -31,8 +31,8 @@ export function ActivitiesClient() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1C2833]">Hoạt động</h1>
-          <p className="text-sm text-[#5D6D7E] mt-1">
+          <h1 className="text-2xl font-bold text-text-primary">Hoạt động</h1>
+          <p className="text-sm text-text-secondary mt-1">
             Quản lý hoạt động và lịch sử tương tác
           </p>
         </div>
@@ -46,7 +46,7 @@ export function ActivitiesClient() {
             {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
           </Button>
           <Link href="/activities/new">
-            <Button className="bg-[#1A5276] hover:bg-[#154360]">
+            <Button className="bg-primary-mid hover:bg-primary-hover">
               <Plus className="w-4 h-4 mr-2" />
               Tạo hoạt động
             </Button>

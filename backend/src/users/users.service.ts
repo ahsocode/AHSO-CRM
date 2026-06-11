@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
+import { AuthUserCache } from "../auth/auth-user-cache";
 import { EmailService } from "../email/email.service";
 import { PrismaService } from "../common/prisma.service";
 import { CreateUserDto } from "./dto/create-user.dto";
@@ -138,6 +139,10 @@ export class UsersService {
         role: true
       }
     });
+
+    // Role/isActive changes must take effect on the next request, not after
+    // the 60s auth cache expires.
+    AuthUserCache.invalidate(id);
 
     return {
       id: updatedUser.id,

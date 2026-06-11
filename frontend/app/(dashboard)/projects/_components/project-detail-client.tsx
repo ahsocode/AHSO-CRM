@@ -33,7 +33,8 @@ import {
   useProjectDocuments,
   useProjectOverview360,
   useProjectTimeline,
-  useUpdateProjectDocumentPlan
+  useUpdateProjectDocumentPlan,
+  useUpdateProjectStatus
 } from "@/hooks/use-projects";
 import { useAddSurveyNote, useCreateSurvey, useProjectSurveys, useUploadSurveyMedia } from "@/hooks/use-surveys";
 import { toast } from "@/hooks/use-toast";
@@ -475,7 +476,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
               <MiniPanel label="Hoàn thành" value={project.completedAt ? formatDate(project.completedAt) : "Chưa hoàn thành"} />
               <MiniPanel label="Hóa đơn bán ra" value={project.salesInvoiceDate ? formatDate(project.salesInvoiceDate) : "Chưa ghi nhận"} />
             </div>
-            <ProjectStageStepper currentStatus={project.status} />
+            <ProjectStageStepper currentStatus={project.status} projectId={projectId} />
           </div>
           <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Customer Owner</p>
@@ -843,8 +844,27 @@ function resolveProject360Tab(value: string | null): Project360Tab {
   return TAB_KEYS.includes(value as Project360Tab) ? (value as Project360Tab) : "overview";
 }
 
-function ProjectStageStepper({ currentStatus }: { currentStatus: ProjectStatus }) {
+// Path bar kiểu Salesforce: click một stage để chuyển trạng thái dự án ngay
+// tại trang chi tiết; chuyển lùi stage sẽ hỏi xác nhận.
+function ProjectStageStepper({ currentStatus, projectId }: { currentStatus: ProjectStatus; projectId: string }) {
   const activeIndex = PROJECT_STAGE_ORDER.indexOf(currentStatus as (typeof PROJECT_STAGE_ORDER)[number]);
+  const updateStatus = useUpdateProjectStatus();
+
+  const handleStageClick = (status: ProjectStatus, index: number) => {
+    if (status === currentStatus || updateStatus.isPending) {
+      return;
+    }
+
+    const isBackward = activeIndex >= 0 && index < activeIndex;
+    if (
+      isBackward &&
+      !window.confirm(`Chuyển lùi dự án về giai đoạn "${getProjectStatusLabel(status)}"?`)
+    ) {
+      return;
+    }
+
+    updateStatus.mutate({ projectId, payload: { status } });
+  };
 
   return (
     <div className="mt-6 rounded-3xl border border-white/70 bg-white/75 p-4">
@@ -858,19 +878,24 @@ function ProjectStageStepper({ currentStatus }: { currentStatus: ProjectStatus }
           const isActive = status === currentStatus;
 
           return (
-            <div
+            <button
               key={status}
+              type="button"
+              disabled={updateStatus.isPending || isActive}
+              title={isActive ? undefined : `Chuyển sang "${getProjectStatusLabel(status)}"`}
+              onClick={() => handleStageClick(status, index)}
               className={cn(
                 "rounded-2xl border px-3 py-2 text-xs font-semibold transition",
                 isActive
                   ? "border-primary bg-primary text-white shadow-sm"
                   : isDone
-                    ? "border-primary/20 bg-primary/10 text-primary"
-                    : "border-border/70 bg-white/70 text-text-secondary"
+                    ? "border-primary/20 bg-primary/10 text-primary hover:bg-primary/20"
+                    : "border-border/70 bg-white/70 text-text-secondary hover:border-primary-light hover:text-primary-mid",
+                updateStatus.isPending && "opacity-60"
               )}
             >
               {getProjectStatusLabel(status)}
-            </div>
+            </button>
           );
         })}
       </div>

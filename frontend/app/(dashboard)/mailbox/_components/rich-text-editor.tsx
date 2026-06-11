@@ -37,6 +37,8 @@ const FONT_FAMILIES = [
 const FONT_SIZES = ["10", "11", "12", "14", "16", "18", "20", "24", "28", "32"];
 
 const COLORS = [
+  // Token Rule exception: màu chữ nhúng vào HTML email gửi ra ngoài —
+  // email client không đọc được CSS variables của app.
   "#1C2833", "#C0392B", "#E67E22", "#1E8449",
   "#2E86C1", "#8E44AD", "#95A5B2", "#FFFFFF"
 ];

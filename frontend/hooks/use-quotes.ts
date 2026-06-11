@@ -180,10 +180,15 @@ export function useBulkQuotes() {
 
   return useMutation({
     mutationFn: async (payload: { action: "status" | "send" | "export" | "delete"; ids: string[]; status?: QuoteStatus }) => {
-      const response = await apiClient.post<ApiResponse<{ action: string; processedCount?: number; items?: Record<string, unknown>[] }>>(
-        "/quotes/bulk",
-        payload
-      );
+      const response = await apiClient.post<
+        ApiResponse<{
+          action: string;
+          processedCount?: number;
+          failedCount?: number;
+          errors?: Array<{ id?: string; name?: string; message: string }>;
+          items?: Record<string, unknown>[];
+        }>
+      >("/quotes/bulk", payload);
       return response.data.data;
     },
     onSuccess: async (data) => {

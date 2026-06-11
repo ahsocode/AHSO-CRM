@@ -120,6 +120,26 @@ export function useUpdateCustomer(customerId: string) {
   });
 }
 
+/**
+ * Inline edit từ bảng danh sách (đổi status/người phụ trách ngay trên row,
+ * không cần mở trang chi tiết) — id truyền theo từng mutation.
+ */
+export function useInlineUpdateCustomer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: Partial<CustomerUpsertInput> }) => {
+      const response = await apiClient.patch<ApiResponse<{ id: string }>>(`/customers/${id}`, payload);
+      return response.data.data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["customers"] });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["reports"] });
+    }
+  });
+}
+
 export function useDeleteCustomer(customerId: string) {
   const queryClient = useQueryClient();
 

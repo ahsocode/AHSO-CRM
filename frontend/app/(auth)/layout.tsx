@@ -41,7 +41,14 @@ export default function AuthLayout({
                       className="h-full w-full object-contain p-2"
                     />
                   ) : (
-                    <img src="/crm-logo.png" alt="AHSO CRM" className="h-full w-full object-contain" />
+                    <Image
+                      src="/crm-logo.png"
+                      alt="AHSO CRM"
+                      width={56}
+                      height={56}
+                      priority
+                      className="h-full w-full object-contain"
+                    />
                   )}
                 </div>
                 <div>

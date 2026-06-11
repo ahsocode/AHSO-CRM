@@ -10,6 +10,7 @@ import { DeletedRecordsPanel } from "@/components/shared/deleted-records-panel";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
+import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useBulkCustomers, useImportCustomer, useDeletedCustomers, useRestoreCustomer, useCustomers } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { useToast } from "@/hooks/use-toast";
@@ -52,10 +53,12 @@ const parseBoolean = (value: string): boolean => {
 export function CustomersClient() {
   const user = useAuthStore((state) => state.user);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<CustomerStatus | "">("");
-  const [industry, setIndustry] = useState("");
-  const [assignedToId, setAssignedToId] = useState("");
-  const [vipFilter, setVipFilter] = useState<VipFilterValue>("all");
+  // Bộ lọc được ghi nhớ qua localStorage — sales không phải lọc lại mỗi lần
+  // quay lại trang. Ô tìm kiếm cố ý KHÔNG ghi nhớ (kỳ vọng luôn bắt đầu rỗng).
+  const [status, setStatus] = usePersistentState<CustomerStatus | "">("crm:filters:customers:status", "");
+  const [industry, setIndustry] = usePersistentState("crm:filters:customers:industry", "");
+  const [assignedToId, setAssignedToId] = usePersistentState("crm:filters:customers:assignedToId", "");
+  const [vipFilter, setVipFilter] = usePersistentState<VipFilterValue>("crm:filters:customers:vip", "all");
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
   const [dedupeOpen, setDedupeOpen] = useState(false);

@@ -1097,6 +1097,7 @@ export class ContractsService {
 
     if (currentStatus !== nextProjectStatus) {
       data.status = nextProjectStatus;
+      data.stageChangedAt = new Date();
     }
 
     await tx.project.update({

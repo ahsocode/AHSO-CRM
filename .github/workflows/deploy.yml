@@ -22,6 +22,7 @@ jobs:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
       BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ahso-crm-backend
       FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/ahso-crm-frontend
+      DOCKER_BUILD_RECORD_UPLOAD: "false"
     steps:
       - uses: actions/checkout@v4
 
@@ -81,8 +82,8 @@ jobs:
       - name: Deploy on production server
         uses: appleboy/ssh-action@v1.2.0
         env:
-          PROD_GHCR_USERNAME: ${{ secrets.PROD_GHCR_USERNAME }}
-          PROD_GHCR_TOKEN: ${{ secrets.PROD_GHCR_TOKEN }}
+          PROD_GHCR_USERNAME: ${{ github.actor }}
+          PROD_GHCR_TOKEN: ${{ github.token }}
         with:
           host: ${{ secrets.PROD_HOST }}
           username: ${{ secrets.PROD_USER }}
@@ -165,11 +166,9 @@ jobs:
             }
 
             print_disk_usage "before cleanup"
-            if [ -n "${PROD_GHCR_TOKEN:-}" ]; then
-              echo "[deploy] Logging in to ghcr.io..."
-              echo "$PROD_GHCR_TOKEN" | docker login ghcr.io -u "${PROD_GHCR_USERNAME:-${{ github.actor }}}" --password-stdin || true
-              echo "[deploy] Docker login step done (exit ignored — pull will verify auth)."
-            fi
+            echo "[deploy] Logging in to ghcr.io..."
+            echo "$PROD_GHCR_TOKEN" | docker login ghcr.io -u "$PROD_GHCR_USERNAME" --password-stdin
+            echo "[deploy] Docker login succeeded."
             echo "[deploy] Ensuring backend secrets are set..."
             ensure_generated_backend_secret "JWT_SECRET" 32
             ensure_generated_backend_secret "JWT_REFRESH_SECRET" 32

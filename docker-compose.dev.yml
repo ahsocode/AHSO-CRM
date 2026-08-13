@@ -1,13 +1,32 @@
 services:
   backend:
-    command: npm run start:dev
+    image: ahso-crm-backend:dev
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+    command: ["sh", "-c", "npx prisma generate && npm run start:dev"]
     volumes:
       - ./backend:/app
-      - /app/node_modules
+      - backend_node_modules:/app/node_modules
       - ./backend/uploads:/app/uploads
 
   frontend:
-    command: npm run dev
+    image: ahso-crm-frontend:dev
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+      HOSTNAME: 0.0.0.0
+      WATCHPACK_POLLING: "true"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-AHSO CRM}
+    command: ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
     volumes:
       - ./frontend:/app
-      - /app/node_modules
+      - frontend_node_modules:/app/node_modules
+
+volumes:
+  backend_node_modules:
+  frontend_node_modules:

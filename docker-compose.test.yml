@@ -1,0 +1,144 @@
+x-backend-test-build: &backend-test-build
+  context: ./backend
+  dockerfile: Dockerfile
+  target: test
+
+x-frontend-test-build: &frontend-test-build
+  context: ./frontend
+  dockerfile: Dockerfile
+  target: test
+
+x-backend-test-env: &backend-test-env
+  NODE_ENV: test
+  DATABASE_URL: postgresql://ahso:ahso_test_password@postgres-e2e:5432/ahso_crm?schema=public
+  REDIS_URL: redis://redis-e2e:6379
+  JWT_SECRET: ahso-test-jwt-secret-change-me-min-32
+  JWT_REFRESH_SECRET: ahso-test-refresh-secret-change-me-32
+  JWT_RESET_SECRET: ahso-test-reset-secret-change-me
+  ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef
+  FRONTEND_URL: http://frontend-e2e:3000
+  CORS_ORIGIN: http://frontend-e2e:3000
+  SMTP_FROM: AHSO CRM <noreply@ahso.vn>
+  LOG_LEVEL: error
+
+services:
+  backend-unit:
+    image: ahso-crm-backend-test:local
+    build: *backend-test-build
+    environment:
+      <<: *backend-test-env
+    command: ["sh", "-c", "npm run typecheck && npm test"]
+
+  frontend-unit:
+    image: ahso-crm-frontend-test:local
+    build:
+      <<: *frontend-test-build
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+        NEXT_PUBLIC_APP_NAME: AHSO CRM
+    environment:
+      NODE_ENV: test
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_APP_NAME: AHSO CRM
+    command: ["sh", "-c", "npm run typecheck && npm run test:unit"]
+
+  postgres-e2e:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ahso_crm
+      POSTGRES_USER: ahso
+      POSTGRES_PASSWORD: ahso_test_password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ahso -d ahso_crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  redis-e2e:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 3s
+
+  e2e-seed:
+    image: ahso-crm-backend-test:local
+    build: *backend-test-build
+    environment:
+      <<: *backend-test-env
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+    command: ["npm", "run", "prisma:seed"]
+
+  backend-e2e:
+    image: ahso-crm-backend-test:local
+    build: *backend-test-build
+    environment:
+      <<: *backend-test-env
+      PORT: 3001
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+      e2e-seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    command: ["npm", "run", "start:dev"]
+
+  frontend-e2e:
+    image: ahso-crm-frontend-test:local
+    build:
+      <<: *frontend-test-build
+      args:
+        NEXT_PUBLIC_API_URL: http://backend-e2e:3001
+        NEXT_PUBLIC_APP_NAME: AHSO CRM
+    environment:
+      NODE_ENV: development
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: http://backend-e2e:3001
+      NEXT_PUBLIC_APP_NAME: AHSO CRM
+    depends_on:
+      backend-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    command: ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+
+  e2e:
+    image: ahso-crm-e2e-test:local
+    build:
+      context: .
+      dockerfile: Dockerfile.e2e
+    environment:
+      CI: "true"
+      E2E_BASE_URL: http://frontend-e2e:3000
+      E2E_API_URL: http://backend-e2e:3001/api
+      E2E_API_BASE_URL: http://backend-e2e:3001/api
+      E2E_ADMIN_EMAIL: admin@ahso.vn
+      E2E_ADMIN_PASSWORD: AHSO123!
+    depends_on:
+      backend-e2e:
+        condition: service_healthy
+      frontend-e2e:
+        condition: service_healthy
+    volumes:
+      - ./playwright-report:/app/playwright-report
+      - ./test-results:/app/test-results

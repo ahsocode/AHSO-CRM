@@ -15,7 +15,7 @@ export default async function globalSetup(config: FullConfig) {
     "http://localhost:3000";
 
   // API lives at a different port in local/CI — derive from base URL or env
-  const apiURL = process.env.E2E_API_URL ?? baseURL.replace(":3000", ":3001");
+  const apiURL = resolveApiOrigin(process.env.E2E_API_URL ?? baseURL.replace(":3000", ":3001"));
 
   mkdirSync(dirname(STORAGE_STATE_PATH), { recursive: true });
 
@@ -55,4 +55,8 @@ export default async function globalSetup(config: FullConfig) {
   await page.context().storageState({ path: STORAGE_STATE_PATH });
 
   await browser.close();
+}
+
+function resolveApiOrigin(apiURL: string) {
+  return apiURL.replace(/\/+$/, "").replace(/\/api$/i, "");
 }

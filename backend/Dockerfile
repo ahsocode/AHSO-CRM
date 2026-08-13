@@ -22,14 +22,27 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Stage 3: build (invalidated when source files change)
+# Stage 3: development runner (keeps source + dev dependencies)
+FROM deps AS dev
+WORKDIR /app
+ENV NODE_ENV=development
+COPY . .
+RUN npx prisma generate
+CMD ["npm", "run", "start:dev"]
+
+# Stage 4: test runner (keeps source + dev dependencies)
+FROM dev AS test
+ENV NODE_ENV=test
+CMD ["sh", "-c", "npm run typecheck && npm test"]
+
+# Stage 5: build (invalidated when source files change)
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate && npm run build
 
-# Stage 4: production runner (copies only compiled output, no dev deps)
+# Stage 6: production runner (copies only compiled output)
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production

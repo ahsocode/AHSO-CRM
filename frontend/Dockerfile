@@ -5,7 +5,24 @@ RUN apk upgrade --no-cache
 COPY package*.json ./
 RUN npm ci
 
-# Stage 2: build Next.js (invalidated when source files change)
+# Stage 2: development runner (keeps source + dev dependencies)
+FROM deps AS dev
+WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+ARG NEXT_PUBLIC_APP_NAME="AHSO CRM"
+ENV NODE_ENV=development
+ENV HOSTNAME=0.0.0.0
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+COPY . .
+CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+
+# Stage 3: test runner (keeps source + dev dependencies)
+FROM dev AS test
+ENV NODE_ENV=test
+CMD ["sh", "-c", "npm run typecheck && npm run test:unit"]
+
+# Stage 4: build Next.js (invalidated when source files change)
 FROM node:22-alpine3.21 AS builder
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001
@@ -16,7 +33,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-# Stage 3: minimal runtime — only standalone output, no dev deps
+# Stage 5: minimal runtime — only standalone output, no dev deps
 FROM node:22-alpine3.21 AS runner
 WORKDIR /app
 ENV NODE_ENV=production

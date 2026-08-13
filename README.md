@@ -91,23 +91,20 @@ Self-hosted B2B sales CRM for technical and industrial project businesses. Manag
 ### Run locally
 
 ```bash
-# 1. Clone and copy env files
+# 1. Clone and enter the repo
 git clone https://github.com/ahsocode/AHSO-CRM.git && cd AHSO-CRM
-cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/.env.local.example frontend/.env.local
 
-# 2. Set a strong JWT_SECRET in backend/.env (min 16 chars)
+# 2. Start all local services from this directory
+npm run docker:up
 
-# 3. Start all services (postgres, redis, backend, frontend)
-docker compose up -d --build
-
-# 4. Apply migrations and seed test data
+# 3. Seed demo/test data
 docker compose exec -T backend npm run prisma:seed
 
-# 5. Verify
+# 4. Verify
 curl http://localhost:3001/api/health
 ```
+
+The default compose file includes local-safe defaults for PostgreSQL, Redis, JWT secrets, CORS, backend, and frontend. Override values through shell env vars or a local `.env` file when needed.
 
 | URL | Description |
 |---|---|
@@ -142,6 +139,19 @@ cd backend && npm run prisma:deploy && npm run prisma:seed
 cd backend && npm run start:dev   # port 3001
 cd frontend && npm run dev         # port 3000
 ```
+
+---
+
+## Development (with Docker)
+
+Use this when you want hot reload but do not want to install Node dependencies on the host:
+
+```bash
+npm run docker:dev
+docker compose exec -T backend npm run prisma:seed
+```
+
+The dev override mounts `./backend` and `./frontend` into their containers while keeping container-managed `node_modules` volumes.
 
 ---
 
@@ -354,6 +364,20 @@ npm run test:unit        # Vitest
 npm run test:e2e
 ```
 
+### Dockerized Tests
+
+```bash
+# from repo root — backend typecheck + Jest, frontend typecheck + Vitest, then E2E
+npm run test:docker
+
+# run smaller slices when debugging
+npm run test:docker:backend
+npm run test:docker:frontend
+npm run test:docker:e2e
+```
+
+The Docker test images use dedicated build targets, so repeated runs reuse cached `npm ci` layers. E2E reports are written to `playwright-report/` and `test-results/`.
+
 ---
 
 ## Repo Layout
@@ -417,8 +441,11 @@ AHSO-CRM/
 ├── e2e/                         Playwright smoke tests
 ├── docs/                        Architecture reference
 ├── scripts/                     Deploy and utility scripts
-├── docker-compose.yml           Local development stack
+├── docker-compose.yml           Local app stack (builds backend/frontend from source)
+├── docker-compose.dev.yml       Hot-reload override for local development
+├── docker-compose.test.yml      Dockerized unit + E2E test stack
 ├── docker-compose.prod.yml      Production stack (GHCR images)
+├── Dockerfile.e2e               Playwright E2E runner image
 └── .github/workflows/           CI + deploy pipelines
 ```
 

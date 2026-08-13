@@ -2,7 +2,15 @@
   "name": "ahso-crm-workspace",
   "private": true,
   "scripts": {
-    "test:e2e": "playwright test"
+    "docker:up": "docker compose up -d --build",
+    "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "docker:down": "docker compose down",
+    "test:e2e": "playwright test",
+    "test:docker": "npm run test:docker:unit && npm run test:docker:e2e",
+    "test:docker:unit": "npm run test:docker:backend && npm run test:docker:frontend",
+    "test:docker:backend": "docker compose -f docker-compose.test.yml run --build --rm backend-unit",
+    "test:docker:frontend": "docker compose -f docker-compose.test.yml run --build --rm frontend-unit",
+    "test:docker:e2e": "docker compose -f docker-compose.test.yml up --build --wait backend-e2e frontend-e2e && docker compose -f docker-compose.test.yml run --build --rm --no-deps e2e; status=$?; docker compose -f docker-compose.test.yml down --remove-orphans; exit $status"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.1"

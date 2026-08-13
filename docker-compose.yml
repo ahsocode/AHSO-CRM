@@ -1,46 +1,72 @@
+name: ahso-crm
+
+x-backend-env: &backend-env
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: postgresql://ahso:${POSTGRES_PASSWORD:-ahso_dev_password}@postgres:5432/${POSTGRES_DB:-ahso_crm}?schema=public
+  REDIS_URL: redis://redis:6379
+  JWT_SECRET: ${JWT_SECRET:-ahso-local-jwt-secret-change-me-min-32chars}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-ahso-local-refresh-secret-change-me-32}
+  JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+  JWT_RESET_SECRET: ${JWT_RESET_SECRET:-ahso-local-reset-secret-change-me-32}
+  JWT_RESET_EXPIRES_IN: ${JWT_RESET_EXPIRES_IN:-15m}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+  CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://127.0.0.1:3000}
+  SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+  UPLOAD_DIR: /app/uploads
+  LOG_LEVEL: ${LOG_LEVEL:-debug}
+  SMTP_FROM: ${SMTP_FROM:-AHSO CRM <noreply@ahso.vn>}
+  AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+  AI_AUTH_MODE: ${AI_AUTH_MODE:-api_key}
+  AI_REQUEST_TIMEOUT_MS: ${AI_REQUEST_TIMEOUT_MS:-30000}
+  AHSO_IMAP_HOST: ${AHSO_IMAP_HOST:-mail90168.maychuemail.com}
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ahso_crm
+      POSTGRES_DB: ${POSTGRES_DB:-ahso_crm}
       POSTGRES_USER: ahso
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ahso_dev_password}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ahso -d ahso_crm"]
+      test: ["CMD-SHELL", "pg_isready -U ahso -d ${POSTGRES_DB:-ahso_crm}"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 10s
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 20
       start_period: 5s
 
   backend:
-    image: ahso-crm-backend:latest
+    image: ahso-crm-backend:local
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: runner
     restart: unless-stopped
-    env_file: ./backend/.env
     environment:
-      DATABASE_URL: "postgresql://ahso:${POSTGRES_PASSWORD}@postgres:5432/ahso_crm?schema=public"
-      REDIS_URL: "redis://redis:6379"
+      <<: *backend-env
     ports:
-      - "3001:3001"
+      - "${BACKEND_PORT:-3001}:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,18 +78,26 @@ services:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 20
+      start_period: 45s
 
   frontend:
-    image: ahso-crm-frontend:latest
+    image: ahso-crm-frontend:local
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-AHSO CRM}
     restart: unless-stopped
-    env_file: ./frontend/.env.local
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-AHSO CRM}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -71,8 +105,9 @@ services:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s
       timeout: 5s
-      retries: 10
-      start_period: 20s
+      retries: 20
+      start_period: 30s
 
 volumes:
-  pgdata:
+  postgres_data:
+  redis_data:

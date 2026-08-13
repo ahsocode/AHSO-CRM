@@ -1759,7 +1759,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               }
               onSearchChange={(value) => setDocumentFilters((prev) => ({ ...prev, search: value }))}
               searchAriaLabel="Tìm kiếm tài liệu dự án"
-              searchPlaceholder="Tên, số chứng từ, ghi chú..."
+              searchPlaceholder="Tìm theo tên, số chứng từ, ghi chú..."
               searchValue={documentFilters.search}
             >
               <select

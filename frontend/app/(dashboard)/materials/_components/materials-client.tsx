@@ -103,25 +103,6 @@ export function MaterialsClient() {
 
       <MaterialOverviewCards items={items} isLoading={materialsQuery.isLoading} />
 
-      <MaterialFilters
-        search={search}
-        categoryId={categoryId}
-        isActive={isActive}
-        lowStockOnly={lowStockOnly}
-        canReset={canReset}
-        onSearchChange={setSearch}
-        onCategoryChange={setCategoryId}
-        onIsActiveChange={setIsActive}
-        onLowStockOnlyChange={setLowStockOnly}
-        onReset={() => {
-          setSearch("");
-          setCategoryId("");
-          setIsActive(undefined);
-          setLowStockOnly(false);
-          setPage(1);
-        }}
-      />
-
       <MaterialTable
         items={items}
         meta={materialsQuery.data?.meta}
@@ -132,6 +113,26 @@ export function MaterialsClient() {
           "Không thể tải danh sách vật tư."
         )}
         onPageChange={setPage}
+        toolbar={
+          <MaterialFilters
+            search={search}
+            categoryId={categoryId}
+            isActive={isActive}
+            lowStockOnly={lowStockOnly}
+            canReset={canReset}
+            onSearchChange={setSearch}
+            onCategoryChange={setCategoryId}
+            onIsActiveChange={setIsActive}
+            onLowStockOnlyChange={setLowStockOnly}
+            onReset={() => {
+              setSearch("");
+              setCategoryId("");
+              setIsActive(undefined);
+              setLowStockOnly(false);
+              setPage(1);
+            }}
+          />
+        }
       />
     </div>
   );

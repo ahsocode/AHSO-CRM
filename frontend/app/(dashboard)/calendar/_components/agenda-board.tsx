@@ -90,7 +90,7 @@ export function AgendaBoard({
   }
 
   const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
   const dayGroups = groupItemsByDay(items);
   const now = Date.now();
 

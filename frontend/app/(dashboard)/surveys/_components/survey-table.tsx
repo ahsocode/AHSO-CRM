@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Eye, ImageIcon, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
 import type { Survey, SurveyListMeta } from "@/lib/types";
@@ -12,23 +14,46 @@ interface SurveyTableProps {
   isLoading: boolean;
   meta?: SurveyListMeta;
   onPageChange?: (page: number) => void;
+  toolbar?: ReactNode;
 }
 
-export function SurveyTable({ surveys, isLoading, meta, onPageChange }: SurveyTableProps) {
+export function SurveyTable({ surveys, isLoading, meta, onPageChange, toolbar }: SurveyTableProps) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const total = meta?.total ?? surveys.length;
+  const header = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Survey Ledger"
+      metaText={`${total} khảo sát · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách khảo sát"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
-    return <div className="rounded-lg bg-white p-8 text-center text-text-secondary">Đang tải...</div>;
+    return (
+      <div className="overflow-hidden rounded-lg border border-border bg-white">
+        {header}
+        <div className="p-8 text-center text-text-secondary">Đang tải...</div>
+      </div>
+    );
   }
 
   if (surveys.length === 0) {
     return (
-      <div className="rounded-lg bg-white p-8 text-center text-text-secondary">
-        Chưa có khảo sát nào
+      <div className="overflow-hidden rounded-lg border border-border bg-white">
+        {header}
+        <div className="p-8 text-center text-text-secondary">Chưa có khảo sát nào</div>
       </div>
     );
   }
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-white">
+      {header}
       {/* Mobile */}
       <div className="divide-y divide-border md:hidden">
         {surveys.map((survey) => (
@@ -91,22 +116,6 @@ export function SurveyTable({ surveys, isLoading, meta, onPageChange }: SurveyTa
           </TableBody>
         </Table>
       </div>
-
-      {meta && (
-        <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
-          <p className="text-sm text-text-secondary">
-            <span className="hidden sm:inline">
-              {(meta.page - 1) * meta.limit + 1}–{Math.min(meta.page * meta.limit, meta.total)} / {meta.total} khảo sát
-            </span>
-            <span className="sm:hidden">{meta.total} khảo sát</span>
-          </p>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => onPageChange?.(meta.page - 1)}>Trước</Button>
-            <span className="px-1 text-sm text-text-secondary">{meta.page}/{meta.totalPages}</span>
-            <Button variant="outline" size="sm" disabled={meta.page >= meta.totalPages} onClick={() => onPageChange?.(meta.page + 1)}>Sau</Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { useDeleteBusinessDocument, useMarkBusinessDocumentSigned } from "@/hooks/use-business-documents";
 import { apiClient } from "@/lib/api-client";
@@ -121,7 +123,8 @@ export function DocumentTable({
   isLoading,
   isError,
   errorMessage,
-  onPageChange
+  onPageChange,
+  toolbar
 }: {
   items: BusinessDocument[];
   meta?: DocumentTableMeta;
@@ -129,13 +132,26 @@ export function DocumentTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  toolbar?: ReactNode;
 }) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Hồ sơ tài liệu"
+      metaText={`${meta?.total ?? items.length} tài liệu · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách tài liệu"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
       <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách tài liệu</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-4">
           {Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className="grid gap-3 rounded-xl border border-border/60 p-4">
@@ -150,9 +166,7 @@ export function DocumentTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader>
-          <CardTitle>Danh sách tài liệu</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách tài liệu."}
@@ -165,9 +179,7 @@ export function DocumentTable({
   if (items.length === 0) {
     return (
       <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách tài liệu</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent>
           <EmptyState
             title="Chưa có tài liệu nào"
@@ -178,28 +190,9 @@ export function DocumentTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Hồ sơ tài liệu</p>
-          <CardTitle>Danh sách tài liệu</CardTitle>
-          <p className="mt-2 text-sm text-text-secondary">
-            {meta?.total ?? items.length} tài liệu, trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} variant="outline">
-            Trang trước
-          </Button>
-          <Button disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} variant="outline">
-            Trang sau
-          </Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
 
       <CardContent className="space-y-4">
         {/* Mobile card layout */}

@@ -1,7 +1,8 @@
 "use client";
 
+import { AppIcon } from "@/components/shared/app-icon";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { MaterialCategorySelect } from "./material-category-select";
 
@@ -29,35 +30,28 @@ export function MaterialFilters({
   onReset: () => void;
 }) {
   return (
-    <div className="surface-card grid gap-4 border border-white/70 p-5 md:grid-cols-2 xl:grid-cols-[1.5fr_200px_200px_auto_auto]">
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="material-search">
-          Tìm kiếm
-        </label>
-        <Input
-          id="material-search"
-          placeholder="Tìm theo mã, tên vật tư..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="material-category">
-          Nhóm vật tư
-        </label>
+    <CompactFilterToolbar
+      canReset={canReset}
+      onReset={onReset}
+      onSearchChange={onSearchChange}
+      searchAriaLabel="Tìm kiếm vật tư"
+      searchId="material-search"
+      searchPlaceholder="Mã, tên vật tư..."
+      searchValue={search}
+    >
+      <label className="w-[140px]" htmlFor="material-category">
+        <span className="sr-only">Nhóm vật tư</span>
         <MaterialCategorySelect
+          className="h-9 rounded-lg bg-white text-[12.5px]"
           id="material-category"
           value={categoryId}
           onChange={onCategoryChange}
-          placeholder="Tất cả nhóm"
+          placeholder="Nhóm"
         />
-      </div>
+      </label>
 
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="material-active">
-          Trạng thái
-        </label>
+      <label className="w-[128px]" htmlFor="material-active">
+        <span className="sr-only">Trạng thái</span>
         <Select
           id="material-active"
           value={isActive === undefined ? "" : isActive ? "true" : "false"}
@@ -65,35 +59,25 @@ export function MaterialFilters({
             const val = e.target.value;
             onIsActiveChange(val === "" ? undefined : val === "true");
           }}
+          className="h-9 rounded-lg bg-white text-[12.5px]"
         >
-          <option value="">Tất cả</option>
-          <option value="true">Đang hoạt động</option>
-          <option value="false">Ngưng hoạt động</option>
+          <option value="">Trạng thái</option>
+          <option value="true">Hoạt động</option>
+          <option value="false">Ngưng</option>
         </Select>
-      </div>
+      </label>
 
-      <div className="flex items-end">
-        <Button
-          type="button"
-          variant={lowStockOnly ? "primary" : "outline"}
-          onClick={() => onLowStockOnlyChange(!lowStockOnly)}
-          className="w-full xl:w-auto"
-        >
-          ⚠ Tồn thấp
-        </Button>
-      </div>
-
-      <div className="flex items-end">
-        <Button
-          className="w-full xl:w-auto"
-          disabled={!canReset}
-          onClick={onReset}
-          type="button"
-          variant="outline"
-        >
-          Xóa bộ lọc
-        </Button>
-      </div>
-    </div>
+      <Button
+        aria-label="Chỉ hiện tồn thấp"
+        aria-pressed={lowStockOnly}
+        className="h-9 w-9 rounded-lg p-0"
+        onClick={() => onLowStockOnlyChange(!lowStockOnly)}
+        title="Chỉ hiện tồn thấp"
+        type="button"
+        variant={lowStockOnly ? "primary" : "outline"}
+      >
+        <AppIcon name="warning" className="h-4 w-4" />
+      </Button>
+    </CompactFilterToolbar>
   );
 }

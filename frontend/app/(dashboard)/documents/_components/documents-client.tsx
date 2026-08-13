@@ -49,22 +49,6 @@ export function DocumentsClient() {
         }
       />
 
-      <DocumentFilters
-        canReset={canReset}
-        search={search}
-        type={type}
-        status={status}
-        onSearchChange={setSearch}
-        onTypeChange={setType}
-        onStatusChange={setStatus}
-        onReset={() => {
-          setSearch("");
-          setType("");
-          setStatus("");
-          setPage(1);
-        }}
-      />
-
       <DocumentTable
         errorMessage={getApiErrorMessage(documentsQuery.error, "Không thể tải danh sách tài liệu.")}
         isError={documentsQuery.isError}
@@ -81,6 +65,23 @@ export function DocumentsClient() {
             : undefined
         }
         onPageChange={setPage}
+        toolbar={
+          <DocumentFilters
+            canReset={canReset}
+            search={search}
+            type={type}
+            status={status}
+            onSearchChange={setSearch}
+            onTypeChange={setType}
+            onStatusChange={setStatus}
+            onReset={() => {
+              setSearch("");
+              setType("");
+              setStatus("");
+              setPage(1);
+            }}
+          />
+        }
       />
 
       <DocumentUploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />

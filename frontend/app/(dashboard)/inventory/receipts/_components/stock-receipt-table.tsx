@@ -1,9 +1,10 @@
 import type { Route } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { STOCK_DOC_STATUS_LABELS, STOCK_DOC_STATUS_COLORS } from "@/lib/constants";
@@ -17,6 +18,7 @@ export function StockReceiptTable({
   isError,
   errorMessage,
   onPageChange,
+  toolbar,
 }: {
   items: StockReceiptListItem[];
   meta?: StockReceiptListMeta;
@@ -24,11 +26,26 @@ export function StockReceiptTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  toolbar?: ReactNode;
 }) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Phiếu nhập kho"
+      metaText={`${meta?.total ?? items.length} phiếu · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách phiếu nhập kho</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => <LoadingSkeleton key={i} className="h-14 w-full" />)}
         </CardContent>
@@ -39,7 +56,7 @@ export function StockReceiptTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader><CardTitle>Danh sách phiếu nhập kho</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách phiếu nhập kho."}
@@ -52,7 +69,7 @@ export function StockReceiptTable({
   if (!items.length) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách phiếu nhập kho</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <EmptyState title="Chưa có phiếu nhập kho" description="Tạo phiếu nhập kho đầu tiên để bắt đầu quản lý tồn kho." />
         </CardContent>
@@ -60,24 +77,9 @@ export function StockReceiptTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="v2-label text-primary">Phiếu nhập</p>
-          <CardTitle>Danh sách phiếu nhập kho</CardTitle>
-          <p className="mt-2 text-sm text-text-secondary">
-            {meta?.total ?? items.length} phiếu, trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} variant="outline">Trang trước</Button>
-          <Button disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} variant="outline">Trang sau</Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
       <CardContent>
         <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-y-2 text-sm">

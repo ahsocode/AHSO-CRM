@@ -1,7 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Select } from "@/components/ui/select";
 import { BusinessDocumentStatus, BusinessDocumentType } from "@/lib/types";
 
@@ -61,60 +60,48 @@ export function DocumentFilters({
   onReset: () => void;
 }) {
   return (
-    <div className="surface-card grid gap-4 border border-white/70 p-5 md:grid-cols-2 xl:grid-cols-[1.5fr_240px_200px_auto]">
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="doc-search">
-          Tìm kiếm
-        </label>
-        <Input
-          id="doc-search"
-          placeholder="Tìm theo tên, số hiệu tài liệu..."
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="doc-type">
-          Loại tài liệu
-        </label>
+    <CompactFilterToolbar
+      canReset={canReset}
+      onReset={onReset}
+      onSearchChange={onSearchChange}
+      searchAriaLabel="Tìm kiếm tài liệu"
+      searchId="doc-search"
+      searchPlaceholder="Tên, số hiệu tài liệu..."
+      searchValue={search}
+    >
+      <label className="w-[150px]" htmlFor="doc-type">
+        <span className="sr-only">Loại tài liệu</span>
         <Select
           id="doc-type"
           value={type}
           onChange={(event) => onTypeChange(event.target.value as BusinessDocumentType | "")}
+          className="h-9 rounded-lg bg-white text-[12.5px]"
         >
-          <option value="">Tất cả loại</option>
+          <option value="">Loại</option>
           {(Object.entries(DOCUMENT_TYPE_LABELS) as [BusinessDocumentType, string][]).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
         </Select>
-      </div>
+      </label>
 
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="doc-status">
-          Trạng thái
-        </label>
+      <label className="w-[128px]" htmlFor="doc-status">
+        <span className="sr-only">Trạng thái</span>
         <Select
           id="doc-status"
           value={status}
           onChange={(event) => onStatusChange(event.target.value as BusinessDocumentStatus | "")}
+          className="h-9 rounded-lg bg-white text-[12.5px]"
         >
-          <option value="">Tất cả trạng thái</option>
+          <option value="">Trạng thái</option>
           {(Object.entries(DOCUMENT_STATUS_LABELS) as [BusinessDocumentStatus, string][]).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
         </Select>
-      </div>
-
-      <div className="flex items-end">
-        <Button className="w-full xl:w-auto" disabled={!canReset} onClick={onReset} type="button" variant="outline">
-          Xóa bộ lọc
-        </Button>
-      </div>
-    </div>
+      </label>
+    </CompactFilterToolbar>
   );
 }

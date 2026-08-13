@@ -1,10 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Select } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { AppIcon } from "@/components/shared/app-icon";
 import { CustomerStatus, UserListItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -49,98 +46,65 @@ export function CustomerFilters({
   usersUnavailable: boolean;
 }) {
   return (
-    <Card className="border border-white/70 p-0">
-      <CardContent className="space-y-3 p-4">
-        <div className="relative">
-          <AppIcon
-            name="search"
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
-          />
-          <Input
-            aria-label="Tìm kiếm khách hàng"
-            value={search}
-            onChange={(event) => onSearchChange(event.target.value)}
-            className="h-10 rounded-lg border-border pl-10 text-[13.5px]"
-            placeholder="Tìm theo tên công ty, mã số thuế, email..."
-          />
-        </div>
+    <CompactFilterToolbar
+      canReset={canReset}
+      onReset={onReset}
+      onSearchChange={onSearchChange}
+      searchAriaLabel="Tìm kiếm khách hàng"
+      searchClassName="xl:max-w-[230px]"
+      searchPlaceholder="Tên công ty, MST, email..."
+      searchValue={search}
+    >
+      <label className="w-[112px]">
+        <span className="sr-only">Trạng thái</span>
+        <Select
+          value={status}
+          onChange={(event) => onStatusChange(event.target.value as CustomerStatus | "")}
+          className="h-9 rounded-lg bg-white text-[12.5px]"
+        >
+          <option value="">Trạng thái</option>
+          {STATUS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      </label>
 
-        <div className="overflow-x-auto pb-1">
-          <div className="flex min-w-max flex-nowrap items-center gap-2">
-            <label className="min-w-[180px]">
-              <span className="sr-only">Trạng thái</span>
-              <Select
-                value={status}
-                onChange={(event) => onStatusChange(event.target.value as CustomerStatus | "")}
-                className="h-9 rounded-full text-[12.5px]"
-              >
-                <option value="">Trạng thái: Tất cả</option>
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    Trạng thái: {option.label}
-                  </option>
-                ))}
-              </Select>
-            </label>
+      <label className="w-[100px]">
+        <span className="sr-only">Ngành hàng</span>
+        <input
+          value={industry}
+          onChange={(event) => onIndustryChange(event.target.value)}
+          className="flex h-9 w-full rounded-lg border border-border bg-white px-4 py-2 text-[12.5px] text-text-primary outline-none transition focus:border-border-focus focus:ring-2 focus:ring-info/15"
+          placeholder="Ngành"
+        />
+      </label>
 
-            <label className="min-w-[170px]">
-              <span className="sr-only">Ngành hàng</span>
-              <div className="relative">
-                <Input
-                  value={industry}
-                  onChange={(event) => onIndustryChange(event.target.value)}
-                  className="h-9 rounded-full text-[12.5px]"
-                  placeholder="Ngành: Tất cả"
-                />
-              </div>
-            </label>
+      <label className="w-[112px]">
+        <span className="sr-only">Phụ trách</span>
+        <Select
+          value={assignedToId}
+          onChange={(event) => onAssignedToIdChange(event.target.value)}
+          disabled={usersUnavailable}
+          className="h-9 rounded-lg bg-white text-[12.5px]"
+        >
+          <option value="">Phụ trách</option>
+          {users.map((user) => (
+            <option key={user.id} value={user.id}>
+              {user.name}
+            </option>
+          ))}
+        </Select>
+      </label>
 
-            <label className="min-w-[180px]">
-              <span className="sr-only">Phụ trách</span>
-              <Select
-                value={assignedToId}
-                onChange={(event) => onAssignedToIdChange(event.target.value)}
-                disabled={usersUnavailable}
-                className="h-9 rounded-full text-[12.5px]"
-              >
-                <option value="">Phụ trách: Tất cả</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    Phụ trách: {user.name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-
-            <button
-              type="button"
-              className={cn("v2-chip", vipFilter === "vip" && "border-accent bg-accent-bg text-accent")}
-              onClick={() => onVipFilterChange(vipFilter === "vip" ? "all" : "vip")}
-            >
-              ★ VIP
-            </button>
-
-            <div className="flex items-center gap-3 pl-2">
-              <span className="hidden text-xs text-text-muted md:inline">
-                {usersUnavailable
-                  ? "Bộ lọc nhân sự không khả dụng."
-                  : "Danh sách cập nhật theo dữ liệu customers/contacts."}
-              </span>
-              <Button variant="ghost" onClick={onReset} disabled={!canReset}>
-                Xóa bộ lọc
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {usersUnavailable ? (
-          <p className="text-xs text-text-muted">
-            {usersUnavailable
-              ? "Bộ lọc nhân sự không khả dụng với tài khoản hiện tại hoặc chưa tải được danh sách người dùng."
-              : "Danh sách được cập nhật theo thời gian thực từ backend customers/contacts."}
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
+      <button
+        type="button"
+        className={cn("v2-chip h-9 whitespace-nowrap rounded-lg px-3", vipFilter === "vip" && "border-accent bg-accent-bg text-accent")}
+        onClick={() => onVipFilterChange(vipFilter === "vip" ? "all" : "vip")}
+      >
+        VIP
+      </button>
+    </CompactFilterToolbar>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import {
   Table,
   TableBody,
@@ -10,6 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { LedgerHeader } from '@/components/shared/ledger-header';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { ActivityListItem } from '@/hooks/use-activities';
@@ -26,27 +28,46 @@ interface ActivityTableProps {
     totalPages: number;
   };
   onPageChange?: (page: number) => void;
+  toolbar?: ReactNode;
 }
 
-export function ActivityTable({ activities, isLoading, meta, onPageChange }: ActivityTableProps) {
+export function ActivityTable({ activities, isLoading, meta, onPageChange, toolbar }: ActivityTableProps) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const total = meta?.total ?? activities.length;
+  const header = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Activity Ledger"
+      metaText={`${total} hoạt động · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách hoạt động"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg p-8 text-center text-text-secondary">
-        Đang tải...
+      <div className="bg-white rounded-lg border border-border overflow-hidden">
+        {header}
+        <div className="p-8 text-center text-text-secondary">Đang tải...</div>
       </div>
     );
   }
 
   if (activities.length === 0) {
     return (
-      <div className="bg-white rounded-lg p-8 text-center text-text-secondary">
-        Không có hoạt động nào
+      <div className="bg-white rounded-lg border border-border overflow-hidden">
+        {header}
+        <div className="p-8 text-center text-text-secondary">Không có hoạt động nào</div>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-lg border border-border overflow-hidden">
+      {header}
       {/* Mobile card layout */}
       <div className="md:hidden divide-y divide-border-light">
         {activities.map((activity) => (
@@ -134,39 +155,6 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange }: Act
           </TableBody>
         </Table>
       </div>
-
-      {meta && (
-        <div className="px-4 py-4 border-t border-border flex items-center justify-between gap-3">
-          <div className="text-sm text-text-secondary">
-            <span className="hidden sm:inline">Hiển thị {(meta.page - 1) * meta.limit + 1} đến{' '}
-            {Math.min(meta.page * meta.limit, meta.total)} của {meta.total} hoạt động</span>
-            <span className="sm:hidden">{meta.total} hoạt động</span>
-          </div>
-          <div className="flex gap-2 items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={meta.page <= 1}
-              onClick={() => onPageChange?.(meta.page - 1)}
-              className="border-border text-text-primary"
-            >
-              Trước
-            </Button>
-            <span className="text-sm text-text-secondary px-1">
-              {meta.page}/{meta.totalPages}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={meta.page >= meta.totalPages}
-              onClick={() => onPageChange?.(meta.page + 1)}
-              className="border-border text-text-primary"
-            >
-              Sau
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

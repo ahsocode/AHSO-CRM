@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -1745,88 +1746,77 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
             <CardTitle>Tài liệu dự án</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-border/60 bg-bg-hover/50 p-4">
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <Input
-                  className="xl:col-span-2"
-                  placeholder="Tìm theo tên, số chứng từ, ghi chú..."
-                  value={documentFilters.search}
-                  onChange={(event) => setDocumentFilters((prev) => ({ ...prev, search: event.target.value }))}
-                />
-                <select
-                  className="h-11 rounded-md border border-border bg-bg-input px-3 text-sm"
-                  value={documentFilters.type}
-                  onChange={(event) => setDocumentFilters((prev) => ({ ...prev, type: event.target.value as "ALL" | BusinessDocumentType }))}
-                >
-                  <option value="ALL">Tất cả loại</option>
-                  {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="h-11 rounded-md border border-border bg-bg-input px-3 text-sm"
-                  value={documentFilters.status}
-                  onChange={(event) => setDocumentFilters((prev) => ({ ...prev, status: event.target.value as "ALL" | BusinessDocumentStatus }))}
-                >
-                  <option value="ALL">Tất cả trạng thái</option>
-                  {Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="h-11 rounded-md border border-border bg-bg-input px-3 text-sm"
-                  value={documentFilters.source}
-                  onChange={(event) => setDocumentFilters((prev) => ({ ...prev, source: event.target.value as "ALL" | BusinessDocumentSource }))}
-                >
-                  <option value="ALL">Tất cả nguồn</option>
-                  {Object.entries(DOCUMENT_SOURCE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    className="h-10 rounded-md border border-border bg-bg-input px-3 text-sm"
-                    value={documentFilters.fileState}
-                    onChange={(event) =>
-                      setDocumentFilters((prev) => ({ ...prev, fileState: event.target.value as "ALL" | "WITH_FILE" | "WITHOUT_FILE" }))
-                    }
-                  >
-                    <option value="ALL">Tất cả file</option>
-                    <option value="WITH_FILE">Có file</option>
-                    <option value="WITHOUT_FILE">Chưa có file</option>
-                  </select>
-                  <span className="text-sm text-text-secondary">
-                    Hiển thị {filteredBusinessDocuments.length}/{businessDocuments.length} tài liệu
-                  </span>
-                </div>
-                {hasActiveDocumentFilters ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setDocumentFilters({
-                        search: "",
-                        type: "ALL",
-                        status: "ALL",
-                        source: "ALL",
-                        fileState: "ALL"
-                      })
-                    }
-                  >
-                    Xóa bộ lọc
-                  </Button>
-                ) : null}
-              </div>
-            </div>
+            <CompactFilterToolbar
+              canReset={hasActiveDocumentFilters}
+              onReset={() =>
+                setDocumentFilters({
+                  search: "",
+                  type: "ALL",
+                  status: "ALL",
+                  source: "ALL",
+                  fileState: "ALL"
+                })
+              }
+              onSearchChange={(value) => setDocumentFilters((prev) => ({ ...prev, search: value }))}
+              searchAriaLabel="Tìm kiếm tài liệu dự án"
+              searchPlaceholder="Tên, số chứng từ, ghi chú..."
+              searchValue={documentFilters.search}
+            >
+              <select
+                aria-label="Loại tài liệu"
+                className="h-9 w-[132px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                value={documentFilters.type}
+                onChange={(event) => setDocumentFilters((prev) => ({ ...prev, type: event.target.value as "ALL" | BusinessDocumentType }))}
+              >
+                <option value="ALL">Loại</option>
+                {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Trạng thái"
+                className="h-9 w-[132px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                value={documentFilters.status}
+                onChange={(event) => setDocumentFilters((prev) => ({ ...prev, status: event.target.value as "ALL" | BusinessDocumentStatus }))}
+              >
+                <option value="ALL">Trạng thái</option>
+                {Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Nguồn"
+                className="h-9 w-[132px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                value={documentFilters.source}
+                onChange={(event) => setDocumentFilters((prev) => ({ ...prev, source: event.target.value as "ALL" | BusinessDocumentSource }))}
+              >
+                <option value="ALL">Nguồn</option>
+                {Object.entries(DOCUMENT_SOURCE_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Tệp đính kèm"
+                className="h-9 w-[112px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                value={documentFilters.fileState}
+                onChange={(event) =>
+                  setDocumentFilters((prev) => ({ ...prev, fileState: event.target.value as "ALL" | "WITH_FILE" | "WITHOUT_FILE" }))
+                }
+              >
+                <option value="ALL">File</option>
+                <option value="WITH_FILE">Có file</option>
+                <option value="WITHOUT_FILE">Chưa có file</option>
+              </select>
+              <span className="whitespace-nowrap text-sm text-text-secondary">
+                {filteredBusinessDocuments.length}/{businessDocuments.length}
+              </span>
+            </CompactFilterToolbar>
             {documentsQuery.isLoading ? (
               <LoadingSkeleton className="h-72 w-full" />
             ) : documentsQuery.isError ? (

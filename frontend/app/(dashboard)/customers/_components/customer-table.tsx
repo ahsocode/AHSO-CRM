@@ -1,12 +1,14 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { AppIcon } from "@/components/shared/app-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select } from "@/components/ui/select";
 import { useInlineUpdateCustomer } from "@/hooks/use-customers";
@@ -70,7 +72,8 @@ export function CustomerTable({
   onToggleSelect,
   onToggleSelectAll,
   hasActiveFilters = false,
-  onResetFilters
+  onResetFilters,
+  toolbar
 }: {
   items: CustomerListItem[];
   meta?: CustomerListMeta;
@@ -84,13 +87,27 @@ export function CustomerTable({
   onToggleSelectAll: () => void;
   hasActiveFilters?: boolean;
   onResetFilters?: () => void;
+  toolbar?: ReactNode;
 }) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Customer Ledger"
+      metaText={`${meta?.total ?? items.length} kết quả · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách khách hàng"
+      titleClassName="text-base"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
-      <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách khách hàng</CardTitle>
-        </CardHeader>
+      <Card className="overflow-hidden border border-white/70 p-0">
+        {ledgerHeader}
         <CardContent className="space-y-4">
           {Array.from({ length: 6 }).map((_, index) => (
             <div key={index} className="grid gap-3 rounded-xl border border-border/60 p-4 lg:grid-cols-[1.3fr_1fr_220px_90px_180px]">
@@ -109,9 +126,7 @@ export function CustomerTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader>
-          <CardTitle>Danh sách khách hàng</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách khách hàng. Kiểm tra lại backend hoặc quyền truy cập."}
@@ -129,9 +144,7 @@ export function CustomerTable({
 
     return (
       <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách khách hàng</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-4">
           <EmptyState title={title} description={description} />
           {hasActiveFilters && onResetFilters ? (
@@ -146,32 +159,9 @@ export function CustomerTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="overflow-hidden border border-white/70 p-0">
-      <CardHeader className="mb-0 gap-2 border-b border-border-light px-5 py-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="v2-label">Customer Ledger</p>
-          <CardTitle className="text-base">Danh sách khách hàng</CardTitle>
-          <p className="mt-1 text-xs text-text-secondary">
-            {meta?.total ?? items.length} kết quả · Trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => onPageChange(currentPage - 1)} disabled={currentPage <= 1}>
-            Trang trước
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-          >
-            Trang sau
-          </Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
 
       <CardContent className="space-y-4 bg-white p-4 md:p-0">
         <div className="grid gap-3 lg:hidden">

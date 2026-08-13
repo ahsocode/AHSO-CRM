@@ -1,8 +1,9 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ReactNode } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { STOCK_DOC_STATUS_LABELS, STOCK_DOC_STATUS_COLORS } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
@@ -15,6 +16,7 @@ export function StockCountTable({
   isError,
   errorMessage,
   onPageChange,
+  toolbar,
 }: {
   items: StockCountListItem[];
   meta?: StockCountListMeta;
@@ -22,11 +24,26 @@ export function StockCountTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  toolbar?: ReactNode;
 }) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Kiểm kê"
+      metaText={`${meta?.total ?? items.length} phiếu · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách phiếu kiểm kê</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => <LoadingSkeleton key={i} className="h-14 w-full" />)}
         </CardContent>
@@ -37,7 +54,7 @@ export function StockCountTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader><CardTitle>Danh sách phiếu kiểm kê</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách phiếu kiểm kê."}
@@ -50,7 +67,7 @@ export function StockCountTable({
   if (!items.length) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách phiếu kiểm kê</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <EmptyState title="Chưa có phiếu kiểm kê" description="Tạo phiếu kiểm kê để đối chiếu số liệu tồn kho thực tế." />
         </CardContent>
@@ -58,24 +75,9 @@ export function StockCountTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="v2-label text-primary">Kiểm kê</p>
-          <CardTitle>Danh sách phiếu kiểm kê</CardTitle>
-          <p className="mt-2 text-sm text-text-secondary">
-            {meta?.total ?? items.length} phiếu, trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} variant="outline">Trang trước</Button>
-          <Button disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} variant="outline">Trang sau</Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
       <CardContent>
         <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-y-2 text-sm">

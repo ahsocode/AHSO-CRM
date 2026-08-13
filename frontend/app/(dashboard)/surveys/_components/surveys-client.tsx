@@ -28,13 +28,12 @@ export function SurveysClient() {
         </Link>
       </div>
 
-      <SurveyFilters filters={filters} onFiltersChange={setFilters} />
-
       <SurveyTable
         surveys={data?.data ?? []}
         isLoading={isLoading}
         meta={data?.meta as SurveyListMeta | undefined}
         onPageChange={(page) => setFilters((f) => ({ ...f, page }))}
+        toolbar={<SurveyFilters filters={filters} onFiltersChange={setFilters} />}
       />
     </div>
   );

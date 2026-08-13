@@ -1,8 +1,7 @@
 import { ACTIVITY_TYPE_LABELS } from "@/lib/constants";
 import { ActivityType, UserListItem } from "@/lib/types";
-import { Button } from "@/components/ui/button";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   SelectRoot,
   SelectContent,
@@ -74,108 +73,89 @@ export function CalendarFilters({
   };
 
   return (
-    <Card className="border border-white/70">
-      <CardContent className="p-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_170px_170px_170px_200px_auto]">
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-search">
-              Tìm kiếm
-            </label>
-            <Input
-              id="calendar-search"
-              placeholder="Tiêu đề, khách hàng, dự án... hoặc ngày (DD/MM/YYYY)"
-              value={search}
-              onChange={(event) => handleSearchChange(event.target.value)}
-            />
-          </div>
+    <CompactFilterToolbar
+      canReset={canReset}
+      onReset={onReset}
+      onSearchChange={handleSearchChange}
+      searchAriaLabel="Tìm kiếm lịch công việc"
+      searchId="calendar-search"
+      searchPlaceholder="Tiêu đề, khách hàng, dự án hoặc ngày..."
+      searchValue={search}
+    >
+      <Input
+        aria-label="Từ ngày"
+        className="h-9 w-[132px] rounded-lg bg-white text-[12.5px]"
+        id="calendar-date-from"
+        type="date"
+        value={dateFrom}
+        onChange={(event) => onDateFromChange(event.target.value)}
+      />
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-date-from">
-              Từ ngày
-            </label>
-            <Input id="calendar-date-from" type="date" value={dateFrom} onChange={(event) => onDateFromChange(event.target.value)} />
-          </div>
+      <Input
+        aria-label="Đến ngày"
+        className="h-9 w-[132px] rounded-lg bg-white text-[12.5px]"
+        id="calendar-date-to"
+        type="date"
+        value={dateTo}
+        onChange={(event) => onDateToChange(event.target.value)}
+      />
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-primary" htmlFor="calendar-date-to">
-              Đến ngày
-            </label>
-            <Input id="calendar-date-to" type="date" value={dateTo} onChange={(event) => onDateToChange(event.target.value)} />
-          </div>
+      <div className="w-[132px]">
+        <SelectRoot
+          value={type || "all"}
+          onValueChange={(value) => onTypeChange(value === "all" ? "" : (value as ActivityType))}
+        >
+          <SelectTrigger aria-label="Loại việc" className="h-9 rounded-lg bg-white text-[12.5px]">
+            <SelectValue placeholder="Loại việc" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Loại việc</SelectItem>
+            {Object.entries(ACTIVITY_TYPE_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </SelectRoot>
+      </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-primary">
-              Loại việc
-            </label>
-            <SelectRoot
-              value={type || "all"}
-              onValueChange={(value) => onTypeChange(value === "all" ? "" : (value as ActivityType))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Tất cả loại" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả loại</SelectItem>
-                {Object.entries(ACTIVITY_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </SelectRoot>
-          </div>
+      <div className="w-[132px]">
+        <SelectRoot
+          value={completion}
+          onValueChange={(value) => onCompletionChange(value as "all" | "open" | "completed")}
+        >
+          <SelectTrigger aria-label="Trạng thái" className="h-9 rounded-lg bg-white text-[12.5px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Trạng thái</SelectItem>
+            <SelectItem value="open">Chưa hoàn tất</SelectItem>
+            <SelectItem value="completed">Đã hoàn tất</SelectItem>
+          </SelectContent>
+        </SelectRoot>
+      </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-primary">
-              Trạng thái
-            </label>
-            <SelectRoot
-              value={completion}
-              onValueChange={(value) => onCompletionChange(value as "all" | "open" | "completed")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="open">Chưa hoàn tất</SelectItem>
-                <SelectItem value="completed">Đã hoàn tất</SelectItem>
-              </SelectContent>
-            </SelectRoot>
-          </div>
-
-          {canFilterAssignee ? (
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-text-primary">
-                Người phụ trách
-              </label>
-              <SelectRoot
-                disabled={assigneesUnavailable}
-                value={assigneeId || "all"}
-                onValueChange={(value) => onAssigneeIdChange(value === "all" ? "" : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{assigneesUnavailable ? "Không tải được user" : "Tất cả phụ trách"}</SelectItem>
-                  {assignees.map((assignee) => (
-                    <SelectItem key={assignee.id} value={assignee.id}>
-                      {assignee.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </SelectRoot>
-            </div>
-          ) : null}
-
-          <div className="flex items-end">
-            <Button className="w-full xl:w-auto" disabled={!canReset} onClick={onReset} type="button" variant="outline">
-              Xóa bộ lọc
-            </Button>
-          </div>
+      {canFilterAssignee ? (
+        <div className="w-[150px]">
+          <SelectRoot
+            disabled={assigneesUnavailable}
+            value={assigneeId || "all"}
+            onValueChange={(value) => onAssigneeIdChange(value === "all" ? "" : value)}
+          >
+            <SelectTrigger aria-label="Người phụ trách" className="h-9 rounded-lg bg-white text-[12.5px]">
+              <SelectValue placeholder={assigneesUnavailable ? "Không tải được user" : "Phụ trách"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{assigneesUnavailable ? "Không tải được user" : "Phụ trách"}</SelectItem>
+              {assignees.map((assignee) => (
+                <SelectItem key={assignee.id} value={assignee.id}>
+                  {assignee.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
         </div>
-      </CardContent>
-    </Card>
+      ) : null}
+    </CompactFilterToolbar>
   );
 }

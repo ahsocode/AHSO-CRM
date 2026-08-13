@@ -59,24 +59,6 @@ export function ContractsClient() {
 
       <ContractOverviewCards meta={contractsQuery.data?.meta} isLoading={contractsQuery.isLoading} />
 
-      <ContractFilters
-        canReset={canReset}
-        onProjectIdChange={setProjectId}
-        onReset={() => {
-          setSearch("");
-          setStatus("");
-          setProjectId("");
-          setPage(1);
-        }}
-        onSearchChange={setSearch}
-        onStatusChange={setStatus}
-        projectId={projectId}
-        projects={projectsQuery.data?.items ?? []}
-        projectsUnavailable={projectsQuery.isError}
-        search={search}
-        status={status}
-      />
-
       <ContractTable
         errorMessage={getApiErrorMessage(contractsQuery.error, "Không thể tải danh sách hợp đồng.")}
         isError={contractsQuery.isError}
@@ -84,6 +66,25 @@ export function ContractsClient() {
         items={contractsQuery.data?.items ?? []}
         meta={contractsQuery.data?.meta}
         onPageChange={setPage}
+        toolbar={
+          <ContractFilters
+            canReset={canReset}
+            onProjectIdChange={setProjectId}
+            onReset={() => {
+              setSearch("");
+              setStatus("");
+              setProjectId("");
+              setPage(1);
+            }}
+            onSearchChange={setSearch}
+            onStatusChange={setStatus}
+            projectId={projectId}
+            projects={projectsQuery.data?.items ?? []}
+            projectsUnavailable={projectsQuery.isError}
+            search={search}
+            status={status}
+          />
+        }
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { useStockReceipts } from "@/hooks/use-stock-receipts";
 import { useWarehousesSelect } from "@/hooks/use-warehouses";
 import { useSuppliersSelect } from "@/hooks/use-suppliers";
 import { PageHeader } from "@/components/layout/page-header";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { apiClient, getApiErrorMessage } from "@/lib/api-client";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,6 +78,17 @@ export function StockReceiptClient() {
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
   });
+  const canReset =
+    search.length > 0 || status.length > 0 || warehouseId.length > 0 || supplierId.length > 0 || dateFrom.length > 0 || dateTo.length > 0;
+  const resetFilters = () => {
+    setSearch("");
+    setStatus("");
+    setWarehouseId("");
+    setSupplierId("");
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+  };
 
   return (
     <div className="space-y-8">
@@ -100,58 +112,6 @@ export function StockReceiptClient() {
         }
       />
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <Input
-          placeholder="Tìm số phiếu..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="w-52"
-        />
-        <Select
-          value={warehouseId}
-          onChange={(e) => { setWarehouseId(e.target.value); setPage(1); }}
-          className="w-44"
-        >
-          <option value="">Tất cả kho</option>
-          {(warehousesSelect.data ?? []).map((w) => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </Select>
-        <Select
-          value={supplierId}
-          onChange={(e) => { setSupplierId(e.target.value); setPage(1); }}
-          className="w-44"
-        >
-          <option value="">Tất cả NCC</option>
-          {(suppliersSelect.data ?? []).map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </Select>
-        <Select
-          value={status}
-          onChange={(e) => { setStatus(e.target.value as StockDocStatus | ""); setPage(1); }}
-          className="w-44"
-        >
-          <option value="">Tất cả trạng thái</option>
-          {Object.entries(STOCK_DOC_STATUS_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </Select>
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-          className="w-40"
-        />
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-          className="w-40"
-        />
-      </div>
-
       <StockReceiptTable
         items={query.data?.items ?? []}
         meta={query.data?.meta}
@@ -159,6 +119,65 @@ export function StockReceiptClient() {
         isError={query.isError}
         errorMessage={getApiErrorMessage(query.error, "Không thể tải danh sách phiếu nhập kho.")}
         onPageChange={setPage}
+        toolbar={
+          <CompactFilterToolbar
+            canReset={canReset}
+            onReset={resetFilters}
+            onSearchChange={(value) => { setSearch(value); setPage(1); }}
+            searchAriaLabel="Tìm kiếm phiếu nhập kho"
+            searchClassName="min-w-[150px] xl:max-w-[170px]"
+            searchPlaceholder="Số phiếu..."
+            searchValue={search}
+          >
+            <Select
+              aria-label="Trạng thái"
+              value={status}
+              onChange={(e) => { setStatus(e.target.value as StockDocStatus | ""); setPage(1); }}
+              className="h-9 w-[108px] rounded-lg bg-white text-[12.5px]"
+            >
+              <option value="">Trạng thái</option>
+              {Object.entries(STOCK_DOC_STATUS_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Kho"
+              value={warehouseId}
+              onChange={(e) => { setWarehouseId(e.target.value); setPage(1); }}
+              className="h-9 w-[104px] rounded-lg bg-white text-[12.5px]"
+            >
+              <option value="">Kho</option>
+              {(warehousesSelect.data ?? []).map((w) => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Nhà cung cấp"
+              value={supplierId}
+              onChange={(e) => { setSupplierId(e.target.value); setPage(1); }}
+              className="h-9 w-[104px] rounded-lg bg-white text-[12.5px]"
+            >
+              <option value="">NCC</option>
+              {(suppliersSelect.data ?? []).map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </Select>
+            <Input
+              aria-label="Từ ngày"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="h-9 w-[116px] rounded-lg bg-white text-[12.5px]"
+            />
+            <Input
+              aria-label="Đến ngày"
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="h-9 w-[116px] rounded-lg bg-white text-[12.5px]"
+            />
+          </CompactFilterToolbar>
+        }
       />
     </div>
   );

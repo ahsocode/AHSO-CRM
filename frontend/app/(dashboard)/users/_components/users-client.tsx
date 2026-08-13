@@ -10,6 +10,7 @@ import { z } from "zod";
 import { PageHeader } from "@/components/layout/page-header";
 import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { AppIcon } from "@/components/shared/app-icon";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -485,50 +486,7 @@ export function UsersClient() {
 
       <UserOverviewCards users={users} isLoading={usersQuery.isLoading} />
 
-      <Card className="bg-white/88">
-        <CardHeader>
-          <CardTitle>Bộ lọc vận hành</CardTitle>
-          <CardDescription>
-            Tìm nhanh theo tên, email, vai trò hoặc trạng thái hoạt động trước khi cập nhật hồ sơ.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr_0.8fr_auto]">
-          <Input
-            placeholder="Tìm theo tên người dùng, email hoặc vai trò..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-
-          <Select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-            <option value="">Tất cả vai trò</option>
-            {roleOptions.map((role) => (
-              <option key={role.id} value={role.id}>
-                {getRoleLabelByName(role.name)}
-              </option>
-            ))}
-          </Select>
-
-          <Select value={activityFilter} onChange={(event) => setActivityFilter(event.target.value as ActivityFilterValue)}>
-            <option value="all">Tất cả trạng thái</option>
-            <option value="active">Đang hoạt động</option>
-            <option value="inactive">Tạm khóa</option>
-          </Select>
-
-          <Button
-            variant="ghost"
-            disabled={!hasActiveFilters}
-            onClick={() => {
-              setSearch("");
-              setRoleFilter("");
-              setActivityFilter("all");
-            }}
-          >
-            Xóa bộ lọc
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_0.8fr]">
         <UserTable
           items={filteredUsers}
           selectedUserId={panelMode === "edit" ? selectedVisibleUser?.id ?? null : null}
@@ -540,6 +498,46 @@ export function UsersClient() {
             setPanelMode("edit");
             setSuccessMessage(null);
           }}
+          toolbar={
+            <CompactFilterToolbar
+              canReset={hasActiveFilters}
+              onReset={() => {
+                setSearch("");
+                setRoleFilter("");
+                setActivityFilter("all");
+              }}
+              onSearchChange={setSearch}
+              searchAriaLabel="Tìm kiếm người dùng"
+              searchClassName="min-w-[150px] xl:max-w-[180px]"
+              searchPlaceholder="Tên, email hoặc vai trò..."
+              searchValue={search}
+            >
+              <Select
+                aria-label="Vai trò"
+                value={roleFilter}
+                onChange={(event) => setRoleFilter(event.target.value)}
+                className="h-9 w-[108px] rounded-lg bg-white text-[12.5px]"
+              >
+                <option value="">Vai trò</option>
+                {roleOptions.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {getRoleLabelByName(role.name)}
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                aria-label="Trạng thái"
+                value={activityFilter}
+                onChange={(event) => setActivityFilter(event.target.value as ActivityFilterValue)}
+                className="h-9 w-[108px] rounded-lg bg-white text-[12.5px]"
+              >
+                <option value="all">Trạng thái</option>
+                <option value="active">Hoạt động</option>
+                <option value="inactive">Tạm khóa</option>
+              </Select>
+            </CompactFilterToolbar>
+          }
         />
 
         <Card className="bg-white/92">

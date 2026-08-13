@@ -1,9 +1,10 @@
 import type { Route } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import type { WarehouseListItem } from "@/lib/types";
 import type { WarehouseListMeta } from "@/hooks/use-warehouses";
@@ -15,6 +16,7 @@ export function WarehouseTable({
   isError,
   errorMessage,
   onPageChange,
+  toolbar,
 }: {
   items: WarehouseListItem[];
   meta?: WarehouseListMeta;
@@ -22,11 +24,26 @@ export function WarehouseTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  toolbar?: ReactNode;
 }) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Kho hàng"
+      metaText={`${meta?.total ?? items.length} kho · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách kho</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <LoadingSkeleton key={i} className="h-14 w-full" />
@@ -39,7 +56,7 @@ export function WarehouseTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader><CardTitle>Danh sách kho</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách kho."}
@@ -52,7 +69,7 @@ export function WarehouseTable({
   if (!items.length) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách kho</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <EmptyState title="Chưa có kho nào" description="Thêm kho đầu tiên để quản lý tồn kho." />
         </CardContent>
@@ -60,24 +77,9 @@ export function WarehouseTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="v2-label text-primary">Kho hàng</p>
-          <CardTitle>Danh sách kho</CardTitle>
-          <p className="mt-2 text-sm text-text-secondary">
-            {meta?.total ?? items.length} kho, trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} variant="outline">Trang trước</Button>
-          <Button disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} variant="outline">Trang sau</Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
 
       <CardContent>
         <div className="overflow-x-auto">

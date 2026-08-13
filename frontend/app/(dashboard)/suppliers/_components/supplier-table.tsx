@@ -3,12 +3,14 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useDeleteSupplier } from "@/hooks/use-suppliers";
 import { formatDate } from "@/lib/format";
 import type { SupplierListItem, SupplierListMeta } from "@/lib/types";
@@ -21,6 +23,7 @@ export function SupplierTable({
   isError,
   errorMessage,
   onPageChange,
+  toolbar,
 }: {
   items: SupplierListItem[];
   meta?: SupplierListMeta;
@@ -28,15 +31,27 @@ export function SupplierTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  toolbar?: ReactNode;
 }) {
   const router = useRouter();
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Supplier Ledger"
+      metaText={`${meta?.total ?? items.length} nhà cung cấp · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách nhà cung cấp"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
 
   if (isLoading) {
     return (
       <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách nhà cung cấp</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
             <LoadingSkeleton key={i} className="h-14 w-full rounded-xl" />
@@ -49,9 +64,7 @@ export function SupplierTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader>
-          <CardTitle>Danh sách nhà cung cấp</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách nhà cung cấp."}
@@ -64,9 +77,7 @@ export function SupplierTable({
   if (items.length === 0) {
     return (
       <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách nhà cung cấp</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent>
           <EmptyState
             title="Chưa có nhà cung cấp"
@@ -77,38 +88,9 @@ export function SupplierTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
-            Supplier Ledger
-          </p>
-          <CardTitle>Danh sách nhà cung cấp</CardTitle>
-          <p className="mt-2 text-sm text-text-secondary">
-            {meta?.total ?? items.length} nhà cung cấp, trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            disabled={currentPage <= 1}
-            onClick={() => onPageChange(currentPage - 1)}
-            variant="outline"
-          >
-            Trang trước
-          </Button>
-          <Button
-            disabled={currentPage >= totalPages}
-            onClick={() => onPageChange(currentPage + 1)}
-            variant="outline"
-          >
-            Trang sau
-          </Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
 
       <CardContent>
         {/* Mobile cards */}

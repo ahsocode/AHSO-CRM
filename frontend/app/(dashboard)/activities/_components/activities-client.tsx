@@ -54,9 +54,6 @@ export function ActivitiesClient() {
         </div>
       </div>
 
-      {/* Filters */}
-      <ActivityFiltersComponent filters={filters} onFiltersChange={setFilters} />
-
       {showDeleted ? (
         <DeletedRecordsPanel
           title="Hoạt động đã xóa mềm"
@@ -90,6 +87,7 @@ export function ActivitiesClient() {
         isLoading={isLoading}
         meta={data?.meta}
         onPageChange={(page) => setFilters({ ...filters, page })}
+        toolbar={<ActivityFiltersComponent filters={filters} onFiltersChange={setFilters} />}
       />
     </div>
   );

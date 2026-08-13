@@ -285,23 +285,6 @@ export function CustomersClient() {
         isLoading={customersQuery.isLoading}
       />
 
-      <CustomerFilters
-        search={search}
-        onSearchChange={setSearch}
-        status={status}
-        onStatusChange={setStatus}
-        industry={industry}
-        onIndustryChange={setIndustry}
-        assignedToId={assignedToId}
-        onAssignedToIdChange={setAssignedToId}
-        vipFilter={vipFilter}
-        onVipFilterChange={setVipFilter}
-        onReset={resetFilters}
-        canReset={canReset}
-        users={usersQuery.data ?? []}
-        usersUnavailable={!canManageUsers || usersQuery.isError}
-      />
-
       {showDeleted ? (
         <DeletedRecordsPanel
           title="Khách hàng đã xóa mềm"
@@ -442,6 +425,24 @@ export function CustomersClient() {
         onPageChange={setPage}
         hasActiveFilters={canReset}
         onResetFilters={resetFilters}
+        toolbar={
+          <CustomerFilters
+            search={search}
+            onSearchChange={setSearch}
+            status={status}
+            onStatusChange={setStatus}
+            industry={industry}
+            onIndustryChange={setIndustry}
+            assignedToId={assignedToId}
+            onAssignedToIdChange={setAssignedToId}
+            vipFilter={vipFilter}
+            onVipFilterChange={setVipFilter}
+            onReset={resetFilters}
+            canReset={canReset}
+            users={usersQuery.data ?? []}
+            usersUnavailable={!canManageUsers || usersQuery.isError}
+          />
+        }
         onToggleSelect={(id) =>
           setSelectedIds((current) =>
             current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]

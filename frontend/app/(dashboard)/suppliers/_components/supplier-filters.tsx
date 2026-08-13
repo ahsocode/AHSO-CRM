@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Select } from "@/components/ui/select";
 
 export function SupplierFilters({
@@ -18,23 +17,17 @@ export function SupplierFilters({
   onReset: () => void;
 }) {
   return (
-    <div className="surface-card grid gap-4 border border-white/70 p-5 md:grid-cols-2 xl:grid-cols-[1.5fr_220px_auto]">
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="supplier-search">
-          Tìm kiếm
-        </label>
-        <Input
-          id="supplier-search"
-          placeholder="Tìm theo tên, mã, mã số thuế..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-semibold text-text-primary" htmlFor="supplier-active">
-          Trạng thái
-        </label>
+    <CompactFilterToolbar
+      canReset={canReset}
+      onReset={onReset}
+      onSearchChange={onSearchChange}
+      searchAriaLabel="Tìm kiếm nhà cung cấp"
+      searchId="supplier-search"
+      searchPlaceholder="Tên, mã, mã số thuế..."
+      searchValue={search}
+    >
+      <label className="w-[128px]" htmlFor="supplier-active">
+        <span className="sr-only">Trạng thái</span>
         <Select
           id="supplier-active"
           value={isActive === undefined ? "" : isActive ? "true" : "false"}
@@ -42,24 +35,13 @@ export function SupplierFilters({
             const val = e.target.value;
             onIsActiveChange(val === "" ? undefined : val === "true");
           }}
+          className="h-9 rounded-lg bg-white text-[12.5px]"
         >
-          <option value="">Tất cả</option>
-          <option value="true">Đang hoạt động</option>
-          <option value="false">Ngưng hoạt động</option>
+          <option value="">Trạng thái</option>
+          <option value="true">Hoạt động</option>
+          <option value="false">Ngưng</option>
         </Select>
-      </div>
-
-      <div className="flex items-end">
-        <Button
-          className="w-full xl:w-auto"
-          disabled={!canReset}
-          onClick={onReset}
-          type="button"
-          variant="outline"
-        >
-          Xóa bộ lọc
-        </Button>
-      </div>
-    </div>
+      </label>
+    </CompactFilterToolbar>
   );
 }

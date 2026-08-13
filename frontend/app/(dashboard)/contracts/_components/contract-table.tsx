@@ -1,12 +1,13 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { AvatarInitials } from "@/components/shared/avatar-initials";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { ContractListItem, ContractListMeta } from "@/lib/types";
 
@@ -16,7 +17,8 @@ export function ContractTable({
   isLoading,
   isError,
   errorMessage,
-  onPageChange
+  onPageChange,
+  toolbar
 }: {
   items: ContractListItem[];
   meta?: ContractListMeta;
@@ -24,13 +26,26 @@ export function ContractTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  toolbar?: ReactNode;
 }) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Contract Ledger"
+      metaText={`${meta?.total ?? items.length} hợp đồng · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách hợp đồng"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
       <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách hợp đồng</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="grid gap-3 rounded-xl border border-border/60 p-4 lg:grid-cols-[1.05fr_1fr_220px_220px]">
@@ -48,9 +63,7 @@ export function ContractTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader>
-          <CardTitle>Danh sách hợp đồng</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách hợp đồng."}
@@ -63,9 +76,7 @@ export function ContractTable({
   if (items.length === 0) {
     return (
       <Card className="border border-white/70">
-        <CardHeader>
-          <CardTitle>Danh sách hợp đồng</CardTitle>
-        </CardHeader>
+        {ledgerHeader}
         <CardContent>
           <EmptyState
             title="Chưa có hợp đồng phù hợp"
@@ -76,28 +87,9 @@ export function ContractTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="border border-white/70">
-      <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Contract Ledger</p>
-          <CardTitle>Danh sách hợp đồng</CardTitle>
-          <p className="mt-2 text-sm text-text-secondary">
-            {meta?.total ?? items.length} hợp đồng, trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} variant="outline">
-            Trang trước
-          </Button>
-          <Button disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} variant="outline">
-            Trang sau
-          </Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
 
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:hidden">

@@ -95,19 +95,6 @@ export function SuppliersClient() {
         isLoading={suppliersQuery.isLoading}
       />
 
-      <SupplierFilters
-        search={search}
-        isActive={isActive}
-        canReset={canReset}
-        onSearchChange={setSearch}
-        onIsActiveChange={setIsActive}
-        onReset={() => {
-          setSearch("");
-          setIsActive(undefined);
-          setPage(1);
-        }}
-      />
-
       <SupplierTable
         items={items}
         meta={suppliersQuery.data?.meta}
@@ -118,6 +105,20 @@ export function SuppliersClient() {
           "Không thể tải danh sách nhà cung cấp."
         )}
         onPageChange={setPage}
+        toolbar={
+          <SupplierFilters
+            search={search}
+            isActive={isActive}
+            canReset={canReset}
+            onSearchChange={setSearch}
+            onIsActiveChange={setIsActive}
+            onReset={() => {
+              setSearch("");
+              setIsActive(undefined);
+              setPage(1);
+            }}
+          />
+        }
       />
     </div>
   );

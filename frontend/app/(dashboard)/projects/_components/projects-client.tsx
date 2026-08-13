@@ -315,26 +315,28 @@ export function ProjectsClient() {
 
       <ProjectOverviewCards meta={activeMeta} isLoading={isLoading} />
 
-      <ProjectFilters
-        assignedToId={assignedToId}
-        canReset={canReset}
-        onAssignedToIdChange={setAssignedToId}
-        onPriorityChange={setPriority}
-        onReset={() => {
-          setSearch("");
-          setStatus("");
-          setPriority("");
-          setAssignedToId("");
-          setPage(1);
-        }}
-        onSearchChange={setSearch}
-        onStatusChange={setStatus}
-        priority={priority}
-        search={search}
-        status={status}
-        users={usersQuery.data ?? []}
-        usersUnavailable={!canManageUsers || usersQuery.isError}
-      />
+      {view === "kanban" ? (
+        <ProjectFilters
+          assignedToId={assignedToId}
+          canReset={canReset}
+          onAssignedToIdChange={setAssignedToId}
+          onPriorityChange={setPriority}
+          onReset={() => {
+            setSearch("");
+            setStatus("");
+            setPriority("");
+            setAssignedToId("");
+            setPage(1);
+          }}
+          onSearchChange={setSearch}
+          onStatusChange={setStatus}
+          priority={priority}
+          search={search}
+          status={status}
+          users={usersQuery.data ?? []}
+          usersUnavailable={!canManageUsers || usersQuery.isError}
+        />
+      ) : null}
 
       {showDeleted ? (
         <DeletedRecordsPanel
@@ -479,6 +481,29 @@ export function ProjectsClient() {
           items={projectsQuery.data?.items ?? []}
           meta={projectsQuery.data?.meta}
           onPageChange={setPage}
+          toolbar={
+            <ProjectFilters
+              assignedToId={assignedToId}
+              canReset={canReset}
+              onAssignedToIdChange={setAssignedToId}
+              onPriorityChange={setPriority}
+              onReset={() => {
+                setSearch("");
+                setStatus("");
+                setPriority("");
+                setAssignedToId("");
+                setPage(1);
+              }}
+              onSearchChange={setSearch}
+              onStatusChange={setStatus}
+              priority={priority}
+              search={search}
+              status={status}
+              users={usersQuery.data ?? []}
+              usersUnavailable={!canManageUsers || usersQuery.isError}
+              variant="ledger"
+            />
+          }
           onToggleSelect={(id) =>
             setSelectedIds((current) =>
               current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]

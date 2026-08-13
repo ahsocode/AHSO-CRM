@@ -1,12 +1,14 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
+import { LedgerHeader } from "@/components/shared/ledger-header";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { AppIcon } from "@/components/shared/app-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { QuoteListItem, QuoteListMeta } from "@/lib/types";
@@ -22,7 +24,8 @@ export function QuoteTable({
   selectedIds,
   allVisibleSelected,
   onToggleSelect,
-  onToggleSelectAll
+  onToggleSelectAll,
+  toolbar
 }: {
   items: QuoteListItem[];
   meta?: QuoteListMeta;
@@ -34,11 +37,26 @@ export function QuoteTable({
   allVisibleSelected: boolean;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
+  toolbar?: ReactNode;
 }) {
+  const currentPage = meta?.page ?? 1;
+  const totalPages = Math.max(meta?.totalPages ?? 1, 1);
+  const ledgerHeader = (
+    <LedgerHeader
+      currentPage={currentPage}
+      eyebrow="Quote Ledger"
+      metaText={`${meta?.total ?? items.length} báo giá · trang ${currentPage}/${totalPages}`}
+      onPageChange={onPageChange}
+      title="Danh sách báo giá"
+      toolbar={toolbar}
+      totalPages={totalPages}
+    />
+  );
+
   if (isLoading) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách báo giá</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent className="space-y-2">
           {Array.from({ length: 8 }).map((_, i) => (
             <LoadingSkeleton key={i} className="h-14 w-full rounded-xl" />
@@ -51,7 +69,7 @@ export function QuoteTable({
   if (isError) {
     return (
       <Card className="border border-danger/20">
-        <CardHeader><CardTitle>Danh sách báo giá</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {errorMessage ?? "Không thể tải danh sách báo giá."}
@@ -64,7 +82,7 @@ export function QuoteTable({
   if (items.length === 0) {
     return (
       <Card className="border border-white/70">
-        <CardHeader><CardTitle>Danh sách báo giá</CardTitle></CardHeader>
+        {ledgerHeader}
         <CardContent>
           <EmptyState
             title="Chưa có báo giá phù hợp"
@@ -80,33 +98,9 @@ export function QuoteTable({
     );
   }
 
-  const currentPage = meta?.page ?? 1;
-  const totalPages = meta?.totalPages ?? 1;
-
   return (
     <Card className="border border-white/70">
-      <CardHeader className="gap-2 pb-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Quote Ledger</p>
-          <CardTitle>Danh sách báo giá</CardTitle>
-          <p className="mt-1 text-sm text-text-secondary">
-            {meta?.total ?? items.length} báo giá · trang {currentPage}/{totalPages}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} variant="outline" size="sm">
-            <AppIcon name="chevron-left" className="mr-1 text-base" />
-            Trước
-          </Button>
-          <span className="min-w-[3rem] text-center text-sm font-medium text-text-secondary">
-            {currentPage} / {totalPages}
-          </span>
-          <Button disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} variant="outline" size="sm">
-            Tiếp
-            <AppIcon name="chevron-right" className="ml-1 text-base" />
-          </Button>
-        </div>
-      </CardHeader>
+      {ledgerHeader}
 
       {/* Mobile */}
       <CardContent className="md:hidden space-y-2">
@@ -300,22 +294,6 @@ export function QuoteTable({
           </table>
         </div>
 
-        {/* Footer pagination */}
-        <div className="flex items-center justify-between border-t border-border/40 px-4 py-3">
-          <p className="text-sm text-text-secondary">
-            {meta?.total ?? items.length} báo giá · trang {currentPage}/{totalPages}
-          </p>
-          <div className="flex items-center gap-2">
-            <Button disabled={currentPage <= 1} onClick={() => onPageChange(currentPage - 1)} variant="outline" size="sm">
-              <AppIcon name="chevron-left" className="mr-1 text-base" />
-              Trước
-            </Button>
-            <Button disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)} variant="outline" size="sm">
-              Tiếp
-              <AppIcon name="chevron-right" className="ml-1 text-base" />
-            </Button>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

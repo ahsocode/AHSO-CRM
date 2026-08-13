@@ -72,24 +72,6 @@ export function QuotesClient() {
 
       <QuoteOverviewCards meta={quotesQuery.data?.meta} isLoading={quotesQuery.isLoading} />
 
-      <QuoteFilters
-        canReset={canReset}
-        onProjectIdChange={setProjectId}
-        onReset={() => {
-          setSearch("");
-          setStatus("");
-          setProjectId("");
-          setPage(1);
-        }}
-        onSearchChange={setSearch}
-        onStatusChange={setStatus}
-        projectId={projectId}
-        projects={projectsQuery.data?.items ?? []}
-        projectsUnavailable={projectsQuery.isError}
-        search={search}
-        status={status}
-      />
-
       {selectedIds.length > 0 ? (
         <BulkActionsBar count={selectedIds.length} onClear={() => setSelectedIds([])}>
           <Select value={bulkAction} onChange={(event) => setBulkAction(event.target.value as "status" | "send")}>
@@ -184,6 +166,25 @@ export function QuotesClient() {
         items={quotesQuery.data?.items ?? []}
         meta={quotesQuery.data?.meta}
         onPageChange={setPage}
+        toolbar={
+          <QuoteFilters
+            canReset={canReset}
+            onProjectIdChange={setProjectId}
+            onReset={() => {
+              setSearch("");
+              setStatus("");
+              setProjectId("");
+              setPage(1);
+            }}
+            onSearchChange={setSearch}
+            onStatusChange={setStatus}
+            projectId={projectId}
+            projects={projectsQuery.data?.items ?? []}
+            projectsUnavailable={projectsQuery.isError}
+            search={search}
+            status={status}
+          />
+        }
         onToggleSelect={(id) =>
           setSelectedIds((current) =>
             current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]

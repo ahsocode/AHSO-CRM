@@ -1,6 +1,6 @@
 'use client';
 
-import { Input } from '@/components/ui/input';
+import { CompactFilterToolbar } from '@/components/shared/compact-filter-toolbar';
 import {
   SelectRoot,
   SelectContent,
@@ -26,83 +26,67 @@ const ACTIVITY_TYPES = [
 ];
 
 export function ActivityFilters({ filters, onFiltersChange }: ActivityFiltersProps) {
+  const canReset = Boolean(filters.type || filters.search || filters.isCompleted !== undefined);
+
   return (
-    <div className="bg-white rounded-lg p-4 border border-border space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Type Filter */}
-        <div>
-          <label className="text-sm font-medium text-text-primary block mb-2">
-            Loại hoạt động
-          </label>
-          <SelectRoot
-            value={filters.type || 'all'}
-            onValueChange={(value) =>
-              onFiltersChange({ ...filters, type: value === 'all' ? undefined : value, page: 1 })
-            }
-          >
-            <SelectTrigger className="border-border">
-              <SelectValue placeholder="Tất cả loại" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả loại</SelectItem>
-              {ACTIVITY_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </SelectRoot>
-        </div>
-
-        {/* Completion Status */}
-        <div>
-          <label className="text-sm font-medium text-text-primary block mb-2">
-            Trạng thái
-          </label>
-          <SelectRoot
-            value={
-              filters.isCompleted === undefined
-                ? 'all'
-                : filters.isCompleted
-                  ? 'completed'
-                  : 'pending'
-            }
-            onValueChange={(value) => {
-              let isCompleted: boolean | undefined;
-              if (value === 'completed') {
-                isCompleted = true;
-              } else if (value === 'pending') {
-                isCompleted = false;
-              }
-              onFiltersChange({ ...filters, isCompleted, page: 1 });
-            }}
-          >
-            <SelectTrigger className="border-border">
-              <SelectValue placeholder="Tất cả" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="pending">Chưa xong</SelectItem>
-              <SelectItem value="completed">Hoàn tất</SelectItem>
-            </SelectContent>
-          </SelectRoot>
-        </div>
-
-        {/* Search */}
-        <div className="md:col-span-2">
-          <label className="text-sm font-medium text-text-primary block mb-2">
-            Tìm kiếm
-          </label>
-          <Input
-            placeholder="Tìm tiêu đề..."
-            value={filters.search || ''}
-            onChange={(e) =>
-              onFiltersChange({ ...filters, search: e.target.value, page: 1 })
-            }
-            className="border-border"
-          />
-        </div>
+    <CompactFilterToolbar
+      canReset={canReset}
+      onReset={() => onFiltersChange({ ...filters, type: undefined, search: undefined, isCompleted: undefined, page: 1 })}
+      onSearchChange={(value) => onFiltersChange({ ...filters, search: value, page: 1 })}
+      searchAriaLabel="Tìm kiếm hoạt động"
+      searchPlaceholder="Tìm tiêu đề..."
+      searchValue={filters.search || ''}
+    >
+      <div className="w-[132px]">
+        <SelectRoot
+          value={filters.type || 'all'}
+          onValueChange={(value) =>
+            onFiltersChange({ ...filters, type: value === 'all' ? undefined : value, page: 1 })
+          }
+        >
+          <SelectTrigger aria-label="Loại hoạt động" className="h-9 rounded-lg border-border bg-white text-[12.5px]">
+            <SelectValue placeholder="Loại" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Loại</SelectItem>
+            {ACTIVITY_TYPES.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </SelectRoot>
       </div>
-    </div>
+
+      <div className="w-[132px]">
+        <SelectRoot
+          value={
+            filters.isCompleted === undefined
+              ? 'all'
+              : filters.isCompleted
+                ? 'completed'
+                : 'pending'
+          }
+          onValueChange={(value) => {
+            let isCompleted: boolean | undefined;
+            if (value === 'completed') {
+              isCompleted = true;
+            } else if (value === 'pending') {
+              isCompleted = false;
+            }
+            onFiltersChange({ ...filters, isCompleted, page: 1 });
+          }}
+        >
+          <SelectTrigger aria-label="Trạng thái" className="h-9 rounded-lg border-border bg-white text-[12.5px]">
+            <SelectValue placeholder="Trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Trạng thái</SelectItem>
+            <SelectItem value="pending">Chưa xong</SelectItem>
+            <SelectItem value="completed">Hoàn tất</SelectItem>
+          </SelectContent>
+        </SelectRoot>
+      </div>
+    </CompactFilterToolbar>
   );
 }

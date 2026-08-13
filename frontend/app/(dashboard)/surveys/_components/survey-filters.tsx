@@ -1,5 +1,6 @@
 "use client";
 
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Input } from "@/components/ui/input";
 import type { SurveyListFilter } from "@/lib/types";
 
@@ -11,29 +12,31 @@ interface SurveyFiltersProps {
 export function SurveyFilters({ filters, onFiltersChange }: SurveyFiltersProps) {
   const update = (patch: Partial<SurveyListFilter>) =>
     onFiltersChange({ ...filters, ...patch, page: 1 });
+  const canReset = Boolean(filters.search || filters.dateFrom || filters.dateTo);
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <CompactFilterToolbar
+      canReset={canReset}
+      onReset={() => onFiltersChange({ ...filters, search: undefined, dateFrom: undefined, dateTo: undefined, page: 1 })}
+      onSearchChange={(value) => update({ search: value || undefined })}
+      searchAriaLabel="Tìm kiếm khảo sát"
+      searchPlaceholder="Tiêu đề, địa điểm, tóm tắt..."
+      searchValue={filters.search ?? ""}
+    >
       <Input
-        className="w-full sm:w-64"
-        placeholder="Tìm theo tiêu đề, địa điểm, tóm tắt..."
-        value={filters.search ?? ""}
-        onChange={(e) => update({ search: e.target.value || undefined })}
-      />
-      <Input
-        className="w-40"
+        aria-label="Từ ngày"
+        className="h-9 w-[132px] rounded-lg bg-white text-[12.5px]"
         type="date"
-        placeholder="Từ ngày"
         value={filters.dateFrom ?? ""}
         onChange={(e) => update({ dateFrom: e.target.value || undefined })}
       />
       <Input
-        className="w-40"
+        aria-label="Đến ngày"
+        className="h-9 w-[132px] rounded-lg bg-white text-[12.5px]"
         type="date"
-        placeholder="Đến ngày"
         value={filters.dateTo ?? ""}
         onChange={(e) => update({ dateTo: e.target.value || undefined })}
       />
-    </div>
+    </CompactFilterToolbar>
   );
 }

@@ -7,6 +7,7 @@ import { useStockIssues } from "@/hooks/use-stock-issues";
 import { useWarehousesSelect } from "@/hooks/use-warehouses";
 import { useProjects } from "@/hooks/use-projects";
 import { PageHeader } from "@/components/layout/page-header";
+import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,17 @@ export function StockIssueClient() {
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
   });
+  const canReset =
+    search.length > 0 || status.length > 0 || warehouseId.length > 0 || projectId.length > 0 || dateFrom.length > 0 || dateTo.length > 0;
+  const resetFilters = () => {
+    setSearch("");
+    setStatus("");
+    setWarehouseId("");
+    setProjectId("");
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+  };
 
   return (
     <div className="space-y-8">
@@ -53,58 +65,6 @@ export function StockIssueClient() {
         }
       />
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <Input
-          placeholder="Tìm số phiếu..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="w-52"
-        />
-        <Select
-          value={warehouseId}
-          onChange={(e) => { setWarehouseId(e.target.value); setPage(1); }}
-          className="w-44"
-        >
-          <option value="">Tất cả kho</option>
-          {(warehousesSelect.data ?? []).map((w) => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </Select>
-        <Select
-          value={projectId}
-          onChange={(e) => { setProjectId(e.target.value); setPage(1); }}
-          className="w-48"
-        >
-          <option value="">Tất cả dự án</option>
-          {(projectsQuery.data?.items ?? []).map((p) => (
-            <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
-          ))}
-        </Select>
-        <Select
-          value={status}
-          onChange={(e) => { setStatus(e.target.value as StockDocStatus | ""); setPage(1); }}
-          className="w-44"
-        >
-          <option value="">Tất cả trạng thái</option>
-          {Object.entries(STOCK_DOC_STATUS_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </Select>
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-          className="w-40"
-        />
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-          className="w-40"
-        />
-      </div>
-
       <StockIssueTable
         items={query.data?.items ?? []}
         meta={query.data?.meta}
@@ -112,6 +72,65 @@ export function StockIssueClient() {
         isError={query.isError}
         errorMessage={getApiErrorMessage(query.error, "Không thể tải danh sách phiếu xuất kho.")}
         onPageChange={setPage}
+        toolbar={
+          <CompactFilterToolbar
+            canReset={canReset}
+            onReset={resetFilters}
+            onSearchChange={(value) => { setSearch(value); setPage(1); }}
+            searchAriaLabel="Tìm kiếm phiếu xuất kho"
+            searchClassName="min-w-[150px] xl:max-w-[170px]"
+            searchPlaceholder="Số phiếu..."
+            searchValue={search}
+          >
+            <Select
+              aria-label="Trạng thái"
+              value={status}
+              onChange={(e) => { setStatus(e.target.value as StockDocStatus | ""); setPage(1); }}
+              className="h-9 w-[108px] rounded-lg bg-white text-[12.5px]"
+            >
+              <option value="">Trạng thái</option>
+              {Object.entries(STOCK_DOC_STATUS_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Kho"
+              value={warehouseId}
+              onChange={(e) => { setWarehouseId(e.target.value); setPage(1); }}
+              className="h-9 w-[104px] rounded-lg bg-white text-[12.5px]"
+            >
+              <option value="">Kho</option>
+              {(warehousesSelect.data ?? []).map((w) => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </Select>
+            <Select
+              aria-label="Dự án"
+              value={projectId}
+              onChange={(e) => { setProjectId(e.target.value); setPage(1); }}
+              className="h-9 w-[118px] rounded-lg bg-white text-[12.5px]"
+            >
+              <option value="">Dự án</option>
+              {(projectsQuery.data?.items ?? []).map((p) => (
+                <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
+              ))}
+            </Select>
+            <Input
+              aria-label="Từ ngày"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              className="h-9 w-[116px] rounded-lg bg-white text-[12.5px]"
+            />
+            <Input
+              aria-label="Đến ngày"
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              className="h-9 w-[116px] rounded-lg bg-white text-[12.5px]"
+            />
+          </CompactFilterToolbar>
+        }
       />
     </div>
   );

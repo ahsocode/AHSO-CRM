@@ -32,9 +32,9 @@ export function KpiCards({
 
   const cards = [
     {
-      label: "Doanh số tháng",
+      label: "Doanh số kỳ",
       value: <CurrencyDisplay amount={data.monthlyRevenue.value} short />,
-      // Sparkline 6 tháng + mũi tên trend theo Design Spec v2 mục 1.2
+      // Sparkline theo khoảng thời gian đang chọn.
       hint: (
         <span className="flex items-center gap-2">
           {data.monthlyRevenue.trend?.length >= 2 ? (
@@ -46,7 +46,7 @@ export function KpiCards({
             {data.monthlyRevenue.changePercent >= 0 ? "▲" : "▼"}{" "}
             {Math.abs(data.monthlyRevenue.changePercent)}%
           </span>
-          <span>tháng trước</span>
+          <span>kỳ trước</span>
         </span>
       ),
       tone: "primary" as const

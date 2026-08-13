@@ -1,6 +1,21 @@
 import { PrismaService } from "../common/prisma.service";
 import { DashboardService } from "./dashboard.service";
 
+function toDateOnly(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getMonthRange(date: Date) {
+  return {
+    dateFrom: toDateOnly(new Date(date.getFullYear(), date.getMonth(), 1)),
+    dateTo: toDateOnly(new Date(date.getFullYear(), date.getMonth() + 1, 0))
+  };
+}
+
 describe("DashboardService", () => {
   let service: DashboardService;
   let prisma: {
@@ -70,11 +85,11 @@ describe("DashboardService", () => {
       }
     ]);
 
-    await expect(service.getKpis()).resolves.toEqual({
+    await expect(service.getKpis(getMonthRange(now))).resolves.toEqual({
       monthlyRevenue: {
         value: 150_000_000,
         changePercent: 50,
-        trend: [0, 0, 0, 0, 100_000_000, 150_000_000]
+        trend: [150_000_000]
       },
       activeProjects: {
         value: 4
@@ -90,12 +105,16 @@ describe("DashboardService", () => {
     });
     expect(prisma.contract.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
+        where: expect.objectContaining({
           deletedAt: null,
           status: {
             in: ["ACTIVE", "SUSPENDED", "COMPLETED"]
+          },
+          createdAt: {
+            gte: expect.any(Date),
+            lt: expect.any(Date)
           }
-        }
+        })
       })
     );
     expect(prisma.project.findMany).toHaveBeenCalledWith(

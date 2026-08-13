@@ -27,7 +27,7 @@ export function RevenueChart({
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Revenue Trend</p>
-        <CardTitle>Doanh thu 6 tháng</CardTitle>
+        <CardTitle>Doanh thu theo tháng</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading || !data ? (

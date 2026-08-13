@@ -306,7 +306,7 @@ export interface DashboardKpis {
   monthlyRevenue: {
     value: number;
     changePercent: number;
-    /** Doanh số 6 tháng gần nhất cho sparkline */
+    /** Doanh số từng tháng trong khoảng thời gian dashboard đang chọn */
     trend: number[];
   };
   activeProjects: {

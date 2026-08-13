@@ -1,9 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../common/prisma.service";
+import { DashboardFilterDto } from "./dto/dashboard-filter.dto";
 
 const ACTIVE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING"] as const;
 const PENDING_QUOTE_STATUSES = ["DRAFT", "SENT"] as const;
+const RECEIVABLE_CONTRACT_STATUSES = ["ACTIVE", "SUSPENDED", "COMPLETED"] as const;
+const APP_TIME_ZONE = "Asia/Ho_Chi_Minh";
+const APP_TIME_ZONE_OFFSET = "+07:00";
+const DAY_MS = 24 * 60 * 60 * 1000;
 const PIPELINE_STAGE_CONFIG = [
   { status: "SURVEY", label: "Khảo sát", color: "stage-survey" },
   { status: "QUOTING", label: "Báo giá", color: "stage-quoting" },
@@ -18,53 +23,57 @@ const PIPELINE_STAGE_CONFIG = [
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getKpis() {
-    const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    // 6 tháng cho sparkline trên KPI card (Design Spec v2 mục 1.2)
-    const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  async getKpis(filters: DashboardFilterDto = {}) {
+    const range = this.resolveDateRange(filters);
+    const monthBuckets = this.resolveMonthBuckets(range.dateFrom, range.dateTo);
+    const periodDuration = range.endExclusive.getTime() - range.start.getTime();
+    const previousPeriodStart = new Date(range.start.getTime() - periodDuration);
 
     const [completedProjects, activeProjects, pendingQuotes, contracts] = await Promise.all([
       this.prisma.project.findMany({
         where: {
           deletedAt: null,
           status: "COMPLETED",
-          completedAt: { gte: trendStart, lt: nextMonthStart }
+          completedAt: { gte: previousPeriodStart, lt: range.endExclusive }
         },
         select: { completedAt: true, estimatedValue: true }
       }),
       this.prisma.project.count({
         where: {
           deletedAt: null,
-          status: { in: [...ACTIVE_PROJECT_STATUSES] }
+          status: { in: [...ACTIVE_PROJECT_STATUSES] },
+          createdAt: { gte: range.start, lt: range.endExclusive }
         }
       }),
       this.prisma.quote.findMany({
         where: {
           deletedAt: null,
-          status: { in: [...PENDING_QUOTE_STATUSES] }
+          status: { in: [...PENDING_QUOTE_STATUSES] },
+          createdAt: { gte: range.start, lt: range.endExclusive }
         },
         select: { total: true }
       }),
       this.prisma.contract.findMany({
-        where: { deletedAt: null, status: { in: ["ACTIVE", "SUSPENDED", "COMPLETED"] } },
+        where: {
+          deletedAt: null,
+          status: { in: [...RECEIVABLE_CONTRACT_STATUSES] },
+          createdAt: { gte: range.start, lt: range.endExclusive }
+        },
         include: { payments: true }
       })
     ]);
 
-    const currentMonthRevenue = completedProjects
-      .filter((p) => p.completedAt !== null && p.completedAt >= currentMonthStart)
+    const periodRevenue = completedProjects
+      .filter((p) => p.completedAt !== null && p.completedAt >= range.start)
       .reduce((sum, p) => sum + Number(p.estimatedValue ?? 0), 0);
 
-    const previousMonthRevenue = completedProjects
-      .filter((p) => p.completedAt !== null && p.completedAt >= previousMonthStart && p.completedAt < currentMonthStart)
+    const previousPeriodRevenue = completedProjects
+      .filter((p) => p.completedAt !== null && p.completedAt >= previousPeriodStart && p.completedAt < range.start)
       .reduce((sum, p) => sum + Number(p.estimatedValue ?? 0), 0);
 
-    const revenueChange = previousMonthRevenue === 0
-      ? 100
-      : Number((((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100).toFixed(1));
+    const revenueChange = previousPeriodRevenue === 0
+      ? (periodRevenue > 0 ? 100 : 0)
+      : Number((((periodRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100).toFixed(1));
 
     const outstandingContracts = contracts.map((contract) => {
       const paidAmount = this.sumCurrency(contract.payments.map((p) => p.amount));
@@ -75,17 +84,17 @@ export class DashboardService {
     const overdueCustomers = outstandingContracts.filter((c) => c.remainingAmount > 0).length;
     const pendingQuoteValue = pendingQuotes.reduce((total, q) => total + Number(q.total), 0);
 
-    const revenueTrend = Array.from({ length: 6 }, (_, index) => {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - (4 - index), 1);
+    const revenueTrend = monthBuckets.map((month) => {
+      const bucketStart = month.start > range.start ? month.start : range.start;
+      const bucketEnd = month.endExclusive < range.endExclusive ? month.endExclusive : range.endExclusive;
       return completedProjects
-        .filter((p) => p.completedAt !== null && p.completedAt >= monthStart && p.completedAt < monthEnd)
+        .filter((p) => p.completedAt !== null && p.completedAt >= bucketStart && p.completedAt < bucketEnd)
         .reduce((sum, p) => sum + Number(p.estimatedValue ?? 0), 0);
     });
 
     return {
       monthlyRevenue: {
-        value: currentMonthRevenue,
+        value: periodRevenue,
         changePercent: revenueChange,
         trend: revenueTrend
       },
@@ -103,41 +112,41 @@ export class DashboardService {
     };
   }
 
-  async getRevenueChart() {
-    const end = new Date();
-    const start = new Date(end.getFullYear(), end.getMonth() - 5, 1);
+  async getRevenueChart(filters: DashboardFilterDto = {}) {
+    const range = this.resolveDateRange(filters);
+    const monthBuckets = this.resolveMonthBuckets(range.dateFrom, range.dateTo);
 
     const completedProjects = await this.prisma.project.findMany({
       where: {
         deletedAt: null,
         status: "COMPLETED",
-        completedAt: { gte: start }
+        completedAt: { gte: range.start, lt: range.endExclusive }
       },
       select: { completedAt: true, estimatedValue: true }
     });
 
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(end.getFullYear(), end.getMonth() - (5 - index), 1);
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
+    return monthBuckets.map((month) => {
+      const bucketStart = month.start > range.start ? month.start : range.start;
+      const bucketEnd = month.endExclusive < range.endExclusive ? month.endExclusive : range.endExclusive;
       const revenue = completedProjects
-        .filter((p) => p.completedAt !== null && p.completedAt.getFullYear() === date.getFullYear() && p.completedAt.getMonth() === date.getMonth())
+        .filter((p) => p.completedAt !== null && p.completedAt >= bucketStart && p.completedAt < bucketEnd)
         .reduce((total, p) => total + Number(p.estimatedValue ?? 0), 0);
 
       return {
-        month: date.toLocaleDateString("vi-VN", { month: "short" }).replace(".", ""),
+        month: month.label,
         revenue,
-        target: 200000000,
-        key
+        target: 200000000
       };
     });
-
-    return months.map(({ key, ...item }) => item);
   }
 
-  async getPipeline() {
+  async getPipeline(filters: DashboardFilterDto = {}) {
+    const range = this.resolveDateRange(filters);
+
     const projects = await this.prisma.project.findMany({
       where: {
-        deletedAt: null
+        deletedAt: null,
+        createdAt: { gte: range.start, lt: range.endExclusive }
       },
       include: {
         customer: true
@@ -201,10 +210,13 @@ export class DashboardService {
     }));
   }
 
-  async getRecentActivity() {
+  async getRecentActivity(filters: DashboardFilterDto = {}) {
+    const range = this.resolveDateRange(filters);
+
     const activities = await this.prisma.activity.findMany({
       where: {
-        deletedAt: null
+        deletedAt: null,
+        updatedAt: { gte: range.start, lt: range.endExclusive }
       },
       include: {
         user: true,
@@ -228,6 +240,92 @@ export class DashboardService {
       userName: activity.user.name,
       isCompleted: activity.isCompleted
     }));
+  }
+
+  private resolveDateRange(filters: DashboardFilterDto) {
+    const currentYear = this.getCurrentBusinessYear();
+    const dateFrom = filters.dateFrom ?? `${currentYear}-01-01`;
+    const dateTo = filters.dateTo ?? `${currentYear}-12-31`;
+
+    return {
+      dateFrom,
+      dateTo,
+      start: this.parseDateOnlyStart(dateFrom),
+      endExclusive: new Date(this.parseDateOnlyStart(dateTo).getTime() + DAY_MS)
+    };
+  }
+
+  private resolveMonthBuckets(dateFrom: string, dateTo: string) {
+    const [fromYear, fromMonth] = this.parseYearMonth(dateFrom);
+    const [toYear, toMonth] = this.parseYearMonth(dateTo);
+    const spansMultipleYears = fromYear !== toYear;
+    const buckets: Array<{
+      start: Date;
+      endExclusive: Date;
+      label: string;
+    }> = [];
+
+    let year = fromYear;
+    let month = fromMonth;
+
+    while (year < toYear || (year === toYear && month <= toMonth)) {
+      const start = this.parseDateOnlyStart(`${year}-${String(month).padStart(2, "0")}-01`);
+      const nextMonth = month === 12 ? 1 : month + 1;
+      const nextMonthYear = month === 12 ? year + 1 : year;
+      const endExclusive = this.parseDateOnlyStart(
+        `${nextMonthYear}-${String(nextMonth).padStart(2, "0")}-01`
+      );
+
+      buckets.push({
+        start,
+        endExclusive,
+        label: this.formatMonthLabel(start, spansMultipleYears || buckets.length >= 12)
+      });
+
+      month = nextMonth;
+      year = nextMonthYear;
+    }
+
+    return buckets.map((bucket) => ({
+      ...bucket,
+      label: spansMultipleYears || buckets.length > 12
+        ? this.formatMonthLabel(bucket.start, true)
+        : bucket.label
+    }));
+  }
+
+  private parseYearMonth(value: string): [number, number] {
+    const [yearPart, monthPart] = value.split("-");
+    const year = Number(yearPart);
+    const month = Number(monthPart);
+
+    return [year, month];
+  }
+
+  private parseDateOnlyStart(value: string) {
+    return new Date(`${value}T00:00:00.000${APP_TIME_ZONE_OFFSET}`);
+  }
+
+  private getCurrentBusinessYear() {
+    const year = new Intl.DateTimeFormat("en-US", {
+      timeZone: APP_TIME_ZONE,
+      year: "numeric"
+    }).format(new Date());
+
+    return Number(year);
+  }
+
+  private formatMonthLabel(date: Date, includeYear: boolean) {
+    const options: Intl.DateTimeFormatOptions = {
+      timeZone: APP_TIME_ZONE,
+      month: "short"
+    };
+
+    if (includeYear) {
+      options.year = "2-digit";
+    }
+
+    return new Intl.DateTimeFormat("vi-VN", options).format(date).replace(".", "");
   }
 
   private sumCurrency(values: Prisma.Decimal[]) {

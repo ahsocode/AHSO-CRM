@@ -11,31 +11,42 @@ import {
   RevenueChartPoint
 } from "@/lib/types";
 
-export function useDashboardKpis() {
+export interface DashboardFilters {
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export function useDashboardKpis(filters: DashboardFilters = {}) {
   return useQuery({
-    queryKey: ["dashboard", "kpis"],
+    queryKey: ["dashboard", "kpis", filters],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<DashboardKpis>>("/dashboard/kpis");
+      const response = await apiClient.get<ApiResponse<DashboardKpis>>("/dashboard/kpis", {
+        params: filters
+      });
       return response.data.data;
     }
   });
 }
 
-export function useRevenueChart() {
+export function useRevenueChart(filters: DashboardFilters = {}) {
   return useQuery({
-    queryKey: ["dashboard", "revenue-chart"],
+    queryKey: ["dashboard", "revenue-chart", filters],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<RevenueChartPoint[]>>("/dashboard/revenue-chart");
+      const response = await apiClient.get<ApiResponse<RevenueChartPoint[]>>("/dashboard/revenue-chart", {
+        params: filters
+      });
       return response.data.data;
     }
   });
 }
 
-export function usePipelinePreview() {
+export function usePipelinePreview(filters: DashboardFilters = {}) {
   return useQuery({
-    queryKey: ["dashboard", "pipeline"],
+    queryKey: ["dashboard", "pipeline", filters],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<PipelineStage[]>>("/dashboard/pipeline");
+      const response = await apiClient.get<ApiResponse<PipelineStage[]>>("/dashboard/pipeline", {
+        params: filters
+      });
       return response.data.data;
     }
   });
@@ -51,13 +62,14 @@ export function useTasksToday() {
   });
 }
 
-export function useRecentActivity() {
+export function useRecentActivity(filters: DashboardFilters = {}) {
   return useQuery({
-    queryKey: ["dashboard", "recent-activity"],
+    queryKey: ["dashboard", "recent-activity", filters],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<RecentActivityItem[]>>("/dashboard/recent-activity");
+      const response = await apiClient.get<ApiResponse<RecentActivityItem[]>>("/dashboard/recent-activity", {
+        params: filters
+      });
       return response.data.data;
     }
   });
 }
-

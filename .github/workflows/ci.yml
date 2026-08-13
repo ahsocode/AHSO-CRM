@@ -99,13 +99,13 @@ jobs:
         with:
           context: ./backend
           load: true
-          tags: ahso-crm-backend:latest
+          tags: ahso-crm-backend:local
       - name: Build frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
           load: true
-          tags: ahso-crm-frontend:latest
+          tags: ahso-crm-frontend:local
       # Images are pre-built above with exactly the names docker-compose.yml expects,
       # so --no-build ensures compose uses them directly without re-building
       - name: Start stack

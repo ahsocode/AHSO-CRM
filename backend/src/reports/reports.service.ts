@@ -757,7 +757,10 @@ export class ReportsService {
         gte: start,
         lt: end
       },
-      project: this.buildProjectWhere(user)
+      project: this.buildProjectWhere(user),
+      // Loại các khoản thanh toán gắn với hợp đồng đã HUỶ (vd: hợp đồng trùng lặp bị
+      // huỷ nhưng vẫn giữ lịch sử thanh toán để tra soát) — không tính vào doanh thu.
+      OR: [{ contractId: null }, { contract: { status: { not: "CANCELLED" } } }]
     };
   }
 

@@ -196,7 +196,10 @@ export const pipelineTools: McpTool[] = [
     name: "update_project_stage",
     description:
       "Chuyển giai đoạn của một dự án trong pipeline. " +
-      "Dùng khi: 'Chuyển deal Hòa Phát sang Đàm phán', 'Đánh dấu dự án X đã thua'.",
+      "Dùng khi: 'Chuyển deal Hòa Phát sang Đàm phán', 'Đánh dấu dự án X đã thua'. " +
+      "Khi chuyển sang COMPLETED, nên truyền salesInvoiceDate (ngày hóa đơn bán ra) — " +
+      "đây là ngày dùng để tính doanh thu trên dashboard, và bắt buộc theo backend. " +
+      "completedAt mặc định lấy theo salesInvoiceDate nếu không truyền riêng.",
     inputSchema: {
       type: "object",
       properties: {
@@ -206,6 +209,16 @@ export const pipelineTools: McpTool[] = [
           enum: ["SURVEY", "QUOTING", "NEGOTIATING", "DELIVERING", "COMPLETED", "LOST"],
           description: "Giai đoạn mới",
         },
+        salesInvoiceDate: {
+          type: "string",
+          description:
+            "Ngày hóa đơn bán ra (YYYY-MM-DD). Bắt buộc khi stage=COMPLETED — đây là ngày dùng để tính doanh thu trên dashboard.",
+        },
+        completedAt: {
+          type: "string",
+          description:
+            "Ngày hoàn thành dự án (YYYY-MM-DD). Chỉ dùng khi stage=COMPLETED. Nếu bỏ trống sẽ lấy theo salesInvoiceDate.",
+        },
       },
       required: ["projectId", "stage"],
     },
@@ -213,17 +226,24 @@ export const pipelineTools: McpTool[] = [
       const client = getApiClient();
       const id = args["projectId"] as string;
       const newStage = args["stage"] as string;
+      const salesInvoiceDate = args["salesInvoiceDate"] as string | undefined;
+      const completedAt = (args["completedAt"] as string | undefined) ?? salesInvoiceDate;
 
-      const res = await client.patch<unknown>(`/projects/${id}/status`, {
-        status: newStage,
-      });
+      const payload: Record<string, unknown> = { status: newStage };
+      if (newStage === "COMPLETED") {
+        if (salesInvoiceDate) payload["salesInvoiceDate"] = salesInvoiceDate;
+        if (completedAt) payload["completedAt"] = completedAt;
+      }
+
+      const res = await client.patch<unknown>(`/projects/${id}/status`, payload);
       const p = extractData<{ code: string; name: string; status: string }>(res.data);
 
       const emoji = STAGE_EMOJI[p.status] ?? "📌";
       return (
         `✅ Đã cập nhật giai đoạn:\n` +
         `${emoji} **${p.name}** (${p.code})\n` +
-        `Giai đoạn mới: **${stageLabel(p.status)}**`
+        `Giai đoạn mới: **${stageLabel(p.status)}**` +
+        (salesInvoiceDate ? `\n📅 Ngày hóa đơn bán ra: ${salesInvoiceDate}` : "")
       );
     },
   },

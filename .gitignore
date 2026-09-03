@@ -18,6 +18,17 @@ e2e/.auth/
 npm-debug.log*
 *.tsbuildinfo
 
+# macOS junk (AppleDouble files from exFAT / network drives)
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+
+# Local tooling caches / worktrees
+.claude/
+.understand-anything/
+mcp-server/dist
+
 # Environment files — never commit real secrets
 .env
 .env.local

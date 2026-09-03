@@ -26,6 +26,7 @@ export function registerHelpers(handlebars: HandlebarsInstance, bundles: I18nBun
     const values = args.slice(0, -1);
     return values.find((v) => v !== null && v !== undefined && v !== "") ?? "";
   });
+  handlebars.registerHelper("hash", (options: Handlebars.HelperOptions) => options.hash);
 
   registerTableHelpers(handlebars);
 }

@@ -88,11 +88,8 @@
         {{!-- Empty col for buyer spacer if needed, or just seller --}}
       </div>
       <div class="signature-col">
-        {{> signature-block 
-            partyLabel=(t "seller")
-            partyName=company.representative
-            partyTitle=company.representativeTitle
-            showDate=true
+        {{> signature-block
+            partyB=(hash label=(t "seller") name=company.representative title=company.representativeTitle)
         }}
       </div>
     </div>

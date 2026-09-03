@@ -48,11 +48,15 @@ export class ActivitiesService {
       where.OR = [{ title: { contains: filters.search, mode: 'insensitive' } }, { content: { contains: filters.search, mode: 'insensitive' } }];
     }
 
-    if (filters.dateFrom) {
-      where.createdAt = { ...(where.createdAt as any), gte: new Date(filters.dateFrom) };
-    }
-    if (filters.dateTo) {
-      where.createdAt = { ...(where.createdAt as any), lte: new Date(filters.dateTo) };
+    if (filters.dateFrom || filters.dateTo) {
+      const createdAt: Prisma.DateTimeFilter = {};
+      if (filters.dateFrom) {
+        createdAt.gte = new Date(filters.dateFrom);
+      }
+      if (filters.dateTo) {
+        createdAt.lte = new Date(filters.dateTo);
+      }
+      where.createdAt = createdAt;
     }
 
     return where;

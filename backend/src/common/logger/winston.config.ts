@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import { WinstonModuleOptions, utilities as nestWinstonUtilities } from "nest-winston";
-import { format, transports } from "winston";
+import { format, transports, Logform } from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 
 const REDACTED_KEYS = new Set([
@@ -34,8 +34,8 @@ function sanitizeValue(value: unknown): unknown {
   );
 }
 
-function sanitizeInfo(info: Record<string, unknown>) {
-  return sanitizeValue(info) as Record<string, unknown>;
+function sanitizeInfo(info: Logform.TransformableInfo): Logform.TransformableInfo {
+  return sanitizeValue(info) as Logform.TransformableInfo;
 }
 
 function ensureLogDirectory() {
@@ -54,7 +54,7 @@ export function createWinstonLoggerOptions(): WinstonModuleOptions {
   const baseFormat = format.combine(
     format.timestamp(),
     format.errors({ stack: true }),
-    format((info) => sanitizeInfo(info) as any)()
+    format((info) => sanitizeInfo(info))()
   );
 
   return {

@@ -153,7 +153,7 @@ export class SettingsController {
   @Patch(":key")
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
-  async updateSetting(@Param("key") key: string, @Body("value") value: any) {
+  async updateSetting(@Param("key") key: string, @Body("value") value: unknown) {
     return this.settingsService.upsertSetting(key, value);
   }
 }

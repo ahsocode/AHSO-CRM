@@ -98,7 +98,7 @@ export class SettingsService {
   /**
    * Update or create a setting
    */
-  async upsertSetting(key: string, value: any, description?: string) {
+  async upsertSetting(key: string, value: unknown, description?: string) {
     const serializedValue = JSON.stringify(value ?? null);
 
     const result = await this.prisma.setting.upsert({

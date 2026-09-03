@@ -4,6 +4,7 @@ import { RoleValue } from "../common/constants/role.constants";
 import { PrismaService } from "../common/prisma.service";
 import { buildCustomerCodePrefix } from "../common/utils/vietnamese";
 import { JwtUser, isStaff } from "../auth/auth.types";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { BulkCustomerDto } from "./dto/bulk-customer.dto";
@@ -719,12 +720,7 @@ export class CustomersService {
       deletedAt: null
     };
 
-    if (isStaff(user)) {
-      where.assignedToId = user.sub;
-      where.assignedTo = {
-        isActive: true
-      };
-    }
+    scopeCustomerWhereToUser(where, user);
 
     if (filters.search) {
       where.OR = [

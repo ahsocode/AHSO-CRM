@@ -3,6 +3,7 @@ import { ModuleRef } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import { decimalToNumber, sumDecimal } from "../common/utils/decimal";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { EmailService } from "../email/email.service";
@@ -768,16 +769,7 @@ export class QuotesService {
   }
 
   private buildAccessibleProjectWhere(user: JwtUser): Prisma.ProjectWhereInput {
-    const customerWhere: Prisma.CustomerWhereInput = {
-      deletedAt: null
-    };
-
-    if (isStaff(user)) {
-      customerWhere.assignedToId = user.sub;
-      customerWhere.assignedTo = {
-        isActive: true
-      };
-    }
+    const customerWhere = scopeCustomerWhereToUser({ deletedAt: null }, user);
 
     return {
       deletedAt: null,

@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { MilestoneStatus, Prisma } from "@prisma/client";
-import { JwtUser, isStaff } from "../auth/auth.types";
+import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import { decimalToNumber, sumDecimal } from "../common/utils/decimal";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
@@ -590,14 +591,7 @@ export class ContractsService {
   }
 
   private buildAccessibleProjectWhere(user: JwtUser): Prisma.ProjectWhereInput {
-    const customerWhere: Prisma.CustomerWhereInput = {
-      deletedAt: null
-    };
-
-    if (isStaff(user)) {
-      customerWhere.assignedToId = user.sub;
-      customerWhere.assignedTo = { isActive: true };
-    }
+    const customerWhere = scopeCustomerWhereToUser({ deletedAt: null }, user);
 
     return {
       deletedAt: null,

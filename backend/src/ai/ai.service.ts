@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma, ProjectStatus } from "@prisma/client";
-import { JwtUser, isStaff } from "../auth/auth.types";
+import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import { DraftEmailDto } from "./dto/draft-email.dto";
 import { AiProviderRegistry } from "./providers/ai-provider-registry.service";
 
@@ -557,14 +558,7 @@ Hãy viết:
       ...extra
     };
 
-    if (isStaff(user)) {
-      where.assignedToId = user.sub;
-      where.assignedTo = {
-        isActive: true
-      };
-    }
-
-    return where;
+    return scopeCustomerWhereToUser(where, user);
   }
 
   private buildProjectWhere(

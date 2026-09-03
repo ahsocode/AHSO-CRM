@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import {
   CustomReportQueryDto,
   ReportTemplateDto,
@@ -711,11 +712,7 @@ export class ReportsService {
       ...extra
     };
 
-    if (isStaff(user)) {
-      where.assignedToId = user.sub;
-    }
-
-    return where;
+    return scopeCustomerWhereToUser(where, user);
   }
 
   private buildProjectWhere(user: JwtUser, extra?: Prisma.ProjectWhereInput): Prisma.ProjectWhereInput {

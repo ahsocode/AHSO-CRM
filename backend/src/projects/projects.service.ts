@@ -3,6 +3,7 @@ import { DocumentType } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
@@ -2150,13 +2151,10 @@ export class ProjectsService {
   }
 
   private buildWhere(filters: Partial<ProjectFilterDto>, user: JwtUser): Prisma.ProjectWhereInput {
-    const customerWhere: Prisma.CustomerWhereInput = {
-      deletedAt: null
-    };
-
-    if (isStaff(user)) {
-      customerWhere.assignedToId = user.sub;
-    }
+    const customerWhere = scopeCustomerWhereToUser(
+      { deletedAt: null } as Prisma.CustomerWhereInput,
+      user
+    );
 
     if (filters.assignedToId && !isStaff(user)) {
       customerWhere.assignedToId = filters.assignedToId;

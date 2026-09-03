@@ -314,7 +314,8 @@ describe("ReportsService", () => {
             {
               customer: {
                 deletedAt: null,
-                assignedToId: "staff-1"
+                assignedToId: "staff-1",
+                assignedTo: { isActive: true }
               }
             },
             {
@@ -322,7 +323,8 @@ describe("ReportsService", () => {
                 deletedAt: null,
                 customer: {
                   deletedAt: null,
-                  assignedToId: "staff-1"
+                  assignedToId: "staff-1",
+                  assignedTo: { isActive: true }
                 }
               }
             },

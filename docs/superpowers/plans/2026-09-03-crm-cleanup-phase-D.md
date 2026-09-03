@@ -10,6 +10,22 @@
 
 **Spec:** This plan's source is the "D. Refactor / dead-code" section of the cleanup report delivered in the session on 2026-09-03. Reproduced inline under each phase.
 
+## Status (2026-09-03)
+
+- **Phase 1 (D6/D5/D4)** — ✅ done. Commits `02d1321`, `ec524d7`, `27d2a62`.
+  - Task 1: 13 docs → `docs/archive/` + `docs/README.md`. `docs/PROJECT_STRUCTURE.md` kept — it has **diverged** from the workspace-root `AHSO-CRM-PROJECT_STRUCTURE.md` (not a duplicate); reconcile-into-one is a **follow-up**.
+  - Task 2: roles table stays on its own header — verified genuinely different (no pagination/filters); documented in code.
+  - Task 3: no `<img>` converted — traced every site, none is a safe/beneficial `next/image` swap (blob URLs, cross-origin, caller-sized). Every `eslint-disable` comment now states the reason.
+- **Phase 2 (D2)** — ✅ done. Commits `f458bba`, `dc0fcd6`, `100abc3`. `scopeCustomerWhereToUser()` in `common/scoping/`, adopted in 6 services. Per user decision, `assignedTo:{isActive:true}` was **unified onto projects + reports** (was bare `assignedToId`) — result-equivalent, now consistent. `calendar.service` left alone (different OR-shape). +4 tests.
+- **Phase 3 (D7)** — ✅ done. Commit `e356dca`. `npm audit fix` (no `--force`): mcp 9→0, backend 56→30, frontend 56→42. Residual all major-bump; triaged in `docs/security/2026-09-audit-triage.md` with priority-ordered follow-up tickets.
+- **Phase 4 (D1)** — not started. God-file splits; each its own sub-plan.
+
+### Follow-ups discovered during execution
+
+1. Reconcile `docs/PROJECT_STRUCTURE.md` ↔ root `AHSO-CRM-PROJECT_STRUCTURE.md` into one canonical file.
+2. Security tickets from `docs/security/2026-09-audit-triage.md`: nodemailer 8→9, `@tiptap/*` cluster → latest 3.x, bcrypt 5→6, `@anthropic-ai/sdk` bump, NestJS 10→12, Next 14→16 (+ proxy rate-limit on `/_next/image` interim).
+3. exFAT drive zeroed `backend/src/common/scoping/customer-scope.ts` during heavy `npm audit fix` I/O (restored from git). Consider moving the working copy off `/Volumes/TRANSCEND` to an APFS location.
+
 ## Global Constraints
 
 - **No `any`.** Backend and frontend are `tsc --noEmit` strict. Use `unknown` + narrowing, generated Prisma types (`Prisma.XWhereInput`, `Prisma.DateTimeFilter`), or a named local type.

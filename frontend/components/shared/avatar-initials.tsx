@@ -33,6 +33,11 @@ export function AvatarInitials({
 
   if (src && !imgError) {
     return (
+      // Intentional <img>: the avatar src is frequently a cross-origin backend
+      // URL or a blob: preview, and the render size is caller-controlled via
+      // `className`. next/image would need per-caller width/height plus
+      // remotePatterns config for the (env-derived) backend origin, with no
+      // real benefit at avatar sizes.
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}

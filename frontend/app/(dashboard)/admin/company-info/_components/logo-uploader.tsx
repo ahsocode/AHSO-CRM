@@ -106,6 +106,9 @@ export function LogoUploader({
             <p className="mb-3 text-sm font-semibold text-text-primary">Logo hiện tại</p>
             <div className="flex h-40 items-center justify-center rounded-2xl bg-white">
               {displayedLogoUrl ? (
+                // Intentional <img>: the logo is a data: URL or a cross-origin
+                // backend path of unknown intrinsic size (admin preview only).
+                // next/image needs explicit dimensions + configured domains.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={displayedLogoUrl}

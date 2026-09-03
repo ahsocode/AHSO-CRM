@@ -107,6 +107,9 @@ function renderBoxContent(
   if (box.type === "image") {
     const source = interpolateTemplateString(box.content.src, sampleData);
     return source ? (
+      // Intentional <img>: a template image box renders an arbitrary
+      // author-interpolated src at author-controlled dimensions on a free-form
+      // canvas — not a candidate for next/image optimization.
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={source}

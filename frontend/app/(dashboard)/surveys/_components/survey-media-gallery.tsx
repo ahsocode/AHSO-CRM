@@ -114,6 +114,9 @@ function MediaCard({ media }: { media: SurveyMedia }) {
     >
       {isImage ? (
         <div className="aspect-square overflow-hidden">
+          {/* Intentional <img>: survey media URLs are authenticated backend
+              assets of unknown intrinsic size; next/image cannot optimize them
+              under the app CSP (img-src 'self' data: blob:). */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={media.url}

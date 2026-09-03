@@ -556,7 +556,7 @@ docker logs backend | grep -i error
 ---
 
 **For questions, refer to:**
-- Full Assessment: `/docs/DEPLOYMENT_READINESS_ASSESSMENT.md`
+- Full Assessment: `/docs/archive/DEPLOYMENT_READINESS_ASSESSMENT.md`
 - Production Runbook: `/docs/PRODUCTION_DEPLOYMENT_CHECKLIST.md`
 - Architecture: `/docs/PROJECT_STRUCTURE.md`
 - Troubleshooting: `/README.md`

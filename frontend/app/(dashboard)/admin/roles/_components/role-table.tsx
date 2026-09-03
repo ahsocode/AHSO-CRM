@@ -15,6 +15,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { UserRole } from "@/lib/types";
 
+// This admin table deliberately does not use the shared LedgerHeader: the roles
+// list is small and un-paginated, has no filter toolbar or search, and the page
+// already provides its heading via PageHeader. LedgerHeader targets the
+// paginated + filterable ledger pages (customers, suppliers, quotes, ...).
 export function RoleTable({
   roles,
   isLoading

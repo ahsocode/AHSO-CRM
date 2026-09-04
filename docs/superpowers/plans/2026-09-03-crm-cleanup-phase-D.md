@@ -18,7 +18,14 @@
   - Task 3: no `<img>` converted — traced every site, none is a safe/beneficial `next/image` swap (blob URLs, cross-origin, caller-sized). Every `eslint-disable` comment now states the reason.
 - **Phase 2 (D2)** — ✅ done. Commits `f458bba`, `dc0fcd6`, `100abc3`. `scopeCustomerWhereToUser()` in `common/scoping/`, adopted in 6 services. Per user decision, `assignedTo:{isActive:true}` was **unified onto projects + reports** (was bare `assignedToId`) — result-equivalent, now consistent. `calendar.service` left alone (different OR-shape). +4 tests.
 - **Phase 3 (D7)** — ✅ done. Commit `e356dca`. `npm audit fix` (no `--force`): mcp 9→0, backend 56→30, frontend 56→42. Residual all major-bump; triaged in `docs/security/2026-09-audit-triage.md` with priority-ordered follow-up tickets.
-- **Phase 4 (D1)** — not started. God-file splits; each its own sub-plan.
+- **Phase 4 (D1)** — in progress:
+  - **4a** `project-detail-client.tsx` 2733 → 2006 LOC. Done: constants+file-utils (`9a752aa`), primitives/leaf components (`b0036c9`). Remaining: 13 panel components (`DocumentsPanel` ~700 LOC is the big one).
+  - **4c** `document-layout-renderer.service.ts` 1048 → 730 LOC. Done: CSS (`7c51e52`), pure helpers (`7c51e52`), line-item column module (`a720904`). Remaining: flow/pagination cluster (~450 LOC), interpolation cluster (~120 LOC) — both need `this.`→free-function threading.
+  - **4b, 4d–4h** — not started.
+
+### Security follow-ups — done ahead of the deferred queue (2026-09-03)
+
+`nodemailer` 8→9 (`54621c8`), `bcrypt` 5→6 (`d2b4079`), `@tiptap/*` 3.23→3.31 (`e543452`). Backend audit 30→27 (0 critical); frontend 42→12 (only devDep `vitest` critical left). See `docs/security/2026-09-audit-triage.md`. Still queued: `@anthropic-ai/sdk`, NestJS 10→12, Next 14→16.
 
 ### Follow-ups discovered during execution
 

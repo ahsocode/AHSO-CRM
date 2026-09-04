@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import type { Prisma } from "@prisma/client";
 import { RoleValue } from "../common/constants/role.constants";
 import { PrismaService } from "../common/prisma.service";
+import { projectProgressPercent } from "../common/utils/project-progress";
 import { buildCustomerCodePrefix } from "../common/utils/vietnamese";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
@@ -244,7 +245,7 @@ export class CustomersService {
         priority: project.priority,
         estimatedValue: Number(project.estimatedValue ?? 0),
         expectedEndDate: project.expectedEndDate,
-        progressPercent: this.mapProjectProgress(project.status),
+        progressPercent: projectProgressPercent(project.status),
         quoteCount: project._count.quotes,
         milestoneCount: project._count.milestones,
         contract: project.contract
@@ -1041,22 +1042,4 @@ export class CustomersService {
     return { success: true };
   }
 
-  private mapProjectProgress(status: string) {
-    switch (status) {
-      case "SURVEY":
-        return 15;
-      case "QUOTING":
-        return 35;
-      case "NEGOTIATING":
-        return 60;
-      case "WON":
-        return 75;
-      case "DELIVERING":
-        return 85;
-      case "COMPLETED":
-        return 100;
-      default:
-        return 0;
-    }
-  }
 }

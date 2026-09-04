@@ -3,6 +3,7 @@ import { DocumentType } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { projectProgressPercent } from "../common/utils/project-progress";
 import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
@@ -383,7 +384,7 @@ export class ProjectsService {
       status: project.status,
       priority: project.priority,
       estimatedValue: projectValue,
-      progressPercent: this.mapProjectProgress(project.status),
+      progressPercent: projectProgressPercent(project.status),
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
       completedAt: project.completedAt,
@@ -398,7 +399,7 @@ export class ProjectsService {
         activityCount: activities.length,
         paidAmount,
         outstandingAmount,
-        progressPercent: this.mapProjectProgress(project.status)
+        progressPercent: projectProgressPercent(project.status)
       },
       projectContact: project.contact ?? null,
       customer: {
@@ -2303,7 +2304,7 @@ export class ProjectsService {
       status: project.status,
       priority: project.priority,
       estimatedValue,
-      progressPercent: this.mapProjectProgress(project.status),
+      progressPercent: projectProgressPercent(project.status),
       startDate: project.startDate,
       expectedEndDate: project.expectedEndDate,
       completedAt: project.completedAt,
@@ -2716,22 +2717,4 @@ export class ProjectsService {
     return `AHSO-${String(maxNumber + 1).padStart(3, "0")}`;
   }
 
-  private mapProjectProgress(status: string) {
-    switch (status) {
-      case "SURVEY":
-        return 15;
-      case "QUOTING":
-        return 35;
-      case "NEGOTIATING":
-        return 60;
-      case "WON":
-        return 75;
-      case "DELIVERING":
-        return 85;
-      case "COMPLETED":
-        return 100;
-      default:
-        return 0;
-    }
-  }
 }

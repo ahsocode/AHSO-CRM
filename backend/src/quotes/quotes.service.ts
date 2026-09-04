@@ -1,10 +1,22 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
-import { JwtUser, isStaff } from "../auth/auth.types";
+import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
-import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
-import { decimalToNumber, sumDecimal } from "../common/utils/decimal";
+import {
+  buildQuoteItemsCreateInput,
+  buildQuoteTotals,
+  buildTableColumnWidthsPayload,
+  calculateAcceptedQuoteTotal,
+  formatCurrency,
+  formatDate,
+  isExpiringSoon,
+  mapBulkMutationResult,
+  normalizeQuoteTableColumnWidths,
+  resolveQuoteStatusPayload,
+  type QuoteTableColumnWidths
+} from "./quote-helpers";
+import { buildAccessibleProjectWhere, buildWhere } from "./quote-where";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { EmailService } from "../email/email.service";
 import { BulkQuoteDto } from "./dto/bulk-quote.dto";
@@ -17,10 +29,6 @@ import { QuotesPdfService } from "./quotes-pdf.service";
 const EXPIRING_SOON_WINDOW_DAYS = 7;
 const EDITABLE_QUOTE_STATUSES = ["DRAFT", "REJECTED"] as const;
 const PRE_SALE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING"] as const;
-const QUOTE_TABLE_COLUMN_KEYS = ["index", "name", "description", "quantity", "unitPrice", "total"] as const;
-
-type QuoteTableColumnKey = (typeof QUOTE_TABLE_COLUMN_KEYS)[number];
-type QuoteTableColumnWidths = Record<QuoteTableColumnKey, number>;
 
 @Injectable()
 export class QuotesService {
@@ -37,7 +45,7 @@ export class QuotesService {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
-    const where = this.buildWhere(filters, user);
+    const where = buildWhere(filters, user);
     const now = new Date();
     const expiringSoonBoundary = new Date(now.getTime() + EXPIRING_SOON_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
@@ -110,7 +118,7 @@ export class QuotesService {
         updatedAt: quote.updatedAt,
         sentAt: quote.sentAt,
         acceptedAt: quote.acceptedAt,
-        isExpiringSoon: this.isExpiringSoon(quote.validUntil, quote.status, now, expiringSoonBoundary),
+        isExpiringSoon: isExpiringSoon(quote.validUntil, quote.status, now, expiringSoonBoundary),
         itemCount: quote._count.items,
         createdBy: quote.createdBy,
         project: {
@@ -138,7 +146,7 @@ export class QuotesService {
           sentCount: matchingQuotes.filter((quote) => quote.status === "SENT").length,
           acceptedCount: matchingQuotes.filter((quote) => quote.status === "ACCEPTED").length,
           expiringSoonCount: matchingQuotes.filter((quote) =>
-            this.isExpiringSoon(quote.validUntil, quote.status, now, expiringSoonBoundary)
+            isExpiringSoon(quote.validUntil, quote.status, now, expiringSoonBoundary)
           ).length
         }
       }
@@ -158,7 +166,7 @@ export class QuotesService {
       taxRate: Number(quote.taxRate),
       taxAmount: Number(quote.taxAmount),
       total: Number(quote.total),
-      tableColumnWidths: this.normalizeQuoteTableColumnWidths(quote.tableColumnWidths),
+      tableColumnWidths: normalizeQuoteTableColumnWidths(quote.tableColumnWidths),
       terms: quote.terms,
       deliveryTerms: quote.deliveryTerms,
       internalNote: quote.internalNote,
@@ -219,7 +227,7 @@ export class QuotesService {
     return this.prisma.$transaction(async (tx) => {
       const project = await tx.project.findFirst({
         where: {
-          ...this.buildAccessibleProjectWhere(user),
+          ...buildAccessibleProjectWhere(user),
           id: dto.projectId
         },
         select: {
@@ -243,7 +251,7 @@ export class QuotesService {
 
       const quoteNo = await this.generateNextQuoteNo(tx);
       const version = (nextVersion._max.version ?? 0) + 1;
-      const totals = this.buildQuoteTotals(dto.items, dto.taxRate);
+      const totals = buildQuoteTotals(dto.items, dto.taxRate);
 
       const quote = await tx.quote.create({
         data: {
@@ -255,11 +263,11 @@ export class QuotesService {
           taxRate: dto.taxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
-          ...this.buildTableColumnWidthsPayload(dto.tableColumnWidths),
+          ...buildTableColumnWidthsPayload(dto.tableColumnWidths),
           terms: dto.terms,
           deliveryTerms: dto.deliveryTerms,
           internalNote: dto.internalNote,
-          ...this.resolveQuoteStatusPayload(
+          ...resolveQuoteStatusPayload(
             {
               status: "DRAFT",
               sentAt: null,
@@ -270,7 +278,7 @@ export class QuotesService {
           projectId: dto.projectId,
           createdById: user.sub,
           items: {
-            create: this.buildQuoteItemsCreateInput(dto.items)
+            create: buildQuoteItemsCreateInput(dto.items)
           }
         },
         select: {
@@ -297,7 +305,7 @@ export class QuotesService {
         throw new BadRequestException("Chỉ có thể sửa báo giá ở trạng thái nháp hoặc bị từ chối");
       }
 
-      const totals = this.buildQuoteTotals(dto.items, dto.taxRate);
+      const totals = buildQuoteTotals(dto.items, dto.taxRate);
       const updatedQuote = await tx.quote.update({
         where: {
           id
@@ -309,14 +317,14 @@ export class QuotesService {
           taxRate: dto.taxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
-          ...this.buildTableColumnWidthsPayload(dto.tableColumnWidths),
+          ...buildTableColumnWidthsPayload(dto.tableColumnWidths),
           terms: dto.terms,
           deliveryTerms: dto.deliveryTerms,
           internalNote: dto.internalNote,
-          ...this.resolveQuoteStatusPayload(quote, dto.status),
+          ...resolveQuoteStatusPayload(quote, dto.status),
           items: {
             deleteMany: {},
-            create: this.buildQuoteItemsCreateInput(dto.items)
+            create: buildQuoteItemsCreateInput(dto.items)
           }
         },
         select: {
@@ -333,13 +341,13 @@ export class QuotesService {
 
   async updateTableLayout(id: string, tableColumnWidths: QuoteTableColumnWidths, user: JwtUser) {
     const quote = await this.prisma.quote.findFirst({
-      where: { ...this.buildWhere({}, user), id },
+      where: { ...buildWhere({}, user), id },
       select: { id: true },
     });
     if (!quote) throw new NotFoundException("Không tìm thấy báo giá");
     return this.prisma.quote.update({
       where: { id },
-      data: this.buildTableColumnWidthsPayload(tableColumnWidths),
+      data: buildTableColumnWidthsPayload(tableColumnWidths),
       select: { id: true, tableColumnWidths: true },
     });
   }
@@ -369,7 +377,7 @@ export class QuotesService {
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice)
       }));
-      const totals = this.buildQuoteTotals(itemInputs, Number(quote.taxRate));
+      const totals = buildQuoteTotals(itemInputs, Number(quote.taxRate));
       const duplicatedQuote = await tx.quote.create({
         data: {
           quoteNo,
@@ -380,7 +388,7 @@ export class QuotesService {
           taxRate: quote.taxRate,
           taxAmount: totals.taxAmount,
           total: totals.total,
-          ...this.buildTableColumnWidthsPayload(quote.tableColumnWidths),
+          ...buildTableColumnWidthsPayload(quote.tableColumnWidths),
           terms: quote.terms,
           deliveryTerms: quote.deliveryTerms,
           internalNote: quote.internalNote,
@@ -389,7 +397,7 @@ export class QuotesService {
           projectId: quote.projectId,
           createdById: user.sub,
           items: {
-            create: this.buildQuoteItemsCreateInput(itemInputs)
+            create: buildQuoteItemsCreateInput(itemInputs)
           }
         },
         select: {
@@ -519,7 +527,7 @@ export class QuotesService {
         data: {
           status: dto.status,
           acceptedItemIds: resolvedAcceptedItemIds,
-          ...this.resolveQuoteStatusPayload(quote, dto.status)
+          ...resolveQuoteStatusPayload(quote, dto.status)
         },
         select: {
           id: true,
@@ -530,7 +538,7 @@ export class QuotesService {
       });
 
       const projectQuoteTotal = dto.status === "ACCEPTED"
-        ? this.calculateAcceptedQuoteTotal(quote.items, quote.taxRate, resolvedAcceptedItemIds, quote.total)
+        ? calculateAcceptedQuoteTotal(quote.items, quote.taxRate, resolvedAcceptedItemIds, quote.total)
         : Number(quote.total);
 
       await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status, projectQuoteTotal);
@@ -587,7 +595,7 @@ export class QuotesService {
   async bulk(dto: BulkQuoteDto, user: JwtUser) {
     const quotes = await this.prisma.quote.findMany({
       where: {
-        ...this.buildWhere({}, user),
+        ...buildWhere({}, user),
         id: {
           in: dto.ids
         }
@@ -634,12 +642,12 @@ export class QuotesService {
       const results = await Promise.allSettled(
         quotes.map((quote) => this.updateStatus(quote.id, { status: dto.status! }, user))
       );
-      return this.mapBulkMutationResult(dto.action, quotes, results);
+      return mapBulkMutationResult(dto.action, quotes, results);
     }
 
     if (dto.action === "send") {
       const results = await Promise.allSettled(quotes.map((quote) => this.send(quote.id, user)));
-      return this.mapBulkMutationResult(dto.action, quotes, results);
+      return mapBulkMutationResult(dto.action, quotes, results);
     }
 
     if (dto.action === "delete") {
@@ -652,128 +660,6 @@ export class QuotesService {
     return {
       action: dto.action,
       processedCount: quotes.length
-    };
-  }
-
-  // Surface per-quote failures instead of silently swallowing them — the user
-  // must know which quotes could not change status (e.g. ACCEPTED quotes).
-  private mapBulkMutationResult(
-    action: string,
-    quotes: Array<{ id: string; quoteNo: string }>,
-    results: PromiseSettledResult<unknown>[]
-  ) {
-    const errors = results.flatMap((result, index) => {
-      if (result.status === "fulfilled") {
-        return [];
-      }
-      const quote = quotes[index];
-      const reason = result.reason instanceof Error ? result.reason.message : "Không thể xử lý báo giá";
-      return [{ id: quote?.id, name: quote?.quoteNo, message: reason }];
-    });
-    const processedCount = results.length - errors.length;
-
-    if (results.length > 0 && processedCount === 0) {
-      throw new BadRequestException("Không xử lý được báo giá nào trong danh sách đã chọn.");
-    }
-
-    return {
-      action,
-      processedCount,
-      failedCount: errors.length,
-      errors
-    };
-  }
-
-  private buildWhere(filters: Partial<QuoteFilterDto>, user: JwtUser): Prisma.QuoteWhereInput {
-    const projectWhere: Prisma.ProjectWhereInput = this.buildAccessibleProjectWhere(user);
-
-    if (filters.projectId) {
-      projectWhere.id = filters.projectId;
-    }
-
-    if (filters.customerId) {
-      projectWhere.customerId = filters.customerId;
-    }
-
-    const where: Prisma.QuoteWhereInput = {
-      deletedAt: null,
-      project: projectWhere
-    };
-
-    if (filters.status) {
-      where.status = filters.status;
-    }
-
-    if (filters.createdById && !isStaff(user)) {
-      where.createdById = filters.createdById;
-    }
-
-    if (filters.search) {
-      where.OR = [
-        {
-          quoteNo: {
-            contains: filters.search,
-            mode: "insensitive"
-          }
-        },
-        {
-          project: {
-            code: {
-              contains: filters.search,
-              mode: "insensitive"
-            }
-          }
-        },
-        {
-          project: {
-            name: {
-              contains: filters.search,
-              mode: "insensitive"
-            }
-          }
-        },
-        {
-          project: {
-            customer: {
-              name: {
-                contains: filters.search,
-                mode: "insensitive"
-              }
-            }
-          }
-        },
-        {
-          project: {
-            customer: {
-              shortName: {
-                contains: filters.search,
-                mode: "insensitive"
-              }
-            }
-          }
-        },
-        {
-          items: {
-            some: {
-              name: {
-                contains: filters.search,
-                mode: "insensitive"
-              }
-            }
-          }
-        }
-      ];
-    }
-
-    return where;
-  }
-
-  private buildAccessibleProjectWhere(user: JwtUser): Prisma.ProjectWhereInput {
-    const customerWhere = scopeCustomerWhereToUser({ deletedAt: null }, user);
-
-    return {
-      deletedAt: null,
-      customer: customerWhere
     };
   }
 
@@ -791,7 +677,7 @@ export class QuotesService {
   private async findAccessibleQuote(id: string, user: JwtUser) {
     const quote = await this.prisma.quote.findFirst({
       where: {
-        ...this.buildWhere({}, user),
+        ...buildWhere({}, user),
         id
       },
       include: {
@@ -868,7 +754,7 @@ export class QuotesService {
   ) {
     const quote = await tx.quote.findFirst({
       where: {
-        ...this.buildWhere({}, user),
+        ...buildWhere({}, user),
         id
       },
       include: {
@@ -922,120 +808,6 @@ export class QuotesService {
     return `${prefix}${String(nextSequence).padStart(3, "0")}`;
   }
 
-  private isExpiringSoon(
-    validUntil: Date | null,
-    status: string,
-    now: Date,
-    expiringSoonBoundary: Date
-  ) {
-    if (!validUntil || status === "ACCEPTED" || status === "REJECTED" || status === "EXPIRED") {
-      return false;
-    }
-
-    return validUntil >= now && validUntil <= expiringSoonBoundary;
-  }
-
-  private buildQuoteItemsCreateInput(
-    items: Array<{
-      name: string;
-      description?: string;
-      unit?: string;
-      quantity: number;
-      unitPrice: number;
-    }>
-  ) {
-    return items.map((item, index) => ({
-      order: index + 1,
-      name: item.name,
-      description: item.description,
-      unit: item.unit,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      total: Math.round(item.quantity * item.unitPrice)
-    }));
-  }
-
-  private normalizeQuoteTableColumnWidths(input: unknown): QuoteTableColumnWidths | undefined {
-    if (!input || typeof input !== "object" || Array.isArray(input)) {
-      return undefined;
-    }
-
-    const raw = input as Record<string, unknown>;
-    const next = QUOTE_TABLE_COLUMN_KEYS.reduce<Partial<QuoteTableColumnWidths>>((result, key) => {
-      const value = Number(raw[key]);
-      if (Number.isFinite(value) && value > 0) {
-        result[key] = Math.round(value * 100) / 100;
-      }
-      return result;
-    }, {});
-
-    return QUOTE_TABLE_COLUMN_KEYS.every((key) => typeof next[key] === "number")
-      ? (next as QuoteTableColumnWidths)
-      : undefined;
-  }
-
-  private buildTableColumnWidthsPayload(input: unknown): { tableColumnWidths: QuoteTableColumnWidths } | Record<string, never> {
-    const tableColumnWidths = this.normalizeQuoteTableColumnWidths(input);
-    return tableColumnWidths ? { tableColumnWidths } : {};
-  }
-
-  private buildQuoteTotals(
-    items: Array<{
-      quantity: number;
-      unitPrice: number;
-    }>,
-    taxRate: number
-  ) {
-    const subtotal = items.reduce(
-      (sum, item) => sum + Math.round(item.quantity * item.unitPrice),
-      0
-    );
-    const taxAmount = Math.round((subtotal * taxRate) / 100);
-
-    return {
-      subtotal,
-      taxAmount,
-      total: subtotal + taxAmount
-    };
-  }
-
-  private resolveQuoteStatusPayload(
-    quote: {
-      status: string;
-      sentAt: Date | null;
-      acceptedAt: Date | null;
-    },
-    nextStatus: string
-  ) {
-    const now = new Date();
-
-    if (nextStatus === "DRAFT") {
-      return {
-        sentAt: null,
-        acceptedAt: null
-      };
-    }
-
-    if (nextStatus === "SENT") {
-      return {
-        sentAt: quote.sentAt ?? now,
-        acceptedAt: null
-      };
-    }
-
-    if (nextStatus === "ACCEPTED") {
-      return {
-        sentAt: quote.sentAt ?? now,
-        acceptedAt: quote.acceptedAt ?? now
-      };
-    }
-
-    return {
-      sentAt: quote.sentAt,
-      acceptedAt: null
-    };
-  }
-
   private async syncProjectStatusForQuote(
     tx: Prisma.TransactionClient,
     projectId: string,
@@ -1075,42 +847,4 @@ export class QuotesService {
       data: nextData
     });
   }
-
-  private calculateAcceptedQuoteTotal(
-    quoteItems: Array<{
-      id: string;
-      total: Prisma.Decimal;
-    }>,
-    taxRate: Prisma.Decimal,
-    acceptedItemIds: string[],
-    fallbackTotal: Prisma.Decimal
-  ) {
-    const acceptedIds = new Set(acceptedItemIds);
-    const scopedItems = acceptedIds.size > 0
-      ? quoteItems.filter((item) => acceptedIds.has(item.id))
-      : quoteItems;
-
-    if (scopedItems.length === 0) {
-      return decimalToNumber(fallbackTotal);
-    }
-
-    const subtotal = sumDecimal(scopedItems.map((item) => item.total));
-    const taxAmount = subtotal.mul(taxRate).div(100).round();
-
-    return decimalToNumber(subtotal.plus(taxAmount));
-  }
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0
-  }).format(value);
-}
-
-function formatDate(value: Date) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short"
-  }).format(value);
 }

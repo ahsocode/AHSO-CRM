@@ -4,6 +4,15 @@ import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import {
+  aggregateRows,
+  buildStatusBuckets,
+  countSetIntersection,
+  createCustomerSet,
+  matchesFilters,
+  resolveMonthsRange,
+  resolvePaymentSourceLabel
+} from "./report-helpers";
+import {
   CustomReportQueryDto,
   ReportTemplateDto,
   UpdateReportTemplateDto
@@ -41,7 +50,7 @@ export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOverview(filters: ReportFilterDto, user: JwtUser) {
-    const { start, nextMonthStart } = this.resolveMonthsRange(filters.months);
+    const { start, nextMonthStart } = resolveMonthsRange(filters.months);
     const paymentWhere = this.buildPaymentWhere(user, start, nextMonthStart);
     const projectWhere = this.buildProjectWhere(user);
     const quoteWhere = this.buildQuoteWhere(user, start, nextMonthStart);
@@ -124,8 +133,8 @@ export class ReportsService {
         id: payment.id,
         amount: Number(payment.amount),
         paidAt: payment.paidAt,
-        contractNo: this.resolvePaymentSourceLabel(payment),
-        sourceLabel: this.resolvePaymentSourceLabel(payment),
+        contractNo: resolvePaymentSourceLabel(payment),
+        sourceLabel: resolvePaymentSourceLabel(payment),
         customerName: payment.project.customer.name,
         projectName: payment.project.name,
         method: payment.method,
@@ -135,7 +144,7 @@ export class ReportsService {
   }
 
   async getRevenueTrend(filters: ReportFilterDto, user: JwtUser) {
-    const { start, nextMonthStart, months } = this.resolveMonthsRange(filters.months);
+    const { start, nextMonthStart, months } = resolveMonthsRange(filters.months);
     const payments = await this.prisma.payment.findMany({
       where: this.buildPaymentWhere(user, start, nextMonthStart),
       orderBy: {
@@ -187,14 +196,14 @@ export class ReportsService {
     ]);
 
     return {
-      projects: this.buildStatusBuckets(projects, PROJECT_STATUS_LABELS, "estimatedValue"),
-      quotes: this.buildStatusBuckets(quotes, QUOTE_STATUS_LABELS, "total"),
-      contracts: this.buildStatusBuckets(contracts, CONTRACT_STATUS_LABELS, "value")
+      projects: buildStatusBuckets(projects, PROJECT_STATUS_LABELS, "estimatedValue"),
+      quotes: buildStatusBuckets(quotes, QUOTE_STATUS_LABELS, "total"),
+      contracts: buildStatusBuckets(contracts, CONTRACT_STATUS_LABELS, "value")
     };
   }
 
   async getTopCustomers(filters: ReportFilterDto, user: JwtUser) {
-    const { start, nextMonthStart } = this.resolveMonthsRange(filters.months);
+    const { start, nextMonthStart } = resolveMonthsRange(filters.months);
     const payments = await this.prisma.payment.findMany({
       where: this.buildPaymentWhere(user, start, nextMonthStart),
       include: {
@@ -274,7 +283,7 @@ export class ReportsService {
   }
 
   async getCustomerJourney(filters: ReportFilterDto, user: JwtUser) {
-    const { start, nextMonthStart } = this.resolveMonthsRange(filters.months);
+    const { start, nextMonthStart } = resolveMonthsRange(filters.months);
     const customers = await this.prisma.customer.findMany({
       where: this.buildCustomerWhere(user, {
         createdAt: {
@@ -412,14 +421,14 @@ export class ReportsService {
     ]);
 
     const leadCustomers = new Set(scopedCustomerIds);
-    const projectCustomers = this.createCustomerSet(projects.map((project) => project.customerId));
-    const quoteCustomers = this.createCustomerSet(
+    const projectCustomers = createCustomerSet(projects.map((project) => project.customerId));
+    const quoteCustomers = createCustomerSet(
       quotes.map((quote) => quote.project.customerId)
     );
-    const contractCustomers = this.createCustomerSet(
+    const contractCustomers = createCustomerSet(
       contracts.map((contract) => contract.project.customerId)
     );
-    const closedCustomers = this.createCustomerSet([
+    const closedCustomers = createCustomerSet([
       ...completedContracts.map((contract) => contract.project.customerId),
       ...payments.map((payment) => payment.project.customerId)
     ]);
@@ -436,29 +445,29 @@ export class ReportsService {
         {
           source: "lead",
           target: "project",
-          value: this.countSetIntersection(leadCustomers, projectCustomers)
+          value: countSetIntersection(leadCustomers, projectCustomers)
         },
         {
           source: "project",
           target: "quote",
-          value: this.countSetIntersection(projectCustomers, quoteCustomers)
+          value: countSetIntersection(projectCustomers, quoteCustomers)
         },
         {
           source: "quote",
           target: "contract",
-          value: this.countSetIntersection(quoteCustomers, contractCustomers)
+          value: countSetIntersection(quoteCustomers, contractCustomers)
         },
         {
           source: "contract",
           target: "closed",
-          value: this.countSetIntersection(contractCustomers, closedCustomers)
+          value: countSetIntersection(contractCustomers, closedCustomers)
         }
       ]
     };
   }
 
   async getActivityHeatmap(filters: ReportFilterDto, user: JwtUser) {
-    const { start, nextMonthStart } = this.resolveMonthsRange(filters.months);
+    const { start, nextMonthStart } = resolveMonthsRange(filters.months);
     const activities = await this.prisma.activity.findMany({
       where: this.buildActivityWhere(user, {
         updatedAt: {
@@ -519,7 +528,7 @@ export class ReportsService {
   }
 
   async getCohort(filters: ReportFilterDto, user: JwtUser) {
-    const { start, months } = this.resolveMonthsRange(filters.months);
+    const { start, months } = resolveMonthsRange(filters.months);
     const customers = await this.prisma.customer.findMany({
       where: this.buildCustomerWhere(user, {
         createdAt: {
@@ -598,8 +607,8 @@ export class ReportsService {
 
   async runCustomQuery(dto: CustomReportQueryDto, user: JwtUser) {
     const rows = await this.loadDatasetRows(dto.dataset, user);
-    const filteredRows = rows.filter((row) => this.matchesFilters(row, dto.filters));
-    const chartData = this.aggregateRows(filteredRows, dto.dimensions, dto.measures);
+    const filteredRows = rows.filter((row) => matchesFilters(row, dto.filters));
+    const chartData = aggregateRows(filteredRows, dto.dimensions, dto.measures);
 
     return {
       rows: filteredRows,
@@ -688,21 +697,6 @@ export class ReportsService {
     };
   }
 
-  private buildStatusBuckets<T extends { status: string; [key: string]: Prisma.Decimal | string | null }>(
-    items: T[],
-    labels: Record<string, string>,
-    valueKey: keyof T
-  ) {
-    return Object.entries(labels).map(([status, label]) => ({
-      key: status,
-      label,
-      count: items.filter((item) => item.status === status).length,
-      totalValue: items
-        .filter((item) => item.status === status)
-        .reduce((sum, item) => sum + Number(item[valueKey] ?? 0), 0)
-    }));
-  }
-
   private buildCustomerWhere(
     user: JwtUser,
     extra?: Prisma.CustomerWhereInput
@@ -761,14 +755,6 @@ export class ReportsService {
     };
   }
 
-  private resolvePaymentSourceLabel(payment: {
-    contract?: { contractNo: string } | null;
-    quote?: { quoteNo: string } | null;
-    project?: { code?: string | null } | null;
-  }) {
-    return payment.contract?.contractNo ?? payment.quote?.quoteNo ?? payment.project?.code ?? "Dự án";
-  }
-
   private buildActivityWhere(user: JwtUser, extra?: Prisma.ActivityWhereInput): Prisma.ActivityWhereInput {
     if (isStaff(user)) {
       return {
@@ -816,36 +802,6 @@ export class ReportsService {
         }
       ]
     };
-  }
-
-  private resolveMonthsRange(months: number) {
-    const now = new Date();
-    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const start = new Date(currentMonthStart.getFullYear(), currentMonthStart.getMonth() - (months - 1), 1);
-
-    return {
-      start,
-      nextMonthStart,
-      months
-    };
-  }
-
-  private createCustomerSet(customerIds: Array<string | null | undefined>) {
-    return new Set(customerIds.filter((customerId): customerId is string => Boolean(customerId)));
-  }
-
-  private countSetIntersection(left: Set<string>, right: Set<string>) {
-    const [smaller, larger] = left.size <= right.size ? [left, right] : [right, left];
-    let count = 0;
-
-    for (const customerId of smaller) {
-      if (larger.has(customerId)) {
-        count += 1;
-      }
-    }
-
-    return count;
   }
 
   private async loadDatasetRows(dataset: CustomReportQueryDto["dataset"], user: JwtUser) {
@@ -1022,8 +978,8 @@ export class ReportsService {
           amount: Number(item.amount),
           paidAt: item.paidAt.toISOString(),
           method: item.method,
-          contractNo: this.resolvePaymentSourceLabel(item),
-          sourceLabel: this.resolvePaymentSourceLabel(item),
+          contractNo: resolvePaymentSourceLabel(item),
+          sourceLabel: resolvePaymentSourceLabel(item),
           projectName: item.project.name,
           customerName: item.project.customer.name,
           createdAt: item.createdAt.toISOString()
@@ -1034,71 +990,4 @@ export class ReportsService {
     }
   }
 
-  private matchesFilters(
-    row: Record<string, unknown>,
-    filters: Array<{ field: string; operator: string; value: unknown }>
-  ) {
-    return filters.every((filter) => {
-      const currentValue = row[filter.field];
-
-      switch (filter.operator) {
-        case "eq":
-          return currentValue === filter.value;
-        case "neq":
-          return currentValue !== filter.value;
-        case "contains":
-          return String(currentValue ?? "")
-            .toLowerCase()
-            .includes(String(filter.value ?? "").toLowerCase());
-        case "gte":
-          return Number(currentValue ?? 0) >= Number(filter.value ?? 0);
-        case "lte":
-          return Number(currentValue ?? 0) <= Number(filter.value ?? 0);
-        case "in":
-          return Array.isArray(filter.value) ? filter.value.includes(currentValue as never) : false;
-        default:
-          return true;
-      }
-    });
-  }
-
-  private aggregateRows(
-    rows: Record<string, unknown>[],
-    dimensions: string[],
-    measures: Array<{ field: string; label: string; aggregator: "count" | "sum" }>
-  ) {
-    if (dimensions.length === 0) {
-      return [
-        measures.reduce<Record<string, unknown>>((acc, measure) => {
-          acc[measure.label] =
-            measure.aggregator === "count"
-              ? rows.length
-              : rows.reduce((sum, row) => sum + Number(row[measure.field] ?? 0), 0);
-          return acc;
-        }, {})
-      ];
-    }
-
-    const groups = new Map<string, Record<string, unknown>>();
-
-    for (const row of rows) {
-      const groupKey = dimensions.map((dimension) => String(row[dimension] ?? "Chưa gán")).join(" / ");
-      const current = groups.get(groupKey) ?? dimensions.reduce<Record<string, unknown>>((acc, dimension) => {
-        acc[dimension] = row[dimension] ?? "Chưa gán";
-        return acc;
-      }, {});
-
-      for (const measure of measures) {
-        const currentValue = Number(current[measure.label] ?? 0);
-        current[measure.label] =
-          measure.aggregator === "count"
-            ? currentValue + 1
-            : currentValue + Number(row[measure.field] ?? 0);
-      }
-
-      groups.set(groupKey, current);
-    }
-
-    return Array.from(groups.values());
-  }
 }

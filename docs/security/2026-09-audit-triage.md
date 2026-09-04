@@ -7,14 +7,26 @@ remaining advisory is deferred.
 
 ## Result
 
-| Package | Before | After | Fixed | Notes |
+| Package | Before | After `audit fix` | After targeted bumps | Notes |
 |---|--:|--:|--:|---|
-| `mcp-server` | 9 | **0** | 9 | fully clean |
-| `backend` | 56 | 30 | 26 | all 30 residual need a major bump |
-| `frontend` | 56 | 42 | 14 | residual: majors + the tiptap lockstep cluster |
+| `mcp-server` | 9 | **0** | **0** | fully clean |
+| `backend` | 56 | 30 | **27** (0 critical) | nodemailer + bcrypt bumped (below) |
+| `frontend` | 56 | 42 | **12** (1 critical, devDep) | tiptap cluster bumped (below) |
 
-Gate after fixes: backend `tsc` + `lint` + 211 tests + `build` green; frontend
+Gate after every step: backend `tsc` + `lint` + 211 tests + `build` green; frontend
 `tsc` + `lint` + 29 tests + `build` green; mcp `tsc` green.
+
+## Targeted major bumps applied 2026-09-03 (after the plan)
+
+| Bump | Commit | Cleared |
+|---|---|---|
+| `nodemailer` 8 → 9, `@nestjs-modules/mailer` 2.3.4 → 2.3.7 | `54621c8` | high CRLF-injection in `List-*` headers |
+| `bcrypt` 5 → 6 (+ `@types/bcrypt` 6) | `d2b4079` | **critical** `tar` arbitrary file write + `@mapbox/node-pre-gyp` (old node-pre-gyp) |
+| `@tiptap/*` cluster 3.23 → 3.31 (10 direct deps, lockstep) | `e543452` | ~28 advisories incl. the `@tiptap/core` prototype-pollution |
+
+All three are same-or-compatible API (Node 20 satisfies the new floors; bcrypt hash
+format is cross-compatible; tiptap stayed on major 3). **Recommend a manual mailbox
+editor smoke test before the next deploy** (tiptap marks / link / image / paste).
 
 ## Fixed transitively (no code/config impact)
 
@@ -56,9 +68,9 @@ qs, body-parser, esbuild — all cleared.
 
 ## Recommended follow-up tickets (priority order)
 
-1. **`nodemailer` 8→9** — smallest, prod-reachable, isolated. ~1h + mailbox regression test.
-2. **`@tiptap/*` cluster → latest 3.x** — prod-reachable, no major bump, just lockstep alignment + editor QA.
-3. **`bcrypt` 5→6** — clears the last critical; hashing round-trip test.
-4. **`@anthropic-ai/sdk` 0.90→latest** — check changelog; AI feature smoke test.
-5. **NestJS 10→12** — large coordinated upgrade; clears ~18 backend advisories including `multer`.
-6. **Next 14→16 + vitest 2→3 + eslint-config-next** — front-end framework upgrade wave; until then, proxy rate-limit on `/_next/image`.
+1. ~~`nodemailer` 8→9~~ — **done** (`54621c8`).
+2. ~~`@tiptap/*` cluster → latest 3.x~~ — **done** (`e543452`); manual editor QA still pending.
+3. ~~`bcrypt` 5→6~~ — **done** (`d2b4079`); last critical cleared.
+4. **`@anthropic-ai/sdk` 0.90→latest** — check changelog against the `claude-api` skill; AI feature smoke test.
+5. **NestJS 10→12** — large coordinated upgrade; clears ~18 backend advisories including `multer` (DoS, prod-reachable) and `@nestjs/swagger`'s `lodash`/`js-yaml`.
+6. **Next 14→16 + vitest 2→3 + eslint-config-next** — front-end framework upgrade wave; until then, proxy rate-limit on `/_next/image`. `vitest` is the remaining frontend "critical" but it is a devDependency (dev-server SSRF, never shipped).

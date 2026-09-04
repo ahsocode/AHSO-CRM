@@ -4,7 +4,15 @@ import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { projectProgressPercent } from "../common/utils/project-progress";
-import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
+import {
+  mapBusinessDocument,
+  mapBusinessDocumentSummary,
+  mapHandover,
+  mapMaterialAllocation,
+  mapStockLot,
+  materialAllocationInclude
+} from "./project-mappers";
+import { buildDeletedWhere, buildWhere } from "./project-where";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
@@ -123,7 +131,7 @@ export class ProjectsService {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
-    const where = this.buildWhere(filters, user);
+    const where = buildWhere(filters, user);
     const view = filters.view ?? "list";
     const now = new Date();
     const dueSoonBoundary = new Date(now.getTime() + DUE_SOON_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -633,7 +641,7 @@ export class ProjectsService {
             }))
           }
         : null,
-      importantDocuments: latestDocuments.map((document) => this.mapBusinessDocumentSummary(document)),
+      importantDocuments: latestDocuments.map((document) => mapBusinessDocumentSummary(document)),
       openMilestones: openMilestones.map((milestone) => ({
         id: milestone.id,
         name: milestone.name,
@@ -649,7 +657,7 @@ export class ProjectsService {
             paymentCount: project.contract.paymentCount
           }
         : null,
-      handovers: handovers.map((handover) => this.mapHandover(handover))
+      handovers: handovers.map((handover) => mapHandover(handover))
     };
   }
 
@@ -1042,7 +1050,7 @@ export class ProjectsService {
       : [];
 
     return {
-      businessDocuments: businessDocuments.map((document) => this.mapBusinessDocument(document)),
+      businessDocuments: businessDocuments.map((document) => mapBusinessDocument(document)),
       documentPlan: {
         requiredTypes: documentRequirements.map((requirement) => requirement.type)
       },
@@ -1313,7 +1321,7 @@ export class ProjectsService {
       }
     });
 
-    return this.mapHandover(handover);
+    return mapHandover(handover);
   }
 
   async createPayment(id: string, dto: CreatePaymentDto, user: JwtUser) {
@@ -1324,7 +1332,7 @@ export class ProjectsService {
     const result = await this.prisma.$transaction(async (tx) => {
       const project = await tx.project.findFirst({
         where: {
-          ...this.buildWhere({}, user),
+          ...buildWhere({}, user),
           id
         },
         select: {
@@ -1527,7 +1535,7 @@ export class ProjectsService {
       }
     });
 
-    return lots.map((lot) => this.mapStockLot(lot));
+    return lots.map((lot) => mapStockLot(lot));
   }
 
   async getMaterialAllocation(id: string, user: JwtUser) {
@@ -1535,10 +1543,10 @@ export class ProjectsService {
     const allocation = await this.prisma.projectMaterialAllocation.findFirst({
       where: { projectId: id, status: { not: "CANCELLED" } },
       orderBy: { createdAt: "desc" },
-      include: this.materialAllocationInclude()
+      include: materialAllocationInclude()
     });
 
-    return allocation ? this.mapMaterialAllocation(allocation) : null;
+    return allocation ? mapMaterialAllocation(allocation) : null;
   }
 
   async upsertMaterialAllocation(id: string, dto: UpsertProjectMaterialAllocationDto, user: JwtUser) {
@@ -1619,7 +1627,7 @@ export class ProjectsService {
                 create: itemCreates
               }
             },
-            include: this.materialAllocationInclude()
+            include: materialAllocationInclude()
           })
         : await tx.projectMaterialAllocation.create({
             data: {
@@ -1628,10 +1636,10 @@ export class ProjectsService {
               notes: dto.notes,
               items: { create: itemCreates }
             },
-            include: this.materialAllocationInclude()
+            include: materialAllocationInclude()
           });
 
-      return this.mapMaterialAllocation(allocation);
+      return mapMaterialAllocation(allocation);
     });
   }
 
@@ -1733,10 +1741,10 @@ export class ProjectsService {
       const confirmed = await tx.projectMaterialAllocation.update({
         where: { id: allocation.id },
         data: { status: "CONFIRMED", confirmedAt: new Date() },
-        include: this.materialAllocationInclude()
+        include: materialAllocationInclude()
       });
 
-      return this.mapMaterialAllocation(confirmed);
+      return mapMaterialAllocation(confirmed);
     });
   }
 
@@ -1893,7 +1901,7 @@ export class ProjectsService {
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
     const now = new Date();
-    const where = this.buildDeletedWhere(filters, user);
+    const where = buildDeletedWhere(filters, user);
 
     const [projects, total] = await this.prisma.$transaction([
       this.prisma.project.findMany({
@@ -1925,7 +1933,7 @@ export class ProjectsService {
   async bulk(dto: BulkProjectDto, user: JwtUser) {
     const projects = await this.prisma.project.findMany({
       where: {
-        ...this.buildWhere({}, user),
+        ...buildWhere({}, user),
         id: {
           in: dto.ids
         }
@@ -1993,137 +2001,6 @@ export class ProjectsService {
     };
   }
 
-  private mapBusinessDocumentSummary(document: {
-    id: string;
-    type: string;
-    source: string;
-    status: string;
-    title: string;
-    documentNo: string | null;
-    documentDate: Date | null;
-    fileUrl: string | null;
-    createdAt: Date;
-    createdBy: { id: string; name: string };
-  }) {
-    return {
-      id: document.id,
-      type: document.type,
-      source: document.source,
-      status: document.status,
-      title: document.title,
-      documentNo: document.documentNo,
-      documentDate: document.documentDate,
-      fileUrl: document.fileUrl,
-      createdAt: document.createdAt,
-      createdBy: document.createdBy
-    };
-  }
-
-  private mapBusinessDocument(document: {
-    id: string;
-    type: string;
-    source: string;
-    status: string;
-    title: string;
-    documentNo: string | null;
-    documentDate: Date | null;
-    fileUrl: string | null;
-    filename: string | null;
-    mimeType: string | null;
-    size: number | null;
-    notes: string | null;
-    customerId: string | null;
-    projectId: string | null;
-    quoteId: string | null;
-    contractId: string | null;
-    paymentId: string | null;
-    generatedDocumentId: string | null;
-    parentId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    customer: { id: string; name: string; shortName: string | null } | null;
-    project: { id: string; code: string; name: string } | null;
-    quote: { id: string; quoteNo: string; version: number } | null;
-    contract: { id: string; contractNo: string } | null;
-    payment: { id: string; amount: Prisma.Decimal; paidAt: Date } | null;
-    generatedDocument: { id: string; number: string; pdfPath: string | null } | null;
-    parent: { id: string; title: string; status: string } | null;
-    createdBy: { id: string; name: string };
-  }) {
-    return {
-      id: document.id,
-      type: document.type,
-      source: document.source,
-      status: document.status,
-      title: document.title,
-      documentNo: document.documentNo,
-      documentDate: document.documentDate,
-      fileUrl: document.fileUrl,
-      filename: document.filename,
-      mimeType: document.mimeType,
-      size: document.size,
-      notes: document.notes,
-      customerId: document.customerId,
-      projectId: document.projectId,
-      quoteId: document.quoteId,
-      contractId: document.contractId,
-      paymentId: document.paymentId,
-      generatedDocumentId: document.generatedDocumentId,
-      parentId: document.parentId,
-      createdAt: document.createdAt,
-      updatedAt: document.updatedAt,
-      customer: document.customer,
-      project: document.project,
-      quote: document.quote,
-      contract: document.contract,
-      payment: document.payment
-        ? {
-            ...document.payment,
-            amount: Number(document.payment.amount)
-          }
-        : null,
-      generatedDocument: document.generatedDocument,
-      parent: document.parent,
-      createdBy: document.createdBy
-    };
-  }
-
-  private mapHandover(handover: {
-    id: string;
-    projectId: string;
-    summary: string | null;
-    customerRequirements: string | null;
-    risks: string | null;
-    decisions: string | null;
-    openTasks: string | null;
-    importantDocumentIds: string[];
-    fromUserId: string | null;
-    toUserId: string | null;
-    createdById: string;
-    createdAt: Date;
-    fromUser: { id: string; name: string } | null;
-    toUser: { id: string; name: string } | null;
-    createdBy: { id: string; name: string };
-  }) {
-    return {
-      id: handover.id,
-      projectId: handover.projectId,
-      summary: handover.summary,
-      customerRequirements: handover.customerRequirements,
-      risks: handover.risks,
-      decisions: handover.decisions,
-      openTasks: handover.openTasks,
-      importantDocumentIds: handover.importantDocumentIds,
-      fromUserId: handover.fromUserId,
-      toUserId: handover.toUserId,
-      createdById: handover.createdById,
-      createdAt: handover.createdAt,
-      fromUser: handover.fromUser,
-      toUser: handover.toUser,
-      createdBy: handover.createdBy
-    };
-  }
-
   private assertPaymentLimit({
     currentPaid,
     nextAmount,
@@ -2149,84 +2026,6 @@ export class ProjectsService {
     return new Intl.NumberFormat("vi-VN", {
       maximumFractionDigits: 0
     }).format(decimalToNumber(value));
-  }
-
-  private buildWhere(filters: Partial<ProjectFilterDto>, user: JwtUser): Prisma.ProjectWhereInput {
-    const customerWhere = scopeCustomerWhereToUser(
-      { deletedAt: null } as Prisma.CustomerWhereInput,
-      user
-    );
-
-    if (filters.assignedToId && !isStaff(user)) {
-      customerWhere.assignedToId = filters.assignedToId;
-    }
-
-    const where: Prisma.ProjectWhereInput = {
-      deletedAt: null,
-      customer: customerWhere
-    };
-
-    if (filters.search) {
-      where.OR = [
-        {
-          code: {
-            contains: filters.search,
-            mode: "insensitive"
-          }
-        },
-        {
-          name: {
-            contains: filters.search,
-            mode: "insensitive"
-          }
-        },
-        {
-          description: {
-            contains: filters.search,
-            mode: "insensitive"
-          }
-        },
-        {
-          customer: {
-            name: {
-              contains: filters.search,
-              mode: "insensitive"
-            }
-          }
-        },
-        {
-          customer: {
-            shortName: {
-              contains: filters.search,
-              mode: "insensitive"
-            }
-          }
-        }
-      ];
-    }
-
-    if (filters.status) {
-      where.status = filters.status;
-    }
-
-    if (filters.priority) {
-      where.priority = filters.priority;
-    }
-
-    if (filters.customerId) {
-      where.customerId = filters.customerId;
-    }
-
-    return where;
-  }
-
-  private buildDeletedWhere(filters: Partial<ProjectFilterDto>, user: JwtUser): Prisma.ProjectWhereInput {
-    return {
-      ...this.buildWhere(filters, user),
-      deletedAt: {
-        not: null
-      }
-    };
   }
 
   private resolveNextCompletedAt({
@@ -2343,7 +2142,7 @@ export class ProjectsService {
   private async getProjectDocumentSources(id: string, user: JwtUser) {
     const project = await this.prisma.project.findFirst({
       where: {
-        ...this.buildWhere({}, user),
+        ...buildWhere({}, user),
         id
       },
       select: {
@@ -2425,7 +2224,7 @@ export class ProjectsService {
   private async findAccessibleProject(id: string, user: JwtUser) {
     const project = await this.prisma.project.findFirst({
       where: {
-        ...this.buildWhere({}, user),
+        ...buildWhere({}, user),
         id
       },
       include: {
@@ -2477,7 +2276,7 @@ export class ProjectsService {
   private async findAccessibleProjectRecord(id: string, user: JwtUser) {
     const project = await this.prisma.project.findFirst({
       where: {
-        ...this.buildWhere({}, user),
+        ...buildWhere({}, user),
         id
       },
       select: {
@@ -2503,158 +2302,6 @@ export class ProjectsService {
     return project;
   }
 
-  private materialAllocationInclude() {
-    return {
-      items: {
-        include: {
-          stockLot: {
-            include: {
-              stockReceiptItem: {
-                select: {
-                  receipt: {
-                    select: {
-                      id: true,
-                      receiptNo: true,
-                      date: true,
-                      purchaseInvoiceNo: true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          warehouse: { select: { id: true, code: true, name: true } },
-          material: { select: { id: true, code: true, name: true, unit: true } }
-        },
-        orderBy: { id: "asc" as const }
-      },
-      stockIssues: {
-        select: {
-          id: true,
-          issueNo: true,
-          warehouseId: true,
-          date: true,
-          status: true,
-          totalAmount: true
-        },
-        orderBy: { createdAt: "asc" as const }
-      }
-    } as const;
-  }
-
-  private mapStockLot(lot: {
-    id: string;
-    warehouseId: string;
-    warehouse: { id: string; code: string; name: string };
-    materialId: string;
-    material: { id: string; code: string; name: string; unit: string };
-    purchaseInvoiceDate: Date;
-    purchaseInvoiceNo: string | null;
-    receivedQuantity: DecimalLike;
-    remainingQuantity: DecimalLike;
-    unitPrice: DecimalLike;
-    stockReceiptItem: {
-      receipt: {
-        id: string;
-        receiptNo: string;
-        date: Date;
-        purchaseInvoiceNo: string | null;
-      };
-    } | null;
-  }) {
-    const receipt = lot.stockReceiptItem?.receipt ?? null;
-    return {
-      id: lot.id,
-      warehouseId: lot.warehouseId,
-      warehouse: lot.warehouse,
-      materialId: lot.materialId,
-      material: lot.material,
-      receipt,
-      purchaseInvoiceDate: lot.purchaseInvoiceDate,
-      purchaseInvoiceNo: lot.purchaseInvoiceNo ?? receipt?.purchaseInvoiceNo ?? null,
-      receivedQuantity: decimalToNumber(lot.receivedQuantity),
-      remainingQuantity: decimalToNumber(lot.remainingQuantity),
-      unitPrice: decimalToNumber(lot.unitPrice),
-      value: decimalToNumber(toDecimal(lot.remainingQuantity).mul(toDecimal(lot.unitPrice)).toDecimalPlaces(0))
-    };
-  }
-
-  private mapMaterialAllocation(allocation: {
-    id: string;
-    projectId: string;
-    salesInvoiceDate: Date;
-    status: string;
-    notes: string | null;
-    confirmedAt: Date | null;
-    cancelledAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-    items: Array<{
-      id: string;
-      stockLotId: string;
-      warehouseId: string;
-      warehouse: { id: string; code: string; name: string };
-      materialId: string;
-      material: { id: string; code: string; name: string; unit: string };
-      quantity: DecimalLike;
-      unitPrice: DecimalLike;
-      total: DecimalLike;
-      stockLot: {
-        purchaseInvoiceDate: Date;
-        purchaseInvoiceNo: string | null;
-        remainingQuantity: DecimalLike;
-        stockReceiptItem: {
-          receipt: {
-            id: string;
-            receiptNo: string;
-            date: Date;
-            purchaseInvoiceNo: string | null;
-          };
-        } | null;
-      };
-    }>;
-    stockIssues: Array<{
-      id: string;
-      issueNo: string;
-      warehouseId: string;
-      date: Date;
-      status: string;
-      totalAmount: DecimalLike;
-    }>;
-  }) {
-    return {
-      id: allocation.id,
-      projectId: allocation.projectId,
-      salesInvoiceDate: allocation.salesInvoiceDate,
-      status: allocation.status,
-      notes: allocation.notes,
-      confirmedAt: allocation.confirmedAt,
-      cancelledAt: allocation.cancelledAt,
-      createdAt: allocation.createdAt,
-      updatedAt: allocation.updatedAt,
-      totalAmount: allocation.items.reduce((sum, item) => sum + decimalToNumber(item.total), 0),
-      items: allocation.items.map((item) => ({
-        id: item.id,
-        stockLotId: item.stockLotId,
-        warehouseId: item.warehouseId,
-        warehouse: item.warehouse,
-        materialId: item.materialId,
-        material: item.material,
-        quantity: decimalToNumber(item.quantity),
-        unitPrice: decimalToNumber(item.unitPrice),
-        total: decimalToNumber(item.total),
-        purchaseInvoiceDate: item.stockLot.purchaseInvoiceDate,
-        purchaseInvoiceNo: item.stockLot.purchaseInvoiceNo ?? item.stockLot.stockReceiptItem?.receipt.purchaseInvoiceNo ?? null,
-        receipt: item.stockLot.stockReceiptItem?.receipt ?? null,
-        remainingQuantity: decimalToNumber(item.stockLot.remainingQuantity)
-      })),
-      stockIssues: allocation.stockIssues.map((issue) => ({
-        ...issue,
-        totalAmount: decimalToNumber(issue.totalAmount)
-      }))
-    };
-  }
-
   private generateNextIssueNo(tx: Prisma.TransactionClient): Promise<string> {
     return generateNextStockIssueNo(tx);
   }
@@ -2662,7 +2309,7 @@ export class ProjectsService {
   private async findDeletedAccessibleProjectRecord(id: string, user: JwtUser) {
     const project = await this.prisma.project.findFirst({
       where: {
-        ...this.buildDeletedWhere({}, user),
+        ...buildDeletedWhere({}, user),
         id
       },
       select: {

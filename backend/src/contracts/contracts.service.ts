@@ -1,14 +1,21 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import type { MilestoneStatus, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
-import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
-import { decimalToNumber, sumDecimal } from "../common/utils/decimal";
+import {
+  calculateContractValueFromQuoteItems,
+  formatNumber,
+  mapContractItem,
+  mapMilestone,
+  resolveMilestoneCompletedAt,
+  resolveSelectedQuoteItems
+} from "./contract-helpers";
+import { buildAccessibleProjectWhere, buildWhere } from "./contract-where";
+import { ContractFilterDto } from "./dto/contract-filter.dto";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { EmailService } from "../email/email.service";
 import { UploadService } from "../upload/upload.service";
-import { ContractFilterDto } from "./dto/contract-filter.dto";
 import { CreateContractDto } from "./dto/create-contract.dto";
 import { CreateMilestoneDto } from "./dto/create-milestone.dto";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
@@ -33,7 +40,7 @@ export class ContractsService {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
-    const where = this.buildWhere(filters, user);
+    const where = buildWhere(filters, user);
     const now = new Date();
 
     const [contracts, total, matchingContracts] = await this.prisma.$transaction([
@@ -174,10 +181,10 @@ export class ContractsService {
         ? project.quotes.find((quote) => quote.id === dto.sourceQuoteId)
         : null;
       const selectedQuoteItems = selectedSourceQuote
-        ? this.resolveSelectedQuoteItems(selectedSourceQuote.items, dto.sourceQuoteItemIds)
+        ? resolveSelectedQuoteItems(selectedSourceQuote.items, dto.sourceQuoteItemIds)
         : [];
       const resolvedContractValue = selectedSourceQuote
-        ? this.calculateContractValueFromQuoteItems(selectedQuoteItems, selectedSourceQuote.taxRate)
+        ? calculateContractValueFromQuoteItems(selectedQuoteItems, selectedSourceQuote.taxRate)
         : dto.value;
 
       if (resolvedContractValue <= 0) {
@@ -322,7 +329,7 @@ export class ContractsService {
         paymentAmount: Number(milestone.paymentAmount ?? 0),
         notes: milestone.notes
       })),
-      items: contract.items.map((item) => this.mapContractItem(item)),
+      items: contract.items.map((item) => mapContractItem(item)),
       payments: contract.payments.map((payment) => ({
         id: payment.id,
         amount: Number(payment.amount),
@@ -404,7 +411,7 @@ export class ContractsService {
         description: dto.description,
         dueDate: dto.dueDate,
         status: dto.status,
-        completedAt: this.resolveMilestoneCompletedAt(dto.status),
+        completedAt: resolveMilestoneCompletedAt(dto.status),
         paymentAmount: dto.paymentAmount ?? null,
         notes: dto.notes,
         contractId: contract.id,
@@ -412,13 +419,13 @@ export class ContractsService {
       }
     });
 
-    return this.mapMilestone(milestone);
+    return mapMilestone(milestone);
   }
 
   async updateMilestone(milestoneId: string, dto: UpdateMilestoneDto, user: JwtUser) {
     const milestone = await this.findAccessibleMilestone(milestoneId, user);
     const nextStatus = dto.status ?? milestone.status;
-    const nextCompletedAt = this.resolveMilestoneCompletedAt(nextStatus, milestone.completedAt, dto.completedAt);
+    const nextCompletedAt = resolveMilestoneCompletedAt(nextStatus, milestone.completedAt, dto.completedAt);
     const updatedMilestone = await this.prisma.milestone.update({
       where: {
         id: milestoneId
@@ -434,13 +441,13 @@ export class ContractsService {
       }
     });
 
-    return this.mapMilestone(updatedMilestone);
+    return mapMilestone(updatedMilestone);
   }
 
   async createPayment(contractId: string, dto: CreatePaymentDto, user: JwtUser) {
     const { payment, projectId } = await this.prisma.$transaction(async (tx) => {
       const contract = await tx.contract.findFirst({
-        where: { id: contractId, project: this.buildAccessibleProjectWhere(user) },
+        where: { id: contractId, project: buildAccessibleProjectWhere(user) },
         select: {
           id: true,
           projectId: true,
@@ -459,7 +466,7 @@ export class ContractsService {
 
       if (nextPaidAmount > contractValue) {
         throw new BadRequestException(
-          `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị hợp đồng (${this.formatNumber(contractValue)} VND)`
+          `Tổng thanh toán (${formatNumber(nextPaidAmount)} VND) không được vượt giá trị hợp đồng (${formatNumber(contractValue)} VND)`
         );
       }
 
@@ -521,89 +528,11 @@ export class ContractsService {
     return { success: true, id: contract.id };
   }
 
-  private buildWhere(filters: Partial<ContractFilterDto>, user: JwtUser): Prisma.ContractWhereInput {
-    const projectWhere: Prisma.ProjectWhereInput = this.buildAccessibleProjectWhere(user);
-    const where: Prisma.ContractWhereInput = {
-      deletedAt: null,
-      project: projectWhere
-    };
-
-    if (filters.projectId) {
-      where.projectId = filters.projectId;
-    }
-
-    if (filters.customerId) {
-      projectWhere.customerId = filters.customerId;
-    }
-
-    if (filters.status) {
-      where.status = filters.status;
-    }
-
-    if (filters.search) {
-      where.OR = [
-        {
-          contractNo: {
-            contains: filters.search,
-            mode: "insensitive"
-          }
-        },
-        {
-          project: {
-            code: {
-              contains: filters.search,
-              mode: "insensitive"
-            }
-          }
-        },
-        {
-          project: {
-            name: {
-              contains: filters.search,
-              mode: "insensitive"
-            }
-          }
-        },
-        {
-          project: {
-            customer: {
-              name: {
-                contains: filters.search,
-                mode: "insensitive"
-              }
-            }
-          }
-        },
-        {
-          project: {
-            customer: {
-              shortName: {
-                contains: filters.search,
-                mode: "insensitive"
-              }
-            }
-          }
-        }
-      ];
-    }
-
-    return where;
-  }
-
-  private buildAccessibleProjectWhere(user: JwtUser): Prisma.ProjectWhereInput {
-    const customerWhere = scopeCustomerWhereToUser({ deletedAt: null }, user);
-
-    return {
-      deletedAt: null,
-      customer: customerWhere
-    };
-  }
-
   private async findAccessibleContract(id: string, user: JwtUser) {
     const contract = await this.prisma.contract.findFirst({
       where: {
         id,
-        project: this.buildAccessibleProjectWhere(user)
+        project: buildAccessibleProjectWhere(user)
       },
       include: {
         project: {
@@ -686,7 +615,7 @@ export class ContractsService {
     const contract = await this.prisma.contract.findFirst({
       where: {
         id,
-        project: this.buildAccessibleProjectWhere(user)
+        project: buildAccessibleProjectWhere(user)
       },
       select: {
         id: true,
@@ -707,12 +636,6 @@ export class ContractsService {
     return contract;
   }
 
-  private formatNumber(value: number) {
-    return new Intl.NumberFormat("vi-VN", {
-      maximumFractionDigits: 0
-    }).format(value);
-  }
-
   private async findAccessibleContractForMutation(
     tx: Prisma.TransactionClient,
     id: string,
@@ -721,7 +644,7 @@ export class ContractsService {
     const contract = await tx.contract.findFirst({
       where: {
         id,
-        project: this.buildAccessibleProjectWhere(user)
+        project: buildAccessibleProjectWhere(user)
       },
       select: {
         id: true,
@@ -753,7 +676,7 @@ export class ContractsService {
   ) {
     const project = await tx.project.findFirst({
       where: {
-        ...this.buildAccessibleProjectWhere(user),
+        ...buildAccessibleProjectWhere(user),
         id: projectId
       },
       select: {
@@ -802,7 +725,7 @@ export class ContractsService {
       where: {
         id,
         contract: {
-          project: this.buildAccessibleProjectWhere(user)
+          project: buildAccessibleProjectWhere(user)
         }
       }
     });
@@ -812,118 +735,6 @@ export class ContractsService {
     }
 
     return milestone;
-  }
-
-  private resolveMilestoneCompletedAt(
-    status: MilestoneStatus,
-    currentCompletedAt?: Date | null,
-    explicitCompletedAt?: Date
-  ) {
-    if (explicitCompletedAt) {
-      return explicitCompletedAt;
-    }
-
-    if (status === "DONE" || status === "ACCEPTED") {
-      return currentCompletedAt ?? new Date();
-    }
-
-    return null;
-  }
-
-  private mapMilestone(milestone: {
-    id: string;
-    name: string;
-    description: string | null;
-    dueDate: Date | null;
-    completedAt: Date | null;
-    status: MilestoneStatus;
-    paymentAmount: Prisma.Decimal | null;
-    notes: string | null;
-  }) {
-    return {
-      id: milestone.id,
-      name: milestone.name,
-      description: milestone.description,
-      dueDate: milestone.dueDate,
-      completedAt: milestone.completedAt,
-      status: milestone.status,
-      paymentAmount: Number(milestone.paymentAmount ?? 0),
-      notes: milestone.notes
-    };
-  }
-
-  private resolveSelectedQuoteItems(
-    quoteItems: Array<{
-      id: string;
-      order: number;
-      name: string;
-      description: string | null;
-      unit: string | null;
-      quantity: Prisma.Decimal;
-      unitPrice: Prisma.Decimal;
-      total: Prisma.Decimal;
-    }>,
-    selectedItemIds?: string[]
-  ) {
-    if (quoteItems.length === 0) {
-      throw new BadRequestException("Báo giá nguồn chưa có hạng mục để chốt hợp đồng");
-    }
-
-    if (!selectedItemIds || selectedItemIds.length === 0) {
-      return quoteItems;
-    }
-
-    const availableIds = new Set(quoteItems.map((item) => item.id));
-    const invalidIds = selectedItemIds.filter((itemId) => !availableIds.has(itemId));
-
-    if (invalidIds.length > 0) {
-      throw new BadRequestException("Một số hạng mục được chọn không thuộc báo giá nguồn");
-    }
-
-    const selectedIds = new Set(selectedItemIds);
-    const selectedItems = quoteItems.filter((item) => selectedIds.has(item.id));
-
-    if (selectedItems.length === 0) {
-      throw new BadRequestException("Cần chọn ít nhất một hạng mục để chốt hợp đồng");
-    }
-
-    return selectedItems;
-  }
-
-  private calculateContractValueFromQuoteItems(
-    quoteItems: Array<{
-      total: Prisma.Decimal;
-    }>,
-    taxRate: Prisma.Decimal
-  ) {
-    const subtotal = sumDecimal(quoteItems.map((item) => item.total));
-    const taxAmount = subtotal.mul(taxRate).div(100).round();
-
-    return decimalToNumber(subtotal.plus(taxAmount));
-  }
-
-  private mapContractItem(item: {
-    id: string;
-    order: number;
-    name: string;
-    description: string | null;
-    unit: string | null;
-    quantity: Prisma.Decimal;
-    unitPrice: Prisma.Decimal;
-    total: Prisma.Decimal;
-    quoteItemId: string | null;
-  }) {
-    return {
-      id: item.id,
-      order: item.order,
-      name: item.name,
-      description: item.description,
-      unit: item.unit,
-      quantity: Number(item.quantity),
-      unitPrice: Number(item.unitPrice),
-      total: Number(item.total),
-      quoteItemId: item.quoteItemId
-    };
   }
 
   private async generateNextContractNo(tx: Prisma.TransactionClient) {

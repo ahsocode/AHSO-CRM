@@ -18,14 +18,29 @@
   - Task 3: no `<img>` converted — traced every site, none is a safe/beneficial `next/image` swap (blob URLs, cross-origin, caller-sized). Every `eslint-disable` comment now states the reason.
 - **Phase 2 (D2)** — ✅ done. Commits `f458bba`, `dc0fcd6`, `100abc3`. `scopeCustomerWhereToUser()` in `common/scoping/`, adopted in 6 services. Per user decision, `assignedTo:{isActive:true}` was **unified onto projects + reports** (was bare `assignedToId`) — result-equivalent, now consistent. `calendar.service` left alone (different OR-shape). +4 tests.
 - **Phase 3 (D7)** — ✅ done. Commit `e356dca`. `npm audit fix` (no `--force`): mcp 9→0, backend 56→30, frontend 56→42. Residual all major-bump; triaged in `docs/security/2026-09-audit-triage.md` with priority-ordered follow-up tickets.
-- **Phase 4 (D1)** — in progress:
-  - **4a** `project-detail-client.tsx` 2733 → 2006 LOC. Done: constants+file-utils (`9a752aa`), primitives/leaf components (`b0036c9`). Remaining: 13 panel components (`DocumentsPanel` ~700 LOC is the big one).
-  - **4c** `document-layout-renderer.service.ts` 1048 → 730 LOC. Done: CSS (`7c51e52`), pure helpers (`7c51e52`), line-item column module (`a720904`). Remaining: flow/pagination cluster (~450 LOC), interpolation cluster (~120 LOC) — both need `this.`→free-function threading.
-  - **4b, 4d–4h** — not started.
+- **Phase 4 (D1)** — mostly done:
+  | File | Before | After | Status |
+  |---|--:|--:|---|
+  | 4c `document-layout-renderer.service.ts` | 1048 | **730** | ✅ under threshold. CSS + helpers + columns extracted (`7c51e52`, `a720904`). Remaining flow/interpolation clusters optional. |
+  | 4d `customers.service.ts` | 1062 | 1045 | ~ mapProjectProgress deduped into `common/utils/project-progress` (`c25f3e6`); has **no unit spec** so deeper splitting deferred. |
+  | 4e `reports.service.ts` | 1104 | **892** | ✅ helpers + where-builders extracted (`bb1245e`, `a816196`). |
+  | 4f `contracts.service.ts` | 1112 | **923** | ✅ helpers + where-builders (`ce6a05d`). |
+  | 4g `quotes.service.ts` | 1116 | **850** | ✅ helpers + where-builders; `syncProjectStatusForQuote` kept in service (`3fbf1ba`). |
+  | 4h `projects.service.ts` | 2739 | 2367 | mappers + where-builders extracted (`0401611`). **Still over threshold** — needs a collaborator-service split (ProjectDocumentsService / ProjectMaterialAllocationService / ProjectTimelineService / ProjectPaymentsService); that is a large, status-sync-sensitive job for its own session with the "assert stageChangedAt fires" test written first. |
+  | 4a `project-detail-client.tsx` | 2733 | 2006 | constants + file-utils + 10 leaf primitives extracted (`9a752aa`, `b0036c9`). Remaining: 13 panel components (`DocumentsPanel` ~700 LOC). Frontend has **no test coverage** for this file — compiler-only verification; recommend doing the panel moves with a browser click-through available. |
+  | 4b `quote-detail-client.tsx` | 1059 | 1059 | not started (frontend, same no-test caveat). |
 
 ### Security follow-ups — done ahead of the deferred queue (2026-09-03)
 
-`nodemailer` 8→9 (`54621c8`), `bcrypt` 5→6 (`d2b4079`), `@tiptap/*` 3.23→3.31 (`e543452`). Backend audit 30→27 (0 critical); frontend 42→12 (only devDep `vitest` critical left). See `docs/security/2026-09-audit-triage.md`. Still queued: `@anthropic-ai/sdk`, NestJS 10→12, Next 14→16.
+`nodemailer` 8→9 (`54621c8`), `bcrypt` 5→6 (`d2b4079`), `@tiptap/*` 3.23→3.31 (`e543452`). Backend audit 30→27 (**0 critical**); frontend 42→12 (only devDep `vitest` critical left). See `docs/security/2026-09-audit-triage.md`. Still queued: `@anthropic-ai/sdk`, NestJS 10→12, Next 14→16. **Manual mailbox rich-text editor smoke test still pending** (tiptap major-minor bump).
+
+### Remaining Phase D work
+
+1. **4h collaborator-service split** — the one backend god-file still over threshold; large + status-sync-sensitive.
+2. **4a / 4b frontend panel splits** — 13 + N components; no test net, best done with a running app.
+3. **4c flow/interpolation clusters** — optional, 4c is already under threshold.
+4. Reconcile the two `PROJECT_STRUCTURE.md` files.
+5. Security queue: `@anthropic-ai/sdk`, NestJS 10→12, Next 14→16.
 
 ### Follow-ups discovered during execution
 

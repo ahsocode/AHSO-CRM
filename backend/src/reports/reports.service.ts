@@ -1,8 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
-import { JwtUser, isStaff } from "../auth/auth.types";
+import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
-import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import {
   aggregateRows,
   buildStatusBuckets,
@@ -12,6 +10,14 @@ import {
   resolveMonthsRange,
   resolvePaymentSourceLabel
 } from "./report-helpers";
+import {
+  buildActivityWhere,
+  buildContractWhere,
+  buildCustomerWhere,
+  buildPaymentWhere,
+  buildProjectWhere,
+  buildQuoteWhere
+} from "./report-where";
 import {
   CustomReportQueryDto,
   ReportTemplateDto,
@@ -51,10 +57,10 @@ export class ReportsService {
 
   async getOverview(filters: ReportFilterDto, user: JwtUser) {
     const { start, nextMonthStart } = resolveMonthsRange(filters.months);
-    const paymentWhere = this.buildPaymentWhere(user, start, nextMonthStart);
-    const projectWhere = this.buildProjectWhere(user);
-    const quoteWhere = this.buildQuoteWhere(user, start, nextMonthStart);
-    const contractWhere = this.buildContractWhere(user, {
+    const paymentWhere = buildPaymentWhere(user, start, nextMonthStart);
+    const projectWhere = buildProjectWhere(user);
+    const quoteWhere = buildQuoteWhere(user, start, nextMonthStart);
+    const contractWhere = buildContractWhere(user, {
       status: {
         in: [...RECEIVABLE_CONTRACT_STATUSES]
       }
@@ -100,7 +106,7 @@ export class ReportsService {
         }
       }),
       this.prisma.customer.count({
-        where: this.buildCustomerWhere(user, {
+        where: buildCustomerWhere(user, {
           status: "ACTIVE"
         })
       })
@@ -146,7 +152,7 @@ export class ReportsService {
   async getRevenueTrend(filters: ReportFilterDto, user: JwtUser) {
     const { start, nextMonthStart, months } = resolveMonthsRange(filters.months);
     const payments = await this.prisma.payment.findMany({
-      where: this.buildPaymentWhere(user, start, nextMonthStart),
+      where: buildPaymentWhere(user, start, nextMonthStart),
       orderBy: {
         paidAt: "asc"
       }
@@ -173,21 +179,21 @@ export class ReportsService {
   async getStatusBreakdown(_filters: ReportFilterDto, user: JwtUser) {
     const [projects, quotes, contracts] = await this.prisma.$transaction([
       this.prisma.project.findMany({
-        where: this.buildProjectWhere(user),
+        where: buildProjectWhere(user),
         select: {
           status: true,
           estimatedValue: true
         }
       }),
       this.prisma.quote.findMany({
-        where: this.buildQuoteWhere(user),
+        where: buildQuoteWhere(user),
         select: {
           status: true,
           total: true
         }
       }),
       this.prisma.contract.findMany({
-        where: this.buildContractWhere(user),
+        where: buildContractWhere(user),
         select: {
           status: true,
           value: true
@@ -205,7 +211,7 @@ export class ReportsService {
   async getTopCustomers(filters: ReportFilterDto, user: JwtUser) {
     const { start, nextMonthStart } = resolveMonthsRange(filters.months);
     const payments = await this.prisma.payment.findMany({
-      where: this.buildPaymentWhere(user, start, nextMonthStart),
+      where: buildPaymentWhere(user, start, nextMonthStart),
       include: {
         project: {
           include: {
@@ -285,7 +291,7 @@ export class ReportsService {
   async getCustomerJourney(filters: ReportFilterDto, user: JwtUser) {
     const { start, nextMonthStart } = resolveMonthsRange(filters.months);
     const customers = await this.prisma.customer.findMany({
-      where: this.buildCustomerWhere(user, {
+      where: buildCustomerWhere(user, {
         createdAt: {
           gte: start,
           lt: nextMonthStart
@@ -317,7 +323,7 @@ export class ReportsService {
 
     const [projects, quotes, contracts, completedContracts, payments] = await this.prisma.$transaction([
       this.prisma.project.findMany({
-        where: this.buildProjectWhere(user, {
+        where: buildProjectWhere(user, {
           createdAt: {
             gte: start,
             lt: nextMonthStart
@@ -339,7 +345,7 @@ export class ReportsService {
             gte: start,
             lt: nextMonthStart
           },
-          project: this.buildProjectWhere(user, {
+          project: buildProjectWhere(user, {
             customerId: {
               in: scopedCustomerIds
             }
@@ -363,7 +369,7 @@ export class ReportsService {
             gte: start,
             lt: nextMonthStart
           },
-          project: this.buildProjectWhere(user, {
+          project: buildProjectWhere(user, {
             customerId: {
               in: scopedCustomerIds
             }
@@ -384,7 +390,7 @@ export class ReportsService {
             gte: start,
             lt: nextMonthStart
           },
-          project: this.buildProjectWhere(user, {
+          project: buildProjectWhere(user, {
             customerId: {
               in: scopedCustomerIds
             }
@@ -404,7 +410,7 @@ export class ReportsService {
             gte: start,
             lt: nextMonthStart
           },
-          project: this.buildProjectWhere(user, {
+          project: buildProjectWhere(user, {
             customerId: {
               in: scopedCustomerIds
             }
@@ -469,7 +475,7 @@ export class ReportsService {
   async getActivityHeatmap(filters: ReportFilterDto, user: JwtUser) {
     const { start, nextMonthStart } = resolveMonthsRange(filters.months);
     const activities = await this.prisma.activity.findMany({
-      where: this.buildActivityWhere(user, {
+      where: buildActivityWhere(user, {
         updatedAt: {
           gte: start,
           lt: nextMonthStart
@@ -502,7 +508,7 @@ export class ReportsService {
 
   async getFunnel(filters: ReportFilterDto, user: JwtUser) {
     const projects = await this.prisma.project.findMany({
-      where: this.buildProjectWhere(user),
+      where: buildProjectWhere(user),
       select: {
         status: true,
         estimatedValue: true
@@ -530,7 +536,7 @@ export class ReportsService {
   async getCohort(filters: ReportFilterDto, user: JwtUser) {
     const { start, months } = resolveMonthsRange(filters.months);
     const customers = await this.prisma.customer.findMany({
-      where: this.buildCustomerWhere(user, {
+      where: buildCustomerWhere(user, {
         createdAt: {
           gte: start
         }
@@ -697,118 +703,11 @@ export class ReportsService {
     };
   }
 
-  private buildCustomerWhere(
-    user: JwtUser,
-    extra?: Prisma.CustomerWhereInput
-  ): Prisma.CustomerWhereInput {
-    const where: Prisma.CustomerWhereInput = {
-      deletedAt: null,
-      ...extra
-    };
-
-    return scopeCustomerWhereToUser(where, user);
-  }
-
-  private buildProjectWhere(user: JwtUser, extra?: Prisma.ProjectWhereInput): Prisma.ProjectWhereInput {
-    return {
-      deletedAt: null,
-      customer: this.buildCustomerWhere(user),
-      ...extra
-    };
-  }
-
-  private buildQuoteWhere(
-    user: JwtUser,
-    createdAfter?: Date,
-    createdBefore?: Date
-  ): Prisma.QuoteWhereInput {
-    return {
-      ...(createdAfter
-        ? {
-            createdAt: {
-              gte: createdAfter,
-              ...(createdBefore ? { lt: createdBefore } : {})
-            }
-          }
-        : {}),
-      project: this.buildProjectWhere(user)
-    };
-  }
-
-  private buildContractWhere(user: JwtUser, extra?: Prisma.ContractWhereInput): Prisma.ContractWhereInput {
-    return {
-      project: this.buildProjectWhere(user),
-      ...extra
-    };
-  }
-
-  private buildPaymentWhere(user: JwtUser, start: Date, end: Date): Prisma.PaymentWhereInput {
-    return {
-      paidAt: {
-        gte: start,
-        lt: end
-      },
-      project: this.buildProjectWhere(user),
-      // Loại các khoản thanh toán gắn với hợp đồng đã HUỶ (vd: hợp đồng trùng lặp bị
-      // huỷ nhưng vẫn giữ lịch sử thanh toán để tra soát) — không tính vào doanh thu.
-      OR: [{ contractId: null }, { contract: { status: { not: "CANCELLED" } } }]
-    };
-  }
-
-  private buildActivityWhere(user: JwtUser, extra?: Prisma.ActivityWhereInput): Prisma.ActivityWhereInput {
-    if (isStaff(user)) {
-      return {
-        deletedAt: null,
-        ...extra,
-        OR: [
-          {
-            customer: this.buildCustomerWhere(user)
-          },
-          {
-            project: this.buildProjectWhere(user)
-          },
-          {
-            customerId: null,
-            projectId: null,
-            userId: user.sub
-          }
-        ]
-      };
-    }
-
-    return {
-      deletedAt: null,
-      ...extra,
-      AND: [
-        {
-          OR: [
-            {
-              customerId: null
-            },
-            {
-              customer: this.buildCustomerWhere(user)
-            }
-          ]
-        },
-        {
-          OR: [
-            {
-              projectId: null
-            },
-            {
-              project: this.buildProjectWhere(user)
-            }
-          ]
-        }
-      ]
-    };
-  }
-
   private async loadDatasetRows(dataset: CustomReportQueryDto["dataset"], user: JwtUser) {
     switch (dataset) {
       case "customers": {
         const customers = await this.prisma.customer.findMany({
-          where: this.buildCustomerWhere(user),
+          where: buildCustomerWhere(user),
           include: {
             assignedTo: {
               select: {
@@ -836,7 +735,7 @@ export class ReportsService {
       }
       case "projects": {
         const projects = await this.prisma.project.findMany({
-          where: this.buildProjectWhere(user),
+          where: buildProjectWhere(user),
           include: {
             customer: {
               select: {
@@ -866,7 +765,7 @@ export class ReportsService {
       }
       case "quotes": {
         const quotes = await this.prisma.quote.findMany({
-          where: this.buildQuoteWhere(user),
+          where: buildQuoteWhere(user),
           include: {
             createdBy: {
               select: {
@@ -900,7 +799,7 @@ export class ReportsService {
       }
       case "contracts": {
         const contracts = await this.prisma.contract.findMany({
-          where: this.buildContractWhere(user),
+          where: buildContractWhere(user),
           include: {
             project: {
               select: {
@@ -933,7 +832,7 @@ export class ReportsService {
       }
       case "activities": {
         const activities = await this.prisma.activity.findMany({
-          where: this.buildActivityWhere(user),
+          where: buildActivityWhere(user),
           include: {
             user: {
               select: {
@@ -961,7 +860,7 @@ export class ReportsService {
       }
       case "payments": {
         const payments = await this.prisma.payment.findMany({
-          where: this.buildPaymentWhere(user, new Date(2000, 0, 1), new Date(2100, 0, 1)),
+          where: buildPaymentWhere(user, new Date(2000, 0, 1), new Date(2100, 0, 1)),
           include: {
             project: {
               include: {

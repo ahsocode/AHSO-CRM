@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
@@ -22,7 +22,6 @@ import {
   useUpdateQuote
 } from "@/hooks/use-quotes";
 import { useProject, useProjects } from "@/hooks/use-projects";
-import { useMaterialsSelect } from "@/hooks/use-materials";
 import { usePolicies } from "@/hooks/use-settings";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { QUOTE_STATUS_LABELS } from "@/lib/constants";
@@ -30,7 +29,6 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { QuoteStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
-  createEmptyQuoteItem,
   defaultQuoteTableColumnWidths,
   defaultQuoteFormValues,
   quoteFormSchema,
@@ -38,18 +36,7 @@ import {
 } from "./form-schemas";
 import { PolicyItemSelect } from "./policy-item-select";
 import { QuoteTemplateControls } from "./quote-template-controls";
-import {
-  DndContext,
-  type DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { GripVertical } from "lucide-react";
+import { QuoteItemsTable } from "./quote-items-table";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
 const QUOTE_TABLE_WIDTH_FIELDS = [
@@ -60,30 +47,6 @@ const QUOTE_TABLE_WIDTH_FIELDS = [
   { key: "unitPrice", label: "Đơn giá", min: 6, max: 40 },
   { key: "total", label: "Thành tiền", min: 6, max: 40 }
 ] as const;
-
-// Drag-and-drop shell for each line item — renders only the sortable wrapper,
-// exposes drag handle props via render-prop so inner content stays unchanged.
-function SortableItemShell({
-  id,
-  disabled,
-  children,
-}: {
-  id: string;
-  disabled?: boolean;
-  children: (handleProps: React.HTMLAttributes<HTMLElement>) => React.ReactNode;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled });
-  return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      {...attributes}
-      className={isDragging ? "relative z-50 opacity-40" : undefined}
-    >
-      {children(listeners ?? {})}
-    </div>
-  );
-}
 
 export function QuoteFormScreen({
   mode = "create",
@@ -116,18 +79,6 @@ export function QuoteFormScreen({
     control: form.control,
     name: "items"
   });
-
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor),
-  );
-
-  function handleItemDragEnd({ active, over }: DragEndEvent) {
-    if (!over || active.id === over.id) return;
-    const from = itemsFieldArray.fields.findIndex((f) => f.id === active.id);
-    const to = itemsFieldArray.fields.findIndex((f) => f.id === over.id);
-    if (from !== -1 && to !== -1) itemsFieldArray.move(from, to);
-  }
 
   // Track which quoteId has already been loaded to prevent re-reset on background refetches.
   const initializedQuoteIdRef = useRef<string | undefined>(undefined);
@@ -246,15 +197,12 @@ export function QuoteFormScreen({
                 Về dự án
               </Link>
             ) : null}
-            <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
-              Về danh sách
-            </Link>
           </div>
         }
       />
 
       <form
-        className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]"
+        className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"
         onSubmit={form.handleSubmit((values) => {
           if (mode === "edit" && quoteId) {
             updateQuoteMutation.mutate(values, {
@@ -379,149 +327,24 @@ export function QuoteFormScreen({
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleItemDragEnd}>
-              <SortableContext items={itemsFieldArray.fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-              {itemsFieldArray.fields.map((field, index) => (
-                <SortableItemShell key={field.id} id={field.id} disabled={!isEditableQuote}>
-                {(dragHandleProps) => (
-                <article className="rounded-xl border border-border-light bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      {isEditableQuote && (
-                        <div
-                          {...dragHandleProps}
-                          className="cursor-grab rounded p-0.5 text-text-muted hover:bg-bg-hover hover:text-text-secondary active:cursor-grabbing"
-                          title="Kéo để sắp xếp"
-                        >
-                          <GripVertical className="h-4 w-4" />
-                        </div>
-                      )}
-                      <Badge variant="neutral">#{String(index + 1).padStart(2, "0")}</Badge>
-                      <p className="text-sm font-semibold text-text-primary">Hạng mục báo giá</p>
-                    </div>
-                    <Button
-                      disabled={itemsFieldArray.fields.length === 1 || !isEditableQuote}
-                      onClick={() => itemsFieldArray.remove(index)}
-                      type="button"
-                      variant="outline"
-                    >
-                      Xóa dòng
-                    </Button>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <Field className="md:col-span-2">
-                      <Label htmlFor={`items.${index}.name`}>Tên hạng mục</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id={`items.${index}.name`}
-                          disabled={!isEditableQuote}
-                          className="flex-1"
-                          {...form.register(`items.${index}.name`)}
-                        />
-                        {isEditableQuote && (
-                          <MaterialPickerButton
-                            onSelect={(material) => {
-                              form.setValue(`items.${index}.name`, material.name);
-                              form.setValue(`items.${index}.unit`, material.unit);
-                              form.setValue(`items.${index}.unitPrice`, material.salePrice);
-                              const qty = form.getValues(`items.${index}.quantity`);
-                              if (Number(qty) > 0) {
-                                form.setValue(
-                                  `items.${index}.unitPrice` as const,
-                                  material.salePrice
-                                );
-                              }
-                            }}
-                          />
-                        )}
-                      </div>
-                      <ErrorText message={form.formState.errors.items?.[index]?.name?.message} />
-                    </Field>
-
-                    <Field className="md:col-span-2">
-                      <Label htmlFor={`items.${index}.description`}>Mô tả</Label>
-                      <Textarea
-                        id={`items.${index}.description`}
-                        disabled={!isEditableQuote}
-                        placeholder="Quy cách, phạm vi, model, thông số kỹ thuật..."
-                        rows={3}
-                        {...form.register(`items.${index}.description`)}
-                      />
-                      <ErrorText message={form.formState.errors.items?.[index]?.description?.message} />
-                    </Field>
-
-                    <Field>
-                      <Label htmlFor={`items.${index}.unit`}>ĐVT</Label>
-                      <Input
-                        id={`items.${index}.unit`}
-                        disabled={!isEditableQuote}
-                        placeholder="Bộ / Gói / Cái"
-                        {...form.register(`items.${index}.unit`)}
-                      />
-                      <ErrorText message={form.formState.errors.items?.[index]?.unit?.message} />
-                    </Field>
-
-                    <Field>
-                      <Label htmlFor={`items.${index}.quantity`}>Số lượng</Label>
-                      <Input
-                        id={`items.${index}.quantity`}
-                        min={0}
-                        step="0.01"
-                        type="number"
-                        disabled={!isEditableQuote}
-                        {...form.register(`items.${index}.quantity`, {
-                          setValueAs: (value) => (value === "" ? 0 : Number(value))
-                        })}
-                      />
-                      <ErrorText message={form.formState.errors.items?.[index]?.quantity?.message} />
-                    </Field>
-
-                    <Field>
-                      <Label htmlFor={`items.${index}.unitPrice`}>Đơn giá</Label>
-                      <Input
-                        id={`items.${index}.unitPrice`}
-                        min={0}
-                        step="1"
-                        type="number"
-                        disabled={!isEditableQuote}
-                        {...form.register(`items.${index}.unitPrice`, {
-                          setValueAs: (value) => (value === "" ? 0 : Number(value))
-                        })}
-                      />
-                      <ErrorText message={form.formState.errors.items?.[index]?.unitPrice?.message} />
-                    </Field>
-                  </div>
-
-                  <div className="mt-4 rounded-lg bg-primary-bg/50 px-4 py-3 text-sm text-text-secondary">
-                    Thành tiền:{" "}
-                    <span className="font-semibold text-text-primary">
-                      <CurrencyDisplay
-                        amount={Math.round(
-                          (Number(watchedItems[index]?.quantity) || 0) * (Number(watchedItems[index]?.unitPrice) || 0)
-                        )}
-                      />
-                    </span>
-                  </div>
-                </article>
-                )}
-                </SortableItemShell>
-              ))}
-              </SortableContext>
-              </DndContext>
-
-              <Button disabled={!isEditableQuote} onClick={() => itemsFieldArray.append(createEmptyQuoteItem())} type="button" variant="outline">
-                <AppIcon name="plus" className="h-4 w-4" />
-                Thêm hạng mục
-              </Button>
+              <QuoteItemsTable
+                form={form}
+                itemsFieldArray={itemsFieldArray}
+                isEditable={isEditableQuote}
+                items={watchedItems}
+                subtotal={subtotal}
+                taxRate={Number(watchedTaxRate) || 0}
+                taxAmount={taxAmount}
+                grandTotal={grandTotal}
+              />
             </CardContent>
           </Card>
 
           <Card className="border border-white/70">
-            <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-primary">Tùy chỉnh bản in</p>
-              <CardTitle>Độ rộng cột bảng báo giá</CardTitle>
-            </CardHeader>
+            <details className="group">
+            <summary className="cursor-pointer select-none px-6 py-4 text-sm font-semibold text-text-primary">
+              Tùy chỉnh bản in (nâng cao)
+            </summary>
             <CardContent className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {QUOTE_TABLE_WIDTH_FIELDS.map((column) => (
@@ -569,6 +392,7 @@ export function QuoteFormScreen({
                 </Button>
               </div>
             </CardContent>
+            </details>
           </Card>
 
           <Card className="border border-white/70">
@@ -629,8 +453,21 @@ export function QuoteFormScreen({
           </Card>
         </div>
 
-        <div className="space-y-6">
-          <Card className="sticky top-28 border border-white/70">
+        <div className="sticky top-[72px] max-h-[calc(100vh-88px)] space-y-6 self-start overflow-y-auto">
+          <Card className="border border-white/70">
+            <CardHeader className="mb-0 gap-2">
+              <p className="v2-label text-accent">Tổng hợp</p>
+              <CardTitle>Tổng hợp giá trị</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-0">
+              <InfoRow label="Tạm tính" value={<CurrencyDisplay amount={subtotal} short />} />
+              <InfoRow label={`VAT ${watchedTaxRate}%`} value={<CurrencyDisplay amount={taxAmount} short />} />
+              <InfoRow label="Tổng cộng" value={<CurrencyDisplay amount={grandTotal} short />} emphasized />
+              <InfoRow label="Số dòng" value={`${watchedItems.length}`} />
+            </CardContent>
+          </Card>
+
+          <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="v2-label text-primary">Dự án & khách hàng</p>
               <CardTitle>Dự án và khách hàng</CardTitle>
@@ -645,7 +482,7 @@ export function QuoteFormScreen({
                 <LoadingSkeleton className="h-56 w-full" />
               ) : selectedProject ? (
                 <>
-                  <div className="rounded-2xl border border-border/60 bg-white/80 p-4">
+                  <div className="rounded-lg bg-bg-subtle p-4">
                     <p className="font-semibold text-text-primary">{selectedProject.name}</p>
                     <p className="mt-1 text-sm text-text-secondary">{selectedProject.code}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -672,19 +509,6 @@ export function QuoteFormScreen({
                   Không tải được thông tin dự án đã chọn.
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          <Card className="border border-white/70">
-            <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-accent">Tổng hợp</p>
-              <CardTitle>Tổng hợp giá trị</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <InfoRow label="Tạm tính" value={<CurrencyDisplay amount={subtotal} short />} />
-              <InfoRow label={`VAT ${watchedTaxRate}%`} value={<CurrencyDisplay amount={taxAmount} short />} />
-              <InfoRow label="Tổng cộng" value={<CurrencyDisplay amount={grandTotal} short />} emphasized />
-              <InfoRow label="Số dòng" value={`${watchedItems.length}`} />
             </CardContent>
           </Card>
 
@@ -740,91 +564,6 @@ export function QuoteFormScreen({
   );
 }
 
-// ─── Material Picker Button ──────────────────────────────────────────────────
-
-function MaterialPickerButton({
-  onSelect
-}: {
-  onSelect: (material: { id: string; name: string; unit: string; salePrice: number; code: string }) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(timer);
-  }, [search]);
-
-  const { data: materials, isLoading } = useMaterialsSelect(debouncedSearch || undefined);
-
-  return (
-    <div className="relative shrink-0">
-      <Button
-        type="button"
-        variant="outline"
-        className="h-9 gap-1.5 px-3 text-xs"
-        onClick={() => setOpen((v) => !v)}
-        title="Tìm vật tư"
-      >
-        <AppIcon name="search" className="h-3.5 w-3.5" />
-        Vật tư
-      </Button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(""); }} />
-          <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-xl border border-border bg-white shadow-lg">
-            <div className="p-2">
-              <Input
-                autoFocus
-                placeholder="Tìm mã hoặc tên vật tư..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="text-sm"
-              />
-            </div>
-            <div className="max-h-56 overflow-y-auto">
-              {isLoading ? (
-                <p className="px-4 py-3 text-sm text-text-secondary">Đang tải...</p>
-              ) : !materials?.length ? (
-                <p className="px-4 py-3 text-sm text-text-secondary">Không tìm thấy vật tư phù hợp.</p>
-              ) : (
-                materials.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-primary-bg"
-                    onClick={() => {
-                      onSelect(m as { id: string; name: string; unit: string; salePrice: number; code: string });
-                      setOpen(false);
-                      setSearch("");
-                    }}
-                  >
-                    <span className="font-mono text-xs text-text-muted">{(m as { code: string }).code}</span>
-                    <span className="flex-1 truncate text-text-primary">{m.name}</span>
-                    <span className="shrink-0 text-xs text-text-secondary">{m.unit}</span>
-                  </button>
-                ))
-              )}
-            </div>
-            <div className="border-t border-border p-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full text-xs"
-                onClick={() => { setOpen(false); setSearch(""); }}
-              >
-                Đóng
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 // ─── Helper components ───────────────────────────────────────────────────────
 
 function Field({
@@ -865,9 +604,14 @@ function InfoRow({
   emphasized?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm">
+    <div className="flex items-center justify-between gap-3 rounded-md px-3 py-2.5 text-sm odd:bg-bg-subtle">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">{label}</p>
-      <div className={cn("mt-2 font-semibold text-text-primary", emphasized ? "font-heading text-2xl" : "")}>
+      <div
+        className={cn(
+          "text-right font-semibold tabular-nums text-text-primary",
+          emphasized ? "font-heading text-xl" : ""
+        )}
+      >
         {value}
       </div>
     </div>

@@ -109,7 +109,7 @@
   }
 
   .v2-table-head {
-    @apply bg-primary text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-white;
+    @apply bg-bg-page text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary;
   }
 
   .metric-sheen {

@@ -1,16 +1,14 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { V2MetricCard } from "@/components/shared/composite-cards";
-import { CustomerListItem, CustomerListMeta } from "@/lib/types";
+import { CustomerListMeta } from "@/lib/types";
 
-// `items` is no longer used for counting: VIP total now comes from meta.summary.vipCount
-// so it stays correct across pages. Prop kept for call-site compatibility (see B5 cleanup).
+// VIP total comes from meta.summary.vipCount so it stays correct across pages.
 export function CustomerOverviewCards({
   meta,
   isLoading
 }: {
   meta?: CustomerListMeta;
-  items?: CustomerListItem[];
   isLoading: boolean;
 }) {
   if (isLoading) {

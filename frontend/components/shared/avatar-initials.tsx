@@ -3,6 +3,17 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
+const LEGAL_PREFIX = /^(công ty|cty|tnhh|cổ phần|cp|mtv|tmdv|tm|dv|hộ kinh doanh|tập đoàn|chi nhánh|doanh nghiệp tư nhân|dntn|một thành viên|thương mại|dịch vụ|sản xuất)\s+/i;
+
+// Strip Vietnamese legal-form prefixes (e.g. "Công ty TNHH") so initials reflect the brand name.
+// Falls back to the trimmed original name if stripping would leave an empty string.
+export function stripLegalPrefix(name: string): string {
+  const trimmed = name.trim();
+  let base = trimmed;
+  while (LEGAL_PREFIX.test(base)) base = base.replace(LEGAL_PREFIX, "");
+  return base.trim() ? base : trimmed;
+}
+
 export function AvatarInitials({
   name,
   className,
@@ -19,7 +30,7 @@ export function AvatarInitials({
     setImgError(false);
   }, [src]);
 
-  const initials = name
+  const initials = stripLegalPrefix(name)
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)

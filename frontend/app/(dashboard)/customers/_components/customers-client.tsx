@@ -25,7 +25,7 @@ import { CustomerFilters, type VipFilterValue } from "./customer-filters";
 import { CustomerOverviewCards } from "./customer-overview-cards";
 import { CustomerTable } from "./customer-table";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 20;
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
@@ -280,7 +280,6 @@ export function CustomersClient() {
       <CustomerDuplicatesDialog open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
 
       <CustomerOverviewCards
-        items={customersQuery.data?.items ?? []}
         meta={customersQuery.data?.meta}
         isLoading={customersQuery.isLoading}
       />

@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { getRoleLabelByName } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { CustomerListItem, CustomerListMeta, CustomerStatus } from "@/lib/types";
 
 const INLINE_STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
@@ -25,6 +26,14 @@ const INLINE_STATUS_OPTIONS: Array<{ value: CustomerStatus; label: string }> = [
   { value: "INACTIVE", label: "Không HĐ" }
 ];
 
+// Badge-like colours per status; the select is borderless and shows its arrow only on hover.
+const INLINE_STATUS_TONE: Record<CustomerStatus, string> = {
+  ACTIVE: "bg-success-bg text-success",
+  PROSPECT: "bg-info-bg text-primary-mid",
+  LEAD: "bg-bg-hover text-text-secondary",
+  INACTIVE: "bg-danger-bg text-danger"
+};
+
 // Inline edit kiểu HubSpot: đổi trạng thái ngay trên row, không cần mở chi tiết
 function InlineStatusCell({ customer }: { customer: CustomerListItem }) {
   const inlineUpdate = useInlineUpdateCustomer();
@@ -33,7 +42,10 @@ function InlineStatusCell({ customer }: { customer: CustomerListItem }) {
   return (
     <Select
       aria-label="Đổi trạng thái khách hàng"
-      className="h-8 w-32 text-xs"
+      className={cn(
+        "h-7 w-32 appearance-none rounded-full border-0 px-3 text-xs font-semibold hover:[appearance:auto]",
+        INLINE_STATUS_TONE[customer.status]
+      )}
       value={customer.status}
       disabled={inlineUpdate.isPending}
       onChange={(event) => {
@@ -250,7 +262,6 @@ export function CustomerTable({
 
                   <td className="px-4 py-3 align-middle">
                     <p className="text-[13px] font-semibold text-text-primary">{customer.projectCount} dự án</p>
-                    <p className="text-xs text-text-muted">Đang gắn</p>
                   </td>
 
                   <td className="px-4 py-3 align-middle">
@@ -281,6 +292,34 @@ export function CustomerTable({
           </table>
         </div>
       </CardContent>
+
+      {totalPages > 1 ? (
+        <div className="flex items-center justify-between gap-3 bg-bg-subtle px-4 py-3 text-xs text-text-secondary">
+          <span>
+            Trang {currentPage}/{totalPages}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 px-3 text-xs"
+              disabled={currentPage <= 1}
+              onClick={() => onPageChange(currentPage - 1)}
+            >
+              Trước
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 px-3 text-xs"
+              disabled={currentPage >= totalPages}
+              onClick={() => onPageChange(currentPage + 1)}
+            >
+              Sau
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </Card>
   );
 }

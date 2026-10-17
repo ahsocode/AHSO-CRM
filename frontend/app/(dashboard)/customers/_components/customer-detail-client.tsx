@@ -313,7 +313,6 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Hoạt động gần đây</p>
                 <CardTitle>Hoạt động gần đây</CardTitle>
               </div>
               <Button
@@ -406,7 +405,6 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Email</p>
               <CardTitle>Email liên quan</CardTitle>
             </CardHeader>
             <CardContent>

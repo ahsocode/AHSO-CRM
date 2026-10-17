@@ -285,7 +285,6 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tiến độ</p>
               <CardTitle>Tiến độ hợp đồng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

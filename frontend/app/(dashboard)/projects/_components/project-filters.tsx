@@ -101,7 +101,6 @@ export function ProjectFilters({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-1 pb-3">
-        <p className="industrial-chip bg-primary/10 text-primary">Bộ lọc</p>
         <CardTitle>Bộ lọc dự án</CardTitle>
       </CardHeader>
       <CardContent>

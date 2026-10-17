@@ -91,7 +91,6 @@ export function InventoryDashboardClient() {
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="v2-label text-primary">Tồn kho</p>
             <CardTitle>Tồn kho hiện có</CardTitle>
           </div>
           {(balances.data?.items.length ?? 0) > 0 && (

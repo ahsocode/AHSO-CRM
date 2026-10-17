@@ -420,7 +420,6 @@ function OverviewPanel({
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tài liệu quan trọng</p>
             <CardTitle>Tài liệu quan trọng mới nhất</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -468,7 +467,6 @@ function AiForecastCard({ projectId }: { projectId: string }) {
     <Card className="border border-primary/20 bg-primary/5">
       <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Dự báo AI</p>
           <CardTitle>Dự báo AI</CardTitle>
         </div>
         <Button
@@ -640,7 +638,6 @@ function TimelinePanel({ projectId }: { projectId: string }) {
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dòng thời gian</p>
         <CardTitle>Dòng thời gian dự án</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -1905,7 +1902,6 @@ function MaterialsPanel({ projectId }: { projectId: string }) {
   return (
     <Card className="border border-white/70">
       <CardHeader className="gap-2">
-        <p className="v2-label text-primary">Vật tư</p>
         <CardTitle>Vật tư cấp cho dự án</CardTitle>
       </CardHeader>
       <CardContent>

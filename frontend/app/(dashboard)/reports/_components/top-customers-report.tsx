@@ -118,7 +118,6 @@ export function TopCustomersReport({
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thu tiền gần đây</p>
           <CardTitle>Thu tiền gần đây</CardTitle>
         </CardHeader>
         <CardContent>

@@ -397,7 +397,6 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-primary">Điều khoản</p>
               <CardTitle>Điều khoản & ghi chú</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
@@ -456,7 +455,6 @@ export function QuoteFormScreen({
         <div className="sticky top-[72px] max-h-[calc(100vh-88px)] space-y-6 self-start overflow-y-auto">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-accent">Tổng hợp</p>
               <CardTitle>Tổng hợp giá trị</CardTitle>
             </CardHeader>
             <CardContent className="space-y-0">

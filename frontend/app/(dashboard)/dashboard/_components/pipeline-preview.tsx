@@ -16,7 +16,6 @@ export function PipelinePreview({
     return (
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Phân bổ pipeline</p>
           <CardTitle>Phân bổ pipeline theo giai đoạn</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -32,7 +31,6 @@ export function PipelinePreview({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Phân bổ pipeline</p>
         <CardTitle>Phân bổ pipeline theo giai đoạn</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

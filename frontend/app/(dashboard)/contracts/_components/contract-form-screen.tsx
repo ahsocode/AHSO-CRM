@@ -443,7 +443,6 @@ export function ContractFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-accent/10 text-accent">Ghi chú</p>
               <CardTitle>Ghi chú thương mại</CardTitle>
             </CardHeader>
             <CardContent>

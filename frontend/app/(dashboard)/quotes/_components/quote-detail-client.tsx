@@ -405,7 +405,6 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Điều khoản thương mại</p>
               <CardTitle>Điều khoản thương mại</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
@@ -423,7 +422,6 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
           {quote.internalNote ? (
             <Card className="border border-white/70">
               <CardHeader className="mb-0 gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Ghi chú nội bộ</p>
                 <CardTitle>Ghi chú nội bộ</CardTitle>
               </CardHeader>
               <CardContent>

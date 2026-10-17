@@ -8,6 +8,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { GlobalShortcuts } from "@/components/shared/global-shortcuts";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { requestSessionFromOtherTabs } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useIdleTimeout } from "@/hooks/use-idle-timeout";
@@ -37,10 +38,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     let isCancelled = false;
 
     async function ensureSession() {
-      const hasAccessToken = Boolean(getAccessToken());
+      let hasAccessToken = Boolean(getAccessToken());
 
-      // No access token means this is a new browser session.
-      // Do NOT auto-refresh via cookie — require explicit login.
+      // sessionStorage is per-tab: a tab opened via "open in new tab" starts
+      // empty even though the user is logged in elsewhere in this browser.
+      // Ask the open tabs first; only if none answers is this a genuinely new
+      // browser session, where the policy stays: no silent cookie refresh,
+      // require explicit login.
+      if (!hasAccessToken) {
+        hasAccessToken = await requestSessionFromOtherTabs();
+      }
+
+      if (isCancelled) {
+        return;
+      }
+
       if (!hasAccessToken) {
         await logout();
         return;

@@ -1,13 +1,19 @@
 import axios from "axios";
-import { API_URL, ACCESS_TOKEN_KEY } from "./constants";
+import { API_URL, ACCESS_TOKEN_KEY, SESSION_ID_KEY } from "./constants";
 import { clearLocalSession, getAccessToken, getSessionId, persistSession } from "./auth";
 import { recordSessionActivity } from "./session-activity";
 import { ApiErrorPayload, ApiResponse, AuthSession } from "./types";
 
-// Cross-tab session sync: when one tab refreshes tokens, broadcast to all others
-// so they update sessionStorage without triggering a second refresh (which would
-// fail because token rotation already invalidated the previous refresh token).
+// Cross-tab session sync over a same-origin BroadcastChannel:
+// - SESSION_REFRESHED: one tab rotated tokens → others adopt the new access
+//   token instead of refreshing again (rotation would invalidate it).
+// - SESSION_REQUEST / SESSION_SHARE: a NEW tab (empty sessionStorage) asks the
+//   already-open tabs for the current session. sessionStorage is per-tab, so
+//   without this a plain "open in new tab" looked like a brand-new browser
+//   session and DashboardShell called logout() — which revoked the session
+//   server-side and logged the user out of EVERY tab.
 let sessionChannel: BroadcastChannel | null = null;
+const pendingSessionRequests = new Map<string, (adopted: boolean) => void>();
 
 function getSessionChannel(): BroadcastChannel | null {
   if (typeof window === "undefined" || !("BroadcastChannel" in window)) return null;
@@ -16,8 +22,41 @@ function getSessionChannel(): BroadcastChannel | null {
       sessionChannel = new BroadcastChannel("ahso-crm-session");
       sessionChannel.onmessage = (event) => {
         try {
-          if (event.data?.type === "SESSION_REFRESHED" && event.data?.accessToken) {
-            window.sessionStorage.setItem(ACCESS_TOKEN_KEY, event.data.accessToken);
+          const data = event.data as {
+            type?: string;
+            requestId?: string;
+            accessToken?: string;
+            sessionId?: string | null;
+          } | null;
+
+          if (data?.type === "SESSION_REFRESHED" && data.accessToken) {
+            window.sessionStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+            return;
+          }
+
+          // Another tab is starting up without a session: share ours if we have one.
+          if (data?.type === "SESSION_REQUEST" && data.requestId) {
+            const accessToken = getAccessToken();
+            if (accessToken) {
+              sessionChannel?.postMessage({
+                type: "SESSION_SHARE",
+                requestId: data.requestId,
+                accessToken,
+                sessionId: getSessionId()
+              });
+            }
+            return;
+          }
+
+          if (data?.type === "SESSION_SHARE" && data.requestId && data.accessToken) {
+            const resolve = pendingSessionRequests.get(data.requestId);
+            if (!resolve) return; // not our request, or already answered
+            pendingSessionRequests.delete(data.requestId);
+            window.sessionStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
+            if (data.sessionId) {
+              window.sessionStorage.setItem(SESSION_ID_KEY, data.sessionId);
+            }
+            resolve(true);
           }
         } catch {
           // sessionStorage may be unavailable (private mode, restricted context)
@@ -29,6 +68,37 @@ function getSessionChannel(): BroadcastChannel | null {
     }
   }
   return sessionChannel;
+}
+
+/**
+ * Ask other open tabs of this browser for the current session.
+ * Resolves true if a tab shared its token (stored into this tab's
+ * sessionStorage), false if nobody answered within `timeoutMs` — i.e. this is
+ * a genuinely new browser session and the "require explicit login" policy
+ * applies.
+ */
+export function requestSessionFromOtherTabs(timeoutMs = 400): Promise<boolean> {
+  const channel = getSessionChannel();
+  if (!channel) return Promise.resolve(false);
+
+  const requestId =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  return new Promise<boolean>((resolve) => {
+    const timer = window.setTimeout(() => {
+      pendingSessionRequests.delete(requestId);
+      resolve(false);
+    }, timeoutMs);
+
+    pendingSessionRequests.set(requestId, (adopted) => {
+      window.clearTimeout(timer);
+      resolve(adopted);
+    });
+
+    channel.postMessage({ type: "SESSION_REQUEST", requestId });
+  });
 }
 
 export const apiClient = axios.create({

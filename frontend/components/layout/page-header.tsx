@@ -5,7 +5,9 @@ export function PageHeader({
   description,
   action,
   className,
-  eyebrow = "Automation Hub"
+  // No default: a generic "Automation Hub" eyebrow repeated the app name on
+  // every page. Pages that want a section label pass it explicitly.
+  eyebrow
 }: {
   title: string;
   description?: string;

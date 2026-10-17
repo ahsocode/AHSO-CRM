@@ -16,6 +16,7 @@ import { useUsers } from "@/hooks/use-users";
 import { useToast } from "@/hooks/use-toast";
 import { isLeadershipRole } from "@/lib/auth";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { formatVNDShort } from "@/lib/format";
 import { Priority, ProjectStatus, ProjectUpsertInput, ProjectViewMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CsvImportDialog, CsvColumnSpec } from "@/components/shared/csv-import-dialog";
@@ -149,6 +150,9 @@ export function ProjectsClient() {
   const activeMeta = view === "kanban" ? kanbanQuery.data?.meta : projectsQuery.data?.meta;
   const activeError = view === "kanban" ? kanbanQuery.error : projectsQuery.error;
   const isLoading = view === "kanban" ? kanbanQuery.isLoading : projectsQuery.isLoading;
+  // Toolbar summary shows the OPEN pipeline (same definition as the dashboard
+  // KPI). Summing every column would fold LOST/COMPLETED value into the total.
+  const kanbanSummary = kanbanQuery.data?.meta?.summary;
   const visibleIds = projectsQuery.data?.items.map((project) => project.id) ?? [];
   const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
 
@@ -253,7 +257,7 @@ export function ProjectsClient() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <PageHeader
         eyebrow="Project Pipeline"
         title="Pipeline Dự án"
@@ -289,9 +293,6 @@ export function ProjectsClient() {
             <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)} className="hidden md:inline-flex">
               {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
             </Button>
-            <Link href="/dashboard" className={cn(buttonVariants({ variant: "outline" }), "hidden md:inline-flex")}>
-              Về dashboard
-            </Link>
           </div>
         }
       />
@@ -313,29 +314,39 @@ export function ProjectsClient() {
         }}
       />
 
-      <ProjectOverviewCards meta={activeMeta} isLoading={isLoading} />
+      {view === "list" ? <ProjectOverviewCards meta={activeMeta} isLoading={isLoading} /> : null}
 
       {view === "kanban" ? (
-        <ProjectFilters
-          assignedToId={assignedToId}
-          canReset={canReset}
-          onAssignedToIdChange={setAssignedToId}
-          onPriorityChange={setPriority}
-          onReset={() => {
-            setSearch("");
-            setStatus("");
-            setPriority("");
-            setAssignedToId("");
-            setPage(1);
-          }}
-          onSearchChange={setSearch}
-          onStatusChange={setStatus}
-          priority={priority}
-          search={search}
-          status={status}
-          users={usersQuery.data ?? []}
-          usersUnavailable={!canManageUsers || usersQuery.isError}
-        />
+        <div className="flex min-h-12 flex-col gap-2 rounded-lg bg-bg-card px-3 py-2 xl:flex-row xl:items-center">
+          <div className="min-w-0 flex-1">
+            <ProjectFilters
+              assignedToId={assignedToId}
+              canReset={canReset}
+              onAssignedToIdChange={setAssignedToId}
+              onPriorityChange={setPriority}
+              onReset={() => {
+                setSearch("");
+                setStatus("");
+                setPriority("");
+                setAssignedToId("");
+                setPage(1);
+              }}
+              onSearchChange={setSearch}
+              onStatusChange={setStatus}
+              priority={priority}
+              search={search}
+              status={status}
+              users={usersQuery.data ?? []}
+              usersUnavailable={!canManageUsers || usersQuery.isError}
+              variant="ledger"
+            />
+          </div>
+          <p className="shrink-0 whitespace-nowrap text-sm font-semibold text-text-secondary">
+            {kanbanQuery.isLoading
+              ? "Đang tải..."
+              : `${kanbanSummary?.activeProjects ?? 0} dự án đang mở · ${formatVNDShort(kanbanSummary?.pipelineValue ?? 0)}`}
+          </p>
+        </div>
       ) : null}
 
       {showDeleted ? (

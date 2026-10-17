@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   DndContext,
@@ -15,171 +16,110 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { GripVertical } from "lucide-react";
-import { AvatarInitials } from "@/components/shared/avatar-initials";
+import { GripVertical, Pencil } from "lucide-react";
+import { AvatarInitials, stripLegalPrefix } from "@/components/shared/avatar-initials";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
-import { CHART_COLORS, PRIORITY_LABELS, PROJECT_STATUS_LABELS } from "@/lib/constants";
-import { formatDate, formatRelativeTime } from "@/lib/format";
-import { Priority, ProjectKanbanColumn, ProjectListItem, ProjectListMeta, ProjectStatus } from "@/lib/types";
-
-const PRIORITY_VARIANTS: Record<Priority, "neutral" | "info" | "warning"> = {
-  LOW: "neutral",
-  NORMAL: "info",
-  HIGH: "warning"
-};
+import { CHART_COLORS, CHART_STAGE_COLORS } from "@/lib/constants";
+import { formatDate, formatVNDShort } from "@/lib/format";
+import { ProjectKanbanColumn, ProjectListItem, ProjectListMeta, ProjectStatus } from "@/lib/types";
 
 // Ngưỡng cảnh báo deal ứ đọng (số ngày ở một stage)
 const STAGE_ROTTING_WARNING_DAYS = 14;
 const STAGE_ROTTING_DANGER_DAYS = 30;
 
-// Màu lấy từ CHART_COLORS (ngoại lệ Token Rule cho SVG/inline style)
-const STAGE_COLORS: Record<ProjectStatus, string> = {
-  SURVEY: CHART_COLORS.muted,
-  QUOTING: CHART_COLORS.primaryLight,
-  NEGOTIATING: CHART_COLORS.accent,
-  WON: CHART_COLORS.stageWon,
-  LOST: CHART_COLORS.danger,
-  DELIVERING: CHART_COLORS.teal,
-  COMPLETED: CHART_COLORS.success
-};
+const DAY_MS = 86_400_000;
+
+type RiskSignal = { color: string; label: string };
+
+// Single highest-priority risk signal per card
+function getRiskSignal(project: ProjectListItem): RiskSignal | null {
+  if (project.isOverdue) {
+    const days = project.expectedEndDate
+      ? Math.max(1, Math.floor((Date.now() - new Date(project.expectedEndDate).getTime()) / DAY_MS))
+      : null;
+    return { color: CHART_COLORS.danger, label: days ? `Trễ hạn ${days} ngày` : "Trễ hạn" };
+  }
+  if (project.daysInCurrentStage >= STAGE_ROTTING_DANGER_DAYS) {
+    return { color: CHART_COLORS.danger, label: `Ứ đọng ${project.daysInCurrentStage} ngày` };
+  }
+  if (project.daysInCurrentStage >= STAGE_ROTTING_WARNING_DAYS) {
+    return { color: CHART_COLORS.accent, label: `Ứ đọng ${project.daysInCurrentStage} ngày` };
+  }
+  if (!project.hasUpcomingActivity) {
+    return { color: CHART_COLORS.accent, label: "Chưa có việc kế tiếp" };
+  }
+  return null;
+}
 
 // Pure card content — used both in normal mode and DragOverlay
-function ProjectCardContent({
-  project,
-  isUpdating,
-  updatingProjectId,
-  onStatusChange,
-}: {
-  project: ProjectListItem;
-  isUpdating: boolean;
-  updatingProjectId?: string;
-  onStatusChange: (projectId: string, status: ProjectStatus) => void;
-}) {
+function ProjectCardContent({ project }: { project: ProjectListItem }) {
+  const risk = getRiskSignal(project);
+  const stageColor = CHART_STAGE_COLORS[project.status];
+
   return (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link
-            href={`/projects/${project.id}`}
-            className="line-clamp-2 font-heading text-[13.5px] font-bold leading-5 text-text-primary hover:text-primary"
-          >
-            {project.name}
-          </Link>
-          <p className="mt-1 text-[11.5px] text-text-muted">{project.code}</p>
-        </div>
-        {project.isOverdue ? <Badge variant="danger">Trễ hạn</Badge> : null}
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <StatusBadge kind="project" status={project.status} />
-        <Badge variant={PRIORITY_VARIANTS[project.priority]}>
-          {PRIORITY_LABELS[project.priority]}
-        </Badge>
-        {/* Deal rotting: cảnh báo deal nằm quá lâu ở một stage (chuẩn Pipedrive) */}
-        {project.daysInCurrentStage >= STAGE_ROTTING_DANGER_DAYS ? (
-          <Badge variant="danger">{project.daysInCurrentStage} ngày ở stage</Badge>
-        ) : project.daysInCurrentStage >= STAGE_ROTTING_WARNING_DAYS ? (
-          <Badge variant="warning">{project.daysInCurrentStage} ngày ở stage</Badge>
-        ) : null}
-        {!project.hasUpcomingActivity ? (
-          <Badge variant="warning">Chưa có việc kế tiếp</Badge>
-        ) : null}
-      </div>
-
-      <div className="mt-4 flex items-start gap-3">
-        <AvatarInitials name={project.customer.assignedTo.name} className="h-10 w-10 rounded-full text-xs" />
-        <div className="min-w-0 text-sm">
-          <p className="truncate font-semibold text-text-primary">{project.customer.name}</p>
-          <p className="truncate text-text-secondary">{project.customer.assignedTo.name}</p>
-          <p className="truncate text-text-secondary">{project.customer.industry ?? "Chưa phân ngành"}</p>
-        </div>
-      </div>
-
-      <div className="mt-3 rounded-lg bg-bg-subtle p-3">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Giá trị</span>
-          <span className="font-heading text-base font-extrabold text-primary">
-            <CurrencyDisplay amount={project.estimatedValue} short />
-          </span>
-        </div>
-        <div className="mt-3 flex items-center justify-between text-sm text-text-secondary">
-          <span>{project.progressPercent}% tiến độ</span>
-          <span>{project.expectedEndDate ? formatDate(project.expectedEndDate) : "Chưa có hạn"}</span>
-        </div>
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border/40">
-          <div
-            className="h-full rounded-full"
-            style={{ width: `${project.progressPercent}%`, backgroundColor: STAGE_COLORS[project.status] }}
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/projects/${project.id}`}
+          title={project.code}
+          onClick={(event) => event.stopPropagation()}
+          className="line-clamp-2 min-w-0 flex-1 font-heading text-[13.5px] font-bold leading-5 text-text-primary hover:text-primary"
+        >
+          {project.name}
+          {project.priority === "HIGH" ? (
+            <span className="ml-1.5 align-middle rounded-full bg-accent-bg px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+              Gấp
+            </span>
+          ) : null}
+        </Link>
+        {risk ? (
+          <span
+            className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: risk.color }}
+            title={risk.label}
+            aria-label={risk.label}
           />
-        </div>
+        ) : null}
       </div>
 
-      <div className="mt-4 grid gap-2 text-sm text-text-secondary">
-        <p>{project.quoteCount} báo giá · {project.milestoneCount} mốc · {project.activityCount} hoạt động</p>
-        <p>Cập nhật {formatRelativeTime(project.lastActivityAt ?? project.updatedAt)}</p>
-        {project.contract ? (
-          <p className="font-medium text-text-primary">HĐ: {project.contract.contractNo}</p>
-        ) : (
-          <p>Chưa có hợp đồng</p>
-        )}
+      <p className="mt-1 truncate text-xs text-text-secondary">{stripLegalPrefix(project.customer.name)}</p>
+
+      <div className="mt-2 flex items-center gap-2">
+        <span className="font-heading text-[13px] font-extrabold text-primary">
+          {formatVNDShort(project.estimatedValue)}
+        </span>
+        <span className="text-text-muted">·</span>
+        <span className={`text-xs ${project.isOverdue ? "font-semibold text-danger" : "text-text-secondary"}`}>
+          {project.expectedEndDate ? formatDate(project.expectedEndDate) : "Chưa có hạn"}
+        </span>
+        <AvatarInitials
+          name={project.customer.assignedTo.name}
+          className="ml-auto h-6 w-6 rounded-full text-[10px]"
+        />
       </div>
 
-      <div className="mt-4 space-y-3">
-        <label className="block space-y-2">
-          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
-            Chuyển stage
-          </span>
-          <Select
-            disabled={isUpdating && updatingProjectId === project.id}
-            value={project.status}
-            className="min-h-[44px]"
-            onChange={(event) => {
-              const nextStatus = event.target.value as ProjectStatus;
-              if (nextStatus !== project.status) onStatusChange(project.id, nextStatus);
-            }}
-          >
-            {Object.entries(PROJECT_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </Select>
-        </label>
-
-        <div className="grid grid-cols-2 gap-2">
-          <Link href={`/projects/${project.id}`} className="contents">
-            <Button type="button" variant="outline" className="min-h-[44px] min-w-[44px]">
-              Chi tiết
-            </Button>
-          </Link>
-          <Link href={`/projects/${project.id}/edit`} className="contents">
-            <Button type="button" variant="ghost" className="min-h-[44px] min-w-[44px]">
-              Sửa
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <div
+        className="absolute bottom-0 left-0 h-[3px]"
+        style={{ width: `${project.progressPercent}%`, backgroundColor: stageColor }}
+      />
     </>
   );
 }
 
-// Draggable card: grip handle triggers drag, rest of card stays interactive
+// Draggable card: grip handle triggers drag, rest of card navigates to detail
 function DraggableCard({
   project,
   isUpdating,
   updatingProjectId,
-  onStatusChange,
 }: {
   project: ProjectListItem;
   isUpdating: boolean;
   updatingProjectId?: string;
-  onStatusChange: (projectId: string, status: ProjectStatus) => void;
 }) {
+  const router = useRouter();
   const disabled = isUpdating && updatingProjectId === project.id;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: project.id,
@@ -190,27 +130,35 @@ function DraggableCard({
     <article
       ref={setNodeRef}
       {...attributes}
-      className={`relative rounded-lg border-l-4 bg-white p-3 shadow-sm transition
+      onClick={() => router.push(`/projects/${project.id}`)}
+      className={`group relative cursor-pointer overflow-hidden rounded-lg border-l-4 bg-bg-card p-3 pb-3.5 shadow-sm transition
         ${isDragging ? "opacity-40 shadow-xl" : "v2-card-hover"}
         ${disabled ? "pointer-events-none opacity-60" : ""}
       `}
-      style={{ borderLeftColor: STAGE_COLORS[project.status] }}
+      style={{ borderLeftColor: CHART_STAGE_COLORS[project.status] }}
     >
-      {/* Drag handle — only this triggers drag, leaves inner links/buttons clickable */}
-      <div
-        {...listeners}
-        className="absolute right-2 top-2 cursor-grab rounded p-0.5 text-text-muted hover:bg-bg-hover hover:text-text-secondary active:cursor-grabbing"
-        title="Kéo để chuyển stage"
-      >
-        <GripVertical className="h-4 w-4" />
+      <div className="absolute right-1 top-1 z-10 flex items-center gap-0.5 rounded bg-bg-card/95 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+        <Link
+          href={`/projects/${project.id}/edit`}
+          onClick={(event) => event.stopPropagation()}
+          className="rounded p-1 text-text-muted hover:bg-bg-hover hover:text-text-secondary"
+          title="Sửa dự án"
+          aria-label="Sửa dự án"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Link>
+        {/* Drag handle — only this triggers drag */}
+        <div
+          {...listeners}
+          onClick={(event) => event.stopPropagation()}
+          className="cursor-grab rounded p-1 text-text-muted hover:bg-bg-hover hover:text-text-secondary active:cursor-grabbing"
+          title="Kéo để chuyển giai đoạn"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </div>
       </div>
 
-      <ProjectCardContent
-        project={project}
-        isUpdating={isUpdating}
-        updatingProjectId={updatingProjectId}
-        onStatusChange={onStatusChange}
-      />
+      <ProjectCardContent project={project} />
     </article>
   );
 }
@@ -220,72 +168,96 @@ function DroppableKanbanColumn({
   column,
   isUpdating,
   updatingProjectId,
-  onStatusChange,
 }: {
   column: ProjectKanbanColumn;
   isUpdating: boolean;
   updatingProjectId?: string;
-  onStatusChange: (projectId: string, status: ProjectStatus) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.key });
+  const [collapsed, setCollapsed] = useState(column.key === "LOST");
+  const color = CHART_STAGE_COLORS[column.key];
 
-  return (
-    <Card
-      className={`flex w-[280px] shrink-0 flex-col border bg-transparent p-0 shadow-none transition
-        ${isOver ? "border-primary/45 bg-primary/5 shadow-lg" : "border-white/70"}`}
-    >
-      <CardHeader className="mb-0 space-y-2 px-1 pb-2 pt-0">
-        <div className="flex items-center gap-2">
-          <span className="v2-stage-dot" style={{ backgroundColor: STAGE_COLORS[column.key] }} />
-          <div className="min-w-0 flex-1">
-            <CardTitle className="truncate text-sm">{column.label}</CardTitle>
-          </div>
+  if (collapsed) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={`flex w-14 shrink-0 flex-col items-center gap-3 rounded-lg py-3 transition
+          ${isOver ? "bg-primary-bg" : "bg-bg-subtle"}`}
+      >
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="flex h-full w-full flex-col items-center gap-3 text-text-secondary hover:text-text-primary"
+          title={`Mở cột ${column.label}`}
+          aria-label={`Mở cột ${column.label}`}
+        >
           <span
             className="rounded-full px-2 py-0.5 text-[11px] font-bold"
-            style={{
-              backgroundColor: `${STAGE_COLORS[column.key]}22`,
-              color: STAGE_COLORS[column.key],
-            }}
+            style={{ backgroundColor: `${color}22`, color }}
           >
             {column.itemCount}
           </span>
+          <span className="text-xs font-semibold" style={{ writingMode: "vertical-rl" }}>
+            {column.label}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex w-[280px] shrink-0 flex-col rounded-lg p-2 transition ${isOver ? "bg-primary-bg" : "bg-bg-subtle"}`}
+    >
+      <div className="mb-2 space-y-0.5 px-1">
+        <div className="flex items-center gap-2">
+          <span className="v2-stage-dot" style={{ backgroundColor: color }} />
+          <p className="min-w-0 flex-1 truncate font-heading text-sm font-bold text-text-primary">{column.label}</p>
+          <span
+            className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+            style={{ backgroundColor: `${color}22`, color }}
+          >
+            {column.itemCount}
+          </span>
+          {column.key === "LOST" ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="rounded px-1 text-xs text-text-secondary hover:bg-bg-hover"
+              title="Thu gọn cột"
+              aria-label="Thu gọn cột"
+            >
+              «
+            </button>
+          ) : null}
         </div>
-        <p className="px-4 text-xs font-semibold text-text-secondary">
+        <p className="pl-5 text-xs font-semibold text-text-secondary">
           <CurrencyDisplay amount={column.totalValue} short />
         </p>
-      </CardHeader>
+      </div>
 
-      <CardContent className="flex-1 px-0 pt-1">
-        <div ref={setNodeRef} className="min-h-[120px] space-y-2">
-          {column.items.length === 0 ? (
-            <div
-              className={`min-h-[120px] rounded-2xl border border-dashed p-4 text-sm transition
-                ${isOver
-                  ? "border-primary/45 bg-primary/10 text-primary"
-                  : "border-border/60 bg-bg-hover/50 text-text-secondary"}`}
-            >
-              Chưa có dự án ở stage này.
-            </div>
-          ) : (
-            column.items.map((project) => (
-              <DraggableCard
-                key={project.id}
-                project={project}
-                isUpdating={isUpdating}
-                updatingProjectId={updatingProjectId}
-                onStatusChange={onStatusChange}
-              />
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <div ref={setNodeRef} className="min-h-[120px] flex-1 space-y-2">
+        {column.items.length === 0 ? (
+          <div className="min-h-[120px] rounded-lg bg-bg-hover/50 p-4 text-sm text-text-secondary">
+            Chưa có dự án ở giai đoạn này.
+          </div>
+        ) : (
+          column.items.map((project) => (
+            <DraggableCard
+              key={project.id}
+              project={project}
+              isUpdating={isUpdating}
+              updatingProjectId={updatingProjectId}
+            />
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
 export function ProjectKanbanBoard({
   columns,
-  meta,
   isLoading,
   isError,
   errorMessage,
@@ -330,7 +302,7 @@ export function ProjectKanbanBoard({
       <div className="overflow-x-auto pb-2">
         <div className="flex min-w-max gap-4">
           {Array.from({ length: 7 }).map((_, index) => (
-            <Card key={index} className="w-[320px] shrink-0 border border-white/70">
+            <Card key={index} className="w-[320px] shrink-0 ">
               <CardHeader className="space-y-3">
                 <LoadingSkeleton className="h-6 w-32" />
                 <LoadingSkeleton className="h-4 w-24" />
@@ -351,7 +323,7 @@ export function ProjectKanbanBoard({
     return (
       <Card className="border border-danger/20">
         <CardHeader>
-          <CardTitle>Kanban pipeline</CardTitle>
+          <CardTitle>Pipeline dự án</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
@@ -366,9 +338,9 @@ export function ProjectKanbanBoard({
 
   if (totalItems === 0) {
     return (
-      <Card className="border border-white/70">
+      <Card className="">
         <CardHeader>
-          <CardTitle>Kanban pipeline</CardTitle>
+          <CardTitle>Pipeline dự án</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -389,15 +361,6 @@ export function ProjectKanbanBoard({
       onDragCancel={() => setActiveProjectId(null)}
     >
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Bảng Kanban</p>
-            <h2 className="mt-2 font-heading text-2xl font-bold text-text-primary">Pipeline Dự án</h2>
-          </div>
-          <p className="max-w-2xl text-sm text-text-secondary">
-            {meta?.total ?? totalItems} dự án trong tập lọc hiện tại. Kéo thẻ sang cột khác để chuyển giai đoạn.
-          </p>
-        </div>
         <p className="mb-2 text-center text-xs text-text-muted md:hidden">
           Vuốt ngang để xem thêm cột →
         </p>
@@ -410,7 +373,6 @@ export function ProjectKanbanBoard({
                 column={column}
                 isUpdating={isUpdating}
                 updatingProjectId={updatingProjectId}
-                onStatusChange={onStatusChange}
               />
             ))}
           </div>
@@ -420,14 +382,10 @@ export function ProjectKanbanBoard({
       <DragOverlay dropAnimation={{ duration: 150, easing: "ease" }}>
         {activeProject ? (
           <article
-            className="w-[280px] rotate-1 cursor-grabbing rounded-lg border-l-4 bg-white p-3 opacity-95 shadow-2xl"
-            style={{ borderLeftColor: STAGE_COLORS[activeProject.status] }}
+            className="relative w-[264px] rotate-1 cursor-grabbing overflow-hidden rounded-lg border-l-4 bg-bg-card p-3 pb-3.5 opacity-95 shadow-2xl"
+            style={{ borderLeftColor: CHART_STAGE_COLORS[activeProject.status] }}
           >
-            <ProjectCardContent
-              project={activeProject}
-              isUpdating={false}
-              onStatusChange={onStatusChange}
-            />
+            <ProjectCardContent project={activeProject} />
           </article>
         ) : null}
       </DragOverlay>

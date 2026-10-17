@@ -328,7 +328,8 @@ Mọi đường dẫn tương đối tính từ `frontend/app/(dashboard)/` tr�
 ## B7 — Nháy trang đăng nhập khi mở tab mới · Opus · ~1h (cần xác minh trước)
 
 - **Triệu chứng:** mở tab mới tới `/dashboard` → hiện `/login?next=...` khoảng 3 giây rồi mới tự vào dashboard.
-- **Giả thuyết:** `frontend/middleware.ts` chặn khi không thấy cookie `ahso_refresh_token`. Backend đặt cookie ở `auth.controller.ts` (`getRefreshCookieOptions`, ~dòng 155) **không có `domain`** → nếu API chạy khác host với crm.ahso.vn, cookie không gửi kèm request trang → middleware đá về /login, sau đó trang login tự refresh bằng API và chuyển tiếp.
+- **✅ ĐÃ SỬA (commit eb1b6d9) — nguyên nhân thật khác giả thuyết dưới đây:** API cùng host (`crm.ahso.vn/api`), cookie không có vấn đề. `DashboardShell` coi tab không có access token (sessionStorage riêng từng tab) là phiên trình duyệt mới → gọi `logout()` → `POST /auth/logout` thu hồi phiên → **mọi tab bị đăng xuất** khi người dùng "mở trong tab mới". Sửa: tab mới hỏi các tab đang mở qua BroadcastChannel (`SESSION_REQUEST`/`SESSION_SHARE`, 400ms) trước khi kết luận là phiên mới. Test: `frontend/lib/session-share.test.ts`.
+- ~~**Giả thuyết:**~~ *(giữ lại để tham khảo)* `frontend/middleware.ts` chặn khi không thấy cookie `ahso_refresh_token`. Backend đặt cookie ở `auth.controller.ts` (`getRefreshCookieOptions`, ~dòng 155) **không có `domain`** → nếu API chạy khác host với crm.ahso.vn, cookie không gửi kèm request trang → middleware đá về /login, sau đó trang login tự refresh bằng API và chuyển tiếp.
 - **Xác minh (bắt buộc trước khi sửa):** trên Chrome đã đăng nhập, DevTools → Application → Cookies: `ahso_refresh_token` nằm ở host nào? Kiểm tra `NEXT_PUBLIC_API_URL` của production trong `.github/workflows/deploy.yml` / secrets.
 - **Hướng sửa (tùy kết quả):**
   - API khác host cùng domain gốc → thêm biến môi trường `COOKIE_DOMAIN=.ahso.vn` vào `getRefreshCookieOptions` (chỉ áp dụng production) + cập nhật docs deploy.

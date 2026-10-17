@@ -65,6 +65,17 @@ export function ProjectsClient() {
   const [status, setStatus] = usePersistentState<ProjectStatus | "">("crm:filters:projects:status", "");
   const [priority, setPriority] = usePersistentState<Priority | "">("crm:filters:projects:priority", "");
   const [assignedToId, setAssignedToId] = usePersistentState("crm:filters:projects:assignedToId", "");
+
+  // Deep link from the dashboard pipeline (`?status=QUOTING`) overrides the
+  // remembered filter. Declared after usePersistentState so it runs after the
+  // localStorage hydration effect and wins.
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("status");
+    if (fromUrl && (PROJECT_STATUS_VALUES as readonly string[]).includes(fromUrl)) {
+      setStatus(fromUrl as ProjectStatus);
+    }
+  }, [setStatus]);
+
   const [page, setPage] = useState(1);
   const [view, setView] = useState<ProjectViewMode>(getProjectViewFromUrl);
   const [importOpen, setImportOpen] = useState(false);

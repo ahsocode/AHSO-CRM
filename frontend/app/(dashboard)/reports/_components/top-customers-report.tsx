@@ -40,7 +40,7 @@ export function TopCustomersReport({
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Top Customers</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Khách hàng hàng đầu</p>
             <CardTitle>Khách hàng mang tiền về</CardTitle>
           </div>
           {(customers ?? []).length > 0 && (
@@ -118,7 +118,7 @@ export function TopCustomersReport({
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Recent Collections</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thu tiền gần đây</p>
           <CardTitle>Thu tiền gần đây</CardTitle>
         </CardHeader>
         <CardContent>

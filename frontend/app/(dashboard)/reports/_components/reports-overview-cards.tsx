@@ -39,7 +39,7 @@ export function ReportsOverviewCards({
     {
       label: "Pipeline mở",
       value: <CurrencyDisplay amount={data.openPipelineValue} short />,
-      helper: "Estimated value của các project chưa đóng",
+      helper: "Tổng giá trị dự án đang mở",
       tone: "info" as const
     },
     {

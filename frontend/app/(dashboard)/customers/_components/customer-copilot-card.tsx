@@ -263,7 +263,7 @@ export function CustomerCopilotCard({ customerId }: { customerId: string }) {
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">CRM Copilot</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trợ lý CRM</p>
           <CardTitle>Gợi ý hành động</CardTitle>
         </div>
         <Button type="button" variant="outline" onClick={handleScan} disabled={scanMutation.isPending}>

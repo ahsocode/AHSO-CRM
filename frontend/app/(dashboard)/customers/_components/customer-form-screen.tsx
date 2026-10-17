@@ -249,7 +249,7 @@ export function CustomerFormScreen({
         <div className="space-y-6">
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="industrial-chip bg-primary/10 text-primary">Customer Core</p>
+            <p className="industrial-chip bg-primary/10 text-primary">Thông tin khách hàng</p>
             <CardTitle>Thông tin doanh nghiệp</CardTitle>
             <p className="text-sm text-text-secondary">
               Nhóm trường cốt lõi để sales, delivery và báo giá dùng chung một hồ sơ chuẩn.
@@ -327,7 +327,7 @@ export function CustomerFormScreen({
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="industrial-chip bg-accent/10 text-accent">Primary Contact</p>
+            <p className="industrial-chip bg-accent/10 text-accent">Liên hệ chính</p>
             <CardTitle>Người liên hệ chính</CardTitle>
             <p className="text-sm text-text-secondary">
               Người phụ trách phía khách hàng — dùng để liên lạc và gán vào từng dự án cụ thể.
@@ -385,7 +385,7 @@ export function CustomerFormScreen({
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-accent/10 text-accent">Commercial Layer</p>
+              <p className="industrial-chip bg-accent/10 text-accent">Thông tin thương mại</p>
               <CardTitle>Liên hệ thương mại</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -459,7 +459,7 @@ export function CustomerFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Dynamic Schema</p>
+              <p className="industrial-chip bg-primary/10 text-primary">Trường tùy chỉnh</p>
               <CardTitle>Custom fields</CardTitle>
             </CardHeader>
             <CardContent>
@@ -476,7 +476,7 @@ export function CustomerFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Action Desk</p>
+              <p className="industrial-chip bg-primary/10 text-primary">Thao tác</p>
               <CardTitle>Kiểm tra trước khi lưu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

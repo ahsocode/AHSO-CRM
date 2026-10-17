@@ -125,7 +125,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
       <section className="v2-shell-card noise-edge overflow-hidden border border-white/70">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
-            <p className="v2-label text-primary">Contract Control</p>
+            <p className="v2-label text-primary">Quản lý hợp đồng</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <h2 className="font-heading text-3xl font-extrabold tracking-[-0.03em] text-text-primary">{contract.project.name}</h2>
               <StatusBadge kind="contract" status={contract.status} />
@@ -185,7 +185,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
           </div>
 
           <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Customer Owner</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Phụ trách</p>
             <div className="mt-4 space-y-2">
               <Link
                 href={`/customers/${contract.project.customer.id}`}
@@ -222,7 +222,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dynamic Schema</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trường tùy chỉnh</p>
           <CardTitle>Custom fields</CardTitle>
         </CardHeader>
         <CardContent>
@@ -243,7 +243,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Quote Stack</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Các phiên bản báo giá</p>
               <CardTitle>Báo giá nguồn</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -285,7 +285,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Progress</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tiến độ</p>
               <CardTitle>Tiến độ hợp đồng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -309,7 +309,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Project Pulse</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Hoạt động gần đây</p>
               <CardTitle>Ngữ cảnh dự án</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

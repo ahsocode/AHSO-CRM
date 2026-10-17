@@ -443,7 +443,7 @@ export function ContractFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-accent/10 text-accent">Notes</p>
+              <p className="industrial-chip bg-accent/10 text-accent">Ghi chú</p>
               <CardTitle>Ghi chú thương mại</CardTitle>
             </CardHeader>
             <CardContent>
@@ -461,7 +461,7 @@ export function ContractFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Dynamic Schema</p>
+              <p className="industrial-chip bg-primary/10 text-primary">Trường tùy chỉnh</p>
               <CardTitle>Custom fields</CardTitle>
             </CardHeader>
             <CardContent>
@@ -480,7 +480,7 @@ export function ContractFormScreen({
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Project Snapshot</p>
+              <p className="industrial-chip bg-primary/10 text-primary">Dự án & khách hàng</p>
               <CardTitle>Dự án và khách hàng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -527,7 +527,7 @@ export function ContractFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-accent/10 text-accent">Source Quote</p>
+              <p className="industrial-chip bg-accent/10 text-accent">Báo giá nguồn</p>
               <CardTitle>Nguồn thương mại</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -661,7 +661,7 @@ export function ContractFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Action Desk</p>
+              <p className="industrial-chip bg-primary/10 text-primary">Thao tác</p>
               <CardTitle>Kiểm tra trước khi lưu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -17,7 +17,7 @@ export default function DashboardError({
   return (
     <div className="mx-auto flex min-h-[55vh] w-full max-w-3xl items-center justify-center px-4 py-12">
       <section className="w-full rounded-[32px] border border-danger/20 bg-white p-8 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-danger">Runtime Guard</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-danger">Bảo vệ hệ thống</p>
         <h1 className="mt-4 font-heading text-3xl font-extrabold text-text-primary">Không thể hiển thị màn hình này</h1>
         <p className="mt-3 text-sm leading-6 text-text-secondary">
           Một phần giao diện vừa gặp dữ liệu thiếu hoặc lỗi runtime. Boundary đã giữ dashboard hoạt động để bạn có thể thử lại.

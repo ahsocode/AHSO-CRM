@@ -56,7 +56,7 @@ export function DeletedRecordsPanel<TRecord extends DeletedRecordBase>({
     <Card className="border border-warning/20 bg-warning-bg/30">
       <CardHeader className="gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-warning">Soft delete recovery</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-warning">Khôi phục dữ liệu đã xóa</p>
           <CardTitle>{title}</CardTitle>
           <p className="mt-2 text-sm text-text-secondary">{description}</p>
         </div>

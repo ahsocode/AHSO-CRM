@@ -146,7 +146,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
       <section className="v2-shell-card noise-edge overflow-hidden border border-white/70">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
-            <p className="v2-label text-primary">Customer Profile</p>
+            <p className="v2-label text-primary">Hồ sơ khách hàng</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <h2 className="font-heading text-3xl font-extrabold text-text-primary">{customer.shortName || customer.name}</h2>
               <StatusBadge status={customer.status} />
@@ -217,7 +217,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dynamic Schema</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trường tùy chỉnh</p>
           <CardTitle>Custom fields</CardTitle>
         </CardHeader>
         <CardContent>
@@ -236,7 +236,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Delivery Snapshot</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tóm tắt triển khai</p>
               <CardTitle>Dự án đang gắn với khách hàng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -313,7 +313,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Activity Pulse</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Hoạt động gần đây</p>
                 <CardTitle>Hoạt động gần đây</CardTitle>
               </div>
               <Button
@@ -340,7 +340,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
                       <AppIcon name="analytics" className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Summary</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Tóm tắt AI</p>
                       <p className="mt-2 whitespace-pre-line text-sm leading-6 text-text-primary">
                         {aiSummaryMutation.data.summary}
                       </p>
@@ -389,7 +389,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Company Brief</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tóm tắt công ty</p>
               <CardTitle>Thông tin doanh nghiệp</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">

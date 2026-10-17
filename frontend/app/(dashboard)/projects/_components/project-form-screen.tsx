@@ -234,7 +234,7 @@ export function ProjectFormScreen({
       >
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="industrial-chip bg-primary/10 text-primary">Project Core</p>
+            <p className="industrial-chip bg-primary/10 text-primary">Thông tin dự án</p>
             <CardTitle>Thông tin dự án</CardTitle>
             <p className="text-sm text-text-secondary">
               Nhóm trường để sales và delivery đọc cùng một cấu trúc pipeline, không tách riêng theo từng module.
@@ -400,7 +400,7 @@ export function ProjectFormScreen({
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Dynamic Schema</p>
+              <p className="industrial-chip bg-primary/10 text-primary">Trường tùy chỉnh</p>
               <CardTitle>Custom fields</CardTitle>
             </CardHeader>
             <CardContent>
@@ -417,7 +417,7 @@ export function ProjectFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-accent/10 text-accent">Delivery Notes</p>
+              <p className="industrial-chip bg-accent/10 text-accent">Ghi chú triển khai</p>
               <CardTitle>Tóm tắt thao tác</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">

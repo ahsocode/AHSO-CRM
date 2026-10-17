@@ -74,7 +74,7 @@ export function ContactManager({
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Contacts</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Người liên hệ</p>
           <CardTitle>Đầu mối liên hệ</CardTitle>
           <p className="mt-2 text-sm text-text-secondary">
             {contacts.length > 0

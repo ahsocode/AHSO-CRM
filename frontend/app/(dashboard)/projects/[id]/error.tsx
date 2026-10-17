@@ -17,7 +17,7 @@ export default function ProjectDetailError({
   return (
     <div className="space-y-6">
       <section className="rounded-[32px] border border-danger/20 bg-white p-8 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-danger">Project 360 Guard</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-danger">Tổng quan 360°</p>
         <h1 className="mt-4 font-heading text-3xl font-extrabold text-text-primary">Không thể mở hồ sơ dự án</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">
           Dữ liệu dự án hoặc một tab trong Project 360 đang thiếu thông tin cần thiết. Bạn có thể thử lại hoặc quay về danh sách dự án.

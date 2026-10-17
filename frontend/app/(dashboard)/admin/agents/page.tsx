@@ -102,7 +102,7 @@ export default function AdminAgentsPage() {
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Registry</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh mục</p>
           <CardTitle>Agent đang bật</CardTitle>
         </CardHeader>
         <CardContent>

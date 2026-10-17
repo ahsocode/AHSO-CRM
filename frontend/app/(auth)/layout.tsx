@@ -52,17 +52,13 @@ export default function AuthLayout({
                   )}
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">AHSO Workspace</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/55">AHSO</p>
                   <p className="mt-1 font-heading text-lg font-extrabold text-white">{brandName}</p>
                 </div>
-              </div>
-              <div className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
-                CRM B2B
               </div>
             </div>
 
             <div className="mt-20 max-w-2xl">
-              <p className="industrial-chip bg-white/12 text-white/78">Project 360</p>
               <h1 className="mt-6 text-balance font-heading text-5xl font-extrabold leading-tight tracking-tight xl:text-6xl">
                 CRM cho đội bán hàng kỹ thuật.
               </h1>
@@ -72,7 +68,7 @@ export default function AuthLayout({
             </div>
 
             <div className="mt-12 grid max-w-xl grid-cols-3 gap-3 text-sm">
-              {["Lead", "Quote", "Contract"].map((item) => (
+              {["Khách hàng", "Báo giá", "Hợp đồng"].map((item) => (
                 <div key={item} className="auth-float-card rounded-2xl border border-white/14 bg-white/10 px-4 py-5 text-center shadow-[0_14px_35px_rgba(0,0,0,0.12)] backdrop-blur">
                   <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-accent" />
                   <p className="font-semibold text-white">{item}</p>
@@ -82,9 +78,9 @@ export default function AuthLayout({
           </div>
 
           <div className="relative flex items-center justify-between gap-4 rounded-3xl border border-white/12 bg-white/10 px-5 py-4 text-sm text-white/72 backdrop-blur">
-            <span>Realtime</span>
-            <span>RBAC</span>
-            <span>Document Hub</span>
+            <span>Cập nhật tức thì</span>
+            <span>Phân quyền</span>
+            <span>Hồ sơ tập trung</span>
           </div>
         </section>
 

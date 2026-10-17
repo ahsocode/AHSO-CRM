@@ -98,7 +98,7 @@ export function AgendaBoard({
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Field Agenda</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Lịch công trường</p>
           <CardTitle>Lịch công việc</CardTitle>
           <p className="mt-2 text-sm text-text-secondary">
             {meta?.total ?? items.length} activity, trang {currentPage}/{totalPages}

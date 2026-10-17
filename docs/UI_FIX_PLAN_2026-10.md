@@ -185,6 +185,51 @@ cd frontend && grep -rnE '(v2-label|industrial-chip|uppercase|tracking-\[0\.[0-9
 | Soft delete recovery | Khôi phục dữ liệu đã xóa |
 | Uploaded / Received | Đã tải lên / Đã nhận |
 | AI Summary | Tóm tắt AI |
+| Customer Core | Thông tin khách hàng |
+| Commercial Layer | Thông tin thương mại |
+| CRM Copilot | Trợ lý CRM |
+| Customer Profile | Hồ sơ khách hàng |
+| Delivery Snapshot | Tóm tắt triển khai |
+| Company Brief | Tóm tắt công ty |
+| Contacts | Người liên hệ |
+| Field Agenda | Lịch công trường |
+| Commercial Quote | Báo giá thương mại |
+| Customer / Project | Khách hàng / Dự án |
+| Item Stack | Danh sách hạng mục |
+| Commercial Terms | Điều khoản thương mại |
+| Internal Notes | Ghi chú nội bộ |
+| AI Email Assistant | Trợ lý email AI |
+| Notes | Ghi chú |
+| Delivery Notes | Ghi chú triển khai |
+| Delivery Plan | Kế hoạch giao hàng |
+| Contract Control | Quản lý hợp đồng |
+| Contract Desk | Quản lý hợp đồng |
+| Cash Flow | Dòng tiền |
+| Cash Collection | Thu tiền |
+| Next Best Action | Việc nên làm tiếp |
+| Latest Site Knowledge | Ghi chú hiện trường gần nhất |
+| Critical Docs | Tài liệu quan trọng |
+| Open Items | Việc còn mở |
+| AI Forecast | Dự báo AI |
+| Document Registry / Business Registry | Danh mục tài liệu / Danh mục doanh nghiệp |
+| Generated PDFs | PDF đã tạo |
+| Milestone Map | Lộ trình mốc |
+| Knowledge Continuity | Tính liên tục tri thức |
+| Handover History | Lịch sử bàn giao |
+| Dataset Config | Cấu hình dữ liệu |
+| Field Library | Thư viện trường |
+| Dimensions | Chiều dữ liệu |
+| Measures | Chỉ số |
+| Filters | Bộ lọc |
+| Chart | Biểu đồ |
+| Journey Flow | Luồng hành trình |
+| Activity Density | Mật độ hoạt động |
+| Conversion Funnel | Phễu chuyển đổi |
+| Agent Chat | Trò chuyện AI |
+| Mailbox registry | Danh mục Mailbox |
+| Bulk actions | Thao tác hàng loạt |
+| Lead / Quote / Contract | Khách hàng / Báo giá / Hợp đồng |
+| Realtime / RBAC / Document Hub | Cập nhật tức thì / Phân quyền / Hồ sơ tập trung |
 | Automation Hub (eyebrow trên PageHeader) | *(xóa — trùng với tên app ở sidebar)* |
 | **Giữ nguyên:** AHSO CRM, Dashboard, Email, Mailbox, AI Agents, Kanban, CSV, VAT, MST | — |
 

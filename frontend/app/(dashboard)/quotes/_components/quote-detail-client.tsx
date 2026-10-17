@@ -259,7 +259,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
       <section className="surface-card noise-edge overflow-hidden border border-white/70">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
-            <p className="industrial-chip bg-primary/10 text-primary">Commercial Quote</p>
+            <p className="industrial-chip bg-primary/10 text-primary">Báo giá thương mại</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <h2 className="font-heading text-3xl font-extrabold text-text-primary">{quote.quoteNo}</h2>
               <Badge variant="neutral">v{quote.version}</Badge>
@@ -291,7 +291,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
           </div>
 
           <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Customer / Project</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Khách hàng / Dự án</p>
             <div className="mt-4 space-y-2">
               <Link
                 href={`/customers/${quote.project.customer.id}`}
@@ -333,7 +333,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Item Stack</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh sách hạng mục</p>
               <CardTitle>Danh mục chào giá</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -405,7 +405,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Commercial Terms</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Điều khoản thương mại</p>
               <CardTitle>Điều khoản thương mại</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
@@ -423,7 +423,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
           {quote.internalNote ? (
             <Card className="border border-white/70">
               <CardHeader className="mb-0 gap-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Internal Notes</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Ghi chú nội bộ</p>
                 <CardTitle>Ghi chú nội bộ</CardTitle>
               </CardHeader>
               <CardContent>
@@ -438,7 +438,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Action Desk</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thao tác</p>
               <CardTitle>Workflow báo giá</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -583,7 +583,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Timeline</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dòng thời gian</p>
               <CardTitle>Mốc thương mại</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -603,7 +603,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Source Project</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dự án nguồn</p>
               <CardTitle>Liên kết dự án</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -718,7 +718,7 @@ function AiDraftEmailDialog({
       <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Email Assistant</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Trợ lý email AI</p>
             <h3 className="mt-2 font-heading text-2xl font-extrabold text-text-primary">Soạn email báo giá</h3>
             <p className="mt-2 text-sm text-text-secondary">
               Nhập chỉ dẫn ngắn để AI tạo subject và nội dung email chuyên nghiệp cho báo giá này.

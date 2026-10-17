@@ -260,7 +260,7 @@ export default function CustomFieldsPage() {
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="industrial-chip bg-accent/10 text-accent">Schema Preview</p>
+            <p className="industrial-chip bg-accent/10 text-accent">Xem trước</p>
             <CardTitle>Danh sách field theo resource</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

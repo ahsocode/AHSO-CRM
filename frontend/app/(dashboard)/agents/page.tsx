@@ -115,7 +115,7 @@ export default function AgentsPage() {
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Agent Chat</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trò chuyện AI</p>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
                 <CardTitle className="truncate">{selectedAgent?.name ?? "Chọn agent"}</CardTitle>

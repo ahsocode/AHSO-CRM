@@ -17,7 +17,7 @@ export function ReportRevenueTrend({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Revenue Trend</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Doanh thu</p>
         <CardTitle>Xu hướng thu tiền theo tháng</CardTitle>
       </CardHeader>
       <CardContent>

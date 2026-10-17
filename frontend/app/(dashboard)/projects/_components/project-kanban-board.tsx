@@ -122,7 +122,7 @@ function ProjectCardContent({
       </div>
 
       <div className="mt-4 grid gap-2 text-sm text-text-secondary">
-        <p>{project.quoteCount} báo giá · {project.milestoneCount} milestone · {project.activityCount} activity</p>
+        <p>{project.quoteCount} báo giá · {project.milestoneCount} mốc · {project.activityCount} hoạt động</p>
         <p>Cập nhật {formatRelativeTime(project.lastActivityAt ?? project.updatedAt)}</p>
         {project.contract ? (
           <p className="font-medium text-text-primary">HĐ: {project.contract.contractNo}</p>
@@ -391,12 +391,11 @@ export function ProjectKanbanBoard({
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Kanban Pipeline</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Bảng Kanban</p>
             <h2 className="mt-2 font-heading text-2xl font-bold text-text-primary">Pipeline Dự án</h2>
           </div>
           <p className="max-w-2xl text-sm text-text-secondary">
-            {meta?.total ?? totalItems} dự án trong tập lọc hiện tại. Kéo tay cầm{" "}
-            <GripVertical className="inline h-3.5 w-3.5" /> để di chuyển card hoặc dùng select làm fallback.
+            {meta?.total ?? totalItems} dự án trong tập lọc hiện tại. Kéo thẻ sang cột khác để chuyển giai đoạn.
           </p>
         </div>
         <p className="mb-2 text-center text-xs text-text-muted md:hidden">

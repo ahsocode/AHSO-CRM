@@ -236,7 +236,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       <section className="surface-card noise-edge overflow-hidden border border-white/70">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
-            <p className="industrial-chip bg-primary/10 text-primary">Project Knowledge Hub</p>
+            <p className="industrial-chip bg-primary/10 text-primary">Tổng quan dự án</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <h2 className="font-heading text-3xl font-extrabold text-text-primary">{project.name}</h2>
               <StatusBadge kind="project" status={project.status} />
@@ -262,7 +262,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             <ProjectStageStepper currentStatus={project.status} projectId={projectId} />
           </div>
           <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Customer Owner</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Phụ trách</p>
             <div className="mt-4 space-y-2">
               <Link href={`/customers/${customer.id}`} className="font-heading text-xl font-bold text-text-primary hover:text-primary">
                 {customer.name}
@@ -352,7 +352,7 @@ function OverviewPanel({
       <div className="space-y-6">
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Next Best Action</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Việc nên làm tiếp</p>
             <CardTitle>Việc cần làm tiếp theo</CardTitle>
           </CardHeader>
           <CardContent>
@@ -372,7 +372,7 @@ function OverviewPanel({
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Latest Site Knowledge</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Ghi chú hiện trường gần nhất</p>
             <CardTitle>Khảo sát mới nhất</CardTitle>
           </CardHeader>
           <CardContent>
@@ -401,7 +401,7 @@ function OverviewPanel({
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dynamic Schema</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trường tùy chỉnh</p>
             <CardTitle>Custom fields</CardTitle>
           </CardHeader>
           <CardContent>
@@ -420,7 +420,7 @@ function OverviewPanel({
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Critical Docs</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tài liệu quan trọng</p>
             <CardTitle>Tài liệu quan trọng mới nhất</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -436,7 +436,7 @@ function OverviewPanel({
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Open Items</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Việc còn mở</p>
             <CardTitle>Mốc triển khai còn mở</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -468,7 +468,7 @@ function AiForecastCard({ projectId }: { projectId: string }) {
     <Card className="border border-primary/20 bg-primary/5">
       <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">AI Forecast</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Dự báo AI</p>
           <CardTitle>Dự báo AI</CardTitle>
         </div>
         <Button
@@ -596,7 +596,7 @@ function ProjectStageStepper({ currentStatus, projectId }: { currentStatus: Proj
   return (
     <div className="mt-6 rounded-3xl border border-white/70 bg-white/75 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Lifecycle</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tiến trình</p>
         <p className="text-sm font-semibold text-text-primary">{getProjectStatusLabel(currentStatus)}</p>
       </div>
       <div className="mt-4 grid gap-2 md:grid-cols-6">
@@ -640,7 +640,7 @@ function TimelinePanel({ projectId }: { projectId: string }) {
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Unified Timeline</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dòng thời gian</p>
         <CardTitle>Dòng thời gian dự án</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -716,7 +716,7 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
     <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Site Visit</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Khảo sát thực địa</p>
           <CardTitle>Tạo khảo sát mới</CardTitle>
         </CardHeader>
         <CardContent>
@@ -1171,7 +1171,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
       <section className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Document Registry</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh mục tài liệu</p>
             <h3 className="mt-1 font-heading text-2xl font-extrabold text-text-primary">Tài liệu dự án</h3>
             <p className="mt-2 max-w-3xl text-sm text-text-secondary">
               Gom PO, bản đã ký, biên bản, hóa đơn và file khách gửi vào cùng một registry để bàn giao dự án không bị đứt mạch.
@@ -1193,7 +1193,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Business Registry</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh mục doanh nghiệp</p>
               <CardTitle>Thêm tài liệu nghiệp vụ</CardTitle>
             </div>
             <Button type="button" variant="ghost" onClick={() => setShowCreateForm(false)}>
@@ -1287,7 +1287,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Project Document Plan</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Kế hoạch hồ sơ</p>
               <CardTitle>Bộ hồ sơ dự án</CardTitle>
             </div>
             {/* Progress summary */}
@@ -1450,7 +1450,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Uploaded / Received</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Đã tải lên / Đã nhận</p>
             <CardTitle>Tài liệu dự án</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1613,7 +1613,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
 
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Generated PDFs</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">PDF đã tạo</p>
             <CardTitle>Tài liệu hệ thống sinh ra</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -1637,7 +1637,7 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Quote Stack</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Các phiên bản báo giá</p>
         <CardTitle>Báo giá liên quan</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -1680,7 +1680,7 @@ function ContractsPanel({ project }: { project: NonNullable<ReturnType<typeof us
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Contract Desk</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Quản lý hợp đồng</p>
         <CardTitle>Thông tin hợp đồng</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -1717,7 +1717,7 @@ function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof use
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Milestone Map</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Lộ trình mốc</p>
         <CardTitle>Các mốc triển khai</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -1808,7 +1808,7 @@ function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof use
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Cash Collection</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thu tiền</p>
         <CardTitle>Thanh toán dự án</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -1957,7 +1957,7 @@ function HandoverPanel({
     <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Knowledge Continuity</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tính liên tục tri thức</p>
           <CardTitle>Tạo ghi chú bàn giao</CardTitle>
         </CardHeader>
         <CardContent>
@@ -1976,7 +1976,7 @@ function HandoverPanel({
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Handover History</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Lịch sử bàn giao</p>
           <CardTitle>Lịch sử ghi chú / quyết định</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

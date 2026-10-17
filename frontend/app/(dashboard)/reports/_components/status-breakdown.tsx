@@ -30,7 +30,7 @@ export function StatusBreakdown({
     return (
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Status Ledger</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trạng thái</p>
           <CardTitle>Phân bổ trạng thái</CardTitle>
         </CardHeader>
         <CardContent>
@@ -47,7 +47,7 @@ export function StatusBreakdown({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Status Ledger</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trạng thái</p>
         <CardTitle>Phân bổ trạng thái</CardTitle>
       </CardHeader>
       <CardContent>

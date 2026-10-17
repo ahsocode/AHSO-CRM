@@ -161,7 +161,7 @@ export function FieldSelector({
   return (
     <div className="space-y-5">
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dimensions</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Chiều dữ liệu</h3>
         <div className="flex flex-wrap gap-2">
           {definition.dimensions.map((field) => (
             <DraggableChip key={field.key} label={field.label} payload={{ zone: "dimensions", field }} />
@@ -170,7 +170,7 @@ export function FieldSelector({
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Measures</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Chỉ số</h3>
         <div className="flex flex-wrap gap-2">
           {definition.measures.map((field) => (
             <DraggableChip key={field.key} label={field.label} payload={{ zone: "measures", field }} />
@@ -179,7 +179,7 @@ export function FieldSelector({
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Filters</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Bộ lọc</h3>
         <div className="flex flex-wrap gap-2">
           {definition.filters.map((field) => (
             <DraggableChip key={field.key} label={field.label} payload={{ zone: "filters", field }} />
@@ -188,7 +188,7 @@ export function FieldSelector({
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Chart</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Biểu đồ</h3>
         <div className="flex flex-wrap gap-2">
           {REPORT_CHART_OPTIONS.map((option) => (
             <DraggableChip key={option.value} label={option.label} payload={{ zone: "chart", chartType: option.value }} />

@@ -45,7 +45,7 @@ function CustomerJourneyCard({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Journey Flow</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Luồng hành trình</p>
         <CardTitle>Luồng khách hàng từ lead tới chốt hợp đồng</CardTitle>
       </CardHeader>
       <CardContent>
@@ -103,7 +103,7 @@ function ActivityHeatmapCard({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Activity Density</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Mật độ hoạt động</p>
         <CardTitle>Heatmap hoạt động theo ngày và giờ</CardTitle>
       </CardHeader>
       <CardContent>
@@ -143,7 +143,7 @@ function FunnelCard({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Conversion Funnel</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Phễu chuyển đổi</p>
         <CardTitle>Funnel chuyển đổi theo giai đoạn dự án</CardTitle>
       </CardHeader>
       <CardContent>
@@ -184,7 +184,7 @@ function CohortCard({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Retention Matrix</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Chính sách lưu trữ</p>
         <CardTitle>Cohort retention theo tháng</CardTitle>
       </CardHeader>
       <CardContent>

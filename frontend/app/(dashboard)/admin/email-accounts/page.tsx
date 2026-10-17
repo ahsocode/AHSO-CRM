@@ -124,7 +124,7 @@ export default function AdminEmailAccountsPage() {
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Mailbox registry</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh mục Mailbox</p>
           <CardTitle>Danh sách tài khoản</CardTitle>
         </CardHeader>
         <CardContent>

@@ -385,7 +385,7 @@ export function ReportBuilder() {
         <div className="space-y-6">
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dataset Config</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Cấu hình dữ liệu</p>
               <CardTitle>Cấu hình template</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -420,7 +420,7 @@ export function ReportBuilder() {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Field Library</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thư viện trường</p>
               <CardTitle>Kéo field vào các zone</CardTitle>
             </CardHeader>
             <CardContent>
@@ -430,7 +430,7 @@ export function ReportBuilder() {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Templates</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Mẫu</p>
               <CardTitle>Template đã lưu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -642,7 +642,7 @@ export function ReportBuilder() {
             <CardHeader className="mb-0 gap-2">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Result Preview</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Xem trước kết quả</p>
                   <CardTitle>Kết quả truy vấn</CardTitle>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

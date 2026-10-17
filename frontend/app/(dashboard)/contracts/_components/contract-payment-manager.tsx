@@ -35,7 +35,7 @@ export function ContractPaymentManager({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Cash Flow</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dòng tiền</p>
         <CardTitle>Lịch sử thanh toán</CardTitle>
         <p className="mt-2 text-sm text-text-secondary">
           Log thanh toán tại đây để công nợ và reports phản ánh lại ngay sau khi thu tiền.

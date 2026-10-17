@@ -74,7 +74,7 @@ export default function NotificationsPage() {
       <Card className="border border-white/70">
         <CardHeader className="gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Realtime Inbox</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Hộp thư</p>
             <CardTitle>Thông báo của bạn</CardTitle>
             <p className="mt-2 text-sm text-text-secondary">
               {meta?.total ?? 0} thông báo · {meta?.unreadCount ?? 0} chưa đọc

@@ -46,7 +46,6 @@ export function QuoteOverviewCards({
         return (
           <Card key={card.key} className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="industrial-chip bg-primary/10 text-primary">Quote Signal</p>
               <CardTitle>{card.label}</CardTitle>
               <CardDescription>{card.description}</CardDescription>
             </CardHeader>

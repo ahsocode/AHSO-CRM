@@ -52,7 +52,7 @@ export function ContractMilestoneManager({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Delivery Plan</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Kế hoạch giao hàng</p>
         <CardTitle>Milestone triển khai</CardTitle>
         <p className="mt-2 text-sm text-text-secondary">
           Thêm và điều chỉnh milestone ngay tại hợp đồng để finance, delivery và sales bám cùng một timeline.

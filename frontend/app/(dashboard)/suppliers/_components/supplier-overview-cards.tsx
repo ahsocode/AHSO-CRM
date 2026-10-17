@@ -29,7 +29,6 @@ export function SupplierOverviewCards({
       {cards.map((card) => (
         <Card key={card.label} className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
-            <p className="industrial-chip bg-primary/10 text-primary">NCC Signal</p>
             <CardTitle>{card.label}</CardTitle>
             <CardDescription>{card.description}</CardDescription>
           </CardHeader>

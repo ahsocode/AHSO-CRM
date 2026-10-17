@@ -232,7 +232,7 @@ export function QuoteFormScreen({
         title={mode === "create" ? "Tạo báo giá mới" : "Cập nhật báo giá"}
         description={
           mode === "create"
-            ? "Tạo quote trực tiếp từ dự án thật, tính toán line item và khóa luôn payload để sang được màn hình preview/in."
+            ? "Chọn dự án, nhập hạng mục và xem trước bản in trước khi gửi khách."
             : "Chỉnh sửa nội dung thương mại của version hiện tại trước khi gửi khách hoặc tạo version kế tiếp."
         }
         action={
@@ -356,7 +356,7 @@ export function QuoteFormScreen({
             <CardHeader className="mb-0 gap-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="v2-label text-accent">Line Items</p>
+                  <p className="v2-label text-accent">Hạng mục</p>
                   <CardTitle>Danh mục chào giá</CardTitle>
                 </div>
                 <QuoteTemplateControls
@@ -519,7 +519,7 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-primary">Print Layout</p>
+              <p className="v2-label text-primary">Tùy chỉnh bản in</p>
               <CardTitle>Độ rộng cột bảng báo giá</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -573,7 +573,7 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-primary">Terms</p>
+              <p className="v2-label text-primary">Điều khoản</p>
               <CardTitle>Điều khoản & ghi chú</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
@@ -632,14 +632,14 @@ export function QuoteFormScreen({
         <div className="space-y-6">
           <Card className="sticky top-28 border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-primary">Project Snapshot</p>
+              <p className="v2-label text-primary">Dự án & khách hàng</p>
               <CardTitle>Dự án và khách hàng</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {!selectedProjectId ? (
                 <EmptyState
                   title="Chưa chọn dự án"
-                  description="Chọn một dự án để tự kéo theo khách hàng, owner và context thương mại."
+                  description="Chọn dự án để tự điền khách hàng và người phụ trách."
                 />
               ) : selectedProjectQuery.isLoading ? (
                 <LoadingSkeleton className="h-56 w-full" />
@@ -677,7 +677,7 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-accent">Quote Summary</p>
+              <p className="v2-label text-accent">Tổng hợp</p>
               <CardTitle>Tổng hợp giá trị</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -690,7 +690,7 @@ export function QuoteFormScreen({
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="v2-label text-primary">Action Desk</p>
+              <p className="v2-label text-primary">Thao tác</p>
               <CardTitle>Kiểm tra trước khi lưu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Line,
@@ -50,17 +50,15 @@ export function RevenueChart({
                     contentStyle={{ borderRadius: 12, border: "1px solid rgba(213,216,220,0.8)", fontSize: 12 }}
                     formatter={(value: number) => formatVNDShort(Number(value))}
                   />
-                  <Area
+                  <Bar
                     dataKey="revenue"
-                    type="monotone"
-                    stroke={CHART_COLORS.primaryMid}
-                    strokeWidth={2}
                     fill={CHART_COLORS.primaryMid}
-                    fillOpacity={0.1}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={36}
                   />
                   <Line
                     dataKey="target"
-                    type="monotone"
+                    type="linear"
                     stroke={CHART_COLORS.accent}
                     strokeDasharray="5 5"
                     strokeWidth={1.5}

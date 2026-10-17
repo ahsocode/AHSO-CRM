@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { KpiCards } from "./_components/kpi-cards";
 import { RevenueChart } from "./_components/revenue-chart";
-import { ProjectDonut } from "./_components/project-donut";
+import { TopProjects } from "./_components/top-projects";
 import { PipelinePreview } from "./_components/pipeline-preview";
 import { TaskChecklist } from "./_components/task-checklist";
 import { ActivityFeed } from "./_components/activity-feed";
@@ -35,11 +35,12 @@ export default function DashboardPage() {
       <PageHeader
         eyebrow="Tổng quan"
         title="Dashboard điều phối"
-      />
-
-      <DashboardDateRangeFilter
-        range={dateRange}
-        onRangeChange={setDateRange}
+        action={
+          <DashboardDateRangeFilter
+            range={dateRange}
+            onRangeChange={setDateRange}
+          />
+        }
       />
 
       <KpiCards data={kpisQuery.data} isLoading={kpisQuery.isLoading} />
@@ -53,7 +54,7 @@ export default function DashboardPage() {
       {/* Desktop: charts */}
       <div className="hidden md:grid gap-5 xl:grid-cols-[1.65fr_1fr]">
         <RevenueChart data={revenueChartQuery.data} isLoading={revenueChartQuery.isLoading} />
-        <ProjectDonut data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
+        <TopProjects />
       </div>
 
       <div className="hidden md:block">

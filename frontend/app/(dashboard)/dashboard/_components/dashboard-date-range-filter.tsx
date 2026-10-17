@@ -139,58 +139,48 @@ export function DashboardDateRangeFilter({
   };
 
   return (
-    <div
-      className={cn(
-        "grid w-full gap-2 rounded-md border border-white/70 bg-white/85 p-3 shadow-sm md:w-auto md:grid-cols-[170px_148px_148px_auto] md:items-end",
-        className
-      )}
-    >
-      <label className="space-y-1.5">
-        <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">
-          <CalendarDays className="h-3.5 w-3.5" />
-          Khoảng thời gian
-        </span>
-        <Select value={selectedPreset} onChange={(event) => handlePresetChange(event.target.value)} className="h-10">
-          {RANGE_PRESETS.map((preset) => (
-            <option key={preset.value} value={preset.value}>
-              {preset.label}
-            </option>
-          ))}
-        </Select>
-      </label>
+    <div className={cn("flex w-full flex-wrap items-center gap-2 md:w-auto md:flex-nowrap", className)}>
+      <CalendarDays className="hidden h-4 w-4 shrink-0 text-text-secondary md:block" aria-hidden="true" />
+      <Select
+        value={selectedPreset}
+        onChange={(event) => handlePresetChange(event.target.value)}
+        className="h-9 w-[150px]"
+        aria-label="Khoảng thời gian"
+      >
+        {RANGE_PRESETS.map((preset) => (
+          <option key={preset.value} value={preset.value}>
+            {preset.label}
+          </option>
+        ))}
+      </Select>
 
-      <label className="space-y-1.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">Từ ngày</span>
-        <Input
-          type="date"
-          value={range.dateFrom}
-          onChange={(event) => handleDateFromChange(event.target.value)}
-          className="h-10 px-3"
-        />
-      </label>
-
-      <label className="space-y-1.5">
-        <span className="text-xs font-semibold uppercase tracking-[0.14em] text-text-secondary">Đến ngày</span>
-        <Input
-          type="date"
-          value={range.dateTo}
-          onChange={(event) => handleDateToChange(event.target.value)}
-          className="h-10 px-3"
-        />
-      </label>
+      <Input
+        type="date"
+        value={range.dateFrom}
+        onChange={(event) => handleDateFromChange(event.target.value)}
+        className="h-9 w-[140px] px-3"
+        aria-label="Từ ngày"
+      />
+      <Input
+        type="date"
+        value={range.dateTo}
+        onChange={(event) => handleDateToChange(event.target.value)}
+        className="h-9 w-[140px] px-3"
+        aria-label="Đến ngày"
+      />
 
       <Button
         type="button"
-        variant="outline"
-        size="md"
-        className="h-10 px-3"
+        variant="ghost"
+        size="sm"
+        className="h-9 px-2"
         disabled={!canReset}
         title="Đặt lại năm hiện hành"
         aria-label="Đặt lại năm hiện hành"
         onClick={() => onRangeChange(defaultRange)}
       >
         <RotateCcw className="h-4 w-4" />
-        <span className="hidden xl:inline">Đặt lại</span>
+        Đặt lại
       </Button>
     </div>
   );

@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { Card,CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { formatVNDShort } from "@/lib/format";
 import { PipelineStage } from "@/lib/types";
@@ -56,9 +57,13 @@ export function PipelinePreview({
           })}
         </div>
 
-        <div className="flex divide-x divide-border/40">
+        <div className="flex gap-2">
           {data.map((stage) => (
-            <div key={stage.status} className="flex flex-1 flex-col items-center gap-1 px-2 text-center">
+            <Link
+              key={stage.status}
+              href={`/projects?view=kanban&status=${stage.status}`}
+              className="flex flex-1 flex-col items-center gap-1 rounded-lg bg-bg-subtle px-2 py-3 text-center transition-colors hover:bg-bg-hover"
+            >
               <span
                 className="h-2 w-2 rounded-full"
                 style={{ backgroundColor: CHART_STAGE_COLORS[stage.status] ?? CHART_COLORS.axis }}
@@ -68,7 +73,7 @@ export function PipelinePreview({
               </p>
               <p className="text-lg font-bold leading-none text-text-primary">{stage.count}</p>
               <p className="text-[11px] text-text-muted">{formatVNDShort(stage.totalValue)}</p>
-            </div>
+            </Link>
           ))}
         </div>
       </CardContent>

@@ -1,4 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Card,CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { formatTime } from "@/lib/format";
 import { DashboardTask } from "@/lib/types";
@@ -50,9 +52,18 @@ export function TaskChecklist({
             ))}
           </ul>
         ) : (
-          <div className="rounded-xl border border-dashed border-border bg-white/60 px-4 py-6 text-center text-sm text-text-muted">
-            Hôm nay chưa có việc nào được lên lịch.
-          </div>
+          <EmptyState
+            title="Chưa có việc hôm nay"
+            description="Hôm nay chưa có việc nào được lên lịch."
+            action={
+              <Link
+                href="/activities/new"
+                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-mid"
+              >
+                Lên lịch việc
+              </Link>
+            }
+          />
         )}
       </CardContent>
     </Card>

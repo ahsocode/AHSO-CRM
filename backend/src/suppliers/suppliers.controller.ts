@@ -6,6 +6,7 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { BulkSupplierDto, bulkSupplierSchema } from "./dto/bulk-supplier.dto";
 import { CreateSupplierDto, createSupplierSchema } from "./dto/create-supplier.dto";
 import { SupplierFilterDto, supplierFilterSchema } from "./dto/supplier-filter.dto";
 import { UpdateSupplierDto, updateSupplierSchema } from "./dto/update-supplier.dto";
@@ -33,6 +34,14 @@ export class SuppliersController {
   @Get("select")
   findAllSelect(@CurrentUser() user: JwtUser) {
     return this.service.findAllSelect(user);
+  }
+
+  // Must stay declared BEFORE @Get(":id") or "export" is captured as an id.
+  @RequirePermissions("suppliers.view")
+  @ApiOperation({ summary: "GET /api/suppliers/export — all rows matching filters (Excel)" })
+  @Get("export")
+  exportAll(@Query(new ZodValidationPipe(supplierFilterSchema, "query")) filters: SupplierFilterDto) {
+    return this.service.exportAll(filters);
   }
 
   @RequirePermissions("suppliers.view")
@@ -73,7 +82,7 @@ export class SuppliersController {
   @RequirePermissions("suppliers.view")
   @ApiOperation({ summary: "POST /api/suppliers/bulk — export selected rows" })
   @Post("bulk")
-  bulk(@Body() dto: { action: "export"; ids: string[] }) {
+  bulk(@Body(new ZodValidationPipe(bulkSupplierSchema)) dto: BulkSupplierDto) {
     return this.service.bulkExport(dto.ids);
   }
 }

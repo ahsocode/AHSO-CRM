@@ -29,7 +29,10 @@ export interface SupplierCreateInput {
   isActive?: boolean;
 }
 
-export interface SupplierUpdateInput extends Partial<SupplierCreateInput> {}
+/** "" hoặc null = xóa trường; bỏ qua (undefined) = giữ nguyên */
+export type SupplierUpdateInput = {
+  [K in keyof SupplierCreateInput]?: SupplierCreateInput[K] | null;
+};
 
 export function useSuppliers(filters: SupplierFilters) {
   return useQuery({
@@ -48,7 +51,9 @@ export function useSuppliers(filters: SupplierFilters) {
 
 export function useSupplier(id?: string) {
   return useQuery({
-    queryKey: ["suppliers", id],
+    // Namespaced "detail" key — avoids colliding with ["suppliers", "select"]
+    // and list keys; invalidating ["suppliers"] still refreshes it.
+    queryKey: ["suppliers", "detail", id],
     enabled: Boolean(id),
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<SupplierDetail>>(`/suppliers/${id}`);
@@ -72,7 +77,7 @@ export function useCreateSupplier() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: SupplierCreateInput) => {
-      const res = await apiClient.post<ApiResponse<SupplierDetail>>("/suppliers", data);
+      const res = await apiClient.post<ApiResponse<Pick<SupplierDetail, "id" | "code" | "name">>>("/suppliers", data);
       return res.data.data;
     },
     onSuccess: async () => {
@@ -85,7 +90,7 @@ export function useUpdateSupplier(id: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: SupplierUpdateInput) => {
-      const res = await apiClient.patch<ApiResponse<SupplierDetail>>(`/suppliers/${id}`, data);
+      const res = await apiClient.patch<ApiResponse<Pick<SupplierDetail, "id" | "code" | "name">>>(`/suppliers/${id}`, data);
       return res.data.data;
     },
     onSuccess: async () => {
@@ -105,4 +110,12 @@ export function useDeleteSupplier(id: string) {
       await qc.invalidateQueries({ queryKey: ["suppliers"] });
     },
   });
+}
+
+/** Xuất toàn bộ NCC theo bộ lọc (endpoint riêng, không bị giới hạn limit=100) */
+export async function fetchSuppliersExport(filters: Pick<SupplierFilters, "search" | "isActive">) {
+  const res = await apiClient.get<ApiResponse<{ items: Record<string, string>[] }>>("/suppliers/export", {
+    params: filters,
+  });
+  return res.data.data.items;
 }

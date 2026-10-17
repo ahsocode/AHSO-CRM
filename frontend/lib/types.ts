@@ -1877,10 +1877,41 @@ export interface SupplierListItem {
   createdAt: string;
   updatedAt: string;
 }
+/** Vật tư do NCC cung cấp (từ bảng MaterialSupplier) */
+export interface SupplierMaterialLink {
+  id: string;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  supplierCode: string | null;
+  costPrice: number;
+  leadTimeDays: number | null;
+  isPreferred: boolean;
+}
+export interface SupplierRecentReceipt {
+  id: string;
+  receiptNo: string;
+  date: string;
+  status: StockDocStatus;
+  totalAmount: number;
+  purchaseInvoiceNo: string | null;
+  warehouse: { id: string; name: string };
+}
+/**
+ * Contract với backend SuppliersService.findOne() — giữ đồng bộ hai phía.
+ * (Trước đây khai báo `_count` mà API không trả → trang chi tiết crash.)
+ */
 export interface SupplierDetail extends SupplierListItem {
   address: string | null;
   notes: string | null;
-  _count: { materialSuppliers: number };
+  _count: { materialSuppliers: number; receipts: number };
+  stats: {
+    confirmedPurchaseTotal: number;
+    lastReceiptDate: string | null;
+  };
+  materials: SupplierMaterialLink[];
+  recentReceipts: SupplierRecentReceipt[];
 }
 export interface SupplierSelectItem {
   id: string;
@@ -1892,6 +1923,7 @@ export interface SupplierListMeta {
   page: number;
   limit: number;
   totalPages: number;
+  summary?: { activeCount: number };
 }
 
 // Material Categories

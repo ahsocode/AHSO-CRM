@@ -104,37 +104,56 @@ export function SupplierFormScreen({
   const apiError = mode === "create" ? createMutation.error : updateMutation.error;
 
   function onSubmit(values: SupplierFormValues) {
-    const payload = {
-      ...values,
-      taxCode: values.taxCode || undefined,
-      address: values.address || undefined,
-      phone: values.phone || undefined,
-      email: values.email || undefined,
-      contactName: values.contactName || undefined,
-      notes: values.notes || undefined,
-    };
-
     if (mode === "create") {
+      // Create: empty optional fields are simply omitted
+      const payload = {
+        ...values,
+        taxCode: values.taxCode || undefined,
+        address: values.address || undefined,
+        phone: values.phone || undefined,
+        email: values.email || undefined,
+        contactName: values.contactName || undefined,
+        notes: values.notes || undefined,
+      };
       createMutation.mutate(payload, {
-        onSuccess: () => {
+        onSuccess: (created) => {
           toast.success("Đã thêm nhà cung cấp thành công.");
-          router.push("/suppliers" as Route);
+          router.push(`/suppliers/${created.id}` as Route);
         },
-        onError: () => {
-          toast.error("Không thể thêm nhà cung cấp.");
-        },
-      });
-    } else {
-      updateMutation.mutate(payload, {
-        onSuccess: () => {
-          toast.success("Đã cập nhật nhà cung cấp.");
-          router.push(`/suppliers/${supplierId}` as Route);
-        },
-        onError: () => {
-          toast.error("Không thể cập nhật nhà cung cấp.");
+        onError: (error) => {
+          toast.error(getApiErrorMessage(error, "Không thể thêm nhà cung cấp."));
         },
       });
+      return;
     }
+
+    // Edit: send "" as-is — backend treats it as "clear this field".
+    // Converting to undefined (old behavior) meant cleared fields were never saved.
+    updateMutation.mutate(values, {
+      onSuccess: () => {
+        toast.success("Đã cập nhật nhà cung cấp.");
+        router.push(`/suppliers/${supplierId}` as Route);
+      },
+      onError: (error) => {
+        toast.error(getApiErrorMessage(error, "Không thể cập nhật nhà cung cấp."));
+      },
+    });
+  }
+
+  if (mode === "edit" && supplierQuery.isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Chỉnh sửa nhà cung cấp" description="Không tải được dữ liệu nhà cung cấp." />
+        <div className="rounded-lg bg-danger-bg/70 p-6 text-sm text-danger">
+          {getApiErrorMessage(supplierQuery.error, "Không tìm thấy nhà cung cấp hoặc đã bị xóa.")}
+          <div className="mt-4">
+            <Link href={"/suppliers" as Route} className={cn(buttonVariants({ variant: "outline" }))}>
+              Về danh sách
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -282,7 +301,7 @@ export function SupplierFormScreen({
               </div>
 
               {apiError ? (
-                <div className="rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">
+                <div className="rounded-lg bg-danger-bg/80 px-4 py-3 text-sm text-danger">
                   {getApiErrorMessage(apiError, "Không thể lưu nhà cung cấp.")}
                 </div>
               ) : null}

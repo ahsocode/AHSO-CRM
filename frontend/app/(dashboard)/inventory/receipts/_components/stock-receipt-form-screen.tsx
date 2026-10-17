@@ -56,9 +56,12 @@ type ReceiptFormValues = z.infer<typeof receiptFormSchema>;
 export function StockReceiptFormScreen({
   mode = "create",
   receiptId,
+  initialSupplierId,
 }: {
   mode?: "create" | "edit";
   receiptId?: string;
+  /** Prefill from `/inventory/receipts/new?supplierId=` (link on supplier detail) */
+  initialSupplierId?: string;
 }) {
   const router = useRouter();
   const createMutation = useCreateStockReceipt();
@@ -73,11 +76,22 @@ export function StockReceiptFormScreen({
       date: new Date().toISOString().slice(0, 10),
       purchaseInvoiceNo: "",
       warehouseId: "",
-      supplierId: "",
+      supplierId: initialSupplierId ?? "",
       notes: "",
       items: [createEmptyStockDocItem("receipt") as ReceiptFormValues["items"][0]],
     },
   });
+
+  // Native <select> can only show the prefilled supplier once its <option>
+  // exists, so re-apply the value after the supplier list has loaded.
+  useEffect(() => {
+    if (mode === "create" && initialSupplierId && suppliersSelect.data) {
+      const exists = suppliersSelect.data.some((supplier) => supplier.id === initialSupplierId);
+      if (exists) {
+        form.setValue("supplierId", initialSupplierId);
+      }
+    }
+  }, [mode, initialSupplierId, suppliersSelect.data, form]);
 
   useEffect(() => {
     if (mode === "edit" && receiptQuery.data) {

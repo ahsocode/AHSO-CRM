@@ -5,9 +5,8 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
-import { useSuppliers } from "@/hooks/use-suppliers";
-import { apiClient, getApiErrorMessage } from "@/lib/api-client";
-import type { SupplierListItem } from "@/lib/types";
+import { fetchSuppliersExport, useSuppliers } from "@/hooks/use-suppliers";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { cn, downloadExcelRows } from "@/lib/utils";
 import { toast } from "sonner";
 import { SupplierFilters } from "./supplier-filters";
@@ -26,24 +25,17 @@ export function SuppliersClient() {
   async function handleExport() {
     setIsExporting(true);
     try {
-      const res = await apiClient.get<{ data: SupplierListItem[] }>("/suppliers", {
-        params: { page: 1, limit: 9999, search: deferredSearch || undefined, isActive },
-      });
-      const items = res.data.data ?? [];
-      if (!items.length) { toast.warning("Không có dữ liệu để xuất."); return; }
-      const rows = items.map((s) => ({
-        "Mã NCC": s.code,
-        "Tên nhà cung cấp": s.name,
-        "Mã số thuế": s.taxCode ?? "",
-        "Điện thoại": s.phone ?? "",
-        "Email": s.email ?? "",
-        "Người liên hệ": s.contactName ?? "",
-        "Trạng thái": s.isActive ? "Hoạt động" : "Ngưng",
-      }));
+      // Dedicated endpoint: the list endpoint caps limit at 100, so the old
+      // `limit: 9999` request always failed with 400.
+      const rows = await fetchSuppliersExport({ search: deferredSearch || undefined, isActive });
+      if (!rows.length) {
+        toast.warning("Không có dữ liệu để xuất.");
+        return;
+      }
       await downloadExcelRows("nha-cung-cap.xlsx", rows);
       toast.success(`Đã xuất ${rows.length} nhà cung cấp.`);
-    } catch {
-      toast.error("Không thể xuất dữ liệu.");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Không thể xuất dữ liệu."));
     } finally {
       setIsExporting(false);
     }
@@ -61,7 +53,6 @@ export function SuppliersClient() {
   });
 
   const items = suppliersQuery.data?.items ?? [];
-  const activeCount = items.filter((s) => s.isActive).length;
   const canReset = search.length > 0 || isActive !== undefined;
 
   return (
@@ -91,7 +82,8 @@ export function SuppliersClient() {
 
       <SupplierOverviewCards
         total={suppliersQuery.data?.meta?.total ?? 0}
-        activeCount={suppliersQuery.data?.items.filter((s) => s.isActive).length ?? 0}
+        // Server-side count across all pages (was: current page only)
+        activeCount={suppliersQuery.data?.meta?.summary?.activeCount ?? 0}
         isLoading={suppliersQuery.isLoading}
       />
 

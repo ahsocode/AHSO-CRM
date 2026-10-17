@@ -3,9 +3,10 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { V2MetricCard } from "@/components/shared/composite-cards";
 import { CustomerListItem, CustomerListMeta } from "@/lib/types";
 
+// `items` is no longer used for counting: VIP total now comes from meta.summary.vipCount
+// so it stays correct across pages. Prop kept for call-site compatibility (see B5 cleanup).
 export function CustomerOverviewCards({
   meta,
-  items = [],
   isLoading
 }: {
   meta?: CustomerListMeta;
@@ -34,7 +35,7 @@ export function CustomerOverviewCards({
     {
       label: "Tổng khách hàng",
       value: meta?.total ?? 0,
-      helper: `Trang ${meta?.page ?? 1}/${meta?.totalPages ?? 1}`,
+      helper: "Theo bộ lọc hiện tại",
       tone: "primary" as const
     },
     {
@@ -50,9 +51,9 @@ export function CustomerOverviewCards({
       tone: "success" as const
     },
     {
-      label: "VIP trên trang",
-      value: items.filter((customer) => customer.isVip).length,
-      helper: "Khách ưu tiên trong trang hiện tại",
+      label: "Khách hàng VIP",
+      value: meta?.summary.vipCount ?? 0,
+      helper: "Theo bộ lọc hiện tại",
       tone: "accent" as const
     }
   ];

@@ -2,9 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { formatVNDShort } from "@/lib/format";
 import { PipelineStage } from "@/lib/types";
-import { CHART_STAGE_SERIES } from "@/lib/constants";
-
-const STAGE_COLORS = [...CHART_STAGE_SERIES];
+import { CHART_COLORS, CHART_STAGE_COLORS } from "@/lib/constants";
 
 export function PipelinePreview({
   data,
@@ -38,7 +36,7 @@ export function PipelinePreview({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex h-9 overflow-hidden rounded-full">
-          {data.map((stage, index) => {
+          {data.map((stage) => {
             const pct = totalValue > 0 ? (stage.totalValue / totalValue) * 100 : 0;
             if (pct < 0.5) {
               return null;
@@ -51,7 +49,7 @@ export function PipelinePreview({
                 className="transition-opacity hover:opacity-80"
                 style={{
                   flex: stage.totalValue,
-                  backgroundColor: STAGE_COLORS[index % STAGE_COLORS.length]
+                  backgroundColor: CHART_STAGE_COLORS[stage.status] ?? CHART_COLORS.axis
                 }}
               />
             );
@@ -59,11 +57,11 @@ export function PipelinePreview({
         </div>
 
         <div className="flex divide-x divide-border/40">
-          {data.map((stage, index) => (
+          {data.map((stage) => (
             <div key={stage.status} className="flex flex-1 flex-col items-center gap-1 px-2 text-center">
               <span
                 className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: STAGE_COLORS[index % STAGE_COLORS.length] }}
+                style={{ backgroundColor: CHART_STAGE_COLORS[stage.status] ?? CHART_COLORS.axis }}
               />
               <p className="text-[10px] font-semibold uppercase leading-tight tracking-[0.12em] text-text-muted">
                 {stage.label}

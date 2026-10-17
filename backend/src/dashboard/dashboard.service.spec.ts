@@ -134,6 +134,19 @@ describe("DashboardService", () => {
     );
   });
 
+  it("returns null change percent when the previous period has no revenue", async () => {
+    const now = new Date();
+    prisma.project.findMany.mockResolvedValue([{ completedAt: now, estimatedValue: 150_000_000 }]);
+    prisma.project.count.mockResolvedValue(0);
+    prisma.quote.findMany.mockResolvedValue([]);
+    prisma.contract.findMany.mockResolvedValue([]);
+
+    const result = await service.getKpis(getMonthRange(now));
+
+    expect(result.monthlyRevenue.value).toBe(150_000_000);
+    expect(result.monthlyRevenue.changePercent).toBeNull();
+  });
+
   it("keeps dashboard pipeline stages aligned with the project status ledger", async () => {
     prisma.project.findMany.mockResolvedValue([
       {

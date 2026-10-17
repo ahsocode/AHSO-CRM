@@ -35,20 +35,30 @@ export function KpiCards({
       label: "Doanh số kỳ",
       value: <CurrencyDisplay amount={data.monthlyRevenue.value} short />,
       // Sparkline theo khoảng thời gian đang chọn.
-      hint: (
-        <span className="flex items-center gap-2">
-          {data.monthlyRevenue.trend?.length >= 2 ? (
-            <span className={data.monthlyRevenue.changePercent >= 0 ? "text-success" : "text-danger"}>
-              <Sparkline data={data.monthlyRevenue.trend} />
+      hint: (() => {
+        const changePercent = data.monthlyRevenue.changePercent;
+
+        // No previous-period baseline: show a neutral message instead of a fake percentage.
+        if (changePercent === null) {
+          return <span className="text-text-secondary">Chưa có số liệu kỳ trước</span>;
+        }
+
+        const toneClass = changePercent >= 0 ? "text-success" : "text-danger";
+
+        return (
+          <span className="flex items-center gap-2">
+            {data.monthlyRevenue.trend?.length >= 2 ? (
+              <span className={toneClass}>
+                <Sparkline data={data.monthlyRevenue.trend} />
+              </span>
+            ) : null}
+            <span className={toneClass}>
+              {changePercent >= 0 ? "▲" : "▼"} {Math.abs(changePercent)}%
             </span>
-          ) : null}
-          <span className={data.monthlyRevenue.changePercent >= 0 ? "text-success" : "text-danger"}>
-            {data.monthlyRevenue.changePercent >= 0 ? "▲" : "▼"}{" "}
-            {Math.abs(data.monthlyRevenue.changePercent)}%
+            <span>kỳ trước</span>
           </span>
-          <span>kỳ trước</span>
-        </span>
-      ),
+        );
+      })(),
       tone: "primary" as const
     },
     {

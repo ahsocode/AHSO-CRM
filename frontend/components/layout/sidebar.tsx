@@ -10,62 +10,6 @@ import { getAuthRoleName } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/shared/app-icon";
 
-function getItemHint(href: string) {
-  if (href === "/dashboard") {
-    return "Tổng quan điều phối";
-  }
-
-  if (href === "/customers") {
-    return "Lead và khách hàng";
-  }
-
-  if (href === "/projects") {
-    return "Cơ hội và triển khai";
-  }
-
-  if (href === "/quotes") {
-    return "Bản chào giá thương mại";
-  }
-
-  if (href === "/contracts") {
-    return "Tiến độ hợp đồng";
-  }
-
-  if (href === "/calendar") {
-    return "Lịch hẹn và công việc";
-  }
-
-  if (href === "/mailbox") {
-    return "Email khách hàng";
-  }
-
-  if (href === "/documents") {
-    return "Hồ sơ & tài liệu";
-  }
-
-  if (href === "/suppliers") {
-    return "Nhà cung cấp vật tư";
-  }
-
-  if (href === "/materials") {
-    return "Danh mục vật tư";
-  }
-
-  if (href === "/inventory") {
-    return "Nhập / Xuất / Kiểm kê";
-  }
-
-  if (href === "/reports") {
-    return "Phân tích vận hành";
-  }
-
-  if (href === "/admin") {
-    return "Cấu hình hệ thống";
-  }
-
-  return "Quyền truy cập nội bộ";
-}
-
 export function Sidebar() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
@@ -125,9 +69,6 @@ export function Sidebar() {
 
               <div className="min-w-0 flex-1">
                 <span className="block whitespace-nowrap">{item.label}</span>
-                <span className={cn("mt-0.5 hidden text-[10.5px] leading-none md:block", isActive ? "text-primary/70" : "text-text-muted")}>
-                  {getItemHint(item.href)}
-                </span>
               </div>
             </Link>
           );

@@ -71,8 +71,9 @@ export class DashboardService {
       .filter((p) => p.completedAt !== null && p.completedAt >= previousPeriodStart && p.completedAt < range.start)
       .reduce((sum, p) => sum + Number(p.estimatedValue ?? 0), 0);
 
+    // null = no previous-period baseline; a percentage change is undefined, so do not fake 0% or 100%.
     const revenueChange = previousPeriodRevenue === 0
-      ? (periodRevenue > 0 ? 100 : 0)
+      ? null
       : Number((((periodRevenue - previousPeriodRevenue) / previousPeriodRevenue) * 100).toFixed(1));
 
     const outstandingContracts = contracts.map((contract) => {

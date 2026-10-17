@@ -35,7 +35,7 @@ export class CustomersService {
     const quarterStart = this.getQuarterStart();
     const lastThirtyDays = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [customers, total, matchingCustomers] = await this.prisma.$transaction([
+    const [customers, total, matchingCustomers, vipCount] = await this.prisma.$transaction([
       this.prisma.customer.findMany({
         where,
         skip,
@@ -77,7 +77,9 @@ export class CustomersService {
           status: true,
           createdAt: true
         }
-      })
+      }),
+      // VIP count covers the whole filtered set, not just the current page.
+      this.prisma.customer.count({ where: { ...where, isVip: true } })
     ]);
 
     const customerIds = matchingCustomers.map((customer) => customer.id);
@@ -140,7 +142,8 @@ export class CustomersService {
         summary: {
           quarterlyRevenue: Number(quarterlyRevenue._sum.amount ?? 0),
           newCustomersLast30Days: newCustomerCount,
-          retentionRate: total > 0 ? Number(((activeCustomerCount / total) * 100).toFixed(1)) : 0
+          retentionRate: total > 0 ? Number(((activeCustomerCount / total) * 100).toFixed(1)) : 0,
+          vipCount
         }
       }
     };

@@ -37,13 +37,15 @@ export function parseDateTimeLocalInput(value: string): Date | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+const SHORT_NUMBER = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
+
 export function formatVNDShort(amount: number): string {
-  if (amount >= 1_000_000_000) {
-    return `${(amount / 1_000_000_000).toFixed(1)} tỷ`;
+  if (Math.abs(amount) >= 1_000_000_000) {
+    return `${SHORT_NUMBER.format(amount / 1_000_000_000)} tỷ`;
   }
 
-  if (amount >= 1_000_000) {
-    return `${Math.round(amount / 1_000_000)}M`;
+  if (Math.abs(amount) >= 1_000_000) {
+    return `${SHORT_NUMBER.format(amount / 1_000_000)} tr`;
   }
 
   return formatVND(amount);

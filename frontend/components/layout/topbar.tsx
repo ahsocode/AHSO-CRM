@@ -44,7 +44,18 @@ function getTopbarContext(pathname: string) {
   if (pathname.startsWith("/reports")) return { area: "Phân tích", current: "Báo cáo" };
   if (pathname.startsWith("/admin")) return { area: "Hệ thống", current: "Quản trị" };
   if (pathname.startsWith("/users")) return { area: "Hệ thống", current: "Người dùng" };
-  return { area: "Tổng quan", current: "Dashboard" };
+  if (pathname.startsWith("/activities")) return { area: "CRM", current: "Hoạt động" };
+  if (pathname.startsWith("/surveys")) return { area: "CRM", current: "Khảo sát" };
+  if (pathname.startsWith("/documents")) return { area: "CRM", current: "Hồ sơ" };
+  if (pathname.startsWith("/suppliers")) return { area: "Kho vật tư", current: "Nhà cung cấp" };
+  if (pathname.startsWith("/materials")) return { area: "Kho vật tư", current: "Vật tư" };
+  if (pathname.startsWith("/inventory")) return { area: "Kho vật tư", current: "Kho hàng" };
+  if (pathname.startsWith("/agents")) return { area: "AI", current: "AI Agents" };
+  if (pathname.startsWith("/notifications")) return { area: "Hệ thống", current: "Thông báo" };
+  if (pathname.startsWith("/settings")) return { area: "Hệ thống", current: "Cài đặt" };
+  if (pathname.startsWith("/dashboard")) return { area: "Tổng quan", current: "Dashboard" };
+  // Unmapped route: show only the app name, no fake "Dashboard" crumb.
+  return { area: "AHSO CRM", current: "" };
 }
 
 function getSessionDevice(session: UserSessionInfo) {
@@ -106,8 +117,12 @@ export function Topbar({
 
       <div className="hidden shrink-0 items-center gap-2 md:flex">
         <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-text-muted">{context.area}</span>
-        <AppIcon name="chevron-down" className="h-3 w-3 -rotate-90 text-text-muted" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{context.current}</span>
+        {context.current ? (
+          <>
+            <AppIcon name="chevron-down" className="h-3 w-3 -rotate-90 text-text-muted" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{context.current}</span>
+          </>
+        ) : null}
       </div>
 
       {/* Mobile: compact search icon button */}

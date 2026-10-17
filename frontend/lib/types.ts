@@ -305,7 +305,8 @@ export interface ForgotPasswordResponse extends ActionResponse {
 export interface DashboardKpis {
   monthlyRevenue: {
     value: number;
-    changePercent: number;
+    /** null khi kỳ trước = 0 (không có mốc so sánh) */
+    changePercent: number | null;
     /** Doanh số từng tháng trong khoảng thời gian dashboard đang chọn */
     trend: number[];
   };
@@ -427,6 +428,8 @@ export interface CustomersSummary {
   quarterlyRevenue: number;
   newCustomersLast30Days: number;
   retentionRate: number;
+  /** Số khách VIP trong toàn bộ bộ lọc hiện tại (không phải trang hiện tại) */
+  vipCount: number;
 }
 
 export interface CustomerListMeta {

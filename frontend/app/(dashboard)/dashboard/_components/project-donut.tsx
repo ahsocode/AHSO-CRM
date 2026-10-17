@@ -5,9 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PipelineStage } from "@/lib/types";
 import { formatVNDShort } from "@/lib/format";
-import { CHART_STAGE_SERIES } from "@/lib/constants";
-
-const STAGE_COLORS = [...CHART_STAGE_SERIES];
+import { CHART_COLORS, CHART_STAGE_COLORS } from "@/lib/constants";
 
 export function ProjectDonut({
   data,
@@ -38,8 +36,8 @@ export function ProjectDonut({
                     paddingAngle={4}
                     stroke="none"
                   >
-                    {data.map((stage, index) => (
-                      <Cell key={stage.status} fill={STAGE_COLORS[index % STAGE_COLORS.length]} />
+                    {data.map((stage) => (
+                      <Cell key={stage.status} fill={CHART_STAGE_COLORS[stage.status] ?? CHART_COLORS.axis} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: number, _label, payload) => [`${value} cơ hội`, payload?.payload?.label]} />
@@ -48,11 +46,11 @@ export function ProjectDonut({
             </div>
 
             <div className="space-y-1">
-              {data.map((stage, index) => (
+              {data.map((stage) => (
                 <div className="flex items-center gap-2 py-1.5" key={stage.status}>
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: STAGE_COLORS[index % STAGE_COLORS.length] }}
+                    style={{ backgroundColor: CHART_STAGE_COLORS[stage.status] ?? CHART_COLORS.axis }}
                   />
                   <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{stage.label}</span>
                   <span className="shrink-0 rounded-full bg-bg-hover px-2 py-0.5 text-xs font-semibold text-text-secondary">

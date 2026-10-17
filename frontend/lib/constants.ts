@@ -1,4 +1,4 @@
-import type { StockDocStatus, SurveyNoteType } from "./types";
+import type { ProjectStatus, StockDocStatus, SurveyNoteType } from "./types";
 
 export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? "AHSO CRM";
 
@@ -124,16 +124,16 @@ export const CHART_COLORS = {
   muted: "#78909c"
 } as const;
 
-/** Series màu theo thứ tự stage pipeline (SURVEY → ... → LOST) */
-export const CHART_STAGE_SERIES = [
-  CHART_COLORS.muted,
-  CHART_COLORS.primaryLight,
-  CHART_COLORS.accent,
-  CHART_COLORS.primaryMid,
-  CHART_COLORS.success,
-  CHART_COLORS.danger,
-  CHART_COLORS.axis
-] as const;
+/** Màu theo trạng thái pipeline — gán theo status, KHÔNG theo index mảng */
+export const CHART_STAGE_COLORS: Record<ProjectStatus, string> = {
+  SURVEY: CHART_COLORS.muted,          // xám xanh
+  QUOTING: CHART_COLORS.primaryLight,  // xanh dương
+  NEGOTIATING: CHART_COLORS.accent,    // cam
+  WON: CHART_COLORS.primaryMid,        // xanh đậm
+  DELIVERING: CHART_COLORS.teal,       // teal
+  COMPLETED: CHART_COLORS.success,     // xanh lá
+  LOST: CHART_COLORS.danger            // đỏ
+};
 
 /** Series màu cho chart phân loại tổng quát (report builder...) */
 export const CHART_CATEGORY_SERIES = [

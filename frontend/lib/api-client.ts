@@ -77,7 +77,10 @@ function getSessionChannel(): BroadcastChannel | null {
  * a genuinely new browser session and the "require explicit login" policy
  * applies.
  */
-export function requestSessionFromOtherTabs(timeoutMs = 400): Promise<boolean> {
+// 1500 ms (was 400): a sibling tab running in a background window can answer
+// slowly, and a missed answer falls through to logout(), which revokes the
+// session for every tab. The wait only happens when this tab has no token.
+export function requestSessionFromOtherTabs(timeoutMs = 1500): Promise<boolean> {
   const channel = getSessionChannel();
   if (!channel) return Promise.resolve(false);
 

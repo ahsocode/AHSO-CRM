@@ -44,7 +44,7 @@ export function ContractsClient() {
     <div className="space-y-8">
       <PageHeader
         title="Hợp đồng"
-        description="Contract board gom hợp đồng, công nợ và tiến độ delivery trên cùng một bề mặt để đội vận hành theo dõi sát hơn."
+        description="Trang này tổng hợp hợp đồng, công nợ và tiến độ triển khai để đội vận hành theo dõi sát hơn."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>

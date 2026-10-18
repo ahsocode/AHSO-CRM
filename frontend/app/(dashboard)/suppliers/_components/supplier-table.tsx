@@ -39,7 +39,6 @@ export function SupplierTable({
   const ledgerHeader = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Supplier Ledger"
       metaText={`${meta?.total ?? items.length} nhà cung cấp · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách nhà cung cấp"

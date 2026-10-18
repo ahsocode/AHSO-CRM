@@ -57,7 +57,7 @@ export function ActivitiesClient() {
       {showDeleted ? (
         <DeletedRecordsPanel
           title="Hoạt động đã xóa mềm"
-          description="Các hoạt động đã xóa mềm vẫn có thể khôi phục để trả lại timeline, lịch và lịch sử tương tác."
+          description="Hoạt động đã xóa vẫn có thể khôi phục để trả lại dòng thời gian, lịch và lịch sử tương tác."
           emptyTitle="Thùng rác hoạt động đang trống"
           emptyDescription="Khi xóa mềm hoạt động, bản ghi sẽ xuất hiện ở đây."
           items={deletedActivitiesQuery.data?.items ?? []}

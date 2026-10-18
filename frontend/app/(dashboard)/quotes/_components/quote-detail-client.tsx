@@ -220,7 +220,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
       )}
       <PageHeader
         title="Chi tiết báo giá"
-        description="Quote workspace gom đầy đủ thông tin thương mại, danh mục chào giá và dữ liệu dự án/khách hàng trên một màn hình."
+        description="Trang này tổng hợp đầy đủ thông tin thương mại, danh mục chào giá và dữ liệu dự án, khách hàng trên một màn hình."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/quotes" className={cn(buttonVariants({ variant: "outline" }))}>
@@ -340,7 +340,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               {quote.items.length === 0 ? (
                 <EmptyState
                   title="Chưa có hạng mục"
-                  description="Quote này chưa có line item. Flow tạo quote hiện tại luôn yêu cầu ít nhất 1 hạng mục để tránh draft rỗng."
+                  description="Báo giá này chưa có hạng mục nào. Khi tạo báo giá, hệ thống luôn yêu cầu ít nhất 1 hạng mục để tránh báo giá trống."
                 />
               ) : (
                 <>
@@ -835,7 +835,7 @@ function QuoteTemplateSelector({
           ) : (
             <>
               <select
-                aria-label="Chọn template báo giá"
+                aria-label="Chọn mẫu báo giá"
                 className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={selectedTemplateVariantId}
                 onChange={(event) => onChange(event.target.value)}

@@ -66,7 +66,6 @@ export function ProjectTable({
   const ledgerHeader = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Project Ledger"
       metaText={`${meta?.total ?? items.length} dự án · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách dự án"

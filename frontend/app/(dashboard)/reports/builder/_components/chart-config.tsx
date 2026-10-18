@@ -40,7 +40,7 @@ export function ChartConfig({
       </label>
 
       <label className="space-y-2">
-        <span className="text-sm font-semibold text-text-primary">Chart type</span>
+        <span className="text-sm font-semibold text-text-primary">Loại biểu đồ</span>
         <Select value={config.chartType} onChange={(event) => onChartTypeChange(event.target.value as ReportChartType)}>
           {REPORT_CHART_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -52,7 +52,7 @@ export function ChartConfig({
 
       <label className="space-y-2">
         <span className="text-sm font-semibold text-text-primary">Tên template</span>
-        <Input value={templateName} onChange={(event) => onTemplateNameChange(event.target.value)} placeholder="Ví dụ: Pipeline by owner" />
+        <Input value={templateName} onChange={(event) => onTemplateNameChange(event.target.value)} placeholder="Ví dụ: Pipeline theo phụ trách" />
       </label>
 
       <label className="space-y-2">

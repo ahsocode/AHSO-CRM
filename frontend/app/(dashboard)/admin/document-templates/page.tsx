@@ -361,7 +361,7 @@ export default function DocumentTemplatesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Trình biên tập mẫu tài liệu"
-        description="Thiết kế và quản lý variant template theo bố cục A4. Canvas là khu vực làm việc chính, hai panel hai bên chỉ giữ lại những công cụ cần thiết."
+        description="Thiết kế và quản lý phiên bản mẫu theo bố cục A4. Vùng thiết kế là khu vực làm việc chính, hai panel hai bên chỉ giữ lại những công cụ cần thiết."
         action={
           <Link href="/admin" className={cn(buttonVariants({ variant: "outline" }))}>
             Về quản trị
@@ -379,8 +379,8 @@ export default function DocumentTemplatesPage() {
 
       {!registryQuery.isLoading && !registryQuery.data?.length ? (
         <EmptyState
-          title="Không nạp được template registry"
-          description="Backend chưa trả về registry của documents module."
+          title="Không tải được danh mục mẫu"
+          description="Hệ thống chưa trả về danh mục mẫu tài liệu."
         />
       ) : null}
 
@@ -406,7 +406,7 @@ export default function DocumentTemplatesPage() {
               <div className="space-y-3 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-base font-bold text-text-primary">
-                    {activeVariant?.name ?? "Chọn một variant để mở editor"}
+                    {activeVariant?.name ?? "Chọn một phiên bản mẫu để chỉnh sửa"}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2">
                     {activeVariant ? (
@@ -520,8 +520,8 @@ export default function DocumentTemplatesPage() {
 
             {!activeVariant || !draftLayout || !catalogQuery.data ? (
               <EmptyState
-                title="Chọn một variant"
-                description="Khi chọn variant, canvas A4 và inspector sẽ hiện ra để bạn sắp xếp box."
+                title="Chọn một phiên bản"
+                description="Khi chọn phiên bản, vùng thiết kế A4 và bảng thuộc tính sẽ hiện ra để bạn sắp xếp các khối."
               />
             ) : (
               <section className="overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">

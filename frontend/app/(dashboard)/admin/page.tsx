@@ -31,7 +31,7 @@ const ADMIN_CARDS = [
   },
   {
     href: "/admin/custom-fields" as Route,
-    title: "Custom Fields",
+    title: "Trường tùy chỉnh",
     description: "Tạo trường động cho khách hàng, dự án và hợp đồng mà không phải sửa schema chính.",
     icon: "analytics" as const
   },

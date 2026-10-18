@@ -217,7 +217,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
       <style>{`@media print { @page { size: A4; margin: 0; } .quote-column-resize-layer, .quote-column-resize-handle { display: none !important; visibility: hidden !important; } }`}</style>
       <PageHeader
         className="print:hidden"
-        eyebrow="Quotation Preview"
+        eyebrow="Báo giá"
         title="Xem trước bản in"
         description="Canvas A4 để rà lại nội dung thương mại trước khi in hoặc tải PDF chuẩn gửi khách."
         action={

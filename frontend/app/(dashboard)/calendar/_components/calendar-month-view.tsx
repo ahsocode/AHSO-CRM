@@ -436,7 +436,7 @@ export function CalendarMonthView({
           <div className="border-t border-border/50 p-6">
             <EmptyState
               title="Không có công việc trong tháng này"
-              description="Nới bộ lọc hoặc chuyển sang tháng khác để xem thêm activity."
+              description="Nới bộ lọc hoặc chuyển sang tháng khác để xem thêm hoạt động."
             />
           </div>
         )}

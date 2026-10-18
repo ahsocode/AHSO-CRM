@@ -145,8 +145,8 @@ export function ContractMilestoneManager({
 
         {milestones.length === 0 ? (
           <EmptyState
-            title="Chưa có milestone"
-            description="Thêm milestone đầu tiên để theo dõi tiến độ triển khai và nghiệm thu."
+            title="Chưa có mốc"
+            description="Thêm mốc đầu tiên để theo dõi tiến độ triển khai và nghiệm thu."
           />
         ) : (
           <div className="space-y-4">

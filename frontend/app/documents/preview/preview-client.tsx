@@ -89,14 +89,14 @@ export function DocumentPreviewClient({
 
         {!isReady ? (
           <EmptyState
-            title="Thiếu tham số preview"
+            title="Thiếu tham số xem trước"
             description="Cần có loại tài liệu và entityId để dựng bản xem trước."
           />
         ) : previewQuery.isLoading ? (
           <LoadingSkeleton className="h-[75vh] w-full rounded-[32px]" />
         ) : previewQuery.error ? (
           <EmptyState
-            title="Không thể tải preview tài liệu"
+            title="Không thể tải bản xem trước tài liệu"
             description={getApiErrorMessage(previewQuery.error)}
           />
         ) : (

@@ -113,7 +113,7 @@ export function MaterialSupplierManager({
         {rows.length === 0 ? (
           <EmptyState
             title="Chưa có nhà cung cấp"
-            description="Thêm NCC để liên kết giá nhập và lead time với vật tư này."
+            description="Thêm nhà cung cấp để liên kết giá nhập và thời gian giao hàng với vật tư này."
           />
         ) : (
           <div className="overflow-x-auto">

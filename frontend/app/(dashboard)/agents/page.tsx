@@ -154,7 +154,7 @@ export default function AgentsPage() {
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={handleInputKeyDown}
-                placeholder="Ví dụ: Tìm khách hàng Vinamilk và đề xuất email follow-up tuần này."
+                placeholder="Ví dụ: Tìm khách hàng Vinamilk và đề xuất email theo dõi tuần này."
                 className="min-h-[80px]"
               />
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

@@ -226,9 +226,8 @@ export function CalendarClient() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Work Calendar"
         title="Lịch công việc"
-        description="Điều phối cuộc gọi, họp, khảo sát và follow-up theo tuần hoặc tháng. Kéo activity sang ngày khác để dời lịch."
+        description="Điều phối cuộc gọi, họp, khảo sát và theo dõi theo tuần hoặc tháng. Kéo hoạt động sang ngày khác để dời lịch."
         action={
           <div className="flex flex-wrap items-center gap-3">
 {/* View mode toggle with smart enable/disable */}

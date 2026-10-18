@@ -168,7 +168,7 @@ export function NotificationForm({
                 <div>
                   <CardTitle className="text-base">Nhắc milestone sắp đến hạn</CardTitle>
                   <p className="mt-0.5 text-sm text-text-secondary">
-                    Gửi cho <span className="font-medium text-text-primary">staff phụ trách dự án</span>
+                    Gửi cho <span className="font-medium text-text-primary">nhân viên phụ trách dự án</span>
                   </p>
                 </div>
               </div>
@@ -211,7 +211,7 @@ export function NotificationForm({
                 <div>
                   <CardTitle className="text-base">Nhắc thanh toán sắp đến hạn</CardTitle>
                   <p className="mt-0.5 text-sm text-text-secondary">
-                    Gửi cho <span className="font-medium text-text-primary">staff</span> và{" "}
+                    Gửi cho <span className="font-medium text-text-primary">nhân viên phụ trách</span> và{" "}
                     <span className="font-medium text-text-primary">contact chính của khách hàng</span>
                   </p>
                 </div>

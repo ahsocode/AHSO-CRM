@@ -1,0 +1,117 @@
+# B9 — Chuỗi tiếng Anh còn sót (quét 19/10/2026, sau B2)
+
+Định dạng: `file:dòng: chuỗi hiện tại`. Đường dẫn tính từ `frontend/`.
+Bỏ qua (không sửa): id kỹ thuật (`document-preview`), `aria-label` "Project 360 sections" → đổi thành "Các mục hồ sơ dự án", "Dashboard điều phối" (hợp lệ).
+
+Thuật ngữ chuẩn khi dịch: activity → hoạt động · timeline → dòng thời gian · milestone → mốc · quote → báo giá · contract → hợp đồng · lead → khách tiềm năng · delivery → triển khai · stage → giai đoạn · template → mẫu · upload → tải lên · import → nhập · preview → xem trước · owner → phụ trách · Settings → Cài đặt · schema/field → trường tùy chỉnh · registry → danh mục · variant → phiên bản · funnel → phễu · conversion rate → tỷ lệ chuyển đổi · follow-up → theo dõi · "X Ledger" → "Danh sách X" (vd. Customer Ledger → Danh sách khách hàng) · "X Desk"/"X workspace"/"X board" → bỏ, viết lại câu tự nhiên · "xóa mềm" → "đã xóa (có thể khôi phục)".
+Câu mô tả chứa thuật ngữ lập trình ("Flow tạo quote…", "prefill", "route", "phase", "commercial context", "attachment", "create/edit") → viết lại ngắn gọn, hướng tới người dùng sales, giữ nguyên ý.
+
+- `app/(dashboard)/activities/_components/activities-client.tsx:60`: Các hoạt động đã xóa mềm vẫn có thể khôi phục để trả lại timeline, lịch và lịch sử tương tác.
+- `app/(dashboard)/activities/_components/activity-table.tsx:41`: Activity Ledger
+- `app/(dashboard)/admin/custom-fields/page.tsx:108`: Custom Fields
+- `app/(dashboard)/admin/custom-fields/page.tsx:109`: Tạo schema động cho khách hàng, dự án và hợp đồng. Những field này sẽ xuất hiện ngay trên form create/edit và detail.
+- `app/(dashboard)/admin/document-templates/page.tsx:364`: Thiết kế và quản lý variant template theo bố cục A4. Canvas là khu vực làm việc chính, hai panel hai bên chỉ giữ lại những công cụ cần thiết.
+- `app/(dashboard)/admin/document-templates/page.tsx:382`: Không nạp được template registry
+- `app/(dashboard)/admin/document-templates/page.tsx:383`: Backend chưa trả về registry của documents module.
+- `app/(dashboard)/admin/document-templates/page.tsx:523`: Chọn một variant
+- `app/(dashboard)/admin/document-templates/page.tsx:524`: Khi chọn variant, canvas A4 và inspector sẽ hiện ra để bạn sắp xếp box.
+- `app/(dashboard)/admin/email-accounts/page.tsx:62`: Admin tạo cấu hình email, nhân sự tự nhập mật khẩu IMAP trong phần Settings.
+- `app/(dashboard)/admin/notifications/_components/notification-form.tsx:214`: staff
+- `app/(dashboard)/admin/notifications/page.tsx:31`: Cấu hình lịch và ngưỡng gửi email nhắc milestone và thanh toán tự động cho staff và khách hàng.
+- `app/(dashboard)/agents/page.tsx:157`: Ví dụ: Tìm khách hàng Vinamilk và đề xuất email follow-up tuần này.
+- `app/(dashboard)/calendar/_components/agenda-board.tsx:85`: Nới bộ lọc ngày hoặc trạng thái để xem thêm activity.
+- `app/(dashboard)/calendar/_components/calendar-client.tsx:231`: Điều phối cuộc gọi, họp, khảo sát và follow-up theo tuần hoặc tháng. Kéo activity sang ngày khác để dời lịch.
+- `app/(dashboard)/calendar/_components/calendar-month-view.tsx:439`: Nới bộ lọc hoặc chuyển sang tháng khác để xem thêm activity.
+- `app/(dashboard)/calendar/_components/calendar-week-view.tsx:493`: Nới bộ lọc ngày hoặc trạng thái để xem thêm activity.
+- `app/(dashboard)/contracts/_components/contract-acceptance-preview-client.tsx:220`: Tổng milestone
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:99`: Contract Desk
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:101`: Hồ sơ hợp đồng gom commercial context, milestone triển khai, dòng tiền, attachment và biên bản nghiệm thu.
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:220`: Tiến độ milestone
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:226`: Custom fields
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:232`: Chưa có custom field cho hợp đồng
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:233`: Khi admin tạo field động cho resource hợp đồng, dữ liệu sẽ hiện ở đây.
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:253`: Dự án này chưa liên kết quote. Flow hiện tại đã có route quotes để mở rộng truy vết đầy đủ.
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:304`: Milestone xong
+- `app/(dashboard)/contracts/_components/contract-detail-client.tsx:389`: Chọn template hợp đồng
+- `app/(dashboard)/contracts/_components/contract-form-screen.tsx:464`: Custom fields
+- `app/(dashboard)/contracts/_components/contract-form-screen.tsx:472`: Chưa có custom field cho hợp đồng
+- `app/(dashboard)/contracts/_components/contract-form-screen.tsx:473`: Admin có thể tạo thêm field động tại Quản trị > Custom Fields.
+- `app/(dashboard)/contracts/_components/contract-form-screen.tsx:508`: Owner
+- `app/(dashboard)/contracts/_components/contract-form-screen.tsx:513`: Quote accepted
+- `app/(dashboard)/contracts/_components/contract-form-screen.tsx:655`: Bạn có thể chọn accepted quote để prefill giá trị hợp đồng hoặc nhập thủ công nếu đang nhập lại hồ sơ cũ.
+- `app/(dashboard)/contracts/_components/contract-milestone-manager.tsx:148`: Chưa có milestone
+- `app/(dashboard)/contracts/_components/contract-milestone-manager.tsx:149`: Thêm milestone đầu tiên để theo dõi tiến độ triển khai và nghiệm thu.
+- `app/(dashboard)/contracts/_components/contract-payment-manager.tsx:119`: Khi thu tiền được log vào hệ thống, card này sẽ phản ánh ngay dòng tiền và công nợ.
+- `app/(dashboard)/contracts/_components/contract-table.tsx:36`: Contract Ledger
+- `app/(dashboard)/contracts/_components/contract-table.tsx:83`: Điều chỉnh bộ lọc hoặc tiếp tục chốt quote để mở thêm hợp đồng ở phase tiếp theo.
+- `app/(dashboard)/contracts/_components/contract-table.tsx:125`: Timeline
+- `app/(dashboard)/contracts/_components/contracts-client.tsx:47`: Contract board gom hợp đồng, công nợ và tiến độ delivery trên cùng một bề mặt để đội vận hành theo dõi sát hơn.
+- `app/(dashboard)/customers/_components/customer-detail-client.tsx:124`: Customer 360
+- `app/(dashboard)/customers/_components/customer-detail-client.tsx:221`: Custom fields
+- `app/(dashboard)/customers/_components/customer-detail-client.tsx:227`: Chưa có custom field cho khách hàng
+- `app/(dashboard)/customers/_components/customer-detail-client.tsx:228`: Khi admin tạo field động cho resource khách hàng, dữ liệu sẽ hiện ở đây.
+- `app/(dashboard)/customers/_components/customer-detail-client.tsx:246`: Khách hàng này chưa được gắn dự án. Phase tiếp theo có thể mở rộng từ danh sách báo giá hoặc khảo sát.
+- `app/(dashboard)/customers/_components/customer-detail-client.tsx:354`: Khi sales hoặc delivery log cuộc gọi, email và ghi chú, timeline này sẽ là nơi nhìn nhanh toàn bộ bối cảnh.
+- `app/(dashboard)/customers/_components/customer-form-screen.tsx:463`: Custom fields
+- `app/(dashboard)/customers/_components/customer-form-screen.tsx:471`: Chưa có custom field cho khách hàng
+- `app/(dashboard)/customers/_components/customer-form-screen.tsx:472`: Admin có thể tạo thêm field động tại Quản trị > Custom Fields.
+- `app/(dashboard)/customers/_components/customer-table.tsx:109`: Customer Ledger
+- `app/(dashboard)/customers/_components/customers-client.tsx:242`: Quản lý danh sách khách hàng và lead của AHSO.
+- `app/(dashboard)/customers/_components/customers-client.tsx:268`: Import danh sách khách hàng từ CSV
+- `app/(dashboard)/customers/_components/customers-client.tsx:269`: Tải file mẫu, điền dữ liệu theo cột, rồi upload để nhập hàng loạt.
+- `app/(dashboard)/materials/_components/material-supplier-manager.tsx:116`: Thêm NCC để liên kết giá nhập và lead time với vật tư này.
+- `app/(dashboard)/materials/_components/material-table.tsx:43`: Material Ledger
+- `app/(dashboard)/notifications/page.tsx:107`: Khi quote, hợp đồng hoặc công việc có cập nhật, hệ thống sẽ hiển thị tại đây.
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:293`: Project 360 sections
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:368`: Khi có activity chưa hoàn tất, hệ thống sẽ ưu tiên hiển thị ở đây.
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:405`: Custom fields
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:411`: Chưa có custom field cho dự án
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:412`: Khi admin tạo field động cho resource dự án, dữ liệu sẽ hiện ở đây.
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:453`: Không có milestone mở
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:645`: Timeline sẽ gom activity, khảo sát, báo giá, tài liệu, milestone và thanh toán.
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:1532`: Upload PO, báo giá đã ký, hợp đồng đã ký, biên bản hoặc hóa đơn vào đây.
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:1642`: Dự án này chưa có quote gắn vào.
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:1704`: Dự án này chưa được gắn contract.
+- `app/(dashboard)/projects/_components/project-detail-client.tsx:1722`: Chưa có milestone
+- `app/(dashboard)/projects/_components/project-form-screen.tsx:403`: Custom fields
+- `app/(dashboard)/projects/_components/project-form-screen.tsx:411`: Chưa có custom field cho dự án
+- `app/(dashboard)/projects/_components/project-form-screen.tsx:412`: Admin có thể tạo thêm field động tại Quản trị > Custom Fields.
+- `app/(dashboard)/projects/_components/project-table.tsx:69`: Project Ledger
+- `app/(dashboard)/projects/_components/projects-client.tsx:273`: Project Pipeline
+- `app/(dashboard)/projects/_components/projects-client.tsx:314`: Import danh sách dự án từ CSV
+- `app/(dashboard)/projects/_components/projects-client.tsx:366`: Dự án bị xóa mềm được giữ lại để phục hồi hồ sơ 360, timeline và tài liệu liên quan khi cần.
+- `app/(dashboard)/quotes/_components/quote-detail-client.tsx:223`: Quote workspace gom đầy đủ thông tin thương mại, danh mục chào giá và dữ liệu dự án/khách hàng trên một màn hình.
+- `app/(dashboard)/quotes/_components/quote-detail-client.tsx:343`: Quote này chưa có line item. Flow tạo quote hiện tại luôn yêu cầu ít nhất 1 hạng mục để tránh draft rỗng.
+- `app/(dashboard)/quotes/_components/quote-detail-client.tsx:838`: Chọn template báo giá
+- `app/(dashboard)/quotes/_components/quote-form-screen.tsx:182`: Quotation Desk
+- `app/(dashboard)/quotes/_components/quote-form-screen.tsx:446`: Nêu lưu ý thương mại, phạm vi chào giá, điểm cần follow-up.
+- `app/(dashboard)/quotes/_components/quote-preview-client.tsx:220`: Quotation Preview
+- `app/(dashboard)/quotes/_components/quote-table.tsx:47`: Quote Ledger
+- `app/(dashboard)/quotes/_components/quotes-client.tsx:65`: Quote board nối dữ liệu thật để đội sales theo dõi toàn bộ báo giá, trạng thái gửi/chốt và cửa sổ hết hạn trên một màn hình.
+- `app/(dashboard)/reports/_components/reports-client.tsx:71`: Khi có thêm lead, quote accepted và contract, biểu đồ luồng chuyển đổi sẽ hiện rõ hơn.
+- `app/(dashboard)/reports/_components/reports-client.tsx:166`: Funnel chưa có dữ liệu
+- `app/(dashboard)/reports/_components/reports-client.tsx:167`: Khi pipeline có nhiều cơ hội hơn, funnel sẽ phản ánh rõ conversion rate giữa các stage.
+- `app/(dashboard)/reports/_components/status-breakdown.tsx:55`: Project Status
+- `app/(dashboard)/reports/_components/status-breakdown.tsx:56`: Quote Status
+- `app/(dashboard)/reports/_components/status-breakdown.tsx:57`: Contract Status
+- `app/(dashboard)/reports/builder/_components/chart-config.tsx:43`: Chart type
+- `app/(dashboard)/reports/builder/_components/chart-config.tsx:55`: Ví dụ: Pipeline by owner
+- `app/(dashboard)/reports/builder/_components/report-builder.tsx:142`: Chưa đủ dữ liệu để vẽ chart
+- `app/(dashboard)/reports/builder/_components/report-builder.tsx:344`: Kéo field vào Dimensions, Measures, Filters hoặc Chart để lắp một báo cáo tùy biến theo đúng pipeline của đội.
+- `app/(dashboard)/reports/builder/_components/report-builder.tsx:471`: Chưa có template nào
+- `app/(dashboard)/reports/builder/_components/report-builder.tsx:483`: Tối đa 2 field để nhóm dữ liệu.
+- `app/(dashboard)/reports/builder/_components/report-builder.tsx:629`: Chart
+- `app/(dashboard)/reports/builder/_components/report-builder.tsx:630`: Kéo chart type vào đây hoặc chọn ở phần cấu hình.
+- `app/(dashboard)/reports/builder/_components/report-builder.tsx:678`: Kéo fields vào zones, chọn chart phù hợp và bấm Chạy truy vấn để xem preview.
+- `app/(dashboard)/settings/email/page.tsx:28`: Settings
+- `app/(dashboard)/suppliers/_components/supplier-table.tsx:42`: Supplier Ledger
+- `app/(dashboard)/surveys/_components/survey-table.tsx:27`: Survey Ledger
+- `app/(dashboard)/users/_components/user-table.tsx:35`: User Ledger
+- `app/(dashboard)/users/_components/users-client.tsx:236`: Upload avatar
+- `app/documents/preview/preview-client.tsx:92`: Thiếu tham số preview
+- `app/documents/preview/preview-client.tsx:99`: Không thể tải preview tài liệu
+- `components/layout/notification-dropdown.tsx:103`: Khi có cập nhật quan trọng về quote, hợp đồng hoặc công việc, bạn sẽ thấy tại đây.
+- `components/layout/sidebar.tsx:37`: Automation Hub
+- `components/shared/module-placeholder.tsx:16`: Route và layout đã sẵn sàng cho tuần triển khai tiếp theo. Phần nghiệp vụ chi tiết sẽ được gắn API thật sau khi hoàn tất phase foundation + auth.
+
+_Tổng: 107 chuỗi_

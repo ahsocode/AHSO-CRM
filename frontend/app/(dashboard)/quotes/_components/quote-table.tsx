@@ -44,7 +44,6 @@ export function QuoteTable({
   const ledgerHeader = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Quote Ledger"
       metaText={`${meta?.total ?? items.length} báo giá · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách báo giá"

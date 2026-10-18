@@ -290,7 +290,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       <Project360Brief project={project} overview={overview} onNavigate={handleTabChange} />
 
       <div className="sticky top-3 z-20 rounded-[28px] border border-white/70 bg-white/90 p-2 shadow-sm backdrop-blur-xl">
-        <div role="tablist" aria-label="Project 360 sections" className="flex gap-2 overflow-x-auto">
+        <div role="tablist" aria-label="Các mục hồ sơ dự án" className="flex gap-2 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -365,7 +365,7 @@ function OverviewPanel({
                 </p>
               </article>
             ) : (
-              <EmptyState title="Chưa có việc đang mở" description="Khi có activity chưa hoàn tất, hệ thống sẽ ưu tiên hiển thị ở đây." />
+              <EmptyState title="Chưa có việc đang mở" description="Khi có hoạt động chưa hoàn tất, hệ thống sẽ ưu tiên hiển thị ở đây." />
             )}
           </CardContent>
         </Card>
@@ -402,14 +402,14 @@ function OverviewPanel({
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trường tùy chỉnh</p>
-            <CardTitle>Custom fields</CardTitle>
+            <CardTitle>Giá trị trường tùy chỉnh</CardTitle>
           </CardHeader>
           <CardContent>
             <CustomFieldRenderer
               fields={customFields}
               values={project.customFieldValues ?? {}}
-              emptyTitle="Chưa có custom field cho dự án"
-              emptyDescription="Khi admin tạo field động cho resource dự án, dữ liệu sẽ hiện ở đây."
+              emptyTitle="Chưa có trường tùy chỉnh cho dự án"
+              emptyDescription="Khi quản trị viên tạo trường tùy chỉnh cho dự án, dữ liệu sẽ hiện ở đây."
             />
           </CardContent>
         </Card>
@@ -450,7 +450,7 @@ function OverviewPanel({
                 />
               ))
             ) : (
-              <EmptyState title="Không có milestone mở" description="Các mốc triển khai đang không có việc cần chú ý." />
+              <EmptyState title="Không có mốc đang mở" description="Các mốc triển khai đang không có việc cần chú ý." />
             )}
           </CardContent>
         </Card>
@@ -560,7 +560,7 @@ function Project360Brief({
           openMilestoneCount > 0
             ? `${openMilestoneCount} milestone còn mở cần theo dõi.`
             : project.contract
-              ? "Không có milestone mở trong snapshot hiện tại."
+              ? "Không có mốc nào đang mở."
               : "Chưa có hợp đồng để sinh milestone triển khai."
         }
         onClick={() => onNavigate("handover")}
@@ -642,7 +642,7 @@ function TimelinePanel({ projectId }: { projectId: string }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {!timelineQuery.data?.length ? (
-          <EmptyState title="Chưa có sự kiện" description="Timeline sẽ gom activity, khảo sát, báo giá, tài liệu, milestone và thanh toán." />
+          <EmptyState title="Chưa có sự kiện" description="Dòng thời gian sẽ tổng hợp hoạt động, khảo sát, báo giá, tài liệu, mốc và thanh toán." />
         ) : (
           timelineQuery.data.map((item) => (
             <article key={item.id} className="flex gap-4 rounded-2xl border border-border/60 bg-white/80 p-4">
@@ -1529,7 +1529,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                 {getApiErrorMessage(documentsQuery.error, "Không thể tải tài liệu dự án.")}
               </div>
             ) : !businessDocuments.length ? (
-              <EmptyState title="Chưa có tài liệu nghiệp vụ" description="Upload PO, báo giá đã ký, hợp đồng đã ký, biên bản hoặc hóa đơn vào đây." />
+              <EmptyState title="Chưa có tài liệu nghiệp vụ" description="Tải lên PO, báo giá đã ký, hợp đồng đã ký, biên bản hoặc hóa đơn tại đây." />
             ) : !filteredBusinessDocuments.length ? (
               <EmptyState title="Không có tài liệu khớp bộ lọc" description="Thử xóa bớt điều kiện lọc hoặc tìm bằng từ khóa khác." />
             ) : (
@@ -1639,7 +1639,7 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
       </CardHeader>
       <CardContent className="space-y-4">
         {quotes.length === 0 ? (
-          <EmptyState title="Chưa có báo giá" description="Dự án này chưa có quote gắn vào." />
+          <EmptyState title="Chưa có báo giá" description="Dự án này chưa có báo giá nào được gắn vào." />
         ) : (
           quotes.map((quote) => (
             <article key={quote.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
@@ -1701,7 +1701,7 @@ function ContractsPanel({ project }: { project: NonNullable<ReturnType<typeof us
             </div>
           </>
         ) : (
-          <EmptyState title="Chưa có hợp đồng" description="Dự án này chưa được gắn contract." />
+          <EmptyState title="Chưa có hợp đồng" description="Dự án này chưa được gắn hợp đồng." />
         )}
       </CardContent>
     </Card>
@@ -1719,7 +1719,7 @@ function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof use
       </CardHeader>
       <CardContent className="space-y-4">
         {milestones.length === 0 ? (
-          <EmptyState title="Chưa có milestone" description="Dự án này chưa được lập mốc triển khai." />
+          <EmptyState title="Chưa có mốc" description="Dự án này chưa được lập mốc triển khai." />
         ) : (
           milestones.map((milestone) => {
             const statusConfig = getMilestoneStatusConfig(milestone.status);

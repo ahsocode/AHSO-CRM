@@ -104,7 +104,7 @@ export default function NotificationsPage() {
           ) : items.length === 0 ? (
             <EmptyState
               title="Chưa có thông báo nào"
-              description="Khi quote, hợp đồng hoặc công việc có cập nhật, hệ thống sẽ hiển thị tại đây."
+              description="Khi báo giá, hợp đồng hoặc công việc có cập nhật, hệ thống sẽ hiển thị tại đây."
             />
           ) : (
             <div className="space-y-4">

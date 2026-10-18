@@ -139,7 +139,7 @@ function ReportChart({
   if (!categoryKey || measureKeys.length === 0) {
     return (
       <EmptyState
-        title="Chưa đủ dữ liệu để vẽ chart"
+        title="Chưa đủ dữ liệu để vẽ biểu đồ"
         description="Hãy thêm dimension và measure, sau đó chạy lại truy vấn."
       />
     );
@@ -340,8 +340,8 @@ export function ReportBuilder() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Custom Report Builder"
-        description="Kéo field vào Dimensions, Measures, Filters hoặc Chart để lắp một báo cáo tùy biến theo đúng pipeline của đội."
+        title="Tạo báo cáo tùy chỉnh"
+        description="Kéo trường dữ liệu vào Dimensions, Measures, Filters hoặc Biểu đồ để lắp báo cáo tùy chỉnh theo đúng pipeline của đội."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline" onClick={() => runQueryMutation.mutate(config)}>
@@ -468,7 +468,7 @@ export function ReportBuilder() {
                 ))
               ) : (
                 <EmptyState
-                  title="Chưa có template nào"
+                  title="Chưa có mẫu nào"
                   description="Sau khi thiết kế một báo cáo phù hợp, hãy lưu lại để đội dùng lại nhanh hơn."
                 />
               )}
@@ -480,7 +480,7 @@ export function ReportBuilder() {
           <div className="grid gap-4 md:grid-cols-2">
             <DropZone
               title="Dimensions"
-              description="Tối đa 2 field để nhóm dữ liệu."
+              description="Tối đa 2 trường để nhóm dữ liệu."
               onDrop={(payload) => handleDrop("dimensions", payload)}
             >
               <div className="flex min-h-[120px] flex-wrap gap-2">
@@ -626,8 +626,8 @@ export function ReportBuilder() {
             </DropZone>
 
             <DropZone
-              title="Chart"
-              description="Kéo chart type vào đây hoặc chọn ở phần cấu hình."
+              title="Biểu đồ"
+              description="Kéo loại biểu đồ vào đây hoặc chọn ở phần cấu hình."
               onDrop={(payload) => handleDrop("chart", payload)}
             >
               <div className="flex min-h-[120px] items-center">
@@ -675,7 +675,7 @@ export function ReportBuilder() {
               ) : (
                 <EmptyState
                   title="Chưa có kết quả"
-                  description="Kéo fields vào zones, chọn chart phù hợp và bấm Chạy truy vấn để xem preview."
+                  description="Kéo trường dữ liệu vào các vùng, chọn biểu đồ phù hợp và bấm Chạy truy vấn để xem trước."
                 />
               )}
             </CardContent>

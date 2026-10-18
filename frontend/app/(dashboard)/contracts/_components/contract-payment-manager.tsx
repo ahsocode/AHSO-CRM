@@ -116,7 +116,7 @@ export function ContractPaymentManager({
         {payments.length === 0 ? (
           <EmptyState
             title="Chưa có thanh toán"
-            description="Khi thu tiền được log vào hệ thống, card này sẽ phản ánh ngay dòng tiền và công nợ."
+            description="Khi ghi nhận thu tiền vào hệ thống, thẻ này sẽ cập nhật ngay dòng tiền và công nợ."
           />
         ) : (
           payments.map((payment) => (

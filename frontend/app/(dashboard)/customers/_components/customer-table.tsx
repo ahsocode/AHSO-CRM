@@ -106,7 +106,6 @@ export function CustomerTable({
   const ledgerHeader = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Customer Ledger"
       metaText={`${meta?.total ?? items.length} kết quả · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách khách hàng"
@@ -261,15 +260,15 @@ export function CustomerTable({
                   </td>
 
                   <td className="px-4 py-3 align-middle">
-                    <p className="text-[13px] font-semibold text-text-primary">{customer.projectCount} dự án</p>
+                    <p className="whitespace-nowrap text-[13px] font-semibold text-text-primary">{customer.projectCount} dự án</p>
                   </td>
 
-                  <td className="px-4 py-3 align-middle">
+                  <td className="min-w-[160px] px-4 py-3 align-middle">
                     <div className="flex items-center gap-2">
                       <AvatarInitials name={customer.assignedTo.name} className="h-7 w-7 rounded-full bg-primary-bg text-[10px] text-primary" />
                       <div className="text-xs">
-                        <p className="font-semibold text-text-primary">{customer.assignedTo.name}</p>
-                        <p className="text-text-muted">{getRoleLabelByName(customer.assignedTo.role)}</p>
+                        <p className="whitespace-nowrap font-semibold text-text-primary">{customer.assignedTo.name}</p>
+                        <p className="whitespace-nowrap text-text-muted">{getRoleLabelByName(customer.assignedTo.role)}</p>
                       </div>
                     </div>
                   </td>

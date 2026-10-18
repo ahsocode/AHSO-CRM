@@ -32,7 +32,7 @@ export function UserTable({
 }) {
   const header = (
     <LedgerHeader
-      eyebrow="User Ledger"
+      eyebrow="Danh sách người dùng"
       metaText={`${items.length} người dùng`}
       title="Người dùng"
       toolbar={toolbar}

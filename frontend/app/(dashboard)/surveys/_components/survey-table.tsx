@@ -24,7 +24,6 @@ export function SurveyTable({ surveys, isLoading, meta, onPageChange, toolbar }:
   const header = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Survey Ledger"
       metaText={`${total} khảo sát · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách khảo sát"

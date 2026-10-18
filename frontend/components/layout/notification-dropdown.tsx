@@ -100,7 +100,7 @@ export function NotificationDropdown() {
           <div className="p-1">
             <EmptyState
               title="Chưa có thông báo"
-              description="Khi có cập nhật quan trọng về quote, hợp đồng hoặc công việc, bạn sẽ thấy tại đây."
+              description="Khi có cập nhật quan trọng về báo giá, hợp đồng hoặc công việc, bạn sẽ thấy tại đây."
             />
           </div>
         )}

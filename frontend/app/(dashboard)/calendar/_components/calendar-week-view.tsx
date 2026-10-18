@@ -490,7 +490,7 @@ export function CalendarWeekView({
           <div className="border-t border-border/50 p-6">
             <EmptyState
               title="Không có công việc trong khoảng đã chọn"
-              description="Nới bộ lọc ngày hoặc trạng thái để xem thêm activity."
+              description="Nới bộ lọc ngày hoặc trạng thái để xem thêm hoạt động."
             />
           </div>
         )}

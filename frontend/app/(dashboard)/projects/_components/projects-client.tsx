@@ -270,7 +270,7 @@ export function ProjectsClient() {
   return (
     <div className="space-y-4">
       <PageHeader
-        eyebrow="Project Pipeline"
+        eyebrow="Dự án"
         title="Pipeline Dự án"
         description="Điều phối cơ hội từ khảo sát, báo giá, đàm phán đến triển khai với kanban kéo thả và dữ liệu đồng bộ."
         action={
@@ -311,7 +311,7 @@ export function ProjectsClient() {
       <CsvImportDialog<ProjectUpsertInput>
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        title="Import danh sách dự án từ CSV"
+        title="Nhập danh sách dự án từ CSV"
         description="Khách hàng phải tồn tại trước. Dùng Mã số thuế hoặc Tên KH để tra cứu."
         templateFilename="du-an-mau.csv"
         columns={importColumns}
@@ -363,7 +363,7 @@ export function ProjectsClient() {
       {showDeleted ? (
         <DeletedRecordsPanel
           title="Dự án đã xóa mềm"
-          description="Dự án bị xóa mềm được giữ lại để phục hồi hồ sơ 360, timeline và tài liệu liên quan khi cần."
+          description="Dự án đã xóa vẫn được giữ lại, giúp khôi phục hồ sơ, dòng thời gian và tài liệu liên quan khi cần."
           emptyTitle="Thùng rác dự án đang trống"
           emptyDescription="Khi xóa mềm dự án, hồ sơ sẽ xuất hiện ở đây để khôi phục."
           items={deletedProjectsQuery.data?.items ?? []}

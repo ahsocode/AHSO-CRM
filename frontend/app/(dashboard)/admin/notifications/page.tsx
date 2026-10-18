@@ -28,7 +28,7 @@ export default function NotificationsPage() {
     <div className="space-y-8">
       <PageHeader
         title="Nhắc lịch qua email"
-        description="Cấu hình lịch và ngưỡng gửi email nhắc milestone và thanh toán tự động cho staff và khách hàng."
+        description="Cấu hình lịch và ngưỡng gửi email tự động nhắc mốc và thanh toán cho nhân viên phụ trách và khách hàng."
         action={
           <Link href="/admin" className={cn(buttonVariants({ variant: "outline" }))}>
             Về quản trị

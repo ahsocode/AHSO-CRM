@@ -105,8 +105,8 @@ export default function CustomFieldsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Custom Fields"
-        description="Tạo schema động cho khách hàng, dự án và hợp đồng. Những field này sẽ xuất hiện ngay trên form create/edit và detail."
+        title="Trường tùy chỉnh"
+        description="Tạo trường tùy chỉnh cho khách hàng, dự án và hợp đồng. Các trường này sẽ hiện ngay trên form tạo/sửa và trang chi tiết."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Select

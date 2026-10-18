@@ -400,7 +400,7 @@ export function ProjectFormScreen({
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="industrial-chip bg-primary/10 text-primary">Trường tùy chỉnh</p>
-              <CardTitle>Custom fields</CardTitle>
+              <CardTitle>Giá trị trường tùy chỉnh</CardTitle>
             </CardHeader>
             <CardContent>
               <CustomFieldRenderer
@@ -408,8 +408,8 @@ export function ProjectFormScreen({
                 fields={customFieldsQuery.data ?? []}
                 values={customFieldValues}
                 onChange={setCustomFieldValues}
-                emptyTitle="Chưa có custom field cho dự án"
-                emptyDescription="Admin có thể tạo thêm field động tại Quản trị > Custom Fields."
+                emptyTitle="Chưa có trường tùy chỉnh cho dự án"
+                emptyDescription="Quản trị viên có thể tạo thêm trường tùy chỉnh trong phần Quản trị."
               />
             </CardContent>
           </Card>

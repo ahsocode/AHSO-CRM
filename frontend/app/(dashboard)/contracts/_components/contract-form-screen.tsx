@@ -461,7 +461,7 @@ export function ContractFormScreen({
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="industrial-chip bg-primary/10 text-primary">Trường tùy chỉnh</p>
-              <CardTitle>Custom fields</CardTitle>
+              <CardTitle>Giá trị trường tùy chỉnh</CardTitle>
             </CardHeader>
             <CardContent>
               <CustomFieldRenderer
@@ -469,8 +469,8 @@ export function ContractFormScreen({
                 fields={customFieldsQuery.data ?? []}
                 values={customFieldValues}
                 onChange={setCustomFieldValues}
-                emptyTitle="Chưa có custom field cho hợp đồng"
-                emptyDescription="Admin có thể tạo thêm field động tại Quản trị > Custom Fields."
+                emptyTitle="Chưa có trường tùy chỉnh cho hợp đồng"
+                emptyDescription="Quản trị viên có thể tạo thêm trường tùy chỉnh trong phần Quản trị."
               />
             </CardContent>
           </Card>
@@ -505,12 +505,12 @@ export function ContractFormScreen({
                   </div>
 
                   <InfoRow label="Khách hàng" value={selectedProject.customer.name} />
-                  <InfoRow label="Owner" value={selectedProject.customer.assignedTo.name} />
+                  <InfoRow label="Phụ trách" value={selectedProject.customer.assignedTo.name} />
                   <InfoRow
                     label="Giá trị dự kiến"
                     value={<CurrencyDisplay amount={selectedProject.estimatedValue} short />}
                   />
-                  <InfoRow label="Quote accepted" value={`${acceptedQuotes.length}`} />
+                  <InfoRow label="Báo giá đã chấp nhận" value={`${acceptedQuotes.length}`} />
                   <InfoRow
                     label="Cập nhật cuối"
                     value={formatDateTime(selectedProject.updatedAt)}
@@ -652,7 +652,7 @@ export function ContractFormScreen({
               ) : (
                 <EmptyState
                   title="Chưa chọn báo giá nguồn"
-                  description="Bạn có thể chọn accepted quote để prefill giá trị hợp đồng hoặc nhập thủ công nếu đang nhập lại hồ sơ cũ."
+                  description="Bạn có thể chọn báo giá đã chấp nhận để điền sẵn giá trị hợp đồng, hoặc nhập thủ công nếu đang nhập lại hồ sơ cũ."
                 />
               )}
             </CardContent>

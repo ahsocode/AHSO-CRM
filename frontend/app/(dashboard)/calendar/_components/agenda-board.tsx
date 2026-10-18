@@ -82,7 +82,7 @@ export function AgendaBoard({
         <CardContent>
           <EmptyState
             title="Không có công việc trong khoảng đã chọn"
-            description="Nới bộ lọc ngày hoặc trạng thái để xem thêm activity."
+            description="Nới bộ lọc ngày hoặc trạng thái để xem thêm hoạt động."
           />
         </CardContent>
       </Card>

@@ -25,7 +25,7 @@ export default function EmailSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Settings" title="Kết nối email" description="Nhập mật khẩu email iRedMail của bạn để CRM đồng bộ mailbox cá nhân." />
+      <PageHeader eyebrow="Cài đặt" title="Kết nối email" description="Nhập mật khẩu email iRedMail của bạn để CRM đồng bộ mailbox cá nhân." />
       <Card className="max-w-xl border border-white/70">
         <CardHeader className="mb-0 gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Email cá nhân</p>

@@ -33,7 +33,6 @@ export function ContractTable({
   const ledgerHeader = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Contract Ledger"
       metaText={`${meta?.total ?? items.length} hợp đồng · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách hợp đồng"
@@ -80,7 +79,7 @@ export function ContractTable({
         <CardContent>
           <EmptyState
             title="Chưa có hợp đồng phù hợp"
-            description="Điều chỉnh bộ lọc hoặc tiếp tục chốt quote để mở thêm hợp đồng ở phase tiếp theo."
+            description="Điều chỉnh bộ lọc hoặc tiếp tục chốt báo giá để mở thêm hợp đồng ở giai đoạn tiếp theo."
           />
         </CardContent>
       </Card>
@@ -122,7 +121,7 @@ export function ContractTable({
                 <th className="px-4">Hợp đồng</th>
                 <th className="px-4">Dự án & khách hàng</th>
                 <th className="px-4">Giá trị & công nợ</th>
-                <th className="px-4">Timeline</th>
+                <th className="px-4">Dòng thời gian</th>
               </tr>
             </thead>
             <tbody>

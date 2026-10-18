@@ -52,9 +52,9 @@ export function StatusBreakdown({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-          <DonutSection title="Project Status" items={data.projects} colors={PROJECT_COLORS} />
-          <DonutSection title="Quote Status" items={data.quotes} colors={QUOTE_COLORS} />
-          <DonutSection title="Contract Status" items={data.contracts} colors={CONTRACT_COLORS} />
+          <DonutSection title="Trạng thái dự án" items={data.projects} colors={PROJECT_COLORS} />
+          <DonutSection title="Trạng thái báo giá" items={data.quotes} colors={QUOTE_COLORS} />
+          <DonutSection title="Trạng thái hợp đồng" items={data.contracts} colors={CONTRACT_COLORS} />
         </div>
       </CardContent>
     </Card>

@@ -13,7 +13,7 @@ export function ModulePlaceholder({
       <PageHeader title={title} description={description} />
       <EmptyState
         title="Module đang được mở rộng"
-        description="Route và layout đã sẵn sàng cho tuần triển khai tiếp theo. Phần nghiệp vụ chi tiết sẽ được gắn API thật sau khi hoàn tất phase foundation + auth."
+        description="Giao diện đã sẵn sàng. Phần nghiệp vụ chi tiết sẽ được kết nối dữ liệu thật trong các đợt triển khai tiếp theo."
       />
     </div>
   );

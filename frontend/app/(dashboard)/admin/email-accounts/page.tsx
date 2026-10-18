@@ -59,7 +59,7 @@ export default function AdminEmailAccountsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Admin" title="Tài khoản email" description="Admin tạo cấu hình email, nhân sự tự nhập mật khẩu IMAP trong phần Settings." />
+      <PageHeader eyebrow="Admin" title="Tài khoản email" description="Quản trị viên tạo cấu hình email, nhân sự tự nhập mật khẩu IMAP trong phần Cài đặt." />
 
       <Card className="border border-white/70 bg-primary-bg/40">
         <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">

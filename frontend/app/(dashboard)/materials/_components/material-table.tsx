@@ -40,7 +40,6 @@ export function MaterialTable({
   const ledgerHeader = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Material Ledger"
       metaText={`${meta?.total ?? items.length} vật tư · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách vật tư"

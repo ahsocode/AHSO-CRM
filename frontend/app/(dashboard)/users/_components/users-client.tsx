@@ -233,7 +233,7 @@ function AvatarUploader({
           className="h-20 w-20 rounded-2xl text-lg"
         />
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-text-primary">Upload avatar</p>
+          <p className="font-semibold text-text-primary">Tải ảnh đại diện</p>
           <p className="mt-1 text-sm text-text-secondary">
             Kéo thả ảnh vào đây hoặc chọn file. Hỗ trợ PNG, JPG, WEBP và tối đa 5MB.
           </p>

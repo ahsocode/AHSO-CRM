@@ -38,7 +38,6 @@ export function ActivityTable({ activities, isLoading, meta, onPageChange, toolb
   const header = (
     <LedgerHeader
       currentPage={currentPage}
-      eyebrow="Activity Ledger"
       metaText={`${total} hoạt động · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách hoạt động"

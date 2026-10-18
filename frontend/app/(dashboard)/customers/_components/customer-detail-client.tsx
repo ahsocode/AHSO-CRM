@@ -121,7 +121,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Customer 360"
+        eyebrow="Khách hàng"
         title={customer.name}
         description="Hồ sơ khách hàng dành cho bàn giao vận hành: thông tin doanh nghiệp, người phụ trách, liên hệ, dự án và hoạt động gần nhất."
         action={
@@ -218,14 +218,14 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trường tùy chỉnh</p>
-          <CardTitle>Custom fields</CardTitle>
+          <CardTitle>Giá trị trường tùy chỉnh</CardTitle>
         </CardHeader>
         <CardContent>
           <CustomFieldRenderer
             fields={customFieldsQuery.data ?? []}
             values={customer.customFieldValues ?? {}}
-            emptyTitle="Chưa có custom field cho khách hàng"
-            emptyDescription="Khi admin tạo field động cho resource khách hàng, dữ liệu sẽ hiện ở đây."
+            emptyTitle="Chưa có trường tùy chỉnh cho khách hàng"
+            emptyDescription="Khi quản trị viên tạo trường tùy chỉnh cho khách hàng, dữ liệu sẽ hiện ở đây."
           />
         </CardContent>
       </Card>
@@ -243,7 +243,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
               {customer.projects.length === 0 ? (
                 <EmptyState
                   title="Chưa có dự án"
-                  description="Khách hàng này chưa được gắn dự án. Phase tiếp theo có thể mở rộng từ danh sách báo giá hoặc khảo sát."
+                  description="Khách hàng này chưa được gắn dự án nào."
                 />
               ) : (
                 customer.projects.map((project) => (
@@ -351,7 +351,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
               {customer.activities.length === 0 ? (
                 <EmptyState
                   title="Chưa có hoạt động"
-                  description="Khi sales hoặc delivery log cuộc gọi, email và ghi chú, timeline này sẽ là nơi nhìn nhanh toàn bộ bối cảnh."
+                  description="Khi sales hoặc đội triển khai ghi nhận cuộc gọi, email và ghi chú, dòng thời gian này sẽ giúp bạn nắm nhanh toàn bộ bối cảnh."
                 />
               ) : (
                 customer.activities.map((activity) => (

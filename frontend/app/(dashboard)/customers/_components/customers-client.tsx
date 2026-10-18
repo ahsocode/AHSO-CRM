@@ -239,7 +239,7 @@ export function CustomersClient() {
       <PageHeader
         eyebrow="CRM"
         title="Khách hàng"
-        description="Quản lý danh sách khách hàng và lead của AHSO."
+        description="Quản lý danh sách khách hàng và khách tiềm năng của AHSO."
         action={
           <div className="flex flex-wrap items-center gap-2">
             {/* Mobile: only primary CTA */}
@@ -265,8 +265,8 @@ export function CustomersClient() {
       <CsvImportDialog<CustomerUpsertInput>
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        title="Import danh sách khách hàng từ CSV"
-        description="Tải file mẫu, điền dữ liệu theo cột, rồi upload để nhập hàng loạt."
+        title="Nhập danh sách khách hàng từ CSV"
+        description="Tải tệp mẫu, điền dữ liệu theo cột, rồi tải lên để nhập hàng loạt."
         templateFilename="khach-hang-mau.csv"
         columns={importColumns}
         submitRow={async (input) => {

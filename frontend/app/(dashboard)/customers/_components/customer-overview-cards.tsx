@@ -44,7 +44,7 @@ export function CustomerOverviewCards({
     },
     {
       label: "Tỷ lệ duy trì",
-      value: `${meta?.summary.retentionRate ?? 0}%`,
+      value: `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(meta?.summary.retentionRate ?? 0)}%`,
       helper: "Tỷ lệ khách đang ở trạng thái hoạt động",
       tone: "success" as const
     },

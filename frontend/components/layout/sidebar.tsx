@@ -34,7 +34,6 @@ export function Sidebar() {
         </div>
         <div className="min-w-0">
           <div className="font-heading text-sm font-bold leading-tight tracking-[-0.02em] text-text-primary">AHSO CRM</div>
-          <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-text-muted">Automation Hub</div>
         </div>
       </div>
 

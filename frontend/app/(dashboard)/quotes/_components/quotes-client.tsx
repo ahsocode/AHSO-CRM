@@ -62,7 +62,7 @@ export function QuotesClient() {
     <div className="space-y-8">
       <PageHeader
         title="Báo giá"
-        description="Quote board nối dữ liệu thật để đội sales theo dõi toàn bộ báo giá, trạng thái gửi/chốt và cửa sổ hết hạn trên một màn hình."
+        description="Trang này hiển thị toàn bộ báo giá để đội sales theo dõi trạng thái gửi/chốt và thời hạn hiệu lực trên một màn hình."
         action={
           <Link href="/quotes/new" className={cn(buttonVariants({ variant: "primary" }))}>
             Tạo báo giá

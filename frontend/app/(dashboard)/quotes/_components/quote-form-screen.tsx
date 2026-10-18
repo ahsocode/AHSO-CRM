@@ -179,7 +179,7 @@ export function QuoteFormScreen({
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Quotation Desk"
+        eyebrow="Báo giá"
         title={mode === "create" ? "Tạo báo giá mới" : "Cập nhật báo giá"}
         description={
           mode === "create"
@@ -443,7 +443,7 @@ export function QuoteFormScreen({
                 <Textarea
                   id="internalNote"
                   disabled={!isEditableQuote}
-                  placeholder="Nêu lưu ý thương mại, phạm vi chào giá, điểm cần follow-up."
+                  placeholder="Nêu lưu ý thương mại, phạm vi chào giá, điểm cần theo dõi thêm."
                   {...form.register("internalNote")}
                 />
                 <ErrorText message={form.formState.errors.internalNote?.message} />
@@ -458,9 +458,9 @@ export function QuoteFormScreen({
               <CardTitle>Tổng hợp giá trị</CardTitle>
             </CardHeader>
             <CardContent className="space-y-0">
-              <InfoRow label="Tạm tính" value={<CurrencyDisplay amount={subtotal} short />} />
-              <InfoRow label={`VAT ${watchedTaxRate}%`} value={<CurrencyDisplay amount={taxAmount} short />} />
-              <InfoRow label="Tổng cộng" value={<CurrencyDisplay amount={grandTotal} short />} emphasized />
+              <InfoRow label="Tạm tính" value={<CurrencyDisplay amount={subtotal} />} />
+              <InfoRow label={`VAT ${watchedTaxRate}%`} value={<CurrencyDisplay amount={taxAmount} />} />
+              <InfoRow label="Tổng cộng" value={<CurrencyDisplay amount={grandTotal} />} emphasized />
               <InfoRow label="Số dòng" value={`${watchedItems.length}`} />
             </CardContent>
           </Card>

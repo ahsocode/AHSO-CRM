@@ -217,7 +217,7 @@ export function ContractAcceptancePreviewClient({ contractId }: { contractId: st
           </p>
 
           <section className="mt-6 grid gap-4 md:grid-cols-3">
-            <SummaryCard label="Tổng milestone" value={`${contract.stats.milestoneCount}`} />
+            <SummaryCard label="Tổng số mốc" value={`${contract.stats.milestoneCount}`} />
             <SummaryCard
               label="Hoàn tất / chấp nhận"
               value={`${contract.stats.completedMilestones}`}

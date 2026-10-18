@@ -362,4 +362,15 @@ Mọi đường dẫn tương đối tính từ `frontend/app/(dashboard)/` tr�
 | **Tổng** | **~12.75h** | |
 
 ## Tồn đọng
-*(B8 điền)*
+*(B8 — QA trên production ngày 19/10/2026)*
+
+**Đã xác nhận trên production:** Kanban ≥ 4 card/cột + 1 tín hiệu cảnh báo; bảng khách hàng 20 dòng, avatar đúng; form báo giá dạng bảng, Enter thêm dòng, tổng hợp bám khi cuộn; trang chi tiết NCC; mở tab mới khi đã có tab CRM → vào thẳng, không gọi `/auth/logout`.
+
+**Đã sửa thêm trong B9** (phát hiện khi QA): 114 chuỗi tiếng Anh còn sót trong prop/câu mô tả (`docs/B9_leftover_strings.md`); khung tổng hợp báo giá hiện số rút gọn "1,4 tr" → số chính xác; cột "Dự án"/"Phụ trách" bảng khách hàng bị xuống 3 dòng; "16.7%" → "16,7%"; bỏ chữ "Automation Hub" ở sidebar; thời gian chờ chia sẻ phiên giữa các tab 400 → 1500ms.
+
+**Còn lại (chưa làm, cần quyết định):**
+1. "Top 5 dự án giá trị cao" sắp xếp phía client trên 50 dự án đầu — cần API `sortBy=estimatedValue` nếu số dự án > 50.
+2. Nhiều card Kanban có chấm đỏ là do **dữ liệu thật** (dự án quá hạn chưa cập nhật), không phải lỗi UI — nên rà dữ liệu `expectedEndDate`.
+3. Form báo giá: tổng tiền hiện ở cả cuối bảng và khung bên phải — có thể bỏ một nơi.
+4. Chính sách phiên: khi mở CRM lần đầu sau khi đóng hết tab, hệ thống vẫn bounce qua trang đăng nhập rồi tự vào lại trong một số trường hợp — cần quyết định chính sách "đóng trình duyệt = đăng xuất" có giữ không, rồi làm cho nhất quán.
+5. Chưa chạy `design:design-system` và `design:accessibility-review` (bỏ qua để tiết kiệm token) — nên chạy một lần trước đợt thiết kế tiếp theo, đặc biệt kiểm tra tương phản của `text-text-muted`.

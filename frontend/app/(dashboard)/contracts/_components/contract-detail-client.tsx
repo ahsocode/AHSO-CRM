@@ -96,9 +96,9 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Contract Desk"
+        eyebrow="Hợp đồng"
         title={contract.contractNo}
-        description="Hồ sơ hợp đồng gom commercial context, milestone triển khai, dòng tiền, attachment và biên bản nghiệm thu."
+        description="Hồ sơ hợp đồng tổng hợp thông tin thương mại, mốc triển khai, dòng tiền, tệp đính kèm và biên bản nghiệm thu."
         action={
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/contracts" className={cn(buttonVariants({ variant: "outline" }))}>
@@ -217,20 +217,20 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
         <MetricCard label="Giá trị hợp đồng" value={<CurrencyDisplay amount={contract.value} short />} />
         <MetricCard label="Đã thu" value={<CurrencyDisplay amount={contract.stats.paidAmount} short />} />
         <MetricCard label="Còn lại" value={<CurrencyDisplay amount={contract.stats.outstandingAmount} short />} />
-        <MetricCard label="Tiến độ milestone" value={`${contract.stats.completionRate}%`} />
+        <MetricCard label="Tiến độ mốc" value={`${contract.stats.completionRate}%`} />
       </div>
 
       <Card className="border border-white/70">
         <CardHeader className="mb-0 gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trường tùy chỉnh</p>
-          <CardTitle>Custom fields</CardTitle>
+          <CardTitle>Giá trị trường tùy chỉnh</CardTitle>
         </CardHeader>
         <CardContent>
           <CustomFieldRenderer
             fields={customFieldsQuery.data ?? []}
             values={contract.customFieldValues ?? {}}
-            emptyTitle="Chưa có custom field cho hợp đồng"
-            emptyDescription="Khi admin tạo field động cho resource hợp đồng, dữ liệu sẽ hiện ở đây."
+            emptyTitle="Chưa có trường tùy chỉnh cho hợp đồng"
+            emptyDescription="Khi quản trị viên tạo trường tùy chỉnh cho hợp đồng, dữ liệu sẽ hiện ở đây."
           />
         </CardContent>
       </Card>
@@ -250,7 +250,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
               {contract.project.quotes.length === 0 ? (
                 <EmptyState
                   title="Chưa có báo giá nguồn"
-                  description="Dự án này chưa liên kết quote. Flow hiện tại đã có route quotes để mở rộng truy vết đầy đủ."
+                  description="Dự án này chưa liên kết với báo giá nào. Hệ thống sẽ bổ sung liên kết báo giá để theo dõi đầy đủ hơn."
                 />
               ) : (
                 contract.project.quotes.map((quote) => (
@@ -301,7 +301,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
                 <MiniInfo label="Tạo hợp đồng" value={formatDateTime(contract.createdAt)} />
                 <MiniInfo label="Cập nhật cuối" value={formatDateTime(contract.updatedAt)} />
                 <MiniInfo label="Số thanh toán" value={`${contract.stats.paymentCount}`} />
-                <MiniInfo label="Milestone xong" value={`${contract.stats.completedMilestones}/${contract.stats.milestoneCount}`} />
+                <MiniInfo label="Mốc đã xong" value={`${contract.stats.completedMilestones}/${contract.stats.milestoneCount}`} />
               </div>
             </CardContent>
           </Card>
@@ -386,7 +386,7 @@ function ContractTemplateSelector({
           ) : (
             <>
               <select
-                aria-label="Chọn template hợp đồng"
+                aria-label="Chọn mẫu hợp đồng"
                 className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={selectedTemplateVariantId}
                 onChange={(event) => onChange(event.target.value)}

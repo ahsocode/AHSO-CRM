@@ -67,8 +67,8 @@ function CustomerJourneyCard({
           </div>
         ) : (
           <EmptyState
-            title="Chưa đủ dữ liệu journey"
-            description="Khi có thêm lead, quote accepted và contract, biểu đồ luồng chuyển đổi sẽ hiện rõ hơn."
+            title="Chưa đủ dữ liệu hành trình khách hàng"
+            description="Khi có thêm khách tiềm năng, báo giá đã chấp nhận và hợp đồng, biểu đồ luồng chuyển đổi sẽ hiện rõ hơn."
           />
         )}
       </CardContent>
@@ -163,8 +163,8 @@ function FunnelCard({
           </div>
         ) : (
           <EmptyState
-            title="Funnel chưa có dữ liệu"
-            description="Khi pipeline có nhiều cơ hội hơn, funnel sẽ phản ánh rõ conversion rate giữa các stage."
+            title="Phễu chuyển đổi chưa có dữ liệu"
+            description="Khi pipeline có nhiều cơ hội hơn, phễu sẽ thể hiện rõ tỷ lệ chuyển đổi giữa các giai đoạn."
           />
         )}
       </CardContent>

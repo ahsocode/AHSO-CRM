@@ -65,6 +65,10 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
 - **Grep chỉ bắt chữ giữa thẻ JSX** → sót chuỗi trong prop (`eyebrow=`, `placeholder=`…). `static_checks.py` quét cả prop.
 - **Màu gán theo index mảng** → "Hoàn thành" màu đỏ. Màu trạng thái luôn lấy `CHART_STAGE_COLORS[status]`.
 - **Số rút gọn cho tiền báo giá** ("1,4 tr") → báo giá/hợp đồng luôn hiển thị số đầy đủ (`formatVND`).
+- **Git object hỏng trên exFAT:** commit từ sandbox từng ghi một tree object dạng thô chưa nén → 4 commit
+  không push được. `prepush.sh` chạy `git fsck --connectivity-only` đầu tiên. Cách sửa đã dùng: tìm thư mục
+  có tree hỏng, dựng lại các entry, xác nhận bằng mã băm khớp **trước khi** ghi (`git mktree`), không bao giờ
+  xóa object khi chưa có bản sao. Sau mỗi lần commit từ sandbox: `git fsck --connectivity-only --no-dangling`.
 - **Ổ TRANSCEND (exFAT):** sandbox có thể đọc file bị cắt ngắn; bậc 1 báo `ERROR fsync` → ghi lại file từ phía Mac.
   File rác `._*` làm vỡ jest/vitest → `prepush.sh` tự xóa.
 - **Selector e2e dạng regex** (`/Xuất CSV \+ Excel/i`) không lộ ra khi grep chuỗi nguyên văn → đổi nhãn

@@ -54,6 +54,15 @@ ok()    { printf '\033[1;32m[qa] ✔ %s\033[0m\n' "$*"; }
 # macOS writes AppleDouble junk on exFAT drives; it breaks jest/vitest collection.
 find . -name '._*' -not -path '*/node_modules/*' -not -path './.git/*' -delete 2>/dev/null || true
 
+# Repo integrity: on the exFAT drive a git object was once written with raw,
+# uncompressed bytes (tree of reports/builder), breaking 4 unpushed commits.
+# Connectivity-only fsck reads every tree/commit headed for the push — fails fast.
+stage "0/4 git integrity"
+git fsck --connectivity-only --no-dangling >/dev/null 2>&1 \
+  || { git fsck --connectivity-only --no-dangling 2>&1 | grep -v '^Checking' | head -5
+       fail "git object corruption — ask Claude to repair before pushing (do NOT push)"; }
+ok "git integrity"
+
 if [[ $E2E_ONLY -eq 0 ]]; then
   stage "1/4 static checks"
   git fetch -q origin main 2>/dev/null || true

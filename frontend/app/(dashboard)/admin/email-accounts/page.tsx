@@ -67,7 +67,7 @@ export default function AdminEmailAccountsPage() {
             <p className="font-semibold text-text-primary">Tạo nhanh cho toàn bộ nhân viên</p>
             <p className="mt-0.5 text-sm text-text-secondary">
               Tự động tạo tài khoản email dựa trên email CRM của từng người. Nhân viên chỉ cần vào{" "}
-              <span className="font-medium text-primary">Settings → Email</span> để nhập mật khẩu iRedMail của mình.
+              <span className="font-medium text-primary">Cài đặt → Email</span> để nhập mật khẩu iRedMail của mình.
             </p>
           </div>
           <Button

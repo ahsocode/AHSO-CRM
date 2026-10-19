@@ -194,7 +194,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
                 {contract.project.customer.name}
               </Link>
               <p className="text-sm text-text-secondary">{contract.project.customer.address ?? "Chưa cập nhật địa chỉ"}</p>
-              <p className="text-sm text-text-secondary">Owner: {contract.project.customer.assignedTo.name}</p>
+              <p className="text-sm text-text-secondary">Phụ trách: {contract.project.customer.assignedTo.name}</p>
             </div>
 
             <div className="mt-6 rounded-2xl border border-white/70 bg-white/85 p-4 text-sm">

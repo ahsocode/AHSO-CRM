@@ -234,7 +234,7 @@ export default function CustomFieldsPage() {
                     />
                     <ErrorText message={form.formState.errors.optionsText?.message} />
                     {optionsPreview.length > 0 ? (
-                      <p className="text-xs text-text-secondary">Preview: {optionsPreview.join(" · ")}</p>
+                      <p className="text-xs text-text-secondary">Xem trước: {optionsPreview.join(" · ")}</p>
                     ) : null}
                   </Field>
                 ) : null}

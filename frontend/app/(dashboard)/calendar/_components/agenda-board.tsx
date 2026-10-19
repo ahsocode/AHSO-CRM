@@ -120,7 +120,7 @@ export function AgendaBoard({
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
               <div>
                 <p className="font-heading text-xl font-bold text-text-primary">{formatDate(group.date)}</p>
-                <p className="text-sm text-text-secondary">{group.items.length} activity</p>
+                <p className="text-sm text-text-secondary">{group.items.length} hoạt động</p>
               </div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
                 {new Date(group.date).toLocaleDateString("vi-VN", { weekday: "long" })}

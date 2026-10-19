@@ -399,7 +399,7 @@ export function CustomersClient() {
               );
             }}
           >
-            Export CSV + Excel
+            Xuất CSV + Excel
           </Button>
         </BulkActionsBar>
       ) : null}

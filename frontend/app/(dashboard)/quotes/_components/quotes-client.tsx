@@ -153,7 +153,7 @@ export function QuotesClient() {
               );
             }}
           >
-            Export CSV + Excel
+            Xuất CSV + Excel
           </Button>
         </BulkActionsBar>
       ) : null}

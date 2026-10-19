@@ -65,9 +65,6 @@ export function DocumentPreviewClient({
       <div className="mx-auto flex max-w-7xl flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-white/70 bg-white/90 px-5 py-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
-              Document Preview
-            </p>
             <h1 className="text-2xl font-bold text-text-primary">Xem trước tài liệu</h1>
             <p className="text-sm text-text-secondary">
               Preview HTML giữ đúng quyền truy cập; file PDF được render bằng backend để kiểm tra phân trang thật.

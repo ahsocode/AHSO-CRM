@@ -39,6 +39,8 @@ KEEP = {
     "IMAP", "Webhook", "Webhooks", "Admin", "Production", "Staging", "OK", "PO", "A4", "Esc",
     # font family names in the rich-text editor
     "Courier New", "Times New Roman", "Be Vietnam Pro",
+    # company slogan printed under the company name on customer quotes (brand decision)
+    "Automation Hub",
 }
 # English words that must not appear in user-facing text (whole word, case-insensitive).
 ENGLISH_WORDS = re.compile(
@@ -49,6 +51,7 @@ ENGLISH_WORDS = re.compile(
     r"cancel|delete|edit|submit|loading|search|filter|details|new|add|back|next|previous)\b",
     re.I,
 )
+VIET = re.compile(r"[À-ỹĐđ]")
 IGNORE_TEXT = {"document-preview", "Project 360 sections"}
 TEXT_PROPS = r"eyebrow|label|title|description|placeholder|helper|hint|subtitle|emptyTitle|emptyDescription|aria-label|alt"
 RE_PROP = re.compile(rf'\b({TEXT_PROPS})="([^"]+)"')
@@ -56,6 +59,16 @@ RE_JSX_TEXT = re.compile(r">\s*([A-Za-z][A-Za-z0-9 ,.&/+'’()-]{2,})\s*<")
 # Title-Case multi-word English phrase in a string literal, e.g. {isNew ? "Quote Identity" : "..."}
 # (missed by the two patterns above; cost a full QA round to find).
 RE_LITERAL_PHRASE = re.compile(r"[\"'`]([A-Z][a-z]+(?: [A-Za-z][a-z]+){1,5})[\"'`]")
+# JSX text next to an expression, any language: "{n} milestone</span>", "<p>Owner: {name}",
+# "Thêm và điều chỉnh milestone ...". Caught only by the runtime e2e scan before.
+RE_JSX_SEGMENT = re.compile(r"(?:>|\})([^<>{}\n`]*[A-Za-zÀ-ỹ][^<>{}\n`]*)(?=<|\{)")
+RE_LOOKS_JSX = re.compile(r"</|/>|^\s*<[A-Za-z]|^\s*[^=<>]*\{[^}]*\}[^<>]*</")
+# Template literal used as UI text: `${n} milestone còn mở`
+RE_TEMPLATE = re.compile(r"`([^`]*)`")
+# Vietnamese string literal containing an English word: "Phiên bản ... số quote ..."
+RE_VI_LITERAL = re.compile(r"[\"']([^\"'\n]*[À-ỹĐđ][^\"'\n]*)[\"']")
+# JSX text alone on its own line between tags:      Import CSV
+RE_TEXT_LINE = re.compile(r"^\s*([A-Za-zÀ-ỹĐđ][^<>{}=;\"'`()]*[^\s<>{}=;,])\s*$")
 SKIP_LITERAL_LINE = re.compile(
     r"^\s*(import|export type|type |interface |//|\*)|console\.|throw new|logger\.|queryKey|className="
     # bilingual document labels (vi + English) are intentionally English
@@ -72,6 +85,9 @@ RE_MONEY = re.compile(r"toLocaleString\([^)]*\)\s*\}?\s*(?:VND|VNĐ|đ|₫)|toLo
 
 RE_E2E_LITERAL = re.compile(r'getBy(?:Text|Label|Placeholder|Title)\(\s*"([^"]+)"')
 RE_E2E_NAME = re.compile(r'name:\s*"([^"]+)"')
+# Regex selectors: getByText(/.../i), { name: /.../ } — a literal grep cannot see
+# "/Export CSV \+ Excel/i", which let a label change break 3 e2e tests.
+RE_E2E_REGEX = re.compile(r"(?:getBy(?:Text|Label|Placeholder|Title)\(\s*|name:\s*)/((?:\\/|[^/\n])+)/([a-z]*)")
 E2E_NON_UI = {"ahso_refresh_token", "e2e-project-360.pdf"}
 
 
@@ -109,11 +125,30 @@ def check_english(files: list[Path]) -> list[str]:
             cands = [m.group(2) for m in RE_PROP.finditer(line)] + [m.group(1) for m in RE_JSX_TEXT.finditer(line)]
             if not SKIP_LITERAL_LINE.search(line):
                 cands += [m.group(1) for m in RE_LITERAL_PHRASE.finditer(line)]
+                # template literals: drop ${...} parts, keep only if it reads like prose
+                for m in RE_TEMPLATE.finditer(line):
+                    t = re.sub(r"\$\{[^}]*\}", " ", m.group(1)).strip()
+                    # prose only: no ids (`milestone-${i}-name`), paths, css selectors or class lists
+                    if " " in t and not re.search(r"[/:=#.]|-\s|\s-|\b[a-z]+-[a-z]+\b", t):
+                        cands.append(t)
+            if not SKIP_LITERAL_LINE.search(line):
+                cands += [m.group(1) for m in RE_VI_LITERAL.finditer(line)]
+            tl = RE_TEXT_LINE.match(line)
+            if tl and f.suffix == ".tsx" and " " in tl.group(1) and not re.search(r"[.:?|\[\]&!]|\bnew\s+[A-Z]|\bthrow\b", tl.group(1)):
+                cands.append(tl.group(1))
+            if RE_LOOKS_JSX.search(line):
+                for m in RE_JSX_SEGMENT.finditer(line):
+                    seg = m.group(1).strip()
+                    # attribute fragments (`isCompleted=`), call chains (`).format(`), selectors
+                    if "=" in seg or seg[:1] in ").,(" or seg.endswith(("(", ",")):
+                        continue
+                    cands.append(seg)
             for c in cands:
                 c = c.strip()
                 if c in KEEP or c in IGNORE_TEXT or not ENGLISH_WORDS.search(c):
                     continue
-                out.append(f"ERROR english  {rel(f)}:{i}  {c[:90]}")
+                level = "WARN  loanword" if VIET.search(c) else "ERROR english "
+                out.append(f"{level} {rel(f)}:{i}  {c[:90]}")
     return out
 
 
@@ -161,6 +196,25 @@ def check_e2e(base: str) -> list[str]:
         if "node_modules" not in p.parts and ".next" not in p.parts and not p.name.startswith("._")
     }
     all_src = "\n".join(head_files.values())
+    # approximate rendered text: `${n} dự án` / {n} dự án → "1 dự án"
+    src_rendered = re.sub(r"\$\{[^}]*\}|\{[^{}]*\}", "1", all_src)
+    for f in E2E.rglob("*.ts"):
+        if f.name.startswith("._"):
+            continue
+        for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+            if re.search(r"toHaveCount\(0\)|\.not\.", line):
+                continue  # negative assertion: the text is supposed to be absent
+            for m in RE_E2E_REGEX.finditer(line):
+                body = m.group(1).replace("\\/", "/")
+                core = body.lstrip("^").rstrip("$")
+                if not re.search(r"[A-Za-zÀ-ỹ]{3,}", core):
+                    continue  # too generic to verify statically
+                try:
+                    rx = re.compile(core, re.I if "i" in m.group(2) else 0)
+                except re.error:
+                    continue
+                if not rx.search(all_src) and not rx.search(src_rendered):
+                    out.append(f"ERROR e2e      regex selector /{body}/ matches nothing in frontend  ({f.relative_to(ROOT)}:{i})")
     for s, locs in sorted(sel.items()):
         if s in E2E_NON_UI:
             continue

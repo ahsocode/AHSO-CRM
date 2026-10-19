@@ -275,7 +275,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
                         <p>Đã tạo cho dự án này</p>
                       </div>
                       <div className="rounded-xl bg-bg-hover/60 p-3">
-                        <p className="font-semibold text-text-primary">{project.milestoneCount} milestone</p>
+                        <p className="font-semibold text-text-primary">{project.milestoneCount} mốc</p>
                         <p>Theo dõi delivery</p>
                       </div>
                       <div className="rounded-xl bg-bg-hover/60 p-3">

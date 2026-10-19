@@ -294,7 +294,7 @@ export function QuoteFormScreen({
                 <p className="mt-1">
                   {mode === "edit"
                     ? "Version mới nên được tạo bằng thao tác duplicate trên màn chi tiết."
-                    : "Phiên bản sẽ tự tăng theo số quote đã có trên cùng dự án."}
+                    : "Phiên bản sẽ tự tăng theo số báo giá đã có trên cùng dự án."}
                 </p>
               </div>
             </CardContent>

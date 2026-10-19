@@ -317,7 +317,7 @@ export function CsvImportDialog<TInput>({
                 <ol className="mt-2 list-decimal space-y-1 pl-5 text-text-secondary">
                   <li>Tải file mẫu hoặc dùng file CSV hiện có của bạn.</li>
                   <li>Map cột từ file upload vào cột chuẩn của hệ thống.</li>
-                  <li>Xem preview, kiểm tra lỗi từng dòng rồi import toàn phần hoặc partial.</li>
+                  <li>Xem trước, kiểm tra lỗi từng dòng rồi import toàn phần hoặc partial.</li>
                 </ol>
               </div>
 
@@ -619,7 +619,7 @@ export function CsvImportDialog<TInput>({
                 onClick={() => setStage("preview")}
                 disabled={hasMissingRequiredMapping}
               >
-                Xem preview
+                Xem trước
               </Button>
             </>
           ) : null}

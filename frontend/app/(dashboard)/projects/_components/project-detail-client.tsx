@@ -390,7 +390,7 @@ function OverviewPanel({
                 </div>
                 {overview.latestSurvey.summary ? <p className="mt-3 text-sm text-text-secondary">{overview.latestSurvey.summary}</p> : null}
                 {overview.latestSurvey.nextStep ? (
-                  <p className="mt-3 rounded-xl bg-primary/5 p-3 text-sm text-primary">Next step: {overview.latestSurvey.nextStep}</p>
+                  <p className="mt-3 rounded-xl bg-primary/5 p-3 text-sm text-primary">Bước tiếp theo: {overview.latestSurvey.nextStep}</p>
                 ) : null}
               </article>
             ) : (
@@ -558,7 +558,7 @@ function Project360Brief({
         title={`${handoverCount} ghi chú`}
         description={
           openMilestoneCount > 0
-            ? `${openMilestoneCount} milestone còn mở cần theo dõi.`
+            ? `${openMilestoneCount} mốc còn mở cần theo dõi.`
             : project.contract
               ? "Không có mốc nào đang mở."
               : "Chưa có hợp đồng để sinh milestone triển khai."

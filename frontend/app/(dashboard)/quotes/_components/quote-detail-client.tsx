@@ -300,7 +300,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 {quote.project.customer.name}
               </Link>
               <p className="text-sm text-text-secondary">{quote.project.name}</p>
-              <p className="text-sm text-text-secondary">Owner: {quote.project.customer.assignedTo.name}</p>
+              <p className="text-sm text-text-secondary">Phụ trách: {quote.project.customer.assignedTo.name}</p>
             </div>
 
             <div className="mt-6 rounded-2xl border border-white/70 bg-white/85 p-4 text-sm">

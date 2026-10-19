@@ -299,7 +299,7 @@ export function ProjectsClient() {
             </Link>
             {/* Desktop-only power actions */}
             <Button type="button" variant="outline" onClick={() => setImportOpen(true)} className="hidden md:inline-flex">
-              Import CSV
+              Nhập CSV
             </Button>
             <Button type="button" variant={showDeleted ? "primary" : "outline"} onClick={() => setShowDeleted((value) => !value)} className="hidden md:inline-flex">
               {showDeleted ? "Ẩn thùng rác" : "Thùng rác"}
@@ -471,7 +471,7 @@ export function ProjectsClient() {
               );
             }}
           >
-            Export CSV + Excel
+            Xuất CSV + Excel
           </Button>
         </BulkActionsBar>
       ) : null}

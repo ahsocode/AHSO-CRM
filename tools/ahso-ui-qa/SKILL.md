@@ -67,6 +67,13 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
 - **Số rút gọn cho tiền báo giá** ("1,4 tr") → báo giá/hợp đồng luôn hiển thị số đầy đủ (`formatVND`).
 - **Ổ TRANSCEND (exFAT):** sandbox có thể đọc file bị cắt ngắn; bậc 1 báo `ERROR fsync` → ghi lại file từ phía Mac.
   File rác `._*` làm vỡ jest/vitest → `prepush.sh` tự xóa.
+- **Selector e2e dạng regex** (`/Xuất CSV \+ Excel/i`) không lộ ra khi grep chuỗi nguyên văn → đổi nhãn
+  làm vỡ test. `static_checks.py` kiểm tra cả regex selector; vẫn nên `grep -rn "<từ khóa>" e2e/` khi đổi nhãn nút.
+- **Chữ ghép từ biểu thức** (`{n} milestone`, `` `${n} mốc` ``, `Owner: {name}`) và câu tiếng Việt lẫn từ
+  tiếng Anh: script bắt được; chuỗi **toàn tiếng Anh** = ERROR (chặn push), **câu Việt lẫn từ vay mượn**
+  (template, export, draft…) = WARN loanword — dọn theo đợt, không chặn push.
+- **Lệnh gửi cho Henry:** không kèm chú thích `# ...` cuối dòng — zsh trên macOS không coi `#` là chú thích
+  khi gõ trực tiếp, phần sau `#` bị truyền thành tham số.
 - **Mở tab mới** từng làm đăng xuất mọi tab — mọi thay đổi ở `lib/api-client.ts`, `lib/auth.ts`,
   `dashboard-shell.tsx`, `middleware.ts` phải chạy `--grep "phiên"` + `auth.spec.ts`.
 

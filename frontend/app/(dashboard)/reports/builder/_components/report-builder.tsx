@@ -647,10 +647,10 @@ export function ReportBuilder() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="button" variant="outline" disabled={!canExport} onClick={handleExportCsv}>
-                    Export CSV
+                    Xuất CSV
                   </Button>
                   <Button type="button" variant="outline" disabled={!canExport} onClick={() => void handleExportExcel()}>
-                    Export Excel
+                    Xuất Excel
                   </Button>
                   <Button type="button" variant="ghost" disabled={!canExport} onClick={() => window.print()}>
                     In / Lưu PDF

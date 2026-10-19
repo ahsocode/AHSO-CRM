@@ -498,7 +498,7 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
 
           <section className="mt-8 flex items-end justify-between gap-8 pt-8">
             <div>
-              <Badge variant="neutral">Project: {quote.project.code}</Badge>
+              <Badge variant="neutral">Dự án: {quote.project.code}</Badge>
               <p className="mt-3 text-xs leading-6 text-slate-500">
                 Báo giá do {quote.createdBy.name} lập.
                 {quote.createdBy.email ? ` Email liên hệ: ${quote.createdBy.email}.` : ""}

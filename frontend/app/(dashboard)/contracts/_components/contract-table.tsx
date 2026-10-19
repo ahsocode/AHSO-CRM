@@ -108,7 +108,7 @@ export function ContractTable({
                 <span className="font-heading text-2xl font-extrabold text-text-primary">
                   <CurrencyDisplay amount={contract.value} short />
                 </span>
-                <span className="text-sm text-text-secondary">{contract.milestoneCount} milestone</span>
+                <span className="text-sm text-text-secondary">{contract.milestoneCount} mốc</span>
               </div>
             </article>
           ))}
@@ -137,7 +137,7 @@ export function ContractTable({
                         {contract.isOverdue ? <Badge variant="danger">Quá hạn</Badge> : null}
                       </div>
                       <div className="space-y-1 text-sm text-text-secondary">
-                        <p>{contract.paymentCount} thanh toán · {contract.milestoneCount} milestone</p>
+                        <p>{contract.paymentCount} thanh toán · {contract.milestoneCount} mốc</p>
                         <p>Ký ngày {contract.signDate ? formatDate(contract.signDate) : "chưa cập nhật"}</p>
                       </div>
                     </div>
@@ -154,7 +154,7 @@ export function ContractTable({
                         <Link href={`/customers/${contract.customer.id}`} className="text-text-secondary hover:text-primary">
                           {contract.customer.name}
                         </Link>
-                        <p className="text-text-secondary">Owner: {contract.customer.assignedTo.name}</p>
+                        <p className="text-text-secondary">Phụ trách: {contract.customer.assignedTo.name}</p>
                       </div>
                     </div>
                   </td>

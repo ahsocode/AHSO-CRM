@@ -391,9 +391,13 @@ test.describe("Nhà cung cấp", () => {
       await expect(main.getByText(`Mã NCC: ${supplier.code}`)).toBeVisible();
 
       // Three stat cards.
-      await expect(main.locator("article").filter({ hasText: "Vật tư cung cấp" })).toContainText("0");
-      await expect(main.locator("article").filter({ hasText: "Tổng giá trị nhập" })).toContainText("0");
-      await expect(main.locator("article").filter({ hasText: "Phiếu nhập" })).toContainText("Chưa có lần nhập nào");
+      // Match each stat card by its exact label: a substring filter on "Phiếu nhập"
+      // also hit the "Tổng giá trị nhập" card ("Phiếu nhập đã xác nhận") → strict mode.
+      const statCard = (label: string) =>
+        main.locator("article").filter({ has: page.getByText(label, { exact: true }) });
+      await expect(statCard("Vật tư cung cấp")).toContainText("0");
+      await expect(statCard("Tổng giá trị nhập")).toContainText("0");
+      await expect(statCard("Phiếu nhập")).toContainText("Chưa có lần nhập nào");
       await expect(main.getByText("Vật tư cung cấp", { exact: true })).toBeVisible();
       await expect(main.getByText("Tổng giá trị nhập", { exact: true })).toBeVisible();
       await expect(main.getByText("Phiếu nhập", { exact: true })).toBeVisible();

@@ -112,12 +112,19 @@ wait_for "http://127.0.0.1:3101/api/health" "backend"
 "${COMPOSE[@]}" exec -T backend npm run prisma:seed || fail "database seed"
 wait_for "http://127.0.0.1:3100/login" "frontend"
 
+# Root devDependencies (@playwright/test) are separate from frontend/ and backend/.
+# Without them `npx playwright` downloads a throwaway copy that cannot load
+# playwright.config.ts ("Cannot find module '@playwright/test'").
+if [[ ! -d node_modules/@playwright/test ]]; then
+  echo "[qa] installing root dev dependencies (@playwright/test)…"
+  npm ci --no-audit --no-fund || fail "root npm ci"
+fi
 [[ -d "$HOME/Library/Caches/ms-playwright" ]] && ls "$HOME/Library/Caches/ms-playwright" | grep -q chromium \
-  || npx playwright install chromium
+  || npx --no-install playwright install chromium
 
 PW_ARGS=(--reporter=line)
 [[ -n "$GREP" ]] && PW_ARGS+=(--grep "$GREP")
-if ! npx playwright test "${PW_ARGS[@]}"; then
+if ! npx --no-install playwright test "${PW_ARGS[@]}"; then
   printf '\n[qa] Playwright failed. Report: npx playwright show-report\n'
   printf '[qa] To get help cheaply, paste ONLY the failing test blocks above (title + Error + Locator lines) to Claude.\n'
   fail "e2e"

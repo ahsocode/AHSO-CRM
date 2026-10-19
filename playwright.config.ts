@@ -12,6 +12,8 @@ export default defineConfig({
     {
       name: "auth-guest",
       testMatch: /(auth|security)\.spec\.ts/,
+      // macOS writes AppleDouble "._*" files on exFAT drives; never load them as tests
+      testIgnore: /(^|[\\/])\._/,
       use: {
         baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
         headless: true,
@@ -20,7 +22,7 @@ export default defineConfig({
     },
     {
       name: "authenticated-smoke",
-      testIgnore: /(auth|security)\.spec\.ts/,
+      testIgnore: [/(auth|security)\.spec\.ts/, /(^|[\\/])\._/],
       use: {
         baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
         headless: true,

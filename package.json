@@ -6,6 +6,8 @@
     "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
     "docker:down": "docker compose down",
     "test:e2e": "playwright test",
+    "qa:static": "python3 tools/ahso-ui-qa/scripts/static_checks.py",
+    "qa:prepush": "bash tools/ahso-ui-qa/scripts/prepush.sh",
     "test:docker": "npm run test:docker:unit && npm run test:docker:e2e",
     "test:docker:unit": "npm run test:docker:backend && npm run test:docker:frontend",
     "test:docker:backend": "docker compose -f docker-compose.test.yml run --build --rm backend-unit",

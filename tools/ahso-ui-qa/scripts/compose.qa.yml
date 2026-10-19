@@ -1,0 +1,27 @@
+# Compose override for the isolated pre-push QA stack.
+# Used together with the root docker-compose.yml and project name `ahso-qa`:
+#   docker compose -p ahso-qa -f docker-compose.yml -f tools/ahso-ui-qa/scripts/compose.qa.yml ...
+#
+# Why an override instead of the root file alone:
+# - separate image tags: the QA frontend bakes NEXT_PUBLIC_API_URL=http://localhost:3101,
+#   reusing `ahso-crm-frontend:local` would break the developer's own stack
+# - separate uploads volume: e2e uploads test PDFs; keep them out of ./backend/uploads
+# - no restart policy: the stack is torn down after the run
+# Ports, URLs and secrets come from env vars set by prepush.sh (3100/3101/55432/56379),
+# so the QA stack can run while the dev stack (3000/3001) is up.
+services:
+  postgres:
+    restart: "no"
+  redis:
+    restart: "no"
+  backend:
+    image: ahso-crm-backend:qa
+    restart: "no"
+    volumes:
+      - qa_uploads:/app/uploads
+  frontend:
+    image: ahso-crm-frontend:qa
+    restart: "no"
+
+volumes:
+  qa_uploads:

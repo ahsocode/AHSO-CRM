@@ -135,7 +135,7 @@ export default function CustomFieldsPage() {
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
             <p className="industrial-chip bg-primary/10 text-primary">
-              {editingField ? "Edit Field" : "Create Field"}
+              {editingField ? "Sửa trường" : "Tạo trường"}
             </p>
             <CardTitle>{editingField ? "Chỉnh sửa custom field" : "Tạo custom field mới"}</CardTitle>
           </CardHeader>

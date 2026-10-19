@@ -224,7 +224,7 @@ export function QuoteFormScreen({
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="v2-label text-primary">
-                {mode === "create" ? "Quote Identity" : "Quote Revision"}
+                {mode === "create" ? "Báo giá mới" : "Chỉnh sửa báo giá"}
               </p>
               <CardTitle>Thông tin cơ bản</CardTitle>
             </CardHeader>
@@ -453,7 +453,7 @@ export function QuoteFormScreen({
         </div>
 
         <div className="sticky top-[72px] max-h-[calc(100vh-88px)] space-y-6 self-start overflow-y-auto">
-          <Card className="border border-white/70">
+          <Card className="border border-white/70" data-testid="quote-summary">
             <CardHeader className="mb-0 gap-2">
               <CardTitle>Tổng hợp giá trị</CardTitle>
             </CardHeader>

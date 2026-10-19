@@ -77,6 +77,7 @@ function ProjectCardContent({ project }: { project: ProjectListItem }) {
         </Link>
         {risk ? (
           <span
+            data-testid="risk-dot"
             className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full"
             style={{ backgroundColor: risk.color }}
             title={risk.label}
@@ -130,6 +131,7 @@ function DraggableCard({
     <article
       ref={setNodeRef}
       {...attributes}
+      data-testid="kanban-card"
       onClick={() => router.push(`/projects/${project.id}`)}
       className={`group relative cursor-pointer overflow-hidden rounded-lg border-l-4 bg-bg-card p-3 pb-3.5 shadow-sm transition
         ${isDragging ? "opacity-40 shadow-xl" : "v2-card-hover"}
@@ -181,6 +183,9 @@ function DroppableKanbanColumn({
     return (
       <div
         ref={setNodeRef}
+        data-testid="kanban-column"
+        data-column={column.key}
+        data-collapsed="true"
         className={`flex w-14 shrink-0 flex-col items-center gap-3 rounded-lg py-3 transition
           ${isOver ? "bg-primary-bg" : "bg-bg-subtle"}`}
       >
@@ -207,6 +212,9 @@ function DroppableKanbanColumn({
 
   return (
     <div
+      data-testid="kanban-column"
+      data-column={column.key}
+      data-collapsed="false"
       className={`flex w-[280px] shrink-0 flex-col rounded-lg p-2 transition ${isOver ? "bg-primary-bg" : "bg-bg-subtle"}`}
     >
       <div className="mb-2 space-y-0.5 px-1">

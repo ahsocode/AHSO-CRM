@@ -724,7 +724,7 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
             <Textarea placeholder="Khách tham gia / người trao đổi" value={surveyForm.customerParticipants} onChange={(event) => setSurveyForm((prev) => ({ ...prev, customerParticipants: event.target.value }))} />
             <Textarea placeholder="Mục tiêu khảo sát" value={surveyForm.objectives} onChange={(event) => setSurveyForm((prev) => ({ ...prev, objectives: event.target.value }))} />
             <Textarea placeholder="Tổng kết hiện trường" value={surveyForm.summary} onChange={(event) => setSurveyForm((prev) => ({ ...prev, summary: event.target.value }))} />
-            <Textarea placeholder="Next step sau khảo sát" value={surveyForm.nextStep} onChange={(event) => setSurveyForm((prev) => ({ ...prev, nextStep: event.target.value }))} />
+            <Textarea placeholder="Bước tiếp theo sau khảo sát" value={surveyForm.nextStep} onChange={(event) => setSurveyForm((prev) => ({ ...prev, nextStep: event.target.value }))} />
             <Button type="submit" disabled={createSurvey.isPending}>
               {createSurvey.isPending ? "Đang lưu..." : "Tạo khảo sát"}
             </Button>

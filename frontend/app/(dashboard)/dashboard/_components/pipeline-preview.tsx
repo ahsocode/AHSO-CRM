@@ -44,6 +44,8 @@ export function PipelinePreview({
             return (
               <div
                 key={stage.status}
+                data-testid="pipeline-segment"
+                data-status={stage.status}
                 title={`${stage.label}: ${stage.count} dự án · ${formatVNDShort(stage.totalValue)}`}
                 className="transition-opacity hover:opacity-80"
                 style={{
@@ -59,10 +61,14 @@ export function PipelinePreview({
           {data.map((stage) => (
             <Link
               key={stage.status}
+              data-testid="pipeline-stage"
+              data-status={stage.status}
               href={`/projects?view=kanban&status=${stage.status}`}
               className="flex flex-1 flex-col items-center gap-1 rounded-lg bg-bg-subtle px-2 py-3 text-center transition-colors hover:bg-bg-hover"
             >
               <span
+                data-testid="pipeline-stage-dot"
+                data-status={stage.status}
                 className="h-2 w-2 rounded-full"
                 style={{ backgroundColor: CHART_STAGE_COLORS[stage.status] ?? CHART_COLORS.axis }}
               />

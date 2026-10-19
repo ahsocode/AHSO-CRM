@@ -322,7 +322,7 @@ export function ContractFormScreen({
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="industrial-chip bg-primary/10 text-primary">
-                {mode === "create" ? "Contract Draft" : "Contract Revision"}
+                {mode === "create" ? "Hợp đồng mới" : "Chỉnh sửa hợp đồng"}
               </p>
               <CardTitle>Thông tin hợp đồng</CardTitle>
             </CardHeader>

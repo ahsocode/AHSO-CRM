@@ -120,7 +120,7 @@ export function Topbar({
         {context.current ? (
           <>
             <AppIcon name="chevron-down" className="h-3 w-3 -rotate-90 text-text-muted" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{context.current}</span>
+            <span data-testid="topbar-crumb" className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{context.current}</span>
           </>
         ) : null}
       </div>

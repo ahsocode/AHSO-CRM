@@ -41,8 +41,8 @@ export function CustomFieldRenderer({
   values,
   onChange,
   editable = false,
-  emptyTitle = "Chưa có custom field",
-  emptyDescription = "Hãy tạo custom field trong Admin để phần này hiển thị dữ liệu động."
+  emptyTitle = "Chưa có trường tùy chỉnh",
+  emptyDescription = "Hãy tạo trường tùy chỉnh trong Admin để phần này hiển thị dữ liệu động."
 }: {
   fields: CustomFieldDefinition[];
   values: CustomFieldValues;

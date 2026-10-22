@@ -306,7 +306,7 @@ export function ReportBuilder() {
 
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
-      showError("Cần nhập tên template trước khi lưu.");
+      showError("Cần nhập tên mẫu trước khi lưu.");
       return;
     }
 
@@ -320,7 +320,7 @@ export function ReportBuilder() {
           config
         });
         setActiveTemplate(updated);
-        success("Đã cập nhật template báo cáo.");
+        success("Đã cập nhật mẫu báo cáo.");
       } else {
         const created = await createTemplateMutation.mutateAsync({
           name: templateName,
@@ -330,10 +330,10 @@ export function ReportBuilder() {
           config
         });
         setActiveTemplate(created);
-        success("Đã lưu template báo cáo.");
+        success("Đã lưu mẫu báo cáo.");
       }
     } catch (error) {
-      showError(getApiErrorMessage(error, "Không thể lưu template báo cáo."));
+      showError(getApiErrorMessage(error, "Không thể lưu mẫu báo cáo."));
     }
   };
 
@@ -348,7 +348,7 @@ export function ReportBuilder() {
               Chạy truy vấn
             </Button>
             <Button type="button" variant="outline" onClick={handleSaveTemplate}>
-              {activeTemplate ? "Cập nhật template" : "Lưu template"}
+              {activeTemplate ? "Cập nhật mẫu" : "Lưu mẫu"}
             </Button>
             {activeTemplate ? (
               <Button
@@ -356,7 +356,7 @@ export function ReportBuilder() {
                 variant="ghost"
                 disabled={deleteTemplateMutation.isPending}
                 onClick={() => {
-                  if (!window.confirm(`Xóa template "${activeTemplate.name}"?`)) {
+                  if (!window.confirm(`Xóa mẫu "${activeTemplate.name}"?`)) {
                     return;
                   }
 
@@ -366,12 +366,12 @@ export function ReportBuilder() {
                       setTemplateName("");
                       setTemplateDescription("");
                       setIsShared(false);
-                      success("Đã xóa template báo cáo.");
+                      success("Đã xóa mẫu báo cáo.");
                     }
                   });
                 }}
               >
-                Xóa template
+                Xóa mẫu
               </Button>
             ) : null}
             <Link href="/reports" className={cn(buttonVariants({ variant: "outline" }))}>
@@ -386,7 +386,7 @@ export function ReportBuilder() {
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Cấu hình dữ liệu</p>
-              <CardTitle>Cấu hình template</CardTitle>
+              <CardTitle>Cấu hình mẫu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <ChartConfig
@@ -421,7 +421,7 @@ export function ReportBuilder() {
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thư viện trường</p>
-              <CardTitle>Kéo field vào các zone</CardTitle>
+              <CardTitle>Kéo trường vào các vùng</CardTitle>
             </CardHeader>
             <CardContent>
               <FieldSelector dataset={config.dataset} />
@@ -430,8 +430,8 @@ export function ReportBuilder() {
 
           <Card className="border border-white/70">
             <CardHeader className="mb-0 gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Mẫu</p>
-              <CardTitle>Template đã lưu</CardTitle>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh sách</p>
+              <CardTitle>Mẫu đã lưu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {templatesQuery.isLoading ? (
@@ -620,7 +620,7 @@ export function ReportBuilder() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-text-secondary">Kéo filter vào đây.</p>
+                  <p className="text-sm text-text-secondary">Kéo bộ lọc vào đây.</p>
                 )}
               </div>
             </DropZone>

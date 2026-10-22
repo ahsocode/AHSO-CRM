@@ -53,7 +53,7 @@ export function ContractMilestoneManager({
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Kế hoạch giao hàng</p>
-        <CardTitle>Milestone triển khai</CardTitle>
+        <CardTitle>Mốc triển khai</CardTitle>
         <p className="mt-2 text-sm text-text-secondary">
           Thêm và điều chỉnh milestone ngay tại hợp đồng để finance, delivery và sales bám cùng một timeline.
         </p>
@@ -72,7 +72,7 @@ export function ContractMilestoneManager({
         >
           <div className="grid gap-4 md:grid-cols-2">
             <Field className="md:col-span-2">
-              <Label htmlFor="milestone-name">Tên milestone</Label>
+              <Label htmlFor="milestone-name">Tên mốc</Label>
               <Input id="milestone-name" placeholder="Ví dụ: FAT tại xưởng" {...form.register("name")} />
               <ErrorText message={form.formState.errors.name?.message} />
             </Field>
@@ -132,13 +132,13 @@ export function ContractMilestoneManager({
 
           {createMilestoneMutation.isError ? (
             <div className="rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">
-              {getApiErrorMessage(createMilestoneMutation.error, "Không thể tạo milestone.")}
+              {getApiErrorMessage(createMilestoneMutation.error, "Không thể tạo mốc.")}
             </div>
           ) : null}
 
           <div className="flex justify-end">
             <Button disabled={createMilestoneMutation.isPending} type="submit">
-              {createMilestoneMutation.isPending ? "Đang lưu..." : "Thêm milestone"}
+              {createMilestoneMutation.isPending ? "Đang lưu..." : "Thêm mốc"}
             </Button>
           </div>
         </form>
@@ -205,7 +205,7 @@ function MilestoneEditor({
         })}
       >
         <Field className="md:col-span-2">
-          <Label htmlFor={`milestone-${milestone.id}-name`}>Tên milestone</Label>
+          <Label htmlFor={`milestone-${milestone.id}-name`}>Tên mốc</Label>
           <Input id={`milestone-${milestone.id}-name`} {...form.register("name")} />
           <ErrorText message={form.formState.errors.name?.message} />
         </Field>
@@ -256,13 +256,13 @@ function MilestoneEditor({
 
         {updateMilestoneMutation.isError ? (
           <div className="md:col-span-2 rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">
-            {getApiErrorMessage(updateMilestoneMutation.error, "Không thể cập nhật milestone.")}
+            {getApiErrorMessage(updateMilestoneMutation.error, "Không thể cập nhật mốc.")}
           </div>
         ) : null}
 
         <div className="md:col-span-2 flex justify-end">
           <Button disabled={updateMilestoneMutation.isPending} type="submit" variant="outline">
-            {updateMilestoneMutation.isPending ? "Đang cập nhật..." : "Cập nhật milestone"}
+            {updateMilestoneMutation.isPending ? "Đang cập nhật..." : "Cập nhật mốc"}
           </Button>
         </div>
       </form>

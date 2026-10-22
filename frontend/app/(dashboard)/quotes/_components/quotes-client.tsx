@@ -138,7 +138,7 @@ export function QuotesClient() {
                   onSuccess: async (data) => {
                     const items = data.items ?? [];
                     if (!items.length) {
-                      showError("Không có dữ liệu để export.");
+                      showError("Không có dữ liệu để xuất.");
                       return;
                     }
                     const csv = buildCsv(Object.keys(items[0]), items);
@@ -147,7 +147,7 @@ export function QuotesClient() {
                     success("Đã xuất danh sách báo giá đã chọn.");
                   },
                   onError: (error) => {
-                    showError(error instanceof Error ? error.message : "Không thể export dữ liệu.");
+                    showError(error instanceof Error ? error.message : "Không thể xuất dữ liệu.");
                   }
                 }
               );

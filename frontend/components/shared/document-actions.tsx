@@ -243,7 +243,7 @@ export function DocumentActions({
               {showTemplateSelector ? (
                 <div className="space-y-3">
                   <label className="text-sm font-semibold text-text-primary" htmlFor="document-template-variant">
-                    Template sử dụng
+                    Mẫu sử dụng
                   </label>
                   {runtimeVariantsQuery.isLoading ? (
                     <div className="rounded-xl border border-border bg-bg-hover/40 px-4 py-3 text-sm text-text-secondary">
@@ -257,7 +257,7 @@ export function DocumentActions({
                         onChange={(event) => handleVariantChange(event.target.value)}
                         className="w-full rounded-xl border border-border bg-bg-card px-4 py-3 text-sm font-medium text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                       >
-                        <option value="">Mẫu mặc định / active hiện tại</option>
+                        <option value="">Mẫu mặc định / đang dùng hiện tại</option>
                         {(runtimeVariantsQuery.data ?? []).map((variant) => (
                           <option key={variant.id} value={variant.id}>
                             {variant.name} · v{variant.version}
@@ -267,16 +267,16 @@ export function DocumentActions({
                       </select>
                       <p className="text-xs text-text-secondary">
                         {runtimeVariantsQuery.data?.length
-                          ? "Chỉ các template đã publish mới có thể dùng để preview và tạo PDF cho khách."
-                          : "Chưa có template đã publish; lựa chọn mặc định sẽ dùng active template nếu có, hoặc fallback mẫu hệ thống."}
+                          ? "Chỉ các mẫu đã phát hành mới có thể dùng để xem trước và tạo PDF cho khách."
+                          : "Chưa có mẫu đã phát hành; lựa chọn mặc định sẽ dùng mẫu đang dùng nếu có, hoặc mẫu hệ thống dự phòng."}
                       </p>
                     </>
                   )}
                 </div>
               ) : (
                 <div className="rounded-xl border border-border bg-bg-hover/40 px-4 py-3 text-sm">
-                  <p className="font-semibold text-text-primary">Template sử dụng</p>
-                  <p className="mt-1 text-text-secondary">{templateVariantLabel || "Mẫu mặc định / active hiện tại"}</p>
+                  <p className="font-semibold text-text-primary">Mẫu sử dụng</p>
+                  <p className="mt-1 text-text-secondary">{templateVariantLabel || "Mẫu mặc định / đang dùng hiện tại"}</p>
                 </div>
               )}
 

@@ -268,8 +268,8 @@ export function ContractFormScreen({
         title={mode === "create" ? "Tạo hợp đồng" : "Cập nhật hợp đồng"}
         description={
           mode === "create"
-            ? "Chốt hợp đồng từ dự án thật, khóa số hợp đồng tự động và chuyển project sang nhịp delivery ngay khi phát hành."
-            : "Cập nhật thông tin thương mại, file scan và trạng thái hợp đồng để project, reports và công nợ luôn đồng bộ."
+            ? "Chốt hợp đồng từ dự án thật, khóa số hợp đồng tự động và chuyển dự án sang nhịp triển khai ngay khi phát hành."
+            : "Cập nhật thông tin thương mại, bản quét và trạng thái hợp đồng để dự án, báo cáo và công nợ luôn đồng bộ."
         }
         action={
           <div className="flex flex-wrap items-center gap-3">
@@ -366,7 +366,7 @@ export function ContractFormScreen({
                         : selectedProjectQuery.isLoading
                           ? "Đang tải báo giá được chấp nhận..."
                           : acceptedQuotes.length > 0
-                            ? "Chọn báo giá nguồn nếu muốn bám theo quote đã chấp nhận"
+                            ? "Chọn báo giá nguồn nếu muốn bám theo báo giá đã chấp nhận"
                             : "Không có báo giá accepted, có thể nhập hợp đồng thủ công"}
                     </option>
                     {acceptedQuotes.map((quote) => (
@@ -693,7 +693,7 @@ export function ContractFormScreen({
                   <p className="font-semibold text-text-primary">{selectedProject.customer.name}</p>
                   <p className="mt-2">Dự án tạo lúc: {formatDateTime(selectedProject.createdAt)}</p>
                   <p>Cập nhật cuối: {formatDateTime(selectedProject.updatedAt)}</p>
-                  {activeContract ? <p>Contract hiện tại: {activeContract.contractNo}</p> : null}
+                  {activeContract ? <p>Hợp đồng hiện tại: {activeContract.contractNo}</p> : null}
                 </div>
               ) : null}
 

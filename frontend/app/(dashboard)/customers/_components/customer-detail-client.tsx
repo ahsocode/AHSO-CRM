@@ -276,7 +276,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
                       </div>
                       <div className="rounded-xl bg-bg-hover/60 p-3">
                         <p className="font-semibold text-text-primary">{project.milestoneCount} mốc</p>
-                        <p>Theo dõi delivery</p>
+                        <p>Theo dõi triển khai</p>
                       </div>
                       <div className="rounded-xl bg-bg-hover/60 p-3">
                         {project.contract ? (
@@ -299,7 +299,7 @@ export function CustomerDetailClient({ customerId }: { customerId: string }) {
                         ) : (
                           <>
                             <p className="font-semibold text-text-primary">Chưa có hợp đồng</p>
-                            <p>Project chưa qua bước ký kết</p>
+                            <p>Dự án chưa qua bước ký kết</p>
                           </>
                         )}
                       </div>

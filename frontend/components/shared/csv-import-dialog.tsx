@@ -313,11 +313,11 @@ export function CsvImportDialog<TInput>({
           {stage === "upload" ? (
             <div className="space-y-5">
               <div className="rounded-lg border border-dashed border-border bg-bg-hover/30 p-5 text-sm">
-                <p className="font-medium text-text-primary">Luồng import</p>
+                <p className="font-medium text-text-primary">Luồng nhập</p>
                 <ol className="mt-2 list-decimal space-y-1 pl-5 text-text-secondary">
                   <li>Tải file mẫu hoặc dùng file CSV hiện có của bạn.</li>
-                  <li>Map cột từ file upload vào cột chuẩn của hệ thống.</li>
-                  <li>Xem trước, kiểm tra lỗi từng dòng rồi import toàn phần hoặc partial.</li>
+                  <li>Ghép cột từ tệp tải lên vào cột chuẩn của hệ thống.</li>
+                  <li>Xem trước, kiểm tra lỗi từng dòng rồi nhập toàn bộ hoặc một phần.</li>
                 </ol>
               </div>
 
@@ -399,7 +399,7 @@ export function CsvImportDialog<TInput>({
 
                       <label className="space-y-1">
                         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
-                          Cột từ file upload
+                          Cột từ tệp tải lên
                         </span>
                         <select
                           value={columnMapping[column.header] ?? ""}
@@ -436,7 +436,7 @@ export function CsvImportDialog<TInput>({
             <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
                 <div className="rounded-lg border border-border/60 bg-white/70 p-4">
-                  <p className="text-sm font-semibold text-text-primary">Tóm tắt preview</p>
+                  <p className="text-sm font-semibold text-text-primary">Tóm tắt xem trước</p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <div className="rounded-2xl border border-border/60 bg-bg-hover/30 px-4 py-3">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tổng dòng</p>
@@ -454,7 +454,7 @@ export function CsvImportDialog<TInput>({
                 </div>
 
                 <div className="rounded-lg border border-border/60 bg-white/70 p-4">
-                  <p className="text-sm font-semibold text-text-primary">Cách import</p>
+                  <p className="text-sm font-semibold text-text-primary">Cách nhập</p>
                   <label className="mt-4 flex items-start gap-3 rounded-2xl border border-border/60 bg-bg-hover/20 px-4 py-3">
                     <input
                       type="checkbox"

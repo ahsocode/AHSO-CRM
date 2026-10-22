@@ -289,7 +289,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-text-secondary">Hoàn tất milestone</span>
+                <span className="text-sm text-text-secondary">Hoàn tất mốc</span>
                 <span className="font-heading text-2xl font-extrabold text-text-primary">
                   {contract.stats.completionRate}%
                 </span>
@@ -326,7 +326,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
               </div>
 
               {contract.project.activities.length === 0 ? (
-                <p className="text-sm text-text-secondary">Chưa có activity gần đây.</p>
+                <p className="text-sm text-text-secondary">Chưa có hoạt động gần đây.</p>
               ) : (
                 contract.project.activities.map((activity) => (
                   <article key={activity.id} className="flex gap-3 rounded-2xl border border-border/60 bg-white/80 p-4">
@@ -373,7 +373,7 @@ function ContractTemplateSelector({
         </div>
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Template hợp đồng</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Mẫu hợp đồng</p>
             <p className="mt-1 text-sm text-text-secondary">
               Chọn mẫu hợp đồng trước khi xem trước hoặc tạo PDF chính thức.
             </p>
@@ -403,8 +403,8 @@ function ContractTemplateSelector({
               </select>
               <p className="text-xs text-text-secondary">
                 {templateVariants.length > 0
-                  ? "Danh sách chỉ gồm các template đã publish. Nếu không chọn, hệ thống dùng mẫu active."
-                  : "Chưa có template hợp đồng đã publish; hệ thống sẽ dùng fallback hiện tại."}
+                  ? "Danh sách chỉ gồm các mẫu đã phát hành. Nếu không chọn, hệ thống dùng mẫu đang dùng."
+                  : "Chưa có mẫu hợp đồng đã phát hành; hệ thống sẽ dùng mặc định dự phòng hiện tại."}
               </p>
             </>
           )}

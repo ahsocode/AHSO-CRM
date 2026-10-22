@@ -530,11 +530,11 @@ function Project360Brief({
       <ActionSignal
         icon="activity"
         label="Việc tiếp theo"
-        title={overview?.nextActivity?.title ?? "Chưa có activity mở"}
+        title={overview?.nextActivity?.title ?? "Chưa có hoạt động mở"}
         description={
           overview?.nextActivity?.scheduledAt
             ? formatDateTime(overview.nextActivity.scheduledAt)
-            : "Tạo activity để đội nhận bàn giao biết bước kế tiếp."
+            : "Tạo hoạt động để đội nhận bàn giao biết bước kế tiếp."
         }
         onClick={() => onNavigate("timeline")}
       />
@@ -561,7 +561,7 @@ function Project360Brief({
             ? `${openMilestoneCount} mốc còn mở cần theo dõi.`
             : project.contract
               ? "Không có mốc nào đang mở."
-              : "Chưa có hợp đồng để sinh milestone triển khai."
+              : "Chưa có hợp đồng để sinh mốc triển khai."
         }
         onClick={() => onNavigate("handover")}
       />

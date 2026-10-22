@@ -191,8 +191,8 @@ export function ProjectFormScreen({
         title={mode === "create" ? "Tạo dự án mới" : "Cập nhật dự án"}
         description={
           mode === "create"
-            ? "Khởi tạo cơ hội mới và khóa customer/status/priority ngay từ đầu để pipeline sạch và dễ điều phối."
-            : "Cập nhật dự án, điều chỉnh stage và đồng bộ lại customer context trước khi đi sâu sang quote hoặc contract."
+            ? "Khởi tạo cơ hội mới và khóa khách hàng/trạng thái/mức ưu tiên ngay từ đầu để pipeline sạch và dễ điều phối."
+            : "Cập nhật dự án, điều chỉnh giai đoạn và đồng bộ lại ngữ cảnh khách hàng trước khi đi sâu sang báo giá hoặc hợp đồng."
         }
         action={
           <div className="flex flex-wrap items-center gap-3">

@@ -32,7 +32,7 @@ export function CalendarOverviewCards({
     {
       label: "Tổng công việc",
       value: meta?.summary.total ?? 0,
-      helper: "Số activity trong khoảng ngày đang lọc",
+      helper: "Số hoạt động trong khoảng ngày đang lọc",
       tone: "primary" as const
     },
     {

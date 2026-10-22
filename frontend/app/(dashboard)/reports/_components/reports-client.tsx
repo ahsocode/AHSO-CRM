@@ -46,7 +46,7 @@ function CustomerJourneyCard({
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Luồng hành trình</p>
-        <CardTitle>Luồng khách hàng từ lead tới chốt hợp đồng</CardTitle>
+        <CardTitle>Luồng khách hàng từ khách tiềm năng tới chốt hợp đồng</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -143,8 +143,8 @@ function FunnelCard({
   return (
     <Card className="border border-white/70">
       <CardHeader className="mb-0 gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Phễu chuyển đổi</p>
-        <CardTitle>Funnel chuyển đổi theo giai đoạn dự án</CardTitle>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tỷ lệ chuyển đổi</p>
+        <CardTitle>Phễu chuyển đổi theo giai đoạn dự án</CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (

@@ -123,7 +123,7 @@ export function MaterialSupplierManager({
                   <th className="px-3 py-2">Nhà cung cấp</th>
                   <th className="px-3 py-2">Mã NCC</th>
                   <th className="px-3 py-2">Giá nhập</th>
-                  <th className="px-3 py-2">Lead time (ngày)</th>
+                  <th className="px-3 py-2">Thời gian giao hàng (ngày)</th>
                   <th className="px-3 py-2">Ưu tiên</th>
                   <th className="px-3 py-2"></th>
                 </tr>

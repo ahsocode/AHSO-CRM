@@ -166,7 +166,7 @@ export function NotificationForm({
                   <AppIcon name="calendar" className="text-[18px]" />
                 </span>
                 <div>
-                  <CardTitle className="text-base">Nhắc milestone sắp đến hạn</CardTitle>
+                  <CardTitle className="text-base">Nhắc mốc sắp đến hạn</CardTitle>
                   <p className="mt-0.5 text-sm text-text-secondary">
                     Gửi cho <span className="font-medium text-text-primary">nhân viên phụ trách dự án</span>
                   </p>

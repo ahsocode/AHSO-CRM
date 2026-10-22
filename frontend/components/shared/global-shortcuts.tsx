@@ -164,7 +164,7 @@ export function GlobalShortcuts() {
             </span>
             <div>
               <h2 className="text-base font-semibold text-text-primary">Phím tắt</h2>
-              <p className="text-xs text-text-secondary">Điều hướng và tạo mới nhanh trong workspace.</p>
+              <p className="text-xs text-text-secondary">Điều hướng và tạo mới nhanh trong hệ thống.</p>
             </div>
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={() => setShowHelp(false)}>

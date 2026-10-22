@@ -473,7 +473,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                   onClick={() => setShowPreview(true)}
                 >
                   <AppIcon name="preview" className="h-4 w-4" />
-                  Xem trước theo template đã chọn
+                  Xem trước theo mẫu đã chọn
                 </Button>
 
                 <QuoteTemplateSelector
@@ -522,7 +522,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                     href={`/contracts/new?projectId=${quote.project.id}&sourceQuoteId=${quote.id}`}
                     className={cn(buttonVariants({ variant: "primary", size: "lg" }))}
                   >
-                    Tạo hợp đồng từ quote này
+                    Tạo hợp đồng từ báo giá này
                   </Link>
                 ) : quote.project.contract ? (
                   <div className="rounded-xl bg-bg-muted px-4 py-3 text-sm text-text-secondary">
@@ -689,7 +689,7 @@ function AiDraftEmailDialog({
   projectId: string;
   quoteId: string;
 }) {
-  const [instruction, setInstruction] = useState("Soạn email gửi khách hàng để follow-up báo giá và đề xuất bước tiếp theo.");
+  const [instruction, setInstruction] = useState("Soạn email gửi khách hàng để theo dõi báo giá và đề xuất bước tiếp theo.");
   const draftEmailMutation = useAiDraftEmail();
 
   if (!isOpen) {
@@ -822,7 +822,7 @@ function QuoteTemplateSelector({
         </div>
         <div className="min-w-0 flex-1 space-y-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Template báo giá</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Mẫu báo giá</p>
             <p className="mt-1 text-sm text-text-secondary">
               Chọn mẫu trước khi xem trước hoặc tạo PDF gửi khách.
             </p>
@@ -852,8 +852,8 @@ function QuoteTemplateSelector({
               </select>
               <p className="text-xs text-text-secondary">
                 {templateVariants.length > 0
-                  ? "Danh sách chỉ gồm các template đã publish. Nếu không chọn, hệ thống dùng mẫu active."
-                  : "Chưa có template báo giá đã publish; hệ thống sẽ dùng fallback hiện tại."}
+                  ? "Danh sách chỉ gồm các mẫu đã phát hành. Nếu không chọn, hệ thống dùng mẫu đang dùng."
+                  : "Chưa có mẫu báo giá đã phát hành; hệ thống sẽ dùng mặc định dự phòng hiện tại."}
               </p>
             </>
           )}

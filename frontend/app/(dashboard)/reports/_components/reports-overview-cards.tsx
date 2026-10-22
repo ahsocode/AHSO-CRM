@@ -49,9 +49,9 @@ export function ReportsOverviewCards({
       tone: "danger" as const
     },
     {
-      label: "Tỷ lệ chốt quote",
+      label: "Tỷ lệ chốt báo giá",
       value: `${data.quoteAcceptanceRate}%`,
-      helper: "Accepted / quote đã phát hành trong kỳ",
+      helper: "Đã chấp nhận / báo giá đã phát hành trong kỳ",
       tone: "accent" as const
     },
     {

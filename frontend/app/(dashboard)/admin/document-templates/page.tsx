@@ -197,9 +197,9 @@ export default function DocumentTemplatesPage() {
         name: getDefaultVariantName(selectedType)
       });
       setSelectedVariantId(created.id);
-      success("Đã tạo draft variant mới");
+      success("Đã tạo phiên bản nháp mới");
     } catch (mutationError) {
-      error(getApiErrorMessage(mutationError, "Không thể tạo draft variant."));
+      error(getApiErrorMessage(mutationError, "Không thể tạo phiên bản nháp."));
     }
   };
 
@@ -213,9 +213,9 @@ export default function DocumentTemplatesPage() {
         name: draftName,
         layoutJson: draftLayout
       });
-      success("Đã lưu draft template");
+      success("Đã lưu bản nháp mẫu");
     } catch (mutationError) {
-      error(getApiErrorMessage(mutationError, "Không thể lưu draft template."));
+      error(getApiErrorMessage(mutationError, "Không thể lưu bản nháp mẫu."));
     }
   };
 
@@ -232,32 +232,32 @@ export default function DocumentTemplatesPage() {
         });
       }
       await submitMutation.mutateAsync();
-      success("Đã gửi variant sang trạng thái chờ duyệt");
+      success("Đã gửi phiên bản sang trạng thái chờ duyệt");
     } catch (mutationError) {
-      error(getApiErrorMessage(mutationError, "Không thể gửi variant sang chờ duyệt."));
+      error(getApiErrorMessage(mutationError, "Không thể gửi phiên bản sang chờ duyệt."));
     }
   };
 
   const handleApprove = async () => {
     if (blockingIssues.length > 0) {
-      error("Template vẫn còn lỗi layout chặn publish. Hãy sửa lỗi vượt vùng in hoặc chồng lấn trước.");
+      error("Mẫu vẫn còn lỗi bố cục chặn phát hành. Hãy sửa lỗi vượt vùng in hoặc chồng lấn trước.");
       return;
     }
 
     try {
       await approveMutation.mutateAsync();
-      success("Đã publish variant");
+      success("Đã phát hành phiên bản");
     } catch (mutationError) {
-      error(getApiErrorMessage(mutationError, "Không thể publish variant."));
+      error(getApiErrorMessage(mutationError, "Không thể phát hành phiên bản."));
     }
   };
 
   const handleSetActive = async () => {
     try {
       await setActiveMutation.mutateAsync();
-      success("Đã đặt variant làm active");
+      success("Đã đặt phiên bản làm đang dùng");
     } catch (mutationError) {
-      error(getApiErrorMessage(mutationError, "Không thể đặt variant làm active."));
+      error(getApiErrorMessage(mutationError, "Không thể đặt phiên bản làm đang dùng."));
     }
   };
 
@@ -277,7 +277,7 @@ export default function DocumentTemplatesPage() {
         name: `${activeVariant.name} - bản chỉnh sửa`
       });
       setSelectedVariantId(duplicated.id);
-      success("Đã tạo bản nháp chỉnh sửa từ template đã publish");
+      success("Đã tạo bản nháp chỉnh sửa từ mẫu đã phát hành");
     } catch (mutationError) {
       error(getApiErrorMessage(mutationError, "Không thể tạo bản nháp chỉnh sửa."));
     }
@@ -291,7 +291,7 @@ export default function DocumentTemplatesPage() {
       setSelectedVariantId(duplicated.id);
       success("Đã tạo bản sao draft");
     } catch (mutationError) {
-      error(getApiErrorMessage(mutationError, "Không thể duplicate variant."));
+      error(getApiErrorMessage(mutationError, "Không thể nhân bản phiên bản."));
     }
   };
 
@@ -300,16 +300,16 @@ export default function DocumentTemplatesPage() {
       return;
     }
 
-    if (!window.confirm("Xóa draft variant này? Hành động này không thể hoàn tác.")) {
+    if (!window.confirm("Xóa phiên bản nháp này? Hành động này không thể hoàn tác.")) {
       return;
     }
 
     try {
       await deleteMutation.mutateAsync();
       setSelectedVariantId(undefined);
-      success("Đã xóa variant");
+      success("Đã xóa phiên bản");
     } catch (mutationError) {
-      error(getApiErrorMessage(mutationError, "Không thể xóa variant."));
+      error(getApiErrorMessage(mutationError, "Không thể xóa phiên bản."));
     }
   };
 
@@ -584,10 +584,10 @@ export default function DocumentTemplatesPage() {
             <div className="flex items-center justify-between gap-4 border-b border-border/70 px-6 py-4">
               <div>
                 <p className="text-lg font-bold text-text-primary">
-                  Xem trước template
+                  Xem trước mẫu
                 </p>
                 <p className="text-sm text-text-secondary">
-                  Bản xem sạch của {draftName || activeVariant?.name || "template hiện tại"} ở chế độ{" "}
+                  Bản xem sạch của {draftName || activeVariant?.name || "mẫu hiện tại"} ở chế độ{" "}
                   {previewLanguage === "vi" ? "Tiếng Việt" : "Song ngữ VI-EN"}.
                 </p>
               </div>

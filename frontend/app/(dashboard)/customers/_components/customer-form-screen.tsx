@@ -207,7 +207,7 @@ export function CustomerFormScreen({
         description={
           mode === "create"
             ? "Khởi tạo hồ sơ doanh nghiệp, gắn người phụ trách và chuẩn hóa dữ liệu ngay từ đầu để không phải vá về sau."
-            : "Chỉnh sửa hồ sơ doanh nghiệp, bàn giao phụ trách và giữ dữ liệu sales/delivery luôn đồng bộ."
+            : "Chỉnh sửa hồ sơ doanh nghiệp, bàn giao phụ trách và giữ dữ liệu sales/triển khai luôn đồng bộ."
         }
         action={actionButtons}
       />

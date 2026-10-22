@@ -456,7 +456,7 @@ export function ProjectsClient() {
                   onSuccess: async (data) => {
                     const items = data.items ?? [];
                     if (!items.length) {
-                      showError("Không có dữ liệu để export.");
+                      showError("Không có dữ liệu để xuất.");
                       return;
                     }
                     const csv = buildCsv(Object.keys(items[0]), items);
@@ -465,7 +465,7 @@ export function ProjectsClient() {
                     success("Đã xuất danh sách dự án đã chọn.");
                   },
                   onError: (error) => {
-                    showError(error instanceof Error ? error.message : "Không thể export dữ liệu.");
+                    showError(error instanceof Error ? error.message : "Không thể xuất dữ liệu.");
                   }
                 }
               );

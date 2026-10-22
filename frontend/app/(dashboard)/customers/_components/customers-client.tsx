@@ -384,7 +384,7 @@ export function CustomersClient() {
                   onSuccess: async (data) => {
                     const items = data.items ?? [];
                     if (!items.length) {
-                      showError("Không có dữ liệu để export.");
+                      showError("Không có dữ liệu để xuất.");
                       return;
                     }
                     const csv = buildCsv(Object.keys(items[0]), items);
@@ -393,7 +393,7 @@ export function CustomersClient() {
                     success("Đã xuất danh sách khách hàng đã chọn.");
                   },
                   onError: (error) => {
-                    showError(error instanceof Error ? error.message : "Không thể export dữ liệu.");
+                    showError(error instanceof Error ? error.message : "Không thể xuất dữ liệu.");
                   }
                 }
               );
@@ -406,7 +406,7 @@ export function CustomersClient() {
 
       {importSummary ? (
         <div className="rounded-2xl border border-info/25 bg-info-bg/60 px-5 py-4 text-sm text-info">
-          <p className="font-semibold">Kết quả import khách hàng</p>
+          <p className="font-semibold">Kết quả nhập khách hàng</p>
           <p className="mt-1">
             {importSummary.successCount} dòng thành công
             {importSummary.errorCount > 0 ? ` · ${importSummary.errorCount} dòng lỗi` : ""}. Danh sách đã được đưa về bộ lọc mặc định để dễ kiểm tra dữ liệu mới.

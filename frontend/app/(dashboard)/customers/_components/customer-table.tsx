@@ -151,7 +151,7 @@ export function CustomerTable({
     const title = hasActiveFilters ? "Không có khách hàng khớp bộ lọc" : "Chưa có khách hàng";
     const description = hasActiveFilters
       ? "Dữ liệu có thể đang bị bộ lọc hoặc trang hiện tại che mất. Xóa bộ lọc để xem lại toàn bộ danh sách."
-      : "Tạo khách hàng mới hoặc import CSV để bắt đầu theo dõi pipeline.";
+      : "Tạo khách hàng mới hoặc nhập CSV để bắt đầu theo dõi pipeline.";
 
     return (
       <Card className="border border-white/70">

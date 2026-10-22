@@ -137,7 +137,7 @@ export default function CustomFieldsPage() {
             <p className="industrial-chip bg-primary/10 text-primary">
               {editingField ? "Sửa trường" : "Tạo trường"}
             </p>
-            <CardTitle>{editingField ? "Chỉnh sửa custom field" : "Tạo custom field mới"}</CardTitle>
+            <CardTitle>{editingField ? "Chỉnh sửa trường tùy chỉnh" : "Tạo trường tùy chỉnh mới"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <form
@@ -242,13 +242,13 @@ export default function CustomFieldsPage() {
 
               {activeError ? (
                 <div className="rounded-xl bg-danger-bg/80 px-4 py-3 text-sm text-danger">
-                  {getApiErrorMessage(activeError, "Không thể lưu custom field.")}
+                  {getApiErrorMessage(activeError, "Không thể lưu trường tùy chỉnh.")}
                 </div>
               ) : null}
 
               <div className="flex flex-wrap items-center gap-3">
                 <Button type="submit" variant="primary" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingField ? "Lưu thay đổi" : "Tạo field"}
+                  {editingField ? "Lưu thay đổi" : "Tạo trường"}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleReset}>
                   Làm mới form
@@ -261,7 +261,7 @@ export default function CustomFieldsPage() {
         <Card className="border border-white/70">
           <CardHeader className="mb-0 gap-2">
             <p className="industrial-chip bg-accent/10 text-accent">Xem trước</p>
-            <CardTitle>Danh sách field theo resource</CardTitle>
+            <CardTitle>Danh sách trường theo đối tượng</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {customFieldsQuery.isLoading ? (
@@ -272,8 +272,8 @@ export default function CustomFieldsPage() {
               </div>
             ) : fields.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border/70 bg-bg-hover/40 p-8 text-center">
-                <p className="font-semibold text-text-primary">Chưa có custom field nào cho resource này.</p>
-                <p className="mt-2 text-sm text-text-secondary">Tạo field đầu tiên ở form bên trái để module tương ứng hiển thị động.</p>
+                <p className="font-semibold text-text-primary">Chưa có trường tùy chỉnh nào cho đối tượng này.</p>
+                <p className="mt-2 text-sm text-text-secondary">Tạo trường đầu tiên ở biểu mẫu bên trái để phân hệ tương ứng hiển thị động.</p>
               </div>
             ) : (
               fields.map((field) => (
@@ -307,7 +307,7 @@ export default function CustomFieldsPage() {
                         variant="ghost"
                         disabled={deleteMutation.isPending}
                         onClick={() => {
-                          if (!window.confirm(`Xóa custom field "${field.label}"?`)) {
+                          if (!window.confirm(`Xóa trường tùy chỉnh "${field.label}"?`)) {
                             return;
                           }
 

@@ -32,13 +32,13 @@ const ADMIN_CARDS = [
   {
     href: "/admin/custom-fields" as Route,
     title: "Trường tùy chỉnh",
-    description: "Tạo trường động cho khách hàng, dự án và hợp đồng mà không phải sửa schema chính.",
+    description: "Tạo trường động cho khách hàng, dự án và hợp đồng mà không phải sửa cấu trúc dữ liệu chính.",
     icon: "analytics" as const
   },
   {
     href: "/admin/document-templates" as Route,
     title: "Document Templates",
-    description: "Chỉnh layout tài liệu bằng canvas drag-drop A4, quản lý variant draft/published và kích hoạt đúng mẫu runtime.",
+    description: "Chỉnh bố cục tài liệu bằng khung thiết kế kéo thả A4, quản lý phiên bản nháp/đã phát hành và kích hoạt đúng mẫu đang chạy.",
     icon: "description" as const
   },
   {
@@ -68,7 +68,7 @@ const ADMIN_CARDS = [
   {
     href: "/admin/notifications" as Route,
     title: "Nhắc lịch Email",
-    description: "Bật/tắt và cấu hình giờ gửi, ngưỡng ngày nhắc milestone và thanh toán tự động qua email.",
+    description: "Bật/tắt và cấu hình giờ gửi, ngưỡng ngày nhắc mốc và thanh toán tự động qua email.",
     icon: "mail" as const
   },
   {

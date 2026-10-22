@@ -190,7 +190,7 @@ export function QuoteFormScreen({
           <div className="flex flex-wrap items-center gap-3">
             {mode === "edit" && quoteId ? (
               <Link href={`/quotes/${quoteId}`} className={cn(buttonVariants({ variant: "outline" }))}>
-                Về chi tiết quote
+                Về chi tiết báo giá
               </Link>
             ) : selectedProjectId ? (
               <Link href={`/projects/${selectedProjectId}`} className={cn(buttonVariants({ variant: "outline" }))}>
@@ -528,7 +528,7 @@ export function QuoteFormScreen({
                   <p className="mt-2">Dự án tạo lúc: {formatDateTime(selectedProject.createdAt)}</p>
                   <p>Cập nhật cuối: {formatDateTime(selectedProject.updatedAt)}</p>
                   {mode === "edit" && activeQuote ? (
-                    <p>Quote hiện tại: {activeQuote.quoteNo} · v{activeQuote.version}</p>
+                    <p>Báo giá hiện tại: {activeQuote.quoteNo} · v{activeQuote.version}</p>
                   ) : null}
                 </div>
               ) : null}

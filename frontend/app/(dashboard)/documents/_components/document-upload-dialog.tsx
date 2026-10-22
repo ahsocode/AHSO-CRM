@@ -37,7 +37,7 @@ const DOCUMENT_TYPE_LABELS: Record<BusinessDocumentType, string> = {
 };
 
 const UPLOAD_SOURCE_LABELS: Record<Exclude<BusinessDocumentSource, "GENERATED">, string> = {
-  UPLOADED: "Upload lên",
+  UPLOADED: "Tải lên",
   RECEIVED: "Nhận từ khách",
   SIGNED_UPLOAD: "Bản đã ký (scan)"
 };
@@ -147,7 +147,7 @@ export function DocumentUploadDialog({
       <div className="fixed inset-0 bg-black/40" onClick={handleClose} aria-hidden="true" />
       <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
         <h2 className="font-heading text-xl font-bold text-text-primary">Thêm tài liệu</h2>
-        <p className="mt-1 text-sm text-text-secondary">Upload hồ sơ hoặc tạo record tài liệu mới</p>
+        <p className="mt-1 text-sm text-text-secondary">Tải lên hồ sơ hoặc tạo bản ghi tài liệu mới</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4" noValidate>
           <div className="space-y-1.5">

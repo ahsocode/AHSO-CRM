@@ -45,7 +45,7 @@ export function PushNotificationCard() {
                 {unavailableReason ? (
                   <span className="text-warning">{unavailableReason}</span>
                 ) : isSubscribed ? (
-                  "✅ Đang nhận thông báo — deal mới, milestone, thanh toán"
+                  "✅ Đang nhận thông báo — cơ hội mới, mốc, thanh toán"
                 ) : (
                   "Nhận thông báo ngay trên trình duyệt/desktop khi có cập nhật quan trọng"
                 )}

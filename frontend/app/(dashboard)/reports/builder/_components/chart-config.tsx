@@ -51,7 +51,7 @@ export function ChartConfig({
       </label>
 
       <label className="space-y-2">
-        <span className="text-sm font-semibold text-text-primary">Tên template</span>
+        <span className="text-sm font-semibold text-text-primary">Tên mẫu</span>
         <Input value={templateName} onChange={(event) => onTemplateNameChange(event.target.value)} placeholder="Ví dụ: Pipeline theo phụ trách" />
       </label>
 
@@ -66,7 +66,7 @@ export function ChartConfig({
 
       <label className="flex items-center gap-3 rounded-2xl border border-border/60 bg-white/80 px-4 py-3 md:col-span-2">
         <input type="checkbox" checked={isShared} onChange={(event) => onSharedChange(event.target.checked)} />
-        <span className="text-sm text-text-secondary">Chia sẻ template này cho team</span>
+        <span className="text-sm text-text-secondary">Chia sẻ mẫu này cho nhóm</span>
       </label>
     </div>
   );

@@ -15,6 +15,7 @@
 #   npm run qa:prepush -- --e2e-only   # stage 4 only
 #   npm run qa:prepush -- --grep "Báo giá"   # only e2e tests whose title matches
 #   npm run qa:prepush -- --keep       # leave the QA stack running (http://localhost:3100)
+#   npm run qa:up / npm run qa:down    # start/stop the QA stack only (manual or Claude testing)
 #   npm run qa:prepush -- --install-hook   # run this script automatically on `git push`
 #   SKIP_QA=1 git push                 # bypass the hook once (emergency only)
 set -euo pipefail
@@ -25,12 +26,18 @@ HERE="tools/ahso-ui-qa/scripts"
 PROJECT="ahso-qa"
 COMPOSE=(docker compose -p "$PROJECT" -f docker-compose.yml -f "$HERE/compose.qa.yml")
 
-FAST=0; E2E_ONLY=0; KEEP=0; GREP=""
+FAST=0; E2E_ONLY=0; KEEP=0; GREP=""; UP_ONLY=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --fast) FAST=1 ;;
     --e2e-only) E2E_ONLY=1 ;;
     --keep) KEEP=1 ;;
+    # Start the isolated QA stack and leave it running for manual/Claude testing (no tests)
+    --up) UP_ONLY=1; E2E_ONLY=1; KEEP=1 ;;
+    --down)
+      docker compose -p "$PROJECT" -f docker-compose.yml -f "$HERE/compose.qa.yml" down -v --remove-orphans
+      echo "[qa] QA stack stopped and its data removed."
+      exit 0 ;;
     --grep) GREP="$2"; shift ;;
     --install-hook)
       cat > .git/hooks/pre-push <<'HOOK'
@@ -57,11 +64,13 @@ find . -name '._*' -not -path '*/node_modules/*' -not -path './.git/*' -delete 2
 # Repo integrity: on the exFAT drive a git object was once written with raw,
 # uncompressed bytes (tree of reports/builder), breaking 4 unpushed commits.
 # Connectivity-only fsck reads every tree/commit headed for the push — fails fast.
+if [[ $UP_ONLY -eq 0 ]]; then
 stage "0/4 git integrity"
 git fsck --connectivity-only --no-dangling >/dev/null 2>&1 \
   || { git fsck --connectivity-only --no-dangling 2>&1 | grep -v '^Checking' | head -5
        fail "git object corruption — ask Claude to repair before pushing (do NOT push)"; }
 ok "git integrity"
+fi
 
 if [[ $E2E_ONLY -eq 0 ]]; then
   stage "1/4 static checks"
@@ -120,6 +129,13 @@ wait_for() {  # url label
 wait_for "http://127.0.0.1:3101/api/health" "backend"
 "${COMPOSE[@]}" exec -T backend npm run prisma:seed || fail "database seed"
 wait_for "http://127.0.0.1:3100/login" "frontend"
+
+if [[ $UP_ONLY -eq 1 ]]; then
+  printf '\n\033[1;32m[qa] QA stack is up: http://localhost:3100\033[0m\n'
+  printf '[qa] Seed accounts (password AHSO123!): admin@ahso.vn · manager@ahso.vn · staff@ahso.vn\n'
+  printf '[qa] Isolated data — safe to create/edit/delete. Stop with: npm run qa:down\n'
+  exit 0
+fi
 
 # Root devDependencies (@playwright/test) are separate from frontend/ and backend/.
 # Without them `npx playwright` downloads a throwaway copy that cannot load

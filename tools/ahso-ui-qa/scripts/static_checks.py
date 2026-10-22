@@ -132,7 +132,8 @@ def check_english(files: list[Path]) -> list[str]:
                     if " " in t and not re.search(r"[/:=#.]|-\s|\s-|\b[a-z]+-[a-z]+\b", t):
                         cands.append(t)
             if not SKIP_LITERAL_LINE.search(line):
-                cands += [m.group(1) for m in RE_VI_LITERAL.finditer(line)]
+                # a "literal" that spans markup/code between two quotes is not UI text
+                cands += [m.group(1) for m in RE_VI_LITERAL.finditer(line) if not re.search(r"[<>=]", m.group(1))]
             tl = RE_TEXT_LINE.match(line)
             if tl and f.suffix == ".tsx" and " " in tl.group(1) and not re.search(r"[.:?|\[\]&!]|\bnew\s+[A-Z]|\bthrow\b", tl.group(1)):
                 cands.append(tl.group(1))

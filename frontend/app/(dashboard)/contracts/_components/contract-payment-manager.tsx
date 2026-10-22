@@ -38,7 +38,7 @@ export function ContractPaymentManager({
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dòng tiền</p>
         <CardTitle>Lịch sử thanh toán</CardTitle>
         <p className="mt-2 text-sm text-text-secondary">
-          Log thanh toán tại đây để công nợ và reports phản ánh lại ngay sau khi thu tiền.
+          Ghi nhận thanh toán tại đây để công nợ và báo cáo cập nhật lại ngay sau khi thu tiền.
         </p>
       </CardHeader>
 

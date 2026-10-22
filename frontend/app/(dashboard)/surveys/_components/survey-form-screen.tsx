@@ -176,14 +176,6 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
                         </SelectContent>
                       </SelectRoot>
                       <FormMessage />
-                      <CustomerQuickCreateDialog
-                        open={quickCreateOpen}
-                        onOpenChange={setQuickCreateOpen}
-                        onCreated={(customerId) => {
-                          form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
-                          form.setValue("projectId", "");
-                        }}
-                      />
                     </FormItem>
                   )}
                 />
@@ -325,6 +317,16 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
               </div>
             </form>
           </Form>
+          {/* Rendered outside <form>: our Dialog has no portal, so inside the form its inputs
+              would submit/reset the parent form (Enter key, react-hook-form reset). */}
+          <CustomerQuickCreateDialog
+            open={quickCreateOpen}
+            onOpenChange={setQuickCreateOpen}
+            onCreated={(customerId) => {
+              form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
+              form.setValue("projectId", "");
+            }}
+          />
         </CardContent>
       </Card>
     </div>

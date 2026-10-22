@@ -12,6 +12,7 @@ import { STOCK_DOC_STATUS_LABELS, STOCK_DOC_STATUS_COLORS } from "@/lib/constant
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 export function StockIssueDetailClient({ issueId }: { issueId: string }) {
   const query = useStockIssue(issueId);
@@ -55,7 +56,7 @@ export function StockIssueDetailClient({ issueId }: { issueId: string }) {
                   onClick={() =>
                     confirmMutation.mutate(undefined, {
                       onSuccess: () => success("Đã xác nhận phiếu xuất kho."),
-                      onError: () => showError("Không thể xác nhận phiếu."),
+                      onError: (error) => showError(getApiErrorMessage(error, "Không thể xác nhận phiếu.")),
                     })
                   }
                 >
@@ -73,7 +74,7 @@ export function StockIssueDetailClient({ issueId }: { issueId: string }) {
                   onClick={() =>
                     cancelMutation.mutate(undefined, {
                       onSuccess: () => success("Đã hủy phiếu xuất kho."),
-                      onError: () => showError("Không thể hủy phiếu."),
+                      onError: (error) => showError(getApiErrorMessage(error, "Không thể hủy phiếu.")),
                     })
                   }
                 >

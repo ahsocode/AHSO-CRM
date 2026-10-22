@@ -48,7 +48,9 @@ ENGLISH_WORDS = re.compile(
     r"workspace|registry|signal|hub|preview|template|owner|project|customer|quote|contract|stage|lead|"
     r"milestone|delivery|overview|settings|upload|download|status|schema|field|fields|variant|funnel|"
     r"conversion|flow|prefill|route|phase|board|commercial|attachment|follow-up|chart|staff|save|"
-    r"cancel|delete|edit|submit|loading|search|filter|details|new|add|back|next|previous)\b",
+    r"cancel|delete|edit|submit|loading|search|filter|details|new|add|back|next|previous|"
+    # found by manual QA on the local stack (22/10/2026)
+    r"version|fallback|line item|reports|active)\b",
     re.I,
 )
 VIET = re.compile(r"[À-ỹĐđ]")
@@ -87,6 +89,7 @@ RE_E2E_LITERAL = re.compile(r'getBy(?:Text|Label|Placeholder|Title)\(\s*"([^"]+)
 RE_E2E_NAME = re.compile(r'name:\s*"([^"]+)"')
 # Regex selectors: getByText(/.../i), { name: /.../ } — a literal grep cannot see
 # "/Export CSV \+ Excel/i", which let a label change break 3 e2e tests.
+QA_SKIP = "qa-static: not-ui"  # inline marker: line holds test data or a backend message
 RE_E2E_REGEX = re.compile(r"(?:getBy(?:Text|Label|Placeholder|Title)\(\s*|name:\s*)/((?:\\/|[^/\n])+)/([a-z]*)")
 E2E_NON_UI = {"ahso_refresh_token", "e2e-project-360.pdf"}
 
@@ -179,6 +182,8 @@ def e2e_selectors() -> dict[str, list[str]]:
         if f.name.startswith("._"):
             continue  # macOS AppleDouble junk on exFAT
         for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+            if QA_SKIP in line:
+                continue  # test data / backend message, not a frontend selector
             for m in list(RE_E2E_LITERAL.finditer(line)) + list(RE_E2E_NAME.finditer(line)):
                 sel.setdefault(m.group(1), []).append(f"{f.relative_to(ROOT)}:{i}")
     return sel
@@ -205,6 +210,8 @@ def check_e2e(base: str) -> list[str]:
         for i, line in enumerate(f.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
             if re.search(r"toHaveCount\(0\)|\.not\.", line):
                 continue  # negative assertion: the text is supposed to be absent
+            if QA_SKIP in line:
+                continue
             for m in RE_E2E_REGEX.finditer(line):
                 body = m.group(1).replace("\\/", "/")
                 core = body.lstrip("^").rstrip("$")

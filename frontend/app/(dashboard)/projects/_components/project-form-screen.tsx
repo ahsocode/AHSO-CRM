@@ -262,13 +262,6 @@ export function ProjectFormScreen({
                 ))}
               </Select>
               <ErrorText message={form.formState.errors.customerId?.message} />
-              <CustomerQuickCreateDialog
-                open={quickCreateOpen}
-                onOpenChange={setQuickCreateOpen}
-                onCreated={(customerId) => {
-                  form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
-                }}
-              />
             </Field>
 
             <Field className="md:col-span-2">
@@ -506,6 +499,15 @@ export function ProjectFormScreen({
           </Card>
         </div>
       </form>
+      {/* Rendered outside <form>: our Dialog has no portal, so inside the form its inputs
+          would submit/reset the parent form (Enter key, react-hook-form reset). */}
+      <CustomerQuickCreateDialog
+        open={quickCreateOpen}
+        onOpenChange={setQuickCreateOpen}
+        onCreated={(customerId) => {
+          form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
+        }}
+      />
     </div>
   );
 }

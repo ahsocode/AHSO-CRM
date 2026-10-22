@@ -603,3 +603,133 @@ test.describe("Tiếng Anh", () => {
     expect(offenders, `English leftovers found:\n${offenders.join("\n")}`).toEqual([]);
   });
 });
+
+// ─── Regressions found by manual QA on the local stack (22/10/2026) ──────────
+
+async function firstProjectId(page: Page, request: APIRequestContext) {
+  const accessToken = await getAccessTokenFromPage(page);
+  const response = await request.get(`${API_URL}/projects?page=1&limit=1`, { headers: authHeaders(accessToken) });
+  expect(response.ok()).toBeTruthy();
+  const items = unwrap<Array<{ id: string }> | { items: Array<{ id: string }> }>(await response.json());
+  const list = Array.isArray(items) ? items : items.items;
+  expect(list.length, "seed must contain at least one project").toBeGreaterThan(0);
+  return { id: list[0].id, accessToken };
+}
+
+test.describe("QA thủ công — hồi quy", () => {
+  test("[Khách hàng] quick-create keeps the project form the user is filling", async ({ page, request }) => {
+    // Bug: react-hook-form reset() inside the portal-less dialog called the native
+    // form.reset() of the PARENT project form → typed project name was wiped.
+    await login(page);
+    const projectName = `QA giữ dữ liệu form ${Date.now()}`;
+    const customerName = `CÔNG TY QA TẠO NHANH ${Date.now()}`;
+    let customerId: string | null = null;
+    const projectPosts: string[] = [];
+    page.on("request", (req) => {
+      if (req.method() === "POST" && /\/api\/projects$/.test(req.url())) projectPosts.push(req.url());
+    });
+
+    try {
+      await page.goto("/projects/new");
+      await page.getByPlaceholder("Ví dụ: Nâng cấp hệ thống PLC trạm bơm").fill(projectName);
+      await page.getByRole("button", { name: "+ Tạo khách hàng mới" }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByPlaceholder("Công ty TNHH ABC").fill(customerName);
+      // Enter inside the dialog must not submit the project form behind it.
+      await dialog.getByPlaceholder("Công ty TNHH ABC").press("Enter");
+
+      const created = page.waitForResponse((r) => r.request().method() === "POST" && /\/api\/customers$/.test(r.url()));
+      await dialog.getByRole("button", { name: "Tạo khách hàng" }).click();
+      customerId = unwrap<{ id: string }>(await (await created).json()).id;
+
+      await expect(dialog).toBeHidden();
+      await expect(page.getByPlaceholder("Ví dụ: Nâng cấp hệ thống PLC trạm bơm")).toHaveValue(projectName);
+      await expect(page.locator("#customerId")).toHaveValue(customerId);
+      expect(projectPosts, "project form must not be submitted").toEqual([]);
+    } finally {
+      if (customerId) {
+        const accessToken = await getAccessTokenFromPage(page);
+        await request.delete(`${API_URL}/customers/${customerId}`, { headers: authHeaders(accessToken) }).catch(() => undefined);
+      }
+    }
+  });
+
+  test("[Báo giá] ?projectId preselects the project in the quote form", async ({ page, request }) => {
+    // Bug: value set before the project list loaded → native select looked empty.
+    await login(page);
+    const { id } = await firstProjectId(page, request);
+    await page.goto(`/quotes/new?projectId=${id}`);
+    await expect(page.locator("#projectId")).toHaveValue(id);
+  });
+
+  test("[Hợp đồng] ?projectId preselects the project in the contract form", async ({ page, request }) => {
+    await login(page);
+    const { id } = await firstProjectId(page, request);
+    await page.goto(`/contracts/new?projectId=${id}`);
+    await expect(page.locator("#projectId")).toHaveValue(id);
+  });
+
+  test("[Báo giá] quote detail shows exact totals, not abbreviated", async ({ page, request }) => {
+    await login(page);
+    const { id: projectId, accessToken } = await firstProjectId(page, request);
+    const response = await request.post(`${API_URL}/quotes`, {
+      headers: authHeaders(accessToken),
+      data: { projectId, taxRate: 10, status: "DRAFT", items: [{ name: "Hạng mục QA tổng tiền", quantity: 1, unitPrice: 1_250_000 }] } // qa-static: not-ui
+    });
+    expect(response.ok(), await response.text()).toBeTruthy();
+    const quoteId = unwrap<{ id: string }>(await response.json()).id;
+    try {
+      await page.goto(`/quotes/${quoteId}`);
+      const main = page.locator("main");
+      await expect(main).toContainText("1.375.000");
+      await expect(main).toContainText("125.000");
+      await expect(main).not.toContainText("1,4 tr");
+    } finally {
+      await request.delete(`${API_URL}/quotes/${quoteId}`, { headers: authHeaders(accessToken) }).catch(() => undefined);
+    }
+  });
+
+  test("[Kho] over-stock confirmation explains the real reason", async ({ page, request }) => {
+    // Bug: toast only said "Không thể xác nhận phiếu." although the API explains the shortage.
+    await login(page);
+    const accessToken = await getAccessTokenFromPage(page);
+    const h = authHeaders(accessToken);
+    const stamp = Date.now();
+    const post = async (path: string, data: unknown) => {
+      const r = await request.post(`${API_URL}${path}`, { headers: h, data });
+      expect(r.ok(), `${path}: ${await r.text()}`).toBeTruthy();
+      return unwrap<{ id: string }>(await r.json());
+    };
+    const warehouse = await post("/warehouses", { code: `KHO-QA-${stamp}`, name: `Kho QA ${stamp}` });
+    const material = await post("/materials", { code: `VT-QA-${stamp}`, name: `Vật tư QA ${stamp}`, unit: "Cái" });
+    const receipt = await post("/stock-receipts", {
+      warehouseId: warehouse.id, date: new Date().toISOString(),
+      items: [{ materialId: material.id, quantity: 2, unitPrice: 1000 }]
+    });
+    await post(`/stock-receipts/${receipt.id}/confirm`, {});
+    const issue = await post("/stock-issues", {
+      warehouseId: warehouse.id, date: new Date().toISOString(),
+      items: [{ materialId: material.id, quantity: 5, unitPrice: 1000 }]
+    });
+
+    await page.goto(`/inventory/issues/${issue.id}`);
+    await page.getByRole("button", { name: "Xác nhận", exact: true }).click();
+    await expect(page.getByText(/Không đủ tồn kho/)).toBeVisible(); // qa-static: not-ui (backend message)
+  });
+
+  test("[Bảo mật] roles endpoints require ADMIN or MANAGER", async ({ request }) => {
+    // Bug: GET /roles and /roles/:id had no guard — anyone could read roles and the staff email directory.
+    const anonymous = await request.get(`${API_URL}/roles`);
+    expect(anonymous.status()).toBe(401);
+
+    const staffLogin = await request.post(`${API_URL}/auth/login`, {
+      data: { email: process.env.E2E_STAFF_EMAIL ?? "staff@ahso.vn", password: process.env.E2E_STAFF_PASSWORD ?? process.env.E2E_ADMIN_PASSWORD ?? "AHSO123!" }
+    });
+    expect(staffLogin.ok(), await staffLogin.text()).toBeTruthy();
+    const staffToken = unwrap<{ accessToken: string }>(await staffLogin.json()).accessToken;
+    const asStaff = await request.get(`${API_URL}/roles`, { headers: authHeaders(staffToken) });
+    expect(asStaff.status()).toBe(403);
+    const detailAsStaff = await request.get(`${API_URL}/roles/role_admin`, { headers: authHeaders(staffToken) });
+    expect(detailAsStaff.status()).toBe(403);
+  });
+});

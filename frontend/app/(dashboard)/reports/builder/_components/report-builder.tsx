@@ -375,7 +375,7 @@ export function ReportBuilder() {
               </Button>
             ) : null}
             <Link href="/reports" className={cn(buttonVariants({ variant: "outline" }))}>
-              Về Reports
+              Về Báo cáo
             </Link>
           </div>
         }

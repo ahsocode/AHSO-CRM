@@ -84,15 +84,41 @@ export function QuoteFormScreen({
   const initializedQuoteIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (mode === "create") {
-      form.reset({
-        ...defaultQuoteFormValues,
-        projectId: initialProjectId,
-        terms: policiesQuery.data?.paymentTerms ?? "",
-        deliveryTerms: policiesQuery.data?.deliveryTerms ?? ""
-      });
+    if (mode !== "create") {
+      return;
     }
+    // Default payment/delivery terms arrive asynchronously. Once the user has
+    // started typing, never reset — a slow policies response used to wipe the
+    // line items they had already entered. Fill only still-empty term fields.
+    if (form.formState.isDirty) {
+      if (!form.getValues("terms") && policiesQuery.data?.paymentTerms) {
+        form.setValue("terms", policiesQuery.data.paymentTerms);
+      }
+      if (!form.getValues("deliveryTerms") && policiesQuery.data?.deliveryTerms) {
+        form.setValue("deliveryTerms", policiesQuery.data.deliveryTerms);
+      }
+      return;
+    }
+    form.reset({
+      ...defaultQuoteFormValues,
+      projectId: initialProjectId,
+      terms: policiesQuery.data?.paymentTerms ?? "",
+      deliveryTerms: policiesQuery.data?.deliveryTerms ?? ""
+    });
   }, [form, initialProjectId, mode, policiesQuery.data]);
+
+  // A native <select> can only display the preselected project (?projectId=)
+  // once its <option> exists. The value was set before the project list loaded,
+  // so the field looked empty although it was filled — re-apply after load.
+  useEffect(() => {
+    if (
+      mode === "create" &&
+      initialProjectId &&
+      projectsQuery.data?.items.some((project) => project.id === initialProjectId)
+    ) {
+      form.setValue("projectId", initialProjectId);
+    }
+  }, [form, initialProjectId, mode, projectsQuery.data]);
 
   useEffect(() => {
     if (mode === "edit" && quoteQuery.data && initializedQuoteIdRef.current !== quoteQuery.data.id) {
@@ -184,7 +210,7 @@ export function QuoteFormScreen({
         description={
           mode === "create"
             ? "Chọn dự án, nhập hạng mục và xem trước bản in trước khi gửi khách."
-            : "Chỉnh sửa nội dung thương mại của version hiện tại trước khi gửi khách hoặc tạo version kế tiếp."
+            : "Chỉnh sửa nội dung thương mại của phiên bản hiện tại trước khi gửi khách hoặc tạo phiên bản kế tiếp."
         }
         action={
           <div className="flex flex-wrap items-center gap-3">
@@ -293,7 +319,7 @@ export function QuoteFormScreen({
                 </p>
                 <p className="mt-1">
                   {mode === "edit"
-                    ? "Version mới nên được tạo bằng thao tác duplicate trên màn chi tiết."
+                    ? "Phiên bản mới nên được tạo bằng thao tác nhân bản trên trang chi tiết."
                     : "Phiên bản sẽ tự tăng theo số báo giá đã có trên cùng dự án."}
                 </p>
               </div>

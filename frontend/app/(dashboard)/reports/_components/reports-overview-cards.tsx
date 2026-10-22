@@ -63,7 +63,7 @@ export function ReportsOverviewCards({
     {
       label: "KH hoạt động",
       value: data.activeCustomers,
-      helper: "Số khách hàng trạng thái ACTIVE",
+      helper: "Số khách hàng đang hợp tác",
       tone: "primary" as const
     }
   ];

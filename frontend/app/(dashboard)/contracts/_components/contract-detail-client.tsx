@@ -90,8 +90,8 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
   const selectedTemplateLabel = selectedTemplateVariant
     ? `${selectedTemplateVariant.name} · v${selectedTemplateVariant.version}`
     : activeTemplateVariant
-      ? `${activeTemplateVariant.name} · v${activeTemplateVariant.version} · active`
-      : "Mẫu mặc định / fallback hệ thống";
+      ? `${activeTemplateVariant.name} · v${activeTemplateVariant.version} · đang dùng`
+      : "Mẫu mặc định của hệ thống";
 
   return (
     <div className="space-y-8">
@@ -142,7 +142,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
 
             <p className="mt-5 max-w-3xl text-sm leading-6 text-text-secondary">
               Hợp đồng này bám theo dự án <strong className="text-text-primary">{contract.project.name}</strong> và là
-              điểm đọc nhanh cho toàn bộ tiến độ thu tiền, milestone delivery và quote nguồn.
+              điểm đọc nhanh cho toàn bộ tiến độ thu tiền, mốc triển khai và báo giá nguồn.
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -214,9 +214,9 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Giá trị hợp đồng" value={<CurrencyDisplay amount={contract.value} short />} />
-        <MetricCard label="Đã thu" value={<CurrencyDisplay amount={contract.stats.paidAmount} short />} />
-        <MetricCard label="Còn lại" value={<CurrencyDisplay amount={contract.stats.outstandingAmount} short />} />
+        <MetricCard label="Giá trị hợp đồng" value={<CurrencyDisplay amount={contract.value} />} />
+        <MetricCard label="Đã thu" value={<CurrencyDisplay amount={contract.stats.paidAmount} />} />
+        <MetricCard label="Còn lại" value={<CurrencyDisplay amount={contract.stats.outstandingAmount} />} />
         <MetricCard label="Tiến độ mốc" value={`${contract.stats.completionRate}%`} />
       </div>
 
@@ -392,7 +392,7 @@ function ContractTemplateSelector({
                 onChange={(event) => onChange(event.target.value)}
               >
                 <option value="">
-                  {activeTemplateName ? `Mẫu active hiện tại: ${activeTemplateName}` : "Mẫu mặc định / fallback hệ thống"}
+                  {activeTemplateName ? `Mẫu đang dùng: ${activeTemplateName}` : "Mẫu mặc định của hệ thống"}
                 </option>
                 {templateVariants.map((variant) => (
                   <option key={variant.id} value={variant.id}>

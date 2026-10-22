@@ -80,6 +80,18 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
   khi gõ trực tiếp, phần sau `#` bị truyền thành tham số.
 - **Mở tab mới** từng làm đăng xuất mọi tab — mọi thay đổi ở `lib/api-client.ts`, `lib/auth.ts`,
   `dashboard-shell.tsx`, `middleware.ts` phải chạy `--grep "phiên"` + `auth.spec.ts`.
+- **Dialog lồng trong `<form>`:** `Dialog` của dự án không dùng portal → dialog đặt trong form cha thì
+  Enter submit form cha, còn `form.reset()` (không tham số) gọi `form.reset()` gốc của trình duyệt và xóa
+  sạch form cha. Luôn render dialog **ngoài** `</form>` và reset bằng giá trị cụ thể `reset({...})`.
+- **`<select>` gán giá trị trước khi option tải xong** (`?projectId=` trên báo giá/hợp đồng) → ô chọn trống.
+  Gán lại bằng `setValue` trong `useEffect` khi danh sách đã về. Test: `expect(locator).toHaveValue(id)`.
+- **Effect reset form ghi đè dữ liệu người dùng đang nhập** khi query refetch → chặn bằng `formState.isDirty`.
+- **`onError` dùng câu chung chung** ("Không thể xác nhận phiếu.") che mất lý do từ backend → luôn
+  `getApiErrorMessage(error, "<câu mặc định>")`.
+- **Endpoint quên guard:** khi thêm controller, mọi `@Get` đều phải có `JwtAuthGuard` + quyền phù hợp.
+  Kiểm tra nhanh trên stack QA: `curl -s -o /dev/null -w "%{http_code}" http://localhost:3101/api/<route>` phải ra 401.
+- **Chuỗi trong e2e không phải selector** (dữ liệu test, thông báo từ backend) → thêm `// qa-static: not-ui`
+  cuối dòng để `static_checks.py` bỏ qua.
 
 ## Tiết kiệm token khi điều phối model rẻ hơn
 

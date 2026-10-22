@@ -11,6 +11,7 @@ import { STOCK_DOC_STATUS_LABELS, STOCK_DOC_STATUS_COLORS } from "@/lib/constant
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api-client";
 
 export function StockCountDetailClient({ countId }: { countId: string }) {
   const query = useStockCount(countId);
@@ -54,7 +55,7 @@ export function StockCountDetailClient({ countId }: { countId: string }) {
                   onClick={() =>
                     confirmMutation.mutate(undefined, {
                       onSuccess: () => success("Đã xác nhận phiếu kiểm kê."),
-                      onError: () => showError("Không thể xác nhận phiếu."),
+                      onError: (error) => showError(getApiErrorMessage(error, "Không thể xác nhận phiếu.")),
                     })
                   }
                 >
@@ -72,7 +73,7 @@ export function StockCountDetailClient({ countId }: { countId: string }) {
                   onClick={() =>
                     cancelMutation.mutate(undefined, {
                       onSuccess: () => success("Đã hủy phiếu kiểm kê."),
-                      onError: () => showError("Không thể hủy phiếu."),
+                      onError: (error) => showError(getApiErrorMessage(error, "Không thể hủy phiếu.")),
                     })
                   }
                 >

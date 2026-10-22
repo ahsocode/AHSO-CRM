@@ -316,7 +316,7 @@ export function GeneratedDocumentRow({ document }: { document: GeneratedProjectD
           <p className="text-text-secondary">
             {GENERATED_DOCUMENT_LABELS[document.type] ?? document.type} · {document.renderedAt ? formatDateTime(document.renderedAt) : formatDateTime(document.createdAt)}
           </p>
-          <p className="mt-1 text-xs text-text-muted">Nguồn chuẩn: endpoint tải lại document đã render, không sinh version mới.</p>
+          <p className="mt-1 text-xs text-text-muted">Nguồn chuẩn: endpoint tải lại tài liệu đã tạo, không sinh phiên bản mới.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button

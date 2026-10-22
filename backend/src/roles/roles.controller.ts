@@ -9,10 +9,13 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ROLE_VALUES } from "src/common/constants/role.constants";
+import { Roles } from "src/common/decorators/roles.decorator";
 import { JwtAuthGuard } from "src/common/guards/jwt-auth.guard";
 import { RequirePermissions } from "src/common/decorators/permissions.decorator";
 import { ZodValidationPipe } from "src/common/pipes/zod-validation.pipe";
 import { PermissionsGuard } from "src/common/guards/permissions.guard";
+import { RolesGuard } from "src/common/guards/roles.guard";
 import { RolesService } from "./roles.service";
 import { CreateRoleSchema, CreateRoleInput } from "./dto/create-role.dto";
 import { UpdateRoleSchema, UpdateRoleInput } from "./dto/update-role.dto";
@@ -27,8 +30,13 @@ export class RolesController {
    * GET /roles
    * List all roles with their permissions
    */
+  // SECURITY: these two read endpoints had no guard at all — anyone on the
+  // internet could list every role, its permissions and (via :id) the staff
+  // name + email directory. Same access as the users page: ADMIN, MANAGER.
   @ApiOperation({ summary: "GET /api/roles" })
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLE_VALUES[0], ROLE_VALUES[1])
   async findAll() {
     return this.rolesService.findAll();
   }
@@ -39,6 +47,8 @@ export class RolesController {
    */
   @ApiOperation({ summary: "GET /api/roles/:id" })
   @Get(":id")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(ROLE_VALUES[0], ROLE_VALUES[1])
   async findById(@Param("id") id: string) {
     return this.rolesService.findById(id);
   }

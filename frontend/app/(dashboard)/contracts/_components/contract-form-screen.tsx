@@ -106,6 +106,22 @@ export function ContractFormScreen({
     }
   }, [form, initialProjectId, initialSourceQuoteId, mode]);
 
+  // Native <select> shows a preselected value (?projectId= / ?sourceQuoteId=)
+  // only once its <option> exists; the value was set before the project list
+  // loaded, so the dropdown looked empty while the form already held it.
+  useEffect(() => {
+    if (
+      mode === "create" &&
+      initialProjectId &&
+      projectsQuery.data?.items.some((project) => project.id === initialProjectId)
+    ) {
+      form.setValue("projectId", initialProjectId);
+      if (initialSourceQuoteId) {
+        form.setValue("sourceQuoteId", initialSourceQuoteId);
+      }
+    }
+  }, [form, initialProjectId, initialSourceQuoteId, mode, projectsQuery.data]);
+
   useEffect(() => {
     if (mode === "edit" && contractQuery.data) {
       form.reset({

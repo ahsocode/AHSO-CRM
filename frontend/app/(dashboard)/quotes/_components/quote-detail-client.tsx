@@ -146,7 +146,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const hasContract = Boolean(quote.project.contract);
   const actionItems = hasContract ? [] : STATUS_ACTIONS[quote.status] ?? [];
   const duplicateErrorMessage = duplicateQuoteMutation.isError
-    ? getApiErrorMessage(duplicateQuoteMutation.error, "Không thể tạo version báo giá mới.")
+    ? getApiErrorMessage(duplicateQuoteMutation.error, "Không thể tạo phiên bản báo giá mới.")
     : null;
   const statusErrorMessage = updateQuoteStatusMutation.isError
     ? getApiErrorMessage(updateQuoteStatusMutation.error, "Không thể cập nhật trạng thái báo giá.")
@@ -157,8 +157,8 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
   const selectedTemplateLabel = selectedTemplateVariant
     ? `${selectedTemplateVariant.name} · v${selectedTemplateVariant.version}`
     : activeTemplateVariant
-      ? `${activeTemplateVariant.name} · v${activeTemplateVariant.version} · active`
-      : "Mẫu mặc định / fallback hệ thống";
+      ? `${activeTemplateVariant.name} · v${activeTemplateVariant.version} · đang dùng`
+      : "Mẫu mặc định của hệ thống";
 
   const handleRenderPreviewPdf = async () => {
     const rendered = await renderDocumentMutation.mutateAsync({
@@ -277,7 +277,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
             <p className="mt-5 max-w-3xl text-sm text-text-secondary">
               Báo giá này đang phục vụ dự án <strong className="text-text-primary">{quote.project.name}</strong>. Tất cả
-              line item, điều khoản thương mại và thông tin liên hệ đã được gom để sales và delivery dùng chung.
+              hạng mục, điều khoản thương mại và thông tin liên hệ đã được gom để sales và delivery dùng chung.
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -323,9 +323,9 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Tạm tính" value={<CurrencyDisplay amount={quote.subtotal} short />} />
-        <MetricCard label={`VAT ${quote.taxRate}%`} value={<CurrencyDisplay amount={quote.taxAmount} short />} />
-        <MetricCard label="Tổng cộng" value={<CurrencyDisplay amount={quote.total} short />} />
+        <MetricCard label="Tạm tính" value={<CurrencyDisplay amount={quote.subtotal} />} />
+        <MetricCard label={`VAT ${quote.taxRate}%`} value={<CurrencyDisplay amount={quote.taxAmount} />} />
+        <MetricCard label="Tổng cộng" value={<CurrencyDisplay amount={quote.total} />} />
         <MetricCard label="Số hạng mục" value={`${quote.itemCount}`} />
       </div>
 
@@ -355,7 +355,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                             {item.description ? <p className="mt-2 whitespace-pre-wrap text-sm text-text-secondary">{normalizeItemDescription(item.description)}</p> : null}
                           </div>
                           <span className="font-heading text-xl font-extrabold text-text-primary">
-                            <CurrencyDisplay amount={item.total} short />
+                            <CurrencyDisplay amount={item.total} />
                           </span>
                         </div>
                         <div className="mt-3 text-sm text-text-secondary">
@@ -450,7 +450,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 </div>
                 <p className="mt-2">
                   {hasContract
-                    ? "Dự án đã có hợp đồng nên báo giá này được khóa cho việc tạo version mới và đổi trạng thái."
+                    ? "Dự án đã có hợp đồng nên báo giá này được khóa cho việc tạo phiên bản mới và đổi trạng thái."
                     : "Bạn có thể chỉnh sửa nội dung ở bản nháp/bị từ chối, hoặc chuyển trạng thái để bám workflow sales."}
                 </p>
               </div>
@@ -487,7 +487,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 {canEdit ? (
                   <Link href={`/quotes/${quote.id}/edit`} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
                     <AppIcon name="description" className="h-4 w-4" />
-                    Chỉnh sửa version hiện tại
+                    Chỉnh sửa phiên bản hiện tại
                   </Link>
                 ) : null}
 
@@ -506,7 +506,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                     variant="outline"
                   >
                     <AppIcon name="plus" className="h-4 w-4" />
-                    {duplicateQuoteMutation.isPending ? "Đang tạo version mới..." : "Tạo version kế tiếp"}
+                    {duplicateQuoteMutation.isPending ? "Đang tạo phiên bản mới..." : "Tạo phiên bản kế tiếp"}
                   </Button>
                 ) : quote.project.contract ? (
                   <Link
@@ -841,7 +841,7 @@ function QuoteTemplateSelector({
                 onChange={(event) => onChange(event.target.value)}
               >
                 <option value="">
-                  {activeTemplateName ? `Mẫu active hiện tại: ${activeTemplateName}` : "Mẫu mặc định / fallback hệ thống"}
+                  {activeTemplateName ? `Mẫu đang dùng: ${activeTemplateName}` : "Mẫu mặc định của hệ thống"}
                 </option>
                 {templateVariants.map((variant) => (
                   <option key={variant.id} value={variant.id}>

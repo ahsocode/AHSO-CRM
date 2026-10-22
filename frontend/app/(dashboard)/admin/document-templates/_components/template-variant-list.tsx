@@ -185,7 +185,7 @@ export function TemplateVariantList({
             </option>
           ))}
           {passiveTypes.length > 0 && (
-            <optgroup label="Fallback HBS (chưa mở editor)">
+            <optgroup label="Mẫu dự phòng HBS (chưa mở trình soạn)">
               {passiveTypes.map((item) => (
                 <option key={item.type} value={item.type} disabled>
                   {item.label}
@@ -208,7 +208,7 @@ export function TemplateVariantList({
         <div className="flex flex-1 flex-col items-center gap-1 rounded-2xl bg-success-bg px-3 py-2.5 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-success">Chính thức</p>
           <p className="text-xl font-bold text-text-primary">{officialVariants.length}</p>
-          <p className="text-[11px] text-success">{activeCount} active</p>
+          <p className="text-[11px] text-success">{activeCount} đang dùng</p>
         </div>
         <div className="flex flex-1 flex-col items-center gap-1 rounded-2xl bg-primary-bg px-3 py-2.5 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-primary">Bản nháp</p>

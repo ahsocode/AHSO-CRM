@@ -77,7 +77,11 @@ export function CustomerQuickCreateDialog({
       {
         onSuccess: (data) => {
           success(`Đã tạo khách hàng "${values.name.trim()}".`);
-          form.reset();
+          // Pass explicit values: react-hook-form's argument-less reset() calls the
+          // native `closest('form').reset()`. Our Dialog has no portal, so when it is
+          // opened from inside another form (project/survey form) that wiped the
+          // PARENT form the user was filling in.
+          form.reset({ name: "", shortName: "", phone: "", email: "" });
           onOpenChange(false);
           onCreated(data.id);
         },

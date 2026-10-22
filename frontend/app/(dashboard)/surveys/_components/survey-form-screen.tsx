@@ -29,8 +29,14 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
   const updateMutation = useUpdateSurvey();
 
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({ page: 1, limit: 100 });
-  const customers = customersData?.items ?? [];
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  // Customer just created from the dialog: shown as an option until the list refetches.
+  const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string } | null>(null);
+  const fetchedCustomers = customersData?.items ?? [];
+  const customers =
+    createdCustomer && !fetchedCustomers.some((c) => c.id === createdCustomer.id)
+      ? [...fetchedCustomers, { ...createdCustomer, shortName: null }]
+      : fetchedCustomers;
 
   const form = useForm<SurveyFormValues>({
     resolver: zodResolver(surveyFormSchema),
@@ -322,8 +328,9 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
           <CustomerQuickCreateDialog
             open={quickCreateOpen}
             onOpenChange={setQuickCreateOpen}
-            onCreated={(customerId) => {
-              form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
+            onCreated={(customer) => {
+              setCreatedCustomer(customer);
+              form.setValue("customerId", customer.id, { shouldValidate: true, shouldDirty: true });
               form.setValue("projectId", "");
             }}
           />

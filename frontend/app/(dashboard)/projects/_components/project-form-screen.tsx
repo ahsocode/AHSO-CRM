@@ -86,6 +86,8 @@ export function ProjectFormScreen({
   const deleteProjectMutation = useDeleteProject(projectId ?? "");
   const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  // Customer just created from the dialog: shown as an option until the list refetches.
+  const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string } | null>(null);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -126,9 +128,20 @@ export function ProjectFormScreen({
         mode === "create" ? "Không thể tạo dự án." : "Không thể cập nhật dự án."
       )
     : null;
-  const customerOptions = getCustomerOptions(customersQuery.data?.items ?? [], projectQuery.data?.customer);
+  const customerOptions = getCustomerOptions(
+    customersQuery.data?.items ?? [],
+    projectQuery.data?.customer ?? createdCustomer ?? undefined
+  );
   const isSubmitting = activeMutation.isPending || deleteProjectMutation.isPending;
   const watchedCustomerId = form.watch("customerId");
+
+  // Select the new customer only after its <option> is rendered — a native select
+  // silently shows "" when given a value that has no matching option yet.
+  useEffect(() => {
+    if (createdCustomer && customerOptions.some((c) => c.id === createdCustomer.id) && watchedCustomerId !== createdCustomer.id) {
+      form.setValue("customerId", createdCustomer.id, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [createdCustomer, customerOptions, form, watchedCustomerId]);
   const watchedStatus = form.watch("status");
   const selectedCustomer = customerOptions.find((customer) => customer.id === watchedCustomerId) ?? null;
   const contactsQuery = useCustomerContacts(watchedCustomerId ?? "");
@@ -504,9 +517,7 @@ export function ProjectFormScreen({
       <CustomerQuickCreateDialog
         open={quickCreateOpen}
         onOpenChange={setQuickCreateOpen}
-        onCreated={(customerId) => {
-          form.setValue("customerId", customerId, { shouldValidate: true, shouldDirty: true });
-        }}
+        onCreated={(customer) => setCreatedCustomer(customer)}
       />
     </div>
   );

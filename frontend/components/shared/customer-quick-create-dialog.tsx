@@ -35,7 +35,8 @@ interface CustomerQuickCreateDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Called with the new customer id so the parent form can auto-select it. */
-  onCreated: (customerId: string) => void;
+  /** Receives id + name so the caller can show the option before its list refetches. */
+  onCreated: (customer: { id: string; name: string }) => void;
 }
 
 /**
@@ -83,7 +84,7 @@ export function CustomerQuickCreateDialog({
           // PARENT form the user was filling in.
           form.reset({ name: "", shortName: "", phone: "", email: "" });
           onOpenChange(false);
-          onCreated(data.id);
+          onCreated({ id: data.id, name: values.name.trim() });
         },
         onError: (err) => {
           showError(err instanceof Error ? err.message : "Không thể tạo khách hàng.");

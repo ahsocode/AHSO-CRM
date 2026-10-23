@@ -115,9 +115,9 @@ export const DOCUMENT_STATUS_LABELS: Record<BusinessDocumentStatus, string> = {
 
 export const DOCUMENT_SOURCE_LABELS: Record<BusinessDocumentSource, string> = {
   GENERATED: "Hệ thống sinh",
-  UPLOADED: "Upload nội bộ",
+  UPLOADED: "Tải lên nội bộ",
   RECEIVED: "Khách gửi",
-  SIGNED_UPLOAD: "Bản ký upload"
+  SIGNED_UPLOAD: "Bản ký tải lên"
 };
 
 export const GENERATED_DOCUMENT_LABELS: Partial<Record<DocumentTemplateType, string>> = {

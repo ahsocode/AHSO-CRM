@@ -7,7 +7,7 @@ export function QuoteCostEstimate({ quote }: { quote: QuoteDetail }) {
   if (!estimate) return null;
 
   return (
-    <Card className="bg-bg-subtle print:hidden" data-testid="quote-cost-estimate">
+    <Card className="border-0 bg-bg-subtle print:hidden" data-testid="quote-cost-estimate">
       <CardHeader className="mb-0 gap-2">
         <CardTitle>Giá vốn dự kiến · Lãi gộp dự kiến</CardTitle>
         <p className="text-sm text-text-secondary">Nội bộ — không in ra báo giá</p>

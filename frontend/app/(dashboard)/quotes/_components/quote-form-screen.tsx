@@ -209,7 +209,7 @@ export function QuoteFormScreen({
             </Link>
           }
         />
-        <Card className="border border-danger/20">
+        <Card className="border-0 bg-bg-card">
           <CardContent className="p-6">
             <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
               {getApiErrorMessage(quoteQuery.error, "Không thể tải dữ liệu báo giá.")}
@@ -265,7 +265,7 @@ export function QuoteFormScreen({
         })}
       >
         <div className="space-y-6">
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <p className="v2-label text-primary">
                 {mode === "create" ? "Báo giá mới" : "Chỉnh sửa báo giá"}
@@ -292,7 +292,7 @@ export function QuoteFormScreen({
                 <ErrorText message={form.formState.errors.projectId?.message} />
                 {mode === "edit" ? (
                   <p className="text-sm text-text-secondary">
-                    Version hiện tại được khóa với dự án gốc. Nếu cần báo giá cho dự án khác, hãy tạo quote mới.
+                    Phiên bản hiện tại được khóa với dự án gốc. Nếu cần báo giá cho dự án khác, hãy tạo báo giá mới.
                   </p>
                 ) : null}
               </Field>
@@ -330,7 +330,7 @@ export function QuoteFormScreen({
                 <ErrorText message={form.formState.errors.taxRate?.message} />
               </Field>
 
-              <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm text-text-secondary">
+              <div className="rounded-2xl bg-bg-subtle p-4 text-sm text-text-secondary">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Số báo giá</p>
                 <p className="mt-2 font-semibold text-text-primary">
                   {mode === "edit" && activeQuote ? `${activeQuote.quoteNo} · v${activeQuote.version}` : "Được sinh tự động khi lưu"}
@@ -344,7 +344,7 @@ export function QuoteFormScreen({
             </CardContent>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -386,7 +386,7 @@ export function QuoteFormScreen({
             </CardContent>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <details className="group">
             <summary className="cursor-pointer select-none px-6 py-4 text-sm font-semibold text-text-primary">
               Tùy chỉnh bản in (nâng cao)
@@ -415,13 +415,13 @@ export function QuoteFormScreen({
                 ))}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-white/80 px-4 py-3 text-sm text-text-secondary">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-bg-subtle px-4 py-3 text-sm text-text-secondary">
                 <span>
                   Tổng nhập:{" "}
                   <strong className="text-text-primary">
                     {Object.values(watchedTableColumnWidths).reduce((sum, value) => sum + Number(value || 0), 0)}%
                   </strong>{" "}
-                  · hệ thống sẽ tự chuẩn hóa về 100% khi render.
+                  · hệ thống sẽ tự chuẩn hóa về 100% khi tạo bản in.
                 </span>
                 <Button
                   type="button"
@@ -441,7 +441,7 @@ export function QuoteFormScreen({
             </details>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <CardTitle>Điều khoản & ghi chú</CardTitle>
             </CardHeader>
@@ -499,7 +499,7 @@ export function QuoteFormScreen({
         </div>
 
         <div className="sticky top-[72px] max-h-[calc(100vh-88px)] space-y-6 self-start overflow-y-auto">
-          <Card className="border border-white/70" data-testid="quote-summary">
+          <Card className="border-0 bg-bg-card" data-testid="quote-summary">
             <CardHeader className="mb-0 gap-2">
               <CardTitle>Tổng hợp giá trị</CardTitle>
             </CardHeader>
@@ -511,7 +511,7 @@ export function QuoteFormScreen({
             </CardContent>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <p className="v2-label text-primary">Dự án & khách hàng</p>
               <CardTitle>Dự án và khách hàng</CardTitle>
@@ -556,7 +556,7 @@ export function QuoteFormScreen({
             </CardContent>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <p className="v2-label text-primary">Thao tác</p>
               <CardTitle>Kiểm tra trước khi lưu</CardTitle>
@@ -569,7 +569,7 @@ export function QuoteFormScreen({
               ) : null}
 
               {selectedProject ? (
-                <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm text-text-secondary">
+                <div className="rounded-2xl bg-bg-subtle p-4 text-sm text-text-secondary">
                   <p className="font-semibold text-text-primary">{selectedProject.customer.name}</p>
                   <p className="mt-2">Dự án tạo lúc: {formatDateTime(selectedProject.createdAt)}</p>
                   <p>Cập nhật cuối: {formatDateTime(selectedProject.updatedAt)}</p>
@@ -581,8 +581,8 @@ export function QuoteFormScreen({
 
               {mode === "edit" && activeQuote && !isEditableQuote ? (
                 <div className="rounded-xl bg-warning-bg/80 px-4 py-3 text-sm text-warning">
-                  Quote ở trạng thái <strong>{QUOTE_STATUS_LABELS[activeQuote.status]}</strong> không còn cho chỉnh sửa nội dung.
-                  Hãy quay về màn chi tiết để dùng các action trạng thái hoặc tạo version mới.
+                  Báo giá ở trạng thái <strong>{QUOTE_STATUS_LABELS[activeQuote.status]}</strong> không còn cho chỉnh sửa nội dung.
+                  Hãy quay về màn chi tiết để chuyển trạng thái hoặc tạo phiên bản mới.
                 </div>
               ) : null}
 

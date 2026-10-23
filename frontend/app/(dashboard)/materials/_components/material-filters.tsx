@@ -48,7 +48,7 @@ export function MaterialFilters({
       <label className="w-[140px]" htmlFor="material-category">
         <span className="sr-only">Nhóm vật tư</span>
         <MaterialCategorySelect
-          className="h-9 rounded-lg bg-white text-[12.5px]"
+          className="h-9 rounded-lg bg-bg-card text-[12.5px]"
           id="material-category"
           value={categoryId}
           onChange={onCategoryChange}
@@ -62,7 +62,7 @@ export function MaterialFilters({
           id="material-kind-filter"
           value={kind}
           onChange={(e) => onKindChange(e.target.value as MaterialKind | "")}
-          className="h-9 rounded-lg bg-white text-[12.5px]"
+          className="h-9 rounded-lg bg-bg-card text-[12.5px]"
         >
           <option value="">Loại</option>
           {(Object.keys(MATERIAL_KIND_LABELS) as MaterialKind[]).map((key) => (
@@ -82,7 +82,7 @@ export function MaterialFilters({
             const val = e.target.value;
             onIsActiveChange(val === "" ? undefined : val === "true");
           }}
-          className="h-9 rounded-lg bg-white text-[12.5px]"
+          className="h-9 rounded-lg bg-bg-card text-[12.5px]"
         >
           <option value="">Trạng thái</option>
           <option value="true">Hoạt động</option>

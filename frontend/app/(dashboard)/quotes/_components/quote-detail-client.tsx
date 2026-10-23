@@ -132,7 +132,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             </Link>
           }
         />
-        <Card className="border border-danger/20">
+        <Card className="border-0 bg-bg-card">
           <CardContent className="p-6">
             <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
               {getApiErrorMessage(quoteQuery.error, "Không thể tải dữ liệu báo giá.")}
@@ -258,7 +258,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
         }
       />
 
-      <section className="surface-card noise-edge overflow-hidden border border-white/70">
+      <section className="surface-card noise-edge overflow-hidden">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
             <p className="industrial-chip bg-primary/10 text-primary">Báo giá thương mại</p>
@@ -292,7 +292,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             </div>
           </div>
 
-          <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">
+          <aside className="bg-primary/5 p-6 md:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Khách hàng / Dự án</p>
             <div className="mt-4 space-y-2">
               <Link
@@ -305,7 +305,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
               <p className="text-sm text-text-secondary">Phụ trách: {quote.project.customer.assignedTo.name}</p>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-white/70 bg-white/85 p-4 text-sm">
+            <div className="mt-6 rounded-2xl bg-bg-subtle p-4 text-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Liên hệ chính</p>
               <p className="mt-2 font-semibold text-text-primary">
                 {quote.project.customer.primaryContact?.name ?? "Chưa thiết lập"}
@@ -335,7 +335,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh sách hạng mục</p>
               <CardTitle>Danh mục chào giá</CardTitle>
@@ -350,7 +350,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 <>
                   <div className="grid gap-4 md:hidden">
                     {quote.items.map((item) => (
-                      <article key={item.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+                      <article key={item.id} className="rounded-2xl bg-bg-subtle p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="font-semibold text-text-primary">
@@ -381,7 +381,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                       </thead>
                       <tbody>
                         {quote.items.map((item) => (
-                          <tr key={item.id} className="bg-white/80 shadow-sm">
+                          <tr key={item.id} className="bg-bg-subtle shadow-sm">
                             <td className="rounded-l-2xl px-4 py-4 align-top">
                               <p className="font-semibold text-text-primary">
                                 {String(item.order).padStart(2, "0")}. {item.name}
@@ -407,7 +407,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             </CardContent>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <CardTitle>Điều khoản thương mại</CardTitle>
             </CardHeader>
@@ -424,12 +424,12 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
           </Card>
 
           {quote.internalNote ? (
-            <Card className="border border-white/70">
+            <Card className="border-0 bg-bg-card">
               <CardHeader className="mb-0 gap-2">
                 <CardTitle>Ghi chú nội bộ</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm text-text-secondary">
+                <div className="rounded-2xl bg-bg-subtle p-4 text-sm text-text-secondary">
                   {quote.internalNote}
                 </div>
               </CardContent>
@@ -438,15 +438,15 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
         </div>
 
         <div className="space-y-6">
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thao tác</p>
-              <CardTitle>Workflow báo giá</CardTitle>
+              <CardTitle>Quy trình báo giá</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm text-text-secondary">
+              <div className="rounded-2xl bg-bg-subtle p-4 text-sm text-text-secondary">
                 <p className="font-semibold text-text-primary">
-                  Version hiện tại: {quote.quoteNo} · v{quote.version}
+                  Phiên bản hiện tại: {quote.quoteNo} · v{quote.version}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span>Trạng thái:</span>
@@ -455,7 +455,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                 <p className="mt-2">
                   {hasContract
                     ? "Dự án đã có hợp đồng nên báo giá này được khóa cho việc tạo phiên bản mới và đổi trạng thái."
-                    : "Bạn có thể chỉnh sửa nội dung ở bản nháp/bị từ chối, hoặc chuyển trạng thái để bám workflow sales."}
+                    : "Bạn có thể chỉnh sửa nội dung ở bản nháp/bị từ chối, hoặc chuyển trạng thái theo quy trình bán hàng."}
                 </p>
               </div>
 
@@ -529,8 +529,8 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                     Tạo hợp đồng từ báo giá này
                   </Link>
                 ) : quote.project.contract ? (
-                  <div className="rounded-xl bg-bg-muted px-4 py-3 text-sm text-text-secondary">
-                    Quote này đã có hợp đồng đi kèm.
+                  <div className="rounded-xl bg-bg-subtle px-4 py-3 text-sm text-text-secondary">
+                    Báo giá này đã có hợp đồng đi kèm.
                   </div>
                 ) : null}
 
@@ -568,8 +568,8 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
                     })}
                   </div>
                 ) : (
-                  <div className="rounded-xl bg-bg-muted px-4 py-3 text-sm text-text-secondary">
-                    Không còn action trạng thái trực tiếp cho quote này.
+                  <div className="rounded-xl bg-bg-subtle px-4 py-3 text-sm text-text-secondary">
+                    Không còn thao tác chuyển trạng thái trực tiếp cho báo giá này.
                   </div>
                 )}
               </div>
@@ -583,7 +583,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             </CardContent>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dòng thời gian</p>
               <CardTitle>Mốc thương mại</CardTitle>
@@ -603,13 +603,13 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
             </CardContent>
           </Card>
 
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardHeader className="mb-0 gap-2">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Dự án nguồn</p>
               <CardTitle>Liên kết dự án</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm">
+              <div className="rounded-2xl bg-bg-subtle p-4 text-sm">
                 <Link href={`/projects/${quote.project.id}`} className="font-semibold text-text-primary hover:text-primary">
                   {quote.project.name}
                 </Link>
@@ -626,14 +626,14 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
               <MiniInfo
                 label="Giá trị dự án"
-                value={<CurrencyDisplay amount={quote.project.estimatedValue} short />}
+                value={<CurrencyDisplay amount={quote.project.estimatedValue} />}
               />
               {quote.project.contract ? (
                 <MiniInfo
                   label="Giá trị hợp đồng"
                   value={
                     <Link href={`/contracts/${quote.project.contract.id}`} className="hover:text-primary">
-                      <CurrencyDisplay amount={quote.project.contract.value} short />
+                      <CurrencyDisplay amount={quote.project.contract.value} />
                     </Link>
                   }
                 />
@@ -704,7 +704,7 @@ function AiDraftEmailDialog({
     if (!draftEmailMutation.data) return;
     try {
       await navigator.clipboard.writeText(
-        `Subject: ${draftEmailMutation.data.subject}\n\n${draftEmailMutation.data.body}`
+        `Tiêu đề: ${draftEmailMutation.data.subject}\n\n${draftEmailMutation.data.body}`
       );
       toast({ title: "Đã copy email AI" });
     } catch {
@@ -716,14 +716,14 @@ function AiDraftEmailDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] bg-bg-card p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Trợ lý email AI</p>
             <h3 className="mt-2 font-heading text-2xl font-extrabold text-text-primary">Soạn email báo giá</h3>
             <p className="mt-2 text-sm text-text-secondary">
-              Nhập chỉ dẫn ngắn để AI tạo subject và nội dung email chuyên nghiệp cho báo giá này.
+              Nhập chỉ dẫn ngắn để AI tạo tiêu đề và nội dung email chuyên nghiệp cho báo giá này.
             </p>
           </div>
           <Button type="button" variant="ghost" onClick={onClose}>
@@ -768,21 +768,21 @@ function AiDraftEmailDialog({
           </div>
 
           {draftEmailMutation.isError ? (
-            <div className="rounded-2xl border border-danger/20 bg-danger-bg/70 p-4 text-sm text-danger">
+            <div className="rounded-2xl bg-danger-bg/70 p-4 text-sm text-danger">
               Không thể soạn email AI. Vui lòng kiểm tra Claude API hoặc thử lại sau.
             </div>
           ) : null}
 
           {draftEmailMutation.data ? (
-            <div className="space-y-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <div className="space-y-4 rounded-2xl bg-primary/5 p-4">
               <div>
                 <label className="text-sm font-semibold text-text-primary" htmlFor="ai-email-subject">
-                  Subject
+                  Tiêu đề
                 </label>
                 <input
                   id="ai-email-subject"
                   readOnly
-                  className="mt-2 w-full rounded-md border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none"
+                  className="mt-2 w-full rounded-md border border-border bg-bg-card px-4 py-3 text-sm font-semibold text-text-primary outline-none"
                   value={draftEmailMutation.data.subject}
                 />
               </div>
@@ -793,7 +793,7 @@ function AiDraftEmailDialog({
                 <Textarea
                   id="ai-email-body"
                   readOnly
-                  className="mt-2 min-h-[260px] bg-white"
+                  className="mt-2 min-h-[260px] bg-bg-card"
                   value={draftEmailMutation.data.body}
                 />
               </div>
@@ -819,9 +819,9 @@ function QuoteTemplateSelector({
   onChange: (variantId: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+    <div className="rounded-2xl bg-primary/5 p-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bg-card text-primary shadow-sm">
           <AppIcon name="description" className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1 space-y-3">
@@ -833,14 +833,14 @@ function QuoteTemplateSelector({
           </div>
 
           {isLoading ? (
-            <div className="rounded-xl border border-border bg-white/70 px-4 py-3 text-sm text-text-secondary">
-              Đang tải danh sách template...
+            <div className="rounded-xl bg-bg-card/70 px-4 py-3 text-sm text-text-secondary">
+              Đang tải danh sách mẫu...
             </div>
           ) : (
             <>
               <select
                 aria-label="Chọn mẫu báo giá"
-                className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl border border-border bg-bg-card px-4 py-3 text-sm font-semibold text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={selectedTemplateVariantId}
                 onChange={(event) => onChange(event.target.value)}
               >
@@ -875,7 +875,7 @@ function MetricCard({
   value: React.ReactNode;
 }) {
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardContent className="space-y-2 p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">{label}</p>
         <div className="font-heading text-3xl font-extrabold text-text-primary">{value}</div>
@@ -892,7 +892,7 @@ function MiniPanel({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-white/80 p-4">
+    <div className="rounded-2xl bg-bg-subtle p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">{label}</p>
       <p className="mt-2 font-semibold text-text-primary">{value}</p>
     </div>
@@ -907,7 +907,7 @@ function MiniInfo({
   value: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-white/80 p-4 text-sm">
+    <div className="rounded-2xl bg-bg-subtle p-4 text-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">{label}</p>
       <div className="mt-2 font-semibold text-text-primary">{value}</div>
     </div>
@@ -922,7 +922,7 @@ function TermBlock({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-white/80 p-4">
+    <div className="rounded-2xl bg-bg-subtle p-4">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">{title}</p>
       <p className="mt-3 text-sm leading-6 text-text-secondary">{description}</p>
     </div>
@@ -954,10 +954,10 @@ function AcceptQuoteDialog({
   const allSelected = selectedIds.length === items.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex w-full max-w-xl flex-col rounded-2xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/50 p-4">
+      <div className="flex w-full max-w-xl flex-col rounded-2xl bg-bg-card shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 px-6 py-4">
+        <div className="flex items-center justify-between bg-bg-subtle px-6 py-4">
           <div>
             <h2 className="text-base font-semibold text-text-primary">Xác nhận hạng mục khách chốt</h2>
             <p className="mt-0.5 text-sm text-text-secondary">Chọn các hạng mục khách hàng đã chấp nhận</p>
@@ -972,7 +972,7 @@ function AcceptQuoteDialog({
         </div>
 
         {/* Select-all controls */}
-        <div className="flex items-center justify-between border-b border-border/60 bg-bg-subtle px-6 py-2.5">
+        <div className="flex items-center justify-between bg-bg-subtle px-6 py-2.5">
           <span className="text-sm font-medium text-text-secondary">
             Đã chọn{" "}
             <span className="font-semibold text-text-primary">{selectedIds.length}</span>/{items.length} hạng mục
@@ -1035,7 +1035,7 @@ function AcceptQuoteDialog({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-border/60 px-6 py-4">
+        <div className="bg-bg-subtle px-6 py-4">
           <div className="mb-4 flex items-center justify-between rounded-xl bg-bg-subtle px-4 py-3">
             <span className="text-sm font-medium text-text-secondary">Tổng giá trị chốt</span>
             <span className="text-base font-bold text-text-primary">

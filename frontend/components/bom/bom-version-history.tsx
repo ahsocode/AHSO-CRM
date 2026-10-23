@@ -12,7 +12,7 @@ export function BomVersionHistory({ productId, currentBomId }: { productId: stri
   const versions = versionsQuery.data ?? [];
 
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="mb-0 gap-2">
         <CardTitle>Lịch sử phiên bản</CardTitle>
       </CardHeader>
@@ -30,7 +30,7 @@ export function BomVersionHistory({ productId, currentBomId }: { productId: stri
                 className="flex flex-wrap items-center gap-3 rounded-xl bg-bg-subtle px-4 py-3 text-sm hover:bg-primary-bg"
               >
                 <span className="font-semibold text-text-primary">v{version.version}</span>
-                <span className="font-mono text-xs text-text-muted">{version.code}</span>
+                <span className="font-sans text-xs text-text-muted">{version.code}</span>
                 <BomStatusBadge status={version.status} />
                 {version.id === currentBomId ? <span className="text-xs font-semibold text-primary">Đang xem</span> : null}
                 <span className="ml-auto tabular-nums text-text-secondary">{formatVND(version.total)}</span>

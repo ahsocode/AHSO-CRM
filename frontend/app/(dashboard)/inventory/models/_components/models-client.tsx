@@ -27,7 +27,7 @@ export function ModelsClient() {
         description="Các thành phẩm đã có BOM mẫu. Mở một mẫu để xem, sửa bản nháp hoặc tạo phiên bản mới."
       />
 
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         <CardContent className="space-y-4 p-5">
           <Input
             aria-label="Tìm mẫu máy"
@@ -78,7 +78,7 @@ export function ModelsClient() {
                         </Link>
                         {model.product ? <p className="text-xs text-text-muted">{model.product.code}</p> : null}
                       </td>
-                      <td className="px-4 py-3 font-mono text-sm text-text-secondary">{model.code}</td>
+                      <td className="px-4 py-3 font-sans text-sm text-text-secondary">{model.code}</td>
                       <td className="px-4 py-3 text-sm text-text-primary">v{model.version}</td>
                       <td className="px-4 py-3">
                         <BomStatusBadge status={model.status} />

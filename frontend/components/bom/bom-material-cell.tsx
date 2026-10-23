@@ -63,7 +63,7 @@ function BomPicker({
       <div
         role="dialog"
         aria-label="Chọn vật tư hoặc cụm"
-        className="fixed z-50 w-[350px] rounded-xl bg-bg-card shadow-lg ring-1 ring-black/5"
+        className="fixed z-50 w-[350px] rounded-xl bg-bg-card shadow-lg ring-1 ring-text-primary/5"
         style={style}
       >
         <div className="flex gap-1 p-2">
@@ -79,7 +79,7 @@ function BomPicker({
               onClick={() => setTab(key)}
               className={cn(
                 "rounded-md px-3 py-1.5 text-xs font-semibold",
-                tab === key ? "bg-primary text-white" : "bg-bg-subtle text-text-secondary hover:bg-bg-hover"
+                tab === key ? "bg-primary text-text-sidebar" : "bg-bg-subtle text-text-secondary hover:bg-bg-hover"
               )}
             >
               {label}
@@ -110,7 +110,7 @@ function BomPicker({
                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-primary-bg"
                   onClick={() => onPickMaterial(material)}
                 >
-                  <span className="shrink-0 font-mono text-xs text-text-muted">{material.code}</span>
+                  <span className="shrink-0 font-sans text-xs text-text-muted">{material.code}</span>
                   <span className="flex-1 truncate text-text-primary">{material.name}</span>
                   <span className="shrink-0 text-[11px] text-text-secondary">
                     {MATERIAL_KIND_LABELS[material.kind] ?? ""}
@@ -130,7 +130,7 @@ function BomPicker({
                 className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-primary-bg"
                 onClick={() => onPickChild(bom)}
               >
-                <span className="shrink-0 font-mono text-xs text-text-muted">
+                <span className="shrink-0 font-sans text-xs text-text-muted">
                   {bom.code} · v{bom.version}
                 </span>
                 <span className="flex-1 truncate text-text-primary">{bom.product?.name ?? bom.name}</span>
@@ -189,7 +189,7 @@ export function BomMaterialCell({
         onClick={() => setAnchor(buttonRef.current?.getBoundingClientRect() ?? null)}
         className={cn(
           "h-9 w-full truncate rounded-md px-2 text-left text-sm",
-          linked ? "font-mono text-text-primary" : "text-xs italic text-warning",
+          linked ? "font-sans text-text-primary" : "text-xs italic text-warning",
           readOnly ? "cursor-default" : "bg-bg-subtle hover:bg-primary-bg"
         )}
         title={childLabel ? "Cụm (BOM con)" : linked ? "Đã gắn mã vật tư" : "Chưa gắn mã vật tư"}

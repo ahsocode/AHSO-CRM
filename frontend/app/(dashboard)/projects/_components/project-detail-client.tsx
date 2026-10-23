@@ -147,7 +147,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             </Link>
           }
         />
-        <Card className="border border-danger/20">
+        <Card className="border-0 bg-bg-card">
           <CardContent className="p-6">
             <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
               {getApiErrorMessage(projectQuery.error, "Không thể tải dữ liệu dự án.")}
@@ -195,10 +195,10 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             </Link>
           }
         />
-        <Card className="border border-warning/20">
+        <Card className="border-0 bg-bg-card">
           <CardContent className="p-6">
             <div className="rounded-xl bg-warning-bg/70 p-4 text-sm text-warning">
-              Dữ liệu dự án không đầy đủ: thiếu customerId/customer. Hãy kiểm tra seed hoặc bản ghi dự án trước khi mở Project 360.
+              Dữ liệu dự án không đầy đủ: thiếu thông tin khách hàng. Hãy kiểm tra bản ghi dự án trước khi mở trang tổng quan.
             </div>
           </CardContent>
         </Card>
@@ -235,7 +235,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
         }
       />
 
-      <section className="surface-card noise-edge overflow-hidden border border-white/70">
+      <section className="surface-card noise-edge overflow-hidden">
         <div className="grid gap-0 xl:grid-cols-[1.5fr_0.85fr]">
           <div className="p-6 md:p-8">
             <p className="industrial-chip bg-primary/10 text-primary">Tổng quan dự án</p>
@@ -263,7 +263,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
             </div>
             <ProjectStageStepper currentStatus={project.status} projectId={projectId} />
           </div>
-          <aside className="border-t border-white/70 bg-primary/5 p-6 md:p-8 xl:border-l xl:border-t-0">
+          <aside className="bg-primary/5 p-6 md:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-text-secondary">Phụ trách</p>
             <div className="mt-4 space-y-2">
               <Link href={`/customers/${customer.id}`} className="font-heading text-xl font-bold text-text-primary hover:text-primary">
@@ -272,7 +272,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
               <p className="text-sm text-text-secondary">{customer.industry ?? "Chưa phân ngành"}</p>
               <StatusBadge status={customer.status} />
             </div>
-            <div className="mt-6 rounded-2xl border border-white/70 bg-white/85 p-4 text-sm">
+            <div className="mt-6 rounded-2xl bg-bg-subtle p-4 text-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Liên hệ chính</p>
               <p className="mt-2 font-semibold text-text-primary">{customer.primaryContact?.name ?? "Chưa thiết lập"}</p>
               <p className="text-text-secondary">{customer.primaryContact?.title ?? "Chưa có chức danh"}</p>
@@ -291,7 +291,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
 
       <Project360Brief project={project} overview={overview} onNavigate={handleTabChange} />
 
-      <div className="sticky top-3 z-20 rounded-[28px] border border-white/70 bg-white/90 p-2 shadow-sm backdrop-blur-xl">
+      <div className="sticky top-3 z-20 rounded-[28px] bg-bg-card/90 p-2 shadow-sm backdrop-blur-xl">
         <div role="tablist" aria-label="Các mục hồ sơ dự án" className="flex gap-2 overflow-x-auto">
           {TABS.map((tab) => (
             <button
@@ -303,8 +303,8 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
               className={cn(
                 "inline-flex shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition",
                 activeTab === tab.key
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-text-secondary hover:bg-white hover:text-text-primary"
+                  ? "bg-primary text-text-sidebar shadow-sm"
+                  : "text-text-secondary hover:bg-bg-card hover:text-text-primary"
               )}
             >
               <AppIcon name={tab.icon} className="h-4 w-4" />
@@ -313,7 +313,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
                 <span
                   className={cn(
                     "rounded-full px-2 py-0.5 text-[11px]",
-                    activeTab === tab.key ? "bg-white/20 text-white" : "bg-bg-hover text-text-secondary"
+                    activeTab === tab.key ? "bg-bg-card/20 text-text-sidebar" : "bg-bg-hover text-text-secondary"
                   )}
                 >
                   {tabCounts[tab.key]}
@@ -336,7 +336,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       {activeTab === "payments" ? <PaymentsPanel project={project} /> : null}
       {activeTab === "materials" ? <MaterialsPanel projectId={projectId} /> : null}
       {activeTab === "boms" ? (
-        <Card>
+        <Card className="border-0 bg-bg-card">
           <CardHeader><CardTitle>BOM / Dự toán</CardTitle></CardHeader>
           <CardContent><ProjectBomsTab projectId={projectId} /></CardContent>
         </Card>
@@ -359,14 +359,14 @@ function OverviewPanel({
   return (
     <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
       <div className="space-y-6">
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Việc nên làm tiếp</p>
             <CardTitle>Việc cần làm tiếp theo</CardTitle>
           </CardHeader>
           <CardContent>
             {overview?.nextActivity ? (
-              <article className="rounded-2xl border border-border/60 bg-white/80 p-4">
+              <article className="rounded-2xl bg-bg-subtle p-4">
                 <p className="font-semibold text-text-primary">{overview.nextActivity.title}</p>
                 <p className="mt-2 text-sm text-text-secondary">
                   {overview.nextActivity.scheduledAt ? formatDateTime(overview.nextActivity.scheduledAt) : "Chưa có lịch cụ thể"} ·{" "}
@@ -379,14 +379,14 @@ function OverviewPanel({
           </CardContent>
         </Card>
 
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Ghi chú hiện trường gần nhất</p>
             <CardTitle>Khảo sát mới nhất</CardTitle>
           </CardHeader>
           <CardContent>
             {overview?.latestSurvey ? (
-              <article className="rounded-2xl border border-border/60 bg-white/80 p-4">
+              <article className="rounded-2xl bg-bg-subtle p-4">
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="font-semibold text-text-primary">{overview.latestSurvey.title}</p>
@@ -408,7 +408,7 @@ function OverviewPanel({
           </CardContent>
         </Card>
 
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Trường tùy chỉnh</p>
             <CardTitle>Giá trị trường tùy chỉnh</CardTitle>
@@ -427,7 +427,7 @@ function OverviewPanel({
       <div className="space-y-6">
         <AiForecastCard projectId={project.id} />
 
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <CardTitle>Tài liệu quan trọng mới nhất</CardTitle>
           </CardHeader>
@@ -442,7 +442,7 @@ function OverviewPanel({
           </CardContent>
         </Card>
 
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Việc còn mở</p>
             <CardTitle>Mốc triển khai còn mở</CardTitle>
@@ -473,7 +473,7 @@ function AiForecastCard({ projectId }: { projectId: string }) {
   const probability = forecastMutation.data?.probabilityPercent ?? 0;
 
   return (
-    <Card className="border border-primary/20 bg-primary/5">
+    <Card className="border-0 bg-primary/5">
       <CardHeader className="mb-0 gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <CardTitle>Dự báo AI</CardTitle>
@@ -491,7 +491,7 @@ function AiForecastCard({ projectId }: { projectId: string }) {
       <CardContent className="space-y-4">
         {forecastMutation.isPending ? <LoadingSkeleton className="h-32 w-full" /> : null}
         {forecastMutation.isError ? (
-          <div className="rounded-2xl border border-danger/20 bg-danger-bg/70 p-4 text-sm text-danger">
+          <div className="rounded-2xl bg-danger-bg/70 p-4 text-sm text-danger">
             Không thể tạo dự báo AI. Vui lòng kiểm tra cấu hình Claude API hoặc thử lại sau.
           </div>
         ) : null}
@@ -501,7 +501,7 @@ function AiForecastCard({ projectId }: { projectId: string }) {
               <MiniInfo label="Xác suất thắng" value={`${probability}%`} />
               <MiniInfo label="Doanh thu kỳ vọng" value={formatVNDShort(forecastMutation.data.forecastedRevenue)} />
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-white">
+            <div className="h-3 overflow-hidden rounded-full bg-bg-card">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-primary to-primary-light"
                 style={{ width: `${Math.min(100, Math.max(0, probability))}%` }}
@@ -601,7 +601,7 @@ function ProjectStageStepper({ currentStatus, projectId }: { currentStatus: Proj
   };
 
   return (
-    <div className="mt-6 rounded-3xl border border-white/70 bg-white/75 p-4">
+    <div className="mt-6 rounded-3xl bg-bg-subtle p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tiến trình</p>
         <p className="text-sm font-semibold text-text-primary">{getProjectStatusLabel(currentStatus)}</p>
@@ -621,10 +621,10 @@ function ProjectStageStepper({ currentStatus, projectId }: { currentStatus: Proj
               className={cn(
                 "rounded-2xl border px-3 py-2 text-xs font-semibold transition",
                 isActive
-                  ? "border-primary bg-primary text-white shadow-sm"
+                  ? "border-primary bg-primary text-text-sidebar shadow-sm"
                   : isDone
                     ? "border-primary/20 bg-primary/10 text-primary hover:bg-primary/20"
-                    : "border-border/70 bg-white/70 text-text-secondary hover:border-primary-light hover:text-primary-mid",
+                    : "border-border/70 bg-bg-card/70 text-text-secondary hover:border-primary-light hover:text-primary-mid",
                 updateStatus.isPending && "opacity-60"
               )}
             >
@@ -645,7 +645,7 @@ function TimelinePanel({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="mb-0 gap-2">
         <CardTitle>Dòng thời gian dự án</CardTitle>
       </CardHeader>
@@ -654,7 +654,7 @@ function TimelinePanel({ projectId }: { projectId: string }) {
           <EmptyState title="Chưa có sự kiện" description="Dòng thời gian sẽ tổng hợp hoạt động, khảo sát, báo giá, tài liệu, mốc và thanh toán." />
         ) : (
           timelineQuery.data.map((item) => (
-            <article key={item.id} className="flex gap-4 rounded-2xl border border-border/60 bg-white/80 p-4">
+            <article key={item.id} className="flex gap-4 rounded-2xl bg-bg-subtle p-4">
               <div className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                 <AppIcon name={timelineIcon(item.type)} className="h-5 w-5" />
               </div>
@@ -720,7 +720,7 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         <CardHeader className="mb-0 gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Khảo sát thực địa</p>
           <CardTitle>Tạo khảo sát mới</CardTitle>
@@ -745,7 +745,7 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
         {surveysQuery.isLoading ? (
           <LoadingSkeleton className="h-96 w-full" />
         ) : surveysQuery.isError ? (
-          <Card className="border border-danger/20">
+          <Card className="border-0 bg-bg-card">
             <CardContent className="p-6">
               <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
                 {getApiErrorMessage(surveysQuery.error, "Không thể tải dữ liệu khảo sát.")}
@@ -753,14 +753,14 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
             </CardContent>
           </Card>
         ) : !surveysQuery.data?.length ? (
-          <Card className="border border-white/70">
+          <Card className="border-0 bg-bg-card">
             <CardContent className="p-6">
               <EmptyState title="Chưa có khảo sát" description="Lưu lần khảo sát đầu tiên để người nhận bàn giao xem lại bối cảnh thực tế." />
             </CardContent>
           </Card>
         ) : (
           surveysQuery.data.map((survey) => (
-            <Card key={survey.id} className="border border-white/70">
+            <Card key={survey.id} className="border-0 bg-bg-card">
               <CardHeader className="mb-0 gap-2">
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -790,7 +790,7 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
                   ))}
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-3 rounded-2xl border border-border/60 bg-bg-hover/40 p-4">
+                  <div className="space-y-3 rounded-2xl bg-bg-hover/40 p-4">
                     <div className="grid gap-2 md:grid-cols-2">
                       <select
                         className="h-10 rounded-md border border-border bg-bg-input px-3 text-sm"
@@ -841,13 +841,13 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
                       Thêm ghi chú
                     </Button>
                   </div>
-                  <div className="space-y-3 rounded-2xl border border-dashed border-border bg-bg-hover/60 p-4 text-sm text-text-secondary">
+                  <div className="space-y-3 rounded-2xl bg-bg-hover/60 p-4 text-sm text-text-secondary">
                     <div className="flex items-center gap-2 font-semibold text-text-primary">
                       <AppIcon name="description" className="h-5 w-5 text-primary" />
                       Media khảo sát
                     </div>
                     <Input
-                      placeholder="Mô tả file / ảnh"
+                      placeholder="Mô tả tệp / ảnh"
                       value={mediaDrafts[survey.id]?.caption ?? ""}
                       onChange={(event) =>
                         setMediaDrafts((prev) => ({
@@ -891,8 +891,8 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
                       />
                       Đánh dấu quan trọng
                     </label>
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-border bg-white/70 p-4 text-center hover:border-primary/40">
-                      Tải ảnh / video / file khảo sát
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-border bg-bg-card/70 p-4 text-center hover:border-primary/40">
+                      Tải ảnh / video / tệp khảo sát
                       <input
                         type="file"
                         className="hidden"
@@ -905,7 +905,7 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
                           const validationError = validateSurveyMediaFile(file);
                           if (validationError) {
                             toast({
-                              title: "File khảo sát chưa hợp lệ",
+                              title: "Tệp khảo sát chưa hợp lệ",
                               description: validationError,
                               variant: "destructive"
                             });
@@ -1111,7 +1111,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
       const validationError = validateBusinessDocumentFile(file);
       if (validationError) {
         toast({
-          title: "File tài liệu chưa hợp lệ",
+          title: "Tệp tài liệu chưa hợp lệ",
           description: validationError,
           variant: "destructive"
         });
@@ -1174,13 +1174,13 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-white/70 bg-white/85 p-5 shadow-sm">
+      <section className="rounded-3xl bg-bg-subtle p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh mục tài liệu</p>
             <h3 className="mt-1 font-heading text-2xl font-extrabold text-text-primary">Tài liệu dự án</h3>
             <p className="mt-2 max-w-3xl text-sm text-text-secondary">
-              Gom PO, bản đã ký, biên bản, hóa đơn và file khách gửi vào cùng một registry để bàn giao dự án không bị đứt mạch.
+              Gom PO, bản đã ký, biên bản, hóa đơn và tệp khách gửi vào cùng một danh mục để bàn giao dự án không bị đứt mạch.
             </p>
           </div>
           <Button type="button" onClick={() => setShowCreateForm((current) => !current)}>
@@ -1189,14 +1189,14 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-4">
           <DocumentStat label="Tổng tài liệu" value={businessDocuments.length} />
-          <DocumentStat label="Có file" value={businessDocuments.filter((document) => document.fileUrl).length} />
+          <DocumentStat label="Có tệp" value={businessDocuments.filter((document) => document.fileUrl).length} />
           <DocumentStat label="Đã ký / chấp nhận" value={businessDocuments.filter((document) => ["SIGNED", "ACCEPTED"].includes(document.status)).length} />
           <DocumentStat label="PDF hệ thống" value={generatedDocuments.length} />
         </div>
       </section>
 
       {showCreateForm ? (
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Danh mục doanh nghiệp</p>
@@ -1245,7 +1245,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                 ))}
               </select>
               <label className="block rounded-2xl border border-dashed border-border bg-bg-hover/60 p-4 text-sm text-text-secondary">
-                <span className="font-semibold text-text-primary">File đính kèm</span>
+                <span className="font-semibold text-text-primary">Tệp đính kèm</span>
                 <span className="mt-1 block">{file ? file.name : "PDF, PNG, JPG, XLSX hoặc DOCX, tối đa 10MB"}</span>
                 {file ? <span className="mt-1 block text-xs text-text-muted">{formatFileSize(file.size)}</span> : null}
                 <input
@@ -1262,7 +1262,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                     const validationError = validateBusinessDocumentFile(selectedFile);
                     if (validationError) {
                       toast({
-                        title: "File tài liệu chưa hợp lệ",
+                        title: "Tệp tài liệu chưa hợp lệ",
                         description: validationError,
                         variant: "destructive"
                       });
@@ -1290,7 +1290,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
       ) : null}
 
       <div className="space-y-6">
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Kế hoạch hồ sơ</p>
@@ -1314,7 +1314,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
           <CardContent className="space-y-5">
 
             {/* Preset quick-select */}
-            <div className="rounded-2xl border border-border/60 bg-bg-subtle p-4">
+            <div className="rounded-2xl bg-bg-subtle p-4">
               <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
                 Chọn nhanh theo loại dự án
               </p>
@@ -1325,7 +1325,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                     type="button"
                     title={preset.description}
                     onClick={() => setSelectedPlanTypes(preset.types)}
-                    className="rounded-xl border border-border/60 bg-white px-3 py-1.5 text-sm font-medium text-text-primary transition hover:border-primary/40 hover:bg-primary-bg hover:text-primary"
+                    className="rounded-xl border border-border/60 bg-bg-card px-3 py-1.5 text-sm font-medium text-text-primary transition hover:border-primary/40 hover:bg-primary-bg hover:text-primary"
                   >
                     {preset.label}
                   </button>
@@ -1334,7 +1334,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                   <button
                     type="button"
                     onClick={() => setSelectedPlanTypes([])}
-                    className="rounded-xl border border-border/40 bg-white px-3 py-1.5 text-sm text-text-muted transition hover:border-danger/40 hover:text-danger"
+                    className="rounded-xl border border-border/40 bg-bg-card px-3 py-1.5 text-sm text-text-muted transition hover:border-danger/40 hover:text-danger"
                   >
                     Bỏ chọn tất cả
                   </button>
@@ -1376,14 +1376,14 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                               "rounded-xl border p-3 text-left transition",
                               isSelected
                                 ? "border-primary bg-primary-bg"
-                                : "border-border/60 bg-white hover:border-primary/30 hover:bg-bg-hover"
+                                : "border-border/60 bg-bg-card hover:border-primary/30 hover:bg-bg-hover"
                             )}
                           >
                             <div className="flex items-start gap-2.5">
                               <span
                                 className={cn(
                                   "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-bold",
-                                  isSelected ? "border-primary bg-primary text-white" : "border-border bg-white text-transparent"
+                                  isSelected ? "border-primary bg-primary text-text-sidebar" : "border-border bg-bg-card text-transparent"
                                 )}
                               >
                                 ✓
@@ -1421,7 +1421,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
             </div>
 
             {/* Action bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-bg-hover/50 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-bg-hover/50 px-4 py-3">
               <p className="text-sm text-text-secondary">
                 {hasUnsavedPlanChanges
                   ? "Cấu hình chưa lưu — nhấn Lưu trước khi sinh tài liệu."
@@ -1454,7 +1454,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
           </CardContent>
         </Card>
 
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Đã tải lên / Đã nhận</p>
             <CardTitle>Tài liệu dự án</CardTitle>
@@ -1478,7 +1478,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
             >
               <select
                 aria-label="Loại tài liệu"
-                className="h-9 w-[132px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                className="h-9 w-[132px] rounded-lg border border-border bg-bg-card px-3 text-[12.5px]"
                 value={documentFilters.type}
                 onChange={(event) => setDocumentFilters((prev) => ({ ...prev, type: event.target.value as "ALL" | BusinessDocumentType }))}
               >
@@ -1491,7 +1491,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               </select>
               <select
                 aria-label="Trạng thái"
-                className="h-9 w-[132px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                className="h-9 w-[132px] rounded-lg border border-border bg-bg-card px-3 text-[12.5px]"
                 value={documentFilters.status}
                 onChange={(event) => setDocumentFilters((prev) => ({ ...prev, status: event.target.value as "ALL" | BusinessDocumentStatus }))}
               >
@@ -1504,7 +1504,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               </select>
               <select
                 aria-label="Nguồn"
-                className="h-9 w-[132px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                className="h-9 w-[132px] rounded-lg border border-border bg-bg-card px-3 text-[12.5px]"
                 value={documentFilters.source}
                 onChange={(event) => setDocumentFilters((prev) => ({ ...prev, source: event.target.value as "ALL" | BusinessDocumentSource }))}
               >
@@ -1517,15 +1517,15 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               </select>
               <select
                 aria-label="Tệp đính kèm"
-                className="h-9 w-[112px] rounded-lg border border-border bg-white px-3 text-[12.5px]"
+                className="h-9 w-[112px] rounded-lg border border-border bg-bg-card px-3 text-[12.5px]"
                 value={documentFilters.fileState}
                 onChange={(event) =>
                   setDocumentFilters((prev) => ({ ...prev, fileState: event.target.value as "ALL" | "WITH_FILE" | "WITHOUT_FILE" }))
                 }
               >
-                <option value="ALL">File</option>
-                <option value="WITH_FILE">Có file</option>
-                <option value="WITHOUT_FILE">Chưa có file</option>
+                <option value="ALL">Tệp</option>
+                <option value="WITH_FILE">Có tệp</option>
+                <option value="WITHOUT_FILE">Chưa có tệp</option>
               </select>
               <span className="whitespace-nowrap text-sm text-text-secondary">
                 {filteredBusinessDocuments.length}/{businessDocuments.length}
@@ -1543,7 +1543,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               <EmptyState title="Không có tài liệu khớp bộ lọc" description="Thử xóa bớt điều kiện lọc hoặc tìm bằng từ khóa khác." />
             ) : (
               filteredBusinessDocuments.map((document) => (
-                <div key={document.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+                <div key={document.id} className="rounded-2xl bg-bg-subtle p-4">
                   <DocumentRow document={document} />
                   {editingDocumentId === document.id ? (
                     <form className="mt-4 grid gap-3 rounded-2xl bg-bg-hover/60 p-4 md:grid-cols-2" onSubmit={handleUpdateDocument}>
@@ -1617,14 +1617,14 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
           </CardContent>
         </Card>
 
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">PDF đã tạo</p>
             <CardTitle>Tài liệu hệ thống sinh ra</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {!generatedDocuments.length ? (
-              <EmptyState title="Chưa có PDF được render" description="PDF sinh từ báo giá hoặc hợp đồng liên quan sẽ hiển thị ở đây sau khi render." />
+              <EmptyState title="Chưa có PDF được tạo" description="PDF tạo từ báo giá hoặc hợp đồng liên quan sẽ hiển thị ở đây sau khi tạo bản in." />
             ) : (
               generatedDocuments.map((document) => (
                 <GeneratedDocumentRow key={document.id} document={document} />
@@ -1641,7 +1641,7 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
   const quotes = project.quotes ?? [];
 
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Các phiên bản báo giá</p>
         <CardTitle>Báo giá liên quan</CardTitle>
@@ -1651,7 +1651,7 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
           <EmptyState title="Chưa có báo giá" description="Dự án này chưa có báo giá nào được gắn vào." />
         ) : (
           quotes.map((quote) => (
-            <article key={quote.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+            <article key={quote.id} className="rounded-2xl bg-bg-subtle p-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -1665,7 +1665,7 @@ function QuotesPanel({ project }: { project: NonNullable<ReturnType<typeof usePr
                 </div>
                 <div className="text-right">
                   <p className="font-heading text-2xl font-extrabold text-text-primary">
-                    <CurrencyDisplay amount={quote.total} short />
+                    <CurrencyDisplay amount={quote.total} />
                   </p>
                   <p className="text-sm text-text-secondary">
                     {quote.validUntil ? `Hiệu lực đến ${formatDate(quote.validUntil)}` : "Chưa đặt hạn"}
@@ -1684,7 +1684,7 @@ function ContractsPanel({ project }: { project: NonNullable<ReturnType<typeof us
   const contractStatusConfig = project.contract ? getContractStatusConfig(project.contract.status) : null;
 
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Quản lý hợp đồng</p>
         <CardTitle>Thông tin hợp đồng</CardTitle>
@@ -1701,9 +1701,9 @@ function ContractsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               </Badge>
             </div>
             <div className="grid gap-3 text-sm text-text-secondary md:grid-cols-2 xl:grid-cols-3">
-              <MiniInfo label="Giá trị hợp đồng" value={<CurrencyDisplay amount={project.contract.value} short />} />
-              <MiniInfo label="Đã thu" value={<CurrencyDisplay amount={project.contract.paidAmount} short />} />
-              <MiniInfo label="Còn lại" value={<CurrencyDisplay amount={project.contract.outstandingAmount} short />} />
+              <MiniInfo label="Giá trị hợp đồng" value={<CurrencyDisplay amount={project.contract.value} />} />
+              <MiniInfo label="Đã thu" value={<CurrencyDisplay amount={project.contract.paidAmount} />} />
+              <MiniInfo label="Còn lại" value={<CurrencyDisplay amount={project.contract.outstandingAmount} />} />
               <MiniInfo label="Ký ngày" value={project.contract.signDate ? formatDate(project.contract.signDate) : "Chưa cập nhật"} />
               <MiniInfo label="Bắt đầu" value={project.contract.startDate ? formatDate(project.contract.startDate) : "Chưa cập nhật"} />
               <MiniInfo label="Kết thúc" value={project.contract.endDate ? formatDate(project.contract.endDate) : "Chưa cập nhật"} />
@@ -1721,7 +1721,7 @@ function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof use
   const milestones = project.milestones ?? [];
 
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Lộ trình mốc</p>
         <CardTitle>Các mốc triển khai</CardTitle>
@@ -1734,7 +1734,7 @@ function DeliveryPanel({ project }: { project: NonNullable<ReturnType<typeof use
             const statusConfig = getMilestoneStatusConfig(milestone.status);
 
             return (
-              <article key={milestone.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+              <article key={milestone.id} className="rounded-2xl bg-bg-subtle p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -1812,20 +1812,20 @@ function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof use
   }
 
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="mb-0 gap-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Thu tiền</p>
         <CardTitle>Thanh toán dự án</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <form onSubmit={handleSubmit} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+        <form onSubmit={handleSubmit} className="rounded-2xl bg-bg-subtle p-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-1.5 text-sm font-semibold text-text-primary">
               <span>Nguồn thu</span>
               <select
                 value={source}
                 onChange={(event) => setSource(event.target.value)}
-                className="h-10 w-full rounded-xl border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                className="h-10 w-full rounded-xl border border-border bg-bg-card px-3 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
               >
                 {project.contract ? (
                   <option value={`contract:${project.contract.id}`}>Hợp đồng {project.contract.contractNo}</option>
@@ -1909,7 +1909,7 @@ function PaymentsPanel({ project }: { project: NonNullable<ReturnType<typeof use
 
 function MaterialsPanel({ projectId }: { projectId: string }) {
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="gap-2">
         <CardTitle>Vật tư cấp cho dự án</CardTitle>
       </CardHeader>
@@ -1922,7 +1922,7 @@ function MaterialsPanel({ projectId }: { projectId: string }) {
 
 function CostsPanel({ projectId }: { projectId: string }) {
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       <CardHeader className="gap-2">
         <CardTitle>Chi phí và lãi gộp dự án</CardTitle>
       </CardHeader>
@@ -1973,7 +1973,7 @@ function HandoverPanel({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         <CardHeader className="mb-0 gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Tính liên tục tri thức</p>
           <CardTitle>Tạo ghi chú bàn giao</CardTitle>
@@ -1992,7 +1992,7 @@ function HandoverPanel({
         </CardContent>
       </Card>
 
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         <CardHeader className="mb-0 gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Lịch sử bàn giao</p>
           <CardTitle>Lịch sử ghi chú / quyết định</CardTitle>
@@ -2002,7 +2002,7 @@ function HandoverPanel({
             <EmptyState title="Chưa có bản bàn giao" description="Lưu những điểm cần đọc trước để người phụ trách mới tiếp nhận nhanh hơn." />
           ) : (
             overview.handovers.map((handover) => (
-              <article key={handover.id} className="rounded-2xl border border-border/60 bg-white/80 p-4">
+              <article key={handover.id} className="rounded-2xl bg-bg-subtle p-4">
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <p className="font-semibold text-text-primary">Bàn giao ngày {formatDate(handover.createdAt)}</p>
                   <p className="text-sm text-text-secondary">{handover.createdBy?.name}</p>

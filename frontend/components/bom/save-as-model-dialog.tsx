@@ -147,7 +147,7 @@ export function SaveAsModelDialog({
                         productId === product.id ? "bg-primary-bg font-semibold" : ""
                       )}
                     >
-                      <span className="shrink-0 font-mono text-xs text-text-muted">{product.code}</span>
+                      <span className="shrink-0 font-sans text-xs text-text-muted">{product.code}</span>
                       <span className="flex-1 truncate text-text-primary">{product.name}</span>
                     </button>
                   ))

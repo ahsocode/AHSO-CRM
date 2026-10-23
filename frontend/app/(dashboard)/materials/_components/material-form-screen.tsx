@@ -162,7 +162,7 @@ export function MaterialFormScreen({
       />
 
       {isLoading ? (
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardContent className="space-y-4 pt-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <LoadingSkeleton key={i} className="h-10 w-full rounded-lg" />
@@ -170,7 +170,7 @@ export function MaterialFormScreen({
           </CardContent>
         </Card>
       ) : (
-        <Card className="border border-white/70">
+        <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
               {mode === "create" ? "Tạo mới" : "Chỉnh sửa"}

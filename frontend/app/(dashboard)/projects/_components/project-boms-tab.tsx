@@ -78,7 +78,7 @@ export function ProjectBomsTab({ projectId }: { projectId: string }) {
             <tbody>
               {boms.map((bom) => (
                 <tr key={bom.id} className="bg-bg-subtle" data-testid="project-bom-row">
-                  <td className="rounded-l-xl px-4 py-3 font-mono text-sm text-text-secondary">{bom.code}</td>
+                  <td className="rounded-l-xl px-4 py-3 font-sans text-sm text-text-secondary">{bom.code}</td>
                   <td className="px-4 py-3">
                     <Link
                       href={`/projects/${projectId}/boms/${bom.id}` as Route}

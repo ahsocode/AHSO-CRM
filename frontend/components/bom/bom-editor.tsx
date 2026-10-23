@@ -173,7 +173,7 @@ export function BomEditor({ bomId }: { bomId: string }) {
 
   if (bomQuery.isError || !bom) {
     return (
-      <Card className="border border-danger/20">
+      <Card className="border-0 bg-bg-card">
         <CardContent className="p-6">
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
             {getApiErrorMessage(bomQuery.error, "Không thể tải BOM.")}
@@ -204,7 +204,7 @@ export function BomEditor({ bomId }: { bomId: string }) {
         }
       />
 
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         <CardContent className="space-y-4 p-5">
           <div className="flex flex-wrap items-center gap-3">
             <BomStatusBadge status={bom.status} />
@@ -300,7 +300,7 @@ export function BomEditor({ bomId }: { bomId: string }) {
         </CardContent>
       </Card>
 
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         <CardHeader className="mb-0 gap-2">
           <CardTitle>Tổng dự kiến theo nhóm</CardTitle>
         </CardHeader>
@@ -328,7 +328,7 @@ export function BomEditor({ bomId }: { bomId: string }) {
         </CardContent>
       </Card>
 
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         <CardHeader className="mb-0 gap-2">
           <CardTitle>Danh sách dòng ({rows.length})</CardTitle>
         </CardHeader>

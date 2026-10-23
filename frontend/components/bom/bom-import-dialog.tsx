@@ -308,7 +308,7 @@ export function BomImportDialog({
                           <tr key={row.sourceRow} className={match ? "" : "bg-warning-bg/60"}>
                             <td className="px-2 py-1.5 text-text-muted">{row.sourceRow}</td>
                             <td className="px-2 py-1.5">{COST_GROUP_LABELS[row.group]}</td>
-                            <td className="px-2 py-1.5 font-mono">{row.code || "—"}</td>
+                            <td className="px-2 py-1.5 font-sans">{row.code || "—"}</td>
                             <td className="px-2 py-1.5">{row.name}</td>
                             <td className="px-2 py-1.5">{row.unit}</td>
                             <td className="px-2 py-1.5 text-right tabular-nums">{row.quantity}</td>

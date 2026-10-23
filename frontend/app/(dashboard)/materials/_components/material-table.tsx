@@ -50,7 +50,7 @@ export function MaterialTable({
 
   if (isLoading) {
     return (
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         {ledgerHeader}
         <CardContent className="space-y-4">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -63,7 +63,7 @@ export function MaterialTable({
 
   if (isError) {
     return (
-      <Card className="border border-danger/20">
+      <Card className="border-0 bg-bg-card">
         {ledgerHeader}
         <CardContent>
           <div className="rounded-xl bg-danger-bg/70 p-4 text-sm text-danger">
@@ -76,7 +76,7 @@ export function MaterialTable({
 
   if (items.length === 0) {
     return (
-      <Card className="border border-white/70">
+      <Card className="border-0 bg-bg-card">
         {ledgerHeader}
         <CardContent>
           <EmptyState
@@ -89,7 +89,7 @@ export function MaterialTable({
   }
 
   return (
-    <Card className="border border-white/70">
+    <Card className="border-0 bg-bg-card">
       {ledgerHeader}
 
       <CardContent>
@@ -98,7 +98,7 @@ export function MaterialTable({
           {items.map((material) => (
             <article
               key={material.id}
-              className="cursor-pointer rounded-2xl border border-border/60 bg-white/80 p-4 hover:bg-primary-bg/40"
+              className="cursor-pointer rounded-2xl bg-bg-subtle p-4 hover:bg-primary-bg/40"
               onClick={() => router.push(`/materials/${material.id}` as Route)}
             >
               <div className="flex items-start justify-between gap-2">
@@ -181,8 +181,8 @@ function MaterialRow({ material }: { material: MaterialListItem }) {
   }
 
   return (
-    <tr className="bg-white/80 shadow-sm">
-      <td className="rounded-l-xl px-4 py-3 text-sm font-mono text-text-secondary">
+    <tr className="bg-bg-subtle shadow-sm">
+      <td className="rounded-l-xl px-4 py-3 text-sm font-sans text-text-secondary">
         {material.code}
       </td>
       <td className="px-4 py-3">
@@ -209,7 +209,7 @@ function MaterialRow({ material }: { material: MaterialListItem }) {
         <CurrencyDisplay amount={material.salePrice} short />
       </td>
       <td className="px-4 py-3 text-sm text-text-secondary">
-        <CurrencyDisplay amount={material.costPrice} short />
+        <CurrencyDisplay amount={material.costPrice} />
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">

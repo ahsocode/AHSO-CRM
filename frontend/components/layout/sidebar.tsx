@@ -27,9 +27,9 @@ export function Sidebar() {
       : visibleItems;
 
   return (
-    <aside className="hidden border-border-light bg-white/92 text-text-primary shadow-[1px_0_12px_rgba(0,59,90,0.06)] backdrop-blur-xl print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-[220px] md:min-w-[220px] md:flex-col md:overflow-y-auto md:border-r">
+    <aside className="hidden bg-bg-card/95 text-text-primary shadow-sm backdrop-blur-xl print:hidden md:sticky md:top-0 md:flex md:h-screen md:w-[220px] md:min-w-[220px] md:flex-col md:overflow-y-auto">
       <div className="flex h-14 items-center gap-3 px-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg shadow-[0_4px_12px_rgba(0,59,90,0.20)]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg shadow-md">
           <Image src="/crm-logo.png" alt="AHSO CRM" width={36} height={36} className="h-full w-full object-contain" />
         </div>
         <div className="min-w-0">
@@ -39,7 +39,7 @@ export function Sidebar() {
 
       <nav className="flex min-w-max gap-2 px-3 py-3 md:min-w-0 md:flex-col md:gap-1">
         <p className="hidden px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-text-muted md:block">
-          Menu chính
+          Danh mục chính
         </p>
         {navItems.map((item) => {
           const isActive = pathname === item.href ||
@@ -53,17 +53,17 @@ export function Sidebar() {
               key={item.href}
               href={item.href as Route}
               className={cn(
-                "group flex items-center gap-2.5 rounded-lg border-l-[3px] px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 md:mx-0",
+                "group flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 md:mx-0",
                 isActive
-                  ? "border-primary bg-primary-bg text-primary"
-                  : "border-transparent text-text-secondary hover:bg-bg-subtle hover:text-primary-mid"
+                  ? "bg-primary-bg text-primary"
+                  : "text-text-secondary hover:bg-bg-subtle hover:text-primary-mid"
               )}
             >
               <div
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-md transition-all",
                   isActive
-                    ? "bg-primary text-white"
+                    ? "bg-primary text-text-sidebar"
                     : "bg-bg-hover text-text-secondary group-hover:text-primary-mid"
                 )}
               >
@@ -79,8 +79,7 @@ export function Sidebar() {
       </nav>
 
       <div className="hidden px-3 pb-4 md:mt-auto md:block">
-        <div className="mb-3 h-px bg-border-light" />
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-bg-subtle">
+        <div className="mt-3 flex items-center gap-3 rounded-lg bg-bg-subtle px-3 py-2 transition hover:bg-bg-hover">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-bg text-xs font-bold text-primary">
             {(user?.name ?? "AHSO")
               .split(" ")

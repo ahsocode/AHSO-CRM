@@ -7,7 +7,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { useMaterials } from "@/hooks/use-materials";
 import { apiClient, getApiErrorMessage } from "@/lib/api-client";
-import type { MaterialListItem } from "@/lib/types";
+import { MATERIAL_KIND_LABELS } from "@/lib/constants";
+import type { MaterialKind, MaterialListItem } from "@/lib/types";
 import { cn, downloadExcelRows } from "@/lib/utils";
 import { toast } from "sonner";
 import { MaterialFilters } from "./material-filters";
@@ -19,6 +20,7 @@ const PAGE_SIZE = 10;
 export function MaterialsClient() {
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [kind, setKind] = useState<MaterialKind | "">("");
   const [isActive, setIsActive] = useState<boolean | undefined>(undefined);
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [page, setPage] = useState(1);
@@ -33,6 +35,7 @@ export function MaterialsClient() {
           page: 1, limit: 9999,
           search: deferredSearch || undefined,
           categoryId: categoryId || undefined,
+          kind: kind || undefined,
           isActive,
           lowStockOnly: lowStockOnly || undefined,
         },
@@ -42,6 +45,7 @@ export function MaterialsClient() {
       const rows = items.map((m) => ({
         "Mã vật tư": m.code,
         "Tên vật tư": m.name,
+        "Loại": MATERIAL_KIND_LABELS[m.kind] ?? "",
         "Nhóm": m.category?.name ?? "",
         "Đơn vị tính": m.unit,
         "Giá bán": m.salePrice,
@@ -61,20 +65,21 @@ export function MaterialsClient() {
 
   useEffect(() => {
     setPage(1);
-  }, [deferredSearch, categoryId, isActive, lowStockOnly]);
+  }, [deferredSearch, categoryId, kind, isActive, lowStockOnly]);
 
   const materialsQuery = useMaterials({
     page,
     limit: PAGE_SIZE,
     search: deferredSearch || undefined,
     categoryId: categoryId || undefined,
+    kind: kind || undefined,
     isActive,
     lowStockOnly: lowStockOnly || undefined,
   });
 
   const items = materialsQuery.data?.items ?? [];
   const canReset =
-    search.length > 0 || categoryId.length > 0 || isActive !== undefined || lowStockOnly;
+    search.length > 0 || categoryId.length > 0 || kind !== "" || isActive !== undefined || lowStockOnly;
 
   return (
     <div className="space-y-8">
@@ -117,16 +122,19 @@ export function MaterialsClient() {
           <MaterialFilters
             search={search}
             categoryId={categoryId}
+            kind={kind}
             isActive={isActive}
             lowStockOnly={lowStockOnly}
             canReset={canReset}
             onSearchChange={setSearch}
             onCategoryChange={setCategoryId}
+            onKindChange={setKind}
             onIsActiveChange={setIsActive}
             onLowStockOnlyChange={setLowStockOnly}
             onReset={() => {
               setSearch("");
               setCategoryId("");
+              setKind("");
               setIsActive(undefined);
               setLowStockOnly(false);
               setPage(1);

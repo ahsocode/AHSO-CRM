@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useDeleteMaterial } from "@/hooks/use-materials";
-import { formatDate } from "@/lib/format";
+import { MATERIAL_KIND_LABELS } from "@/lib/constants";
 import type { MaterialListItem, MaterialListMeta } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -112,6 +112,7 @@ export function MaterialTable({
                   <Badge variant={material.isActive ? "success" : "neutral"}>
                     {material.isActive ? "Hoạt động" : "Ngưng"}
                   </Badge>
+                  <Badge variant="neutral">{MATERIAL_KIND_LABELS[material.kind] ?? "—"}</Badge>
                   {material.isLowStock ? (
                     <Badge variant="warning">Tồn thấp</Badge>
                   ) : null}
@@ -137,6 +138,7 @@ export function MaterialTable({
                 <th className="px-4 py-2">Mã VT</th>
                 <th className="px-4 py-2">Tên vật tư</th>
                 <th className="px-4 py-2">Đơn vị</th>
+                <th className="px-4 py-2">Loại</th>
                 <th className="px-4 py-2">Nhóm</th>
                 <th className="px-4 py-2">Giá bán</th>
                 <th className="px-4 py-2">Giá nhập</th>
@@ -195,6 +197,11 @@ function MaterialRow({ material }: { material: MaterialListItem }) {
         ) : null}
       </td>
       <td className="px-4 py-3 text-sm text-text-secondary">{material.unit}</td>
+      <td className="px-4 py-3">
+        <Badge variant={material.kind === "PRODUCT" ? "info" : material.kind === "SERVICE" ? "warning" : "neutral"}>
+          {MATERIAL_KIND_LABELS[material.kind] ?? "—"}
+        </Badge>
+      </td>
       <td className="px-4 py-3 text-sm text-text-secondary">
         {material.category?.name ?? "—"}
       </td>

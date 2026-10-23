@@ -2,285 +2,77 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import { usePermission } from "@/components/shared/permission-gate";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  useConfirmProjectMaterialAllocation,
-  useEligibleStockLots,
-  useProject,
-  useProjectMaterialAllocation,
-  useSaveProjectMaterialAllocation
-} from "@/hooks/use-projects";
+import { useProjectMaterialAllocations } from "@/hooks/use-project-costs";
 import { useStockIssues } from "@/hooks/use-stock-issues";
-import { toast } from "@/hooks/use-toast";
-import { getApiErrorMessage } from "@/lib/api-client";
 import { STOCK_DOC_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatVND } from "@/lib/format";
+import type { ProjectMaterialAllocation } from "@/lib/types";
+import { AllocationBatchCard } from "./project-finance/allocation-batch-card";
+import { AllocationBatchEditor } from "./project-finance/allocation-batch-editor";
 
-type AllocationRow = {
-  stockLotId: string;
-  quantity: number;
-};
+type EditorState = { mode: "new" } | { mode: "edit"; allocation: ProjectMaterialAllocation } | null;
 
 export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
-  const projectQuery = useProject(projectId);
-  const allocationQuery = useProjectMaterialAllocation(projectId);
+  const allocationsQuery = useProjectMaterialAllocations(projectId);
   const issues = useStockIssues({ projectId, status: "CONFIRMED", limit: 50, page: 1 });
-  const saveAllocation = useSaveProjectMaterialAllocation(projectId);
-  const confirmAllocation = useConfirmProjectMaterialAllocation(projectId);
+  const canEdit = usePermission("projects.edit");
+  const [editor, setEditor] = useState<EditorState>(null);
 
-  const project = projectQuery.data;
-  const allocation = allocationQuery.data;
-  const salesInvoiceDate = project?.salesInvoiceDate?.slice(0, 10) ?? allocation?.salesInvoiceDate?.slice(0, 10) ?? "";
-  const eligibleLots = useEligibleStockLots(projectId, salesInvoiceDate);
-  const [rows, setRows] = useState<AllocationRow[]>([]);
-  const [notes, setNotes] = useState("");
-
-  useEffect(() => {
-    if (!allocation) return;
-    setRows(allocation.items.map((item) => ({ stockLotId: item.stockLotId, quantity: item.quantity })));
-    setNotes(allocation.notes ?? "");
-  }, [allocation]);
-
-  const lotById = useMemo(() => {
-    const map = new Map((eligibleLots.data ?? []).map((lot) => [lot.id, lot]));
-    allocation?.items.forEach((item) => {
-      if (!map.has(item.stockLotId)) {
-        map.set(item.stockLotId, {
-          id: item.stockLotId,
-          warehouseId: item.warehouseId,
-          warehouse: item.warehouse,
-          materialId: item.materialId,
-          material: item.material,
-          receipt: item.receipt,
-          purchaseInvoiceDate: item.purchaseInvoiceDate,
-          purchaseInvoiceNo: item.purchaseInvoiceNo,
-          receivedQuantity: item.quantity,
-          remainingQuantity: item.remainingQuantity,
-          unitPrice: item.unitPrice,
-          value: item.total
-        });
-      }
-    });
-    return map;
-  }, [allocation?.items, eligibleLots.data]);
-
+  const allocations = allocationsQuery.data ?? [];
   const issueItems = issues.data?.items ?? [];
-  const totalIssuedValue = issueItems.reduce((s, i) => s + i.totalAmount, 0);
-  const totalDraftValue = rows.reduce((sum, row) => {
-    const lot = lotById.get(row.stockLotId);
-    return sum + Math.round((Number(row.quantity) || 0) * (lot?.unitPrice ?? 0));
-  }, 0);
-  const isCompleted = project?.status === "COMPLETED";
-  const isConfirmed = allocation?.status === "CONFIRMED";
-  const isBusy = saveAllocation.isPending || confirmAllocation.isPending;
+  const totalIssuedValue = issueItems.reduce((sum, issue) => sum + issue.totalAmount, 0);
+  const confirmedTotal = allocations
+    .filter((allocation) => allocation.status === "CONFIRMED")
+    .reduce((sum, allocation) => sum + allocation.totalAmount, 0);
 
-  if (projectQuery.isLoading || allocationQuery.isLoading || issues.isLoading) {
+  if (allocationsQuery.isLoading || issues.isLoading) {
     return <div className="p-4 text-sm text-text-secondary">Đang tải...</div>;
-  }
-
-  async function handleSave() {
-    if (!salesInvoiceDate) {
-      toast({ title: "Thiếu ngày hóa đơn bán ra", variant: "destructive" });
-      return;
-    }
-    const items = rows.filter((row) => row.stockLotId && Number(row.quantity) > 0);
-    if (!items.length) {
-      toast({ title: "Chưa chọn lô vật tư", variant: "destructive" });
-      return;
-    }
-
-    try {
-      await saveAllocation.mutateAsync({ salesInvoiceDate, notes: notes || undefined, items });
-      toast("Đã lưu phân bổ vật tư.");
-    } catch (error) {
-      toast({
-        title: "Không thể lưu phân bổ",
-        description: getApiErrorMessage(error, "Kiểm tra lại lô nhập và số lượng."),
-        variant: "destructive"
-      });
-    }
-  }
-
-  async function handleConfirm() {
-    try {
-      await confirmAllocation.mutateAsync();
-      toast("Đã xác nhận phân bổ và xuất kho cho dự án.");
-    } catch (error) {
-      toast({
-        title: "Không thể xác nhận phân bổ",
-        description: getApiErrorMessage(error, "Kiểm tra tồn lô và ngày hóa đơn bán ra."),
-        variant: "destructive"
-      });
-    }
   }
 
   return (
     <div className="space-y-6">
-      {isCompleted ? (
-        <div className="space-y-4 rounded-xl border border-border/60 bg-white/80 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Phân bổ vật tư</p>
-              <h3 className="mt-1 font-heading text-lg font-bold text-text-primary">
-                {isConfirmed ? "Đã xác nhận phân bổ" : allocation ? "Phân bổ nháp" : "Chưa phân bổ vật tư"}
-              </h3>
-              <p className="mt-1 text-sm text-text-secondary">
-                Ngày hóa đơn bán ra: {salesInvoiceDate ? formatDate(salesInvoiceDate) : "Chưa ghi nhận"}
-              </p>
-            </div>
-            <div className="text-right text-sm">
-              <p className="text-text-secondary">Giá trị phân bổ</p>
-              <p className="font-heading text-xl font-bold text-primary">
-                {formatVND(allocation?.totalAmount ?? totalDraftValue)}
-              </p>
-            </div>
-          </div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Đợt phân bổ giá vốn</p>
+          <p className="mt-1 text-sm text-text-secondary">
+            Mỗi đợt ứng với một hóa đơn bán ra. Giá vốn đã xác nhận:{" "}
+            <span className="font-semibold text-primary">{formatVND(confirmedTotal)}</span>
+          </p>
+        </div>
+        {canEdit && editor === null ? (
+          <Button type="button" onClick={() => setEditor({ mode: "new" })}>
+            Tạo đợt phân bổ
+          </Button>
+        ) : null}
+      </div>
 
-          {!salesInvoiceDate ? (
-            <div className="rounded-lg bg-warning-bg/80 px-4 py-3 text-sm text-warning">
-              Dự án hoàn thành nhưng chưa có ngày hóa đơn bán ra. Hãy cập nhật dự án trước khi phân bổ vật tư.
-            </div>
-          ) : null}
+      {editor ? (
+        <AllocationBatchEditor
+          key={editor.mode === "edit" ? editor.allocation.id : "new"}
+          projectId={projectId}
+          allocation={editor.mode === "edit" ? editor.allocation : undefined}
+          onClose={() => setEditor(null)}
+        />
+      ) : null}
 
-          {!isConfirmed ? (
-            <>
-              <div className="space-y-3">
-                {rows.length === 0 ? (
-                  <div className="rounded-lg bg-bg-subtle px-4 py-6 text-center text-sm text-text-secondary">
-                    Chọn lô nhập hợp lệ để phân bổ cho dự án.
-                  </div>
-                ) : (
-                  rows.map((row, index) => {
-                    const lot = lotById.get(row.stockLotId);
-                    // Lot not in eligible list means it's no longer available (fully consumed or date mismatch)
-                    const isLotUnavailable = row.stockLotId !== "" && !eligibleLots.data?.some(l => l.id === row.stockLotId);
-                    return (
-                      <div key={index} className="grid gap-3 rounded-lg border border-border/50 p-3 lg:grid-cols-[1fr_140px_84px]">
-                        <Select
-                          value={row.stockLotId}
-                          onChange={(event) => {
-                            const nextLot = lotById.get(event.target.value);
-                            setRows((current) =>
-                              current.map((item, rowIndex) =>
-                                rowIndex === index
-                                  ? { stockLotId: event.target.value, quantity: Math.min(item.quantity || 1, nextLot?.remainingQuantity ?? 1) }
-                                  : item
-                              )
-                            );
-                          }}
-                        >
-                          <option value="">Chọn lô nhập...</option>
-                          {(eligibleLots.data ?? []).map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.material.code} - {option.material.name} | {option.warehouse.name} | {formatDate(option.purchaseInvoiceDate)} | còn {option.remainingQuantity} {option.material.unit}
-                            </option>
-                          ))}
-                        </Select>
-                        <Input
-                          type="number"
-                          min={0.001}
-                          step="0.001"
-                          max={isLotUnavailable ? undefined : lot?.remainingQuantity}
-                          disabled={isLotUnavailable}
-                          value={row.quantity || ""}
-                          onChange={(event) => {
-                            const quantity = Number(event.target.value);
-                            setRows((current) =>
-                              current.map((item, rowIndex) => (rowIndex === index ? { ...item, quantity } : item))
-                            );
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setRows((current) => current.filter((_, rowIndex) => rowIndex !== index))}
-                        >
-                          Xóa
-                        </Button>
-                        {isLotUnavailable ? (
-                          <div className="text-xs text-danger lg:col-span-3">
-                            ⚠️ Lô này không còn trong danh sách hợp lệ (đã hết tồn hoặc sai ngày) — xóa và chọn lô khác.
-                          </div>
-                        ) : lot ? (
-                          <div className="text-xs text-text-secondary lg:col-span-3">
-                            {lot.receipt ? `Phiếu nhập ${lot.receipt.receiptNo}` : "Lô điều chỉnh kiểm kê"}
-                            {lot.purchaseInvoiceNo ? ` · HĐ mua ${lot.purchaseInvoiceNo}` : ""}
-                            {" · "}
-                            {lot.warehouse.name} · Đơn giá {formatVND(lot.unitPrice)} · Còn {lot.remainingQuantity} {lot.material.unit}
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!salesInvoiceDate || eligibleLots.isLoading}
-                  onClick={() => setRows((current) => [...current, { stockLotId: "", quantity: 1 }])}
-                >
-                  Thêm lô vật tư
-                </Button>
-                <Button type="button" disabled={isBusy || !salesInvoiceDate} onClick={handleSave}>
-                  Lưu phân bổ nháp
-                </Button>
-                {allocation?.status === "DRAFT" ? (
-                  <Button type="button" disabled={isBusy} onClick={handleConfirm}>
-                    Xác nhận xuất kho
-                  </Button>
-                ) : null}
-              </div>
-
-              <Textarea
-                value={notes}
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Ghi chú phân bổ vật tư"
-              />
-            </>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="border-b border-border/60 text-left text-text-secondary">
-                <tr>
-                  <th className="pb-2 pr-4">Vật tư</th>
-                  <th className="pb-2 pr-4">Lô nhập</th>
-                  <th className="pb-2 pr-4">Kho</th>
-                  <th className="pb-2 pr-4 text-right">Số lượng</th>
-                  <th className="pb-2 text-right">Giá trị</th>
-                </tr>
-              </thead>
-              <tbody>
-                {allocation.items.map((item) => (
-                  <tr key={item.id} className="border-b border-border/30">
-                    <td className="py-2 pr-4">
-                      <p className="font-semibold text-text-primary">{item.material.name}</p>
-                      <p className="text-xs text-text-secondary">{item.material.code}</p>
-                    </td>
-                    <td className="py-2 pr-4">
-                      {item.receipt?.receiptNo ?? "Lô điều chỉnh kiểm kê"}
-                      <p className="text-xs text-text-secondary">
-                        {formatDate(item.purchaseInvoiceDate)}
-                        {item.purchaseInvoiceNo ? ` · ${item.purchaseInvoiceNo}` : ""}
-                      </p>
-                    </td>
-                    <td className="py-2 pr-4">{item.warehouse.name}</td>
-                    <td className="py-2 pr-4 text-right">{item.quantity} {item.material.unit}</td>
-                    <td className="py-2 text-right">{formatVND(item.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      {allocations.length === 0 ? (
+        <div className="rounded-lg bg-bg-subtle px-4 py-6 text-center text-sm text-text-secondary">
+          Chưa có đợt phân bổ vật tư nào cho dự án này.
         </div>
       ) : (
-        <div className="rounded-lg bg-bg-subtle px-4 py-3 text-sm text-text-secondary">
-          Dự án chưa hoàn thành. Phân bổ vật tư sẽ mở sau khi chuyển dự án sang Hoàn thành.
+        <div className="space-y-4">
+          {allocations.map((allocation) => (
+            <AllocationBatchCard
+              key={allocation.id}
+              projectId={projectId}
+              allocation={allocation}
+              canEdit={canEdit}
+              onEdit={(target) => setEditor({ mode: "edit", allocation: target })}
+            />
+          ))}
         </div>
       )}
 
@@ -297,7 +89,7 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
         </div>
       ) : (
         <table className="w-full text-sm">
-          <thead className="border-b border-border/60 text-left text-text-secondary">
+          <thead className="text-left text-text-secondary">
             <tr>
               <th className="pb-2 pr-4">Số phiếu</th>
               <th className="pb-2 pr-4">Ngày</th>
@@ -308,7 +100,7 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
           </thead>
           <tbody>
             {issueItems.map((issue) => (
-              <tr key={issue.id} className="border-b border-border/30">
+              <tr key={issue.id} className="odd:bg-bg-subtle">
                 <td className="py-2 pr-4">
                   <Link href={`/inventory/issues/${issue.id}` as Route} className="text-primary hover:underline">
                     {issue.issueNo}

@@ -4,6 +4,7 @@ export const materialFormSchema = z.object({
   code: z.string().trim().min(1, "Mã vật tư là bắt buộc").max(40),
   name: z.string().trim().min(2, "Tên vật tư phải có ít nhất 2 ký tự").max(200),
   unit: z.string().trim().min(1, "Đơn vị tính là bắt buộc").max(40),
+  kind: z.enum(["STOCK", "SERVICE", "PRODUCT"]).default("STOCK"),
   salePrice: z.coerce.number().min(0, "Giá bán không được âm").default(0),
   costPrice: z.coerce.number().min(0, "Giá nhập không được âm").default(0),
   minStock: z.coerce.number().min(0).optional(),

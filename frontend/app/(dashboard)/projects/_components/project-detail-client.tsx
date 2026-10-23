@@ -52,6 +52,7 @@ import {
   SurveyNoteType
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ProjectCostsTab } from "./project-costs-tab";
 import { ProjectMaterialsTab } from "./project-materials-tab";
 import {
   DOCUMENT_GROUPS,
@@ -333,6 +334,7 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       {activeTab === "delivery" ? <DeliveryPanel project={project} /> : null}
       {activeTab === "payments" ? <PaymentsPanel project={project} /> : null}
       {activeTab === "materials" ? <MaterialsPanel projectId={projectId} /> : null}
+      {activeTab === "costs" ? <CostsPanel projectId={projectId} /> : null}
       {activeTab === "handover" ? <HandoverPanel project={project} overview={overview} /> : null}
     </div>
   );
@@ -1906,6 +1908,19 @@ function MaterialsPanel({ projectId }: { projectId: string }) {
       </CardHeader>
       <CardContent>
         <ProjectMaterialsTab projectId={projectId} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function CostsPanel({ projectId }: { projectId: string }) {
+  return (
+    <Card className="border border-white/70">
+      <CardHeader className="gap-2">
+        <CardTitle>Chi phí và lãi gộp dự án</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ProjectCostsTab projectId={projectId} />
       </CardContent>
     </Card>
   );

@@ -4,27 +4,33 @@ import { AppIcon } from "@/components/shared/app-icon";
 import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { MATERIAL_KIND_LABELS } from "@/lib/constants";
+import type { MaterialKind } from "@/lib/types";
 import { MaterialCategorySelect } from "./material-category-select";
 
 export function MaterialFilters({
   search,
   categoryId,
+  kind,
   isActive,
   lowStockOnly,
   canReset,
   onSearchChange,
   onCategoryChange,
+  onKindChange,
   onIsActiveChange,
   onLowStockOnlyChange,
   onReset,
 }: {
   search: string;
   categoryId: string;
+  kind: MaterialKind | "";
   isActive: boolean | undefined;
   lowStockOnly: boolean;
   canReset: boolean;
   onSearchChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
+  onKindChange: (value: MaterialKind | "") => void;
   onIsActiveChange: (value: boolean | undefined) => void;
   onLowStockOnlyChange: (value: boolean) => void;
   onReset: () => void;
@@ -48,6 +54,23 @@ export function MaterialFilters({
           onChange={onCategoryChange}
           placeholder="Nhóm"
         />
+      </label>
+
+      <label className="w-[150px]" htmlFor="material-kind-filter">
+        <span className="sr-only">Loại vật tư</span>
+        <Select
+          id="material-kind-filter"
+          value={kind}
+          onChange={(e) => onKindChange(e.target.value as MaterialKind | "")}
+          className="h-9 rounded-lg bg-white text-[12.5px]"
+        >
+          <option value="">Loại</option>
+          {(Object.keys(MATERIAL_KIND_LABELS) as MaterialKind[]).map((key) => (
+            <option key={key} value={key}>
+              {MATERIAL_KIND_LABELS[key]}
+            </option>
+          ))}
+        </Select>
       </label>
 
       <label className="w-[128px]" htmlFor="material-active">

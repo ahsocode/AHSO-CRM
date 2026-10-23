@@ -12,6 +12,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateMaterial,
@@ -19,6 +20,7 @@ import {
   useUpdateMaterial,
 } from "@/hooks/use-materials";
 import { getApiErrorMessage } from "@/lib/api-client";
+import { MATERIAL_KIND_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { materialFormSchema, type MaterialFormValues } from "./form-schemas";
@@ -74,6 +76,7 @@ export function MaterialFormScreen({
       code: "",
       name: "",
       unit: "",
+      kind: "STOCK",
       salePrice: 0,
       costPrice: 0,
       minStock: undefined,
@@ -90,6 +93,7 @@ export function MaterialFormScreen({
         code: m.code,
         name: m.name,
         unit: m.unit,
+        kind: m.kind ?? "STOCK",
         salePrice: m.salePrice,
         costPrice: m.costPrice,
         minStock: m.minStock ?? undefined,
@@ -211,6 +215,18 @@ export function MaterialFormScreen({
                     {...form.register("unit")}
                   />
                   <ErrorText message={form.formState.errors.unit?.message} />
+                </Field>
+
+                <Field>
+                  <Label htmlFor="material-kind">Loại</Label>
+                  <Select id="material-kind" {...form.register("kind")}>
+                    {(Object.keys(MATERIAL_KIND_LABELS) as Array<keyof typeof MATERIAL_KIND_LABELS>).map((key) => (
+                      <option key={key} value={key}>
+                        {MATERIAL_KIND_LABELS[key]}
+                      </option>
+                    ))}
+                  </Select>
+                  <ErrorText message={form.formState.errors.kind?.message} />
                 </Field>
 
                 <Field>

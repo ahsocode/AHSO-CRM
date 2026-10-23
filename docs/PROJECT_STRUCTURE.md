@@ -117,7 +117,12 @@ Luật chuyển trạng thái:
 | `StockIssue` / `StockIssueItem` | Phiếu xuất, có thể gắn project |
 | `StockTransfer` / `StockTransferItem` | Chuyển kho |
 | `StockCount` / `StockCountItem` | Kiểm kê, điều chỉnh lệch |
-| `ProjectMaterialAllocation` / `ProjectMaterialAllocationItem` | Phân bổ lô vật tư vào dự án |
+| `ProjectMaterialAllocation` / `ProjectMaterialAllocationItem` | Phân bổ lô vật tư vào dự án — nhiều đợt / dự án, mỗi đợt = 1 hóa đơn bán (`salesInvoiceNo`); item có thể gắn `bomLineId` |
+| `Material.kind` (`MaterialKind`) | STOCK hàng tồn kho · SERVICE dịch vụ/phần mềm · PRODUCT thành phẩm (máy) |
+| `Bom` / `BomLine` | Định mức vật tư: BOM dự án (dự toán) hoặc mẫu máy (MODEL, có phiên bản); dòng có thể là BOM con. `QuoteItem.bomId` → giá vốn dự kiến nội bộ |
+| `ProjectCost` | Chi phí trực tiếp không qua kho (phần mềm, gia công, nhân công…), cùng quy tắc ngày hóa đơn |
+
+Chi tiết nghiệp vụ BOM: `docs/BOM_SPEC.md`.
 
 Luật tồn kho:
 

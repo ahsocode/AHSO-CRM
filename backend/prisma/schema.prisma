@@ -47,6 +47,8 @@ model User {
   agentActionsRequested            AgentAction[]             @relation("AgentActionRequestedBy")
   agentActionsReviewed             AgentAction[]             @relation("AgentActionReviewedBy")
   webhooksCreated                  Webhook[]                 @relation("WebhookCreatedBy")
+  bomsCreated                      Bom[]                     @relation("BomCreatedBy")
+  projectCostsCreated              ProjectCost[]             @relation("ProjectCostCreatedBy")
 }
 
 model UserSession {
@@ -227,38 +229,40 @@ model Contact {
 }
 
 model Project {
-  id                String             @id @default(cuid())
-  code              String             @unique @default(cuid())
-  name              String
-  description       String?
-  status            ProjectStatus      @default(SURVEY)
+  id                   String                       @id @default(cuid())
+  code                 String                       @unique @default(cuid())
+  name                 String
+  description          String?
+  status               ProjectStatus                @default(SURVEY)
   // Thời điểm chuyển stage gần nhất — chỉ báo "deal ứ đọng" trên Kanban
-  stageChangedAt    DateTime           @default(now())
-  priority          Priority           @default(NORMAL)
-  estimatedValue    Decimal?           @db.Decimal(15, 0)
-  startDate         DateTime?
-  expectedEndDate   DateTime?
-  completedAt       DateTime?
-  salesInvoiceDate  DateTime?
-  notes             String?
-  deletedAt         DateTime?
-  customer          Customer           @relation(fields: [customerId], references: [id])
-  customerId        String
-  contact           Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  contactId         String?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  quotes            Quote[]
-  contract          Contract?
-  activities        Activity[]
-  milestones        Milestone[]
-  businessDocuments BusinessDocument[]
-  surveys           Survey[]
-  handovers         ProjectHandover[]
+  stageChangedAt       DateTime                     @default(now())
+  priority             Priority                     @default(NORMAL)
+  estimatedValue       Decimal?                     @db.Decimal(15, 0)
+  startDate            DateTime?
+  expectedEndDate      DateTime?
+  completedAt          DateTime?
+  salesInvoiceDate     DateTime?
+  notes                String?
+  deletedAt            DateTime?
+  customer             Customer                     @relation(fields: [customerId], references: [id])
+  customerId           String
+  contact              Contact?                     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId            String?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  quotes               Quote[]
+  contract             Contract?
+  activities           Activity[]
+  milestones           Milestone[]
+  businessDocuments    BusinessDocument[]
+  surveys              Survey[]
+  handovers            ProjectHandover[]
   documentRequirements ProjectDocumentRequirement[]
-  stockIssues       StockIssue[]
-  materialAllocations ProjectMaterialAllocation[]
-  payments          Payment[]
+  stockIssues          StockIssue[]
+  materialAllocations  ProjectMaterialAllocation[]
+  payments             Payment[]
+  boms                 Bom[]
+  costs                ProjectCost[]
 
   @@index([customerId, deletedAt])
   @@index([status, deletedAt])
@@ -314,22 +318,26 @@ model Quote {
 }
 
 model QuoteItem {
-  id          String    @id @default(cuid())
-  order       Int
-  name        String
-  description String?
-  unit        String?
-  quantity    Decimal   @db.Decimal(10, 2)
-  unitPrice   Decimal   @db.Decimal(15, 0)
-  total       Decimal   @db.Decimal(15, 0)
-  quote       Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  quoteId     String
-  material    Material? @relation(fields: [materialId], references: [id])
-  materialId  String?
+  id            String         @id @default(cuid())
+  order         Int
+  name          String
+  description   String?
+  unit          String?
+  quantity      Decimal        @db.Decimal(10, 2)
+  unitPrice     Decimal        @db.Decimal(15, 0)
+  total         Decimal        @db.Decimal(15, 0)
+  quote         Quote          @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId       String
+  material      Material?      @relation(fields: [materialId], references: [id])
+  materialId    String?
+  // Internal cost breakdown of this line (e.g. "Máy dán nhãn × 1"); never printed.
+  bom           Bom?           @relation(fields: [bomId], references: [id], onDelete: SetNull)
+  bomId         String?
   contractItems ContractItem[]
 
   @@index([quoteId, order])
   @@index([materialId])
+  @@index([bomId])
 }
 
 enum QuoteStatus {
@@ -365,20 +373,20 @@ model Contract {
 }
 
 model ContractItem {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   order       Int
   name        String
   description String?
   unit        String?
-  quantity    Decimal   @db.Decimal(10, 2)
-  unitPrice   Decimal   @db.Decimal(15, 0)
-  total       Decimal   @db.Decimal(15, 0)
-  contract    Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  quantity    Decimal    @db.Decimal(10, 2)
+  unitPrice   Decimal    @db.Decimal(15, 0)
+  total       Decimal    @db.Decimal(15, 0)
+  contract    Contract   @relation(fields: [contractId], references: [id], onDelete: Cascade)
   contractId  String
   quoteItem   QuoteItem? @relation(fields: [quoteItemId], references: [id], onDelete: SetNull)
   quoteItemId String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@index([contractId, order])
   @@index([quoteItemId])
@@ -827,8 +835,8 @@ model Document {
 
 model ProjectDocumentRequirement {
   id         String       @id @default(cuid())
-  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  projectId String
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String
   type       DocumentType
   isRequired Boolean      @default(true)
   createdAt  DateTime     @default(now())
@@ -874,6 +882,127 @@ enum ProjectMaterialAllocationStatus {
   CANCELLED
 }
 
+// ─── BOM (định mức vật tư) — see docs/BOM_SPEC.md ─────────────────────────────
+
+enum MaterialKind {
+  STOCK // Hàng tồn kho — goes through warehouses / stock lots
+  SERVICE // Dịch vụ, phần mềm, nhân công, gia công thuê ngoài — never stocked
+  PRODUCT // Thành phẩm (máy) — may own MODEL BOMs
+}
+
+enum BomKind {
+  PROJECT // Dự toán / BOM thực tế của một dự án
+  MODEL // BOM chuẩn của một mẫu máy (versioned)
+}
+
+enum BomStatus {
+  DRAFT
+  APPROVED // locked: edits require a new version
+  ARCHIVED
+}
+
+enum CostGroup {
+  MECHANICAL // Cơ khí
+  ELECTRICAL // Điện – điều khiển
+  VISION // Vision – camera
+  SOFTWARE // Phần mềm
+  LABOR // Nhân công
+  OUTSOURCE // Thuê ngoài – gia công
+  SHIPPING // Vận chuyển
+  OTHER // Khác
+}
+
+model Bom {
+  id          String    @id @default(cuid())
+  code        String    @unique // BOM-2026-001
+  name        String
+  kind        BomKind
+  status      BomStatus @default(DRAFT)
+  version     Int       @default(1)
+  projectId   String?
+  project     Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Material? @relation("BomProduct", fields: [productId], references: [id])
+  sourceBomId String?
+  sourceBom   Bom?      @relation("BomSource", fields: [sourceBomId], references: [id], onDelete: SetNull)
+  derivedBoms Bom[]     @relation("BomSource")
+  notes       String?
+  approvedAt  DateTime?
+  createdById String
+  createdBy   User      @relation("BomCreatedBy", fields: [createdById], references: [id])
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lines       BomLine[]   @relation("BomLines")
+  usedAsChild BomLine[]   @relation("BomLineChild")
+  quoteItems  QuoteItem[]
+
+  @@unique([productId, version])
+  @@index([projectId])
+  @@index([kind, status])
+  @@index([deletedAt])
+}
+
+model BomLine {
+  id            String    @id @default(cuid())
+  bomId         String
+  bom           Bom       @relation("BomLines", fields: [bomId], references: [id], onDelete: Cascade)
+  order         Int
+  group         CostGroup @default(OTHER)
+  // Free-text lines are allowed while estimating; materialId is required before
+  // allocation or "save as model" (enforced in service, see spec §3).
+  materialId    String?
+  material      Material? @relation(fields: [materialId], references: [id])
+  // Sub-assembly (cụm tủ điện, cụm băng tải…) — quantity multiplies the child BOM.
+  childBomId    String?
+  childBom      Bom?      @relation("BomLineChild", fields: [childBomId], references: [id])
+  name          String
+  specification String?
+  unit          String?
+  quantity      Decimal   @db.Decimal(15, 3)
+  estUnitCost   Decimal   @default(0) @db.Decimal(15, 0)
+  notes         String?
+
+  allocationItems ProjectMaterialAllocationItem[]
+  projectCosts    ProjectCost[]
+
+  @@index([bomId, order])
+  @@index([materialId])
+  @@index([childBomId])
+}
+
+// Direct project cost that never goes through a warehouse (software licence,
+// outsourced machining, labour, shipping…). Same invoice-date rule as stock lots.
+model ProjectCost {
+  id           String                     @id @default(cuid())
+  projectId    String
+  project      Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  group        CostGroup
+  description  String
+  supplierId   String?
+  supplier     Supplier?                  @relation(fields: [supplierId], references: [id])
+  invoiceNo    String?
+  invoiceDate  DateTime
+  amount       Decimal                    @db.Decimal(15, 0) // before VAT
+  vatRate      Decimal?                   @db.Decimal(5, 2)
+  bomLineId    String?
+  bomLine      BomLine?                   @relation(fields: [bomLineId], references: [id], onDelete: SetNull)
+  allocationId String?
+  allocation   ProjectMaterialAllocation? @relation(fields: [allocationId], references: [id], onDelete: SetNull)
+  notes        String?
+  createdById  String
+  createdBy    User                       @relation("ProjectCostCreatedBy", fields: [createdById], references: [id])
+  deletedAt    DateTime?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
+
+  @@index([projectId, deletedAt])
+  @@index([bomLineId])
+  @@index([allocationId])
+  @@index([supplierId])
+}
+
 model Supplier {
   id          String    @id @default(cuid())
   code        String    @unique
@@ -891,6 +1020,7 @@ model Supplier {
 
   materialSuppliers MaterialSupplier[]
   receipts          StockReceipt[]
+  projectCosts      ProjectCost[]
 
   @@index([deletedAt])
   @@index([name])
@@ -914,6 +1044,7 @@ model Material {
   name        String
   description String?
   unit        String
+  kind        MaterialKind      @default(STOCK)
   salePrice   Decimal           @default(0) @db.Decimal(15, 0)
   costPrice   Decimal           @default(0) @db.Decimal(15, 0)
   minStock    Decimal?          @db.Decimal(15, 3)
@@ -925,19 +1056,22 @@ model Material {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  suppliers          MaterialSupplier[]
-  stockBalances      StockBalance[]
-  stockLots          StockLot[]
-  stockReceiptItems  StockReceiptItem[]
-  stockIssueItems    StockIssueItem[]
+  suppliers              MaterialSupplier[]
+  stockBalances          StockBalance[]
+  stockLots              StockLot[]
+  stockReceiptItems      StockReceiptItem[]
+  stockIssueItems        StockIssueItem[]
   projectAllocationItems ProjectMaterialAllocationItem[]
-  stockTransferItems StockTransferItem[]
-  stockCountItems    StockCountItem[]
-  quoteItems         QuoteItem[]
+  stockTransferItems     StockTransferItem[]
+  stockCountItems        StockCountItem[]
+  quoteItems             QuoteItem[]
+  bomLines               BomLine[]
+  productBoms            Bom[]                           @relation("BomProduct")
 
   @@index([deletedAt])
   @@index([code])
   @@index([categoryId])
+  @@index([kind])
 }
 
 model MaterialSupplier {
@@ -967,14 +1101,14 @@ model Warehouse {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  stockBalances StockBalance[]
-  stockLots     StockLot[]
-  receipts      StockReceipt[]
-  issues        StockIssue[]
+  stockBalances          StockBalance[]
+  stockLots              StockLot[]
+  receipts               StockReceipt[]
+  issues                 StockIssue[]
   projectAllocationItems ProjectMaterialAllocationItem[]
-  transfersFrom StockTransfer[] @relation("TransferFromWarehouse")
-  transfersTo   StockTransfer[] @relation("TransferToWarehouse")
-  stockCounts   StockCount[]
+  transfersFrom          StockTransfer[]                 @relation("TransferFromWarehouse")
+  transfersTo            StockTransfer[]                 @relation("TransferToWarehouse")
+  stockCounts            StockCount[]
 
   @@index([deletedAt])
 }
@@ -993,23 +1127,23 @@ model StockBalance {
 }
 
 model StockReceipt {
-  id          String         @id @default(cuid())
-  receiptNo   String         @unique
-  warehouseId String
-  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
-  supplierId  String?
-  supplier    Supplier?      @relation(fields: [supplierId], references: [id])
-  date        DateTime
+  id                String         @id @default(cuid())
+  receiptNo         String         @unique
+  warehouseId       String
+  warehouse         Warehouse      @relation(fields: [warehouseId], references: [id])
+  supplierId        String?
+  supplier          Supplier?      @relation(fields: [supplierId], references: [id])
+  date              DateTime
   purchaseInvoiceNo String?
-  status      StockDocStatus @default(DRAFT)
-  notes       String?
-  totalAmount Decimal        @default(0) @db.Decimal(15, 0)
-  createdById String
-  createdBy   User           @relation("ReceiptCreatedBy", fields: [createdById], references: [id])
-  confirmedAt DateTime?
-  deletedAt   DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  status            StockDocStatus @default(DRAFT)
+  notes             String?
+  totalAmount       Decimal        @default(0) @db.Decimal(15, 0)
+  createdById       String
+  createdBy         User           @relation("ReceiptCreatedBy", fields: [createdById], references: [id])
+  confirmedAt       DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   items StockReceiptItem[]
 
@@ -1034,20 +1168,20 @@ model StockReceiptItem {
 }
 
 model StockLot {
-  id                  String           @id @default(cuid())
+  id                  String            @id @default(cuid())
   stockReceiptItemId  String?
   stockReceiptItem    StockReceiptItem? @relation(fields: [stockReceiptItemId], references: [id], onDelete: SetNull)
   warehouseId         String
-  warehouse           Warehouse        @relation(fields: [warehouseId], references: [id])
+  warehouse           Warehouse         @relation(fields: [warehouseId], references: [id])
   materialId          String
-  material            Material         @relation(fields: [materialId], references: [id])
+  material            Material          @relation(fields: [materialId], references: [id])
   purchaseInvoiceDate DateTime
   purchaseInvoiceNo   String?
-  receivedQuantity    Decimal          @db.Decimal(15, 3)
-  remainingQuantity   Decimal          @db.Decimal(15, 3)
-  unitPrice           Decimal          @db.Decimal(15, 0)
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  receivedQuantity    Decimal           @db.Decimal(15, 3)
+  remainingQuantity   Decimal           @db.Decimal(15, 3)
+  unitPrice           Decimal           @db.Decimal(15, 0)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   allocationItems ProjectMaterialAllocationItem[]
 
@@ -1058,25 +1192,25 @@ model StockLot {
 }
 
 model StockIssue {
-  id          String         @id @default(cuid())
-  issueNo     String         @unique
-  warehouseId String
-  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
-  projectId   String?
-  project     Project?       @relation(fields: [projectId], references: [id])
+  id           String                     @id @default(cuid())
+  issueNo      String                     @unique
+  warehouseId  String
+  warehouse    Warehouse                  @relation(fields: [warehouseId], references: [id])
+  projectId    String?
+  project      Project?                   @relation(fields: [projectId], references: [id])
   allocationId String?
   allocation   ProjectMaterialAllocation? @relation(fields: [allocationId], references: [id])
-  date        DateTime
-  status      StockDocStatus @default(DRAFT)
-  reason      String?
-  notes       String?
-  totalAmount Decimal        @default(0) @db.Decimal(15, 0)
-  createdById String
-  createdBy   User           @relation("IssueCreatedBy", fields: [createdById], references: [id])
-  confirmedAt DateTime?
-  deletedAt   DateTime?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  date         DateTime
+  status       StockDocStatus             @default(DRAFT)
+  reason       String?
+  notes        String?
+  totalAmount  Decimal                    @default(0) @db.Decimal(15, 0)
+  createdById  String
+  createdBy    User                       @relation("IssueCreatedBy", fields: [createdById], references: [id])
+  confirmedAt  DateTime?
+  deletedAt    DateTime?
+  createdAt    DateTime                   @default(now())
+  updatedAt    DateTime                   @updatedAt
 
   items StockIssueItem[]
 
@@ -1106,6 +1240,7 @@ model ProjectMaterialAllocation {
   projectId        String
   project          Project                         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   salesInvoiceDate DateTime
+  salesInvoiceNo   String?
   status           ProjectMaterialAllocationStatus @default(DRAFT)
   notes            String?
   confirmedAt      DateTime?
@@ -1115,6 +1250,7 @@ model ProjectMaterialAllocation {
 
   items       ProjectMaterialAllocationItem[]
   stockIssues StockIssue[]
+  costs       ProjectCost[]
 
   @@index([projectId])
   @@index([status])
@@ -1133,8 +1269,11 @@ model ProjectMaterialAllocationItem {
   quantity     Decimal                   @db.Decimal(15, 3)
   unitPrice    Decimal                   @db.Decimal(15, 0)
   total        Decimal                   @db.Decimal(15, 0)
+  bomLineId    String?
+  bomLine      BomLine?                  @relation(fields: [bomLineId], references: [id], onDelete: SetNull)
 
   @@unique([allocationId, stockLotId])
+  @@index([bomLineId])
   @@index([stockLotId])
   @@index([warehouseId])
   @@index([materialId])

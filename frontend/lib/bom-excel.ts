@@ -99,13 +99,20 @@ export async function readImportWorkbook(file: File): Promise<ImportSheet[]> {
   });
 }
 
-/** 0-based index of the first row (within the first 20) that has at least 3 filled cells. */
+/** Prefer recognizable column headers over title / metadata rows in supplier workbooks. */
 export function guessHeaderRow(rows: string[][]): number {
   const limit = Math.min(rows.length, 20);
+  let bestIndex = 0;
+  let bestScore = 0;
   for (let i = 0; i < limit; i += 1) {
-    if (rows[i].filter((cell) => cell.trim() !== "").length >= 3) return i;
+    const mapping = guessMapping(rows[i]);
+    const score = Object.values(mapping).filter((column) => column >= 0).length;
+    if (mapping.name >= 0 && score > bestScore) {
+      bestIndex = i;
+      bestScore = score;
+    }
   }
-  return 0;
+  return bestScore >= 2 ? bestIndex : Math.max(0, rows.slice(0, limit).findIndex((row) => row.filter((cell) => cell.trim()).length >= 3));
 }
 
 const HEADER_PATTERNS: Record<ImportField, string[]> = {
@@ -282,8 +289,9 @@ export function buildImportRows(rows: string[][], headerIndex: number, mapping: 
     if (!name && !code) continue;
 
     const isSectionHeading = !code && quantityText === "" && priceText === "";
-    if (isSectionHeading) {
-      sectionGroup = guessGroup(name) ?? sectionGroup;
+    const headingGroup = isSectionHeading ? guessGroup(name) : null;
+    if (headingGroup) {
+      sectionGroup = headingGroup;
       continue;
     }
 

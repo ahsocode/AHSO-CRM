@@ -42,7 +42,11 @@ export function Sidebar() {
           Menu chính
         </p>
         {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = pathname === item.href ||
+            (pathname.startsWith(`${item.href}/`) && !navItems.some((other) =>
+              other.href !== item.href && other.href.startsWith(`${item.href}/`) &&
+              (pathname === other.href || pathname.startsWith(`${other.href}/`))
+            ));
 
           return (
             <Link

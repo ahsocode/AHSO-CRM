@@ -86,9 +86,9 @@ export function BomCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+      <DialogContent aria-labelledby="bom-create-title" className="max-h-[90vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Tạo BOM</DialogTitle>
+          <DialogTitle id="bom-create-title">Tạo BOM</DialogTitle>
           <DialogDescription>BOM dự toán mới cho dự án này, ở trạng thái nháp.</DialogDescription>
         </DialogHeader>
 

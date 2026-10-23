@@ -39,15 +39,11 @@ async function resolveCodes(codes: string[], cache: MaterialCache): Promise<void
     while (cursor < pending.length) {
       const code = pending[cursor];
       cursor += 1;
-      try {
-        const response = await apiClient.get<ApiResponse<MaterialSelectItem[]>>("/materials/select", {
-          params: { search: code }
-        });
-        const match = response.data.data.find((item) => codeKey(item.code) === codeKey(code)) ?? null;
-        cache.set(codeKey(code), match);
-      } catch {
-        cache.set(codeKey(code), null);
-      }
+      const response = await apiClient.get<ApiResponse<MaterialSelectItem[]>>("/materials/select", {
+        params: { search: code }
+      });
+      const match = response.data.data.find((item) => codeKey(item.code) === codeKey(code)) ?? null;
+      cache.set(codeKey(code), match);
     }
   }
   await Promise.all(Array.from({ length: Math.min(LOOKUP_CONCURRENCY, pending.length) }, worker));
@@ -123,6 +119,8 @@ export function BomImportDialog({
     let cancelled = false;
     void resolveCodes(previewCodes.split("\u0000"), cacheRef.current).then(() => {
       if (!cancelled) setCacheVersion((value) => value + 1);
+    }).catch((lookupError: unknown) => {
+      if (!cancelled) setError(getApiErrorMessage(lookupError, "Không thể đối chiếu mã vật tư."));
     });
     return () => {
       cancelled = true;
@@ -165,6 +163,10 @@ export function BomImportDialog({
 
   async function handleConfirm() {
     if (parsedRows.length === 0) return;
+    if (parsedRows.length + (mode === "append" ? existingCount : 0) > 1000) {
+      setError("BOM tối đa 1000 dòng. Hãy giảm số dòng hoặc chọn thay thế.");
+      return;
+    }
     setIsImporting(true);
     setError(null);
     try {
@@ -191,9 +193,9 @@ export function BomImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+      <DialogContent aria-labelledby="bom-import-title" className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nhập BOM từ Excel</DialogTitle>
+          <DialogTitle id="bom-import-title">Nhập BOM từ Excel</DialogTitle>
           <DialogDescription>
             Chọn tệp, kiểm tra việc ghép cột rồi xem trước {PREVIEW_ROWS} dòng đầu. Mã vật tư khớp danh mục sẽ được gắn
             tự động, không khớp sẽ thành dòng tự do.

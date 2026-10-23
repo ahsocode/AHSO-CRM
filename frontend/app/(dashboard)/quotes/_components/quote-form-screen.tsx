@@ -3,16 +3,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { AppIcon } from "@/components/shared/app-icon";
+import { usePermission } from "@/components/shared/permission-gate";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,9 +25,10 @@ import {
 } from "@/hooks/use-quotes";
 import { useProject, useProjects } from "@/hooks/use-projects";
 import { usePolicies } from "@/hooks/use-settings";
+import { useProjectBoms } from "@/hooks/use-boms";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { QUOTE_STATUS_LABELS } from "@/lib/constants";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { BOM_STATUS_LABELS, QUOTE_STATUS_LABELS } from "@/lib/constants";
+import { formatDate, formatDateTime, formatVND } from "@/lib/format";
 import { QuoteStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -58,6 +61,8 @@ export function QuoteFormScreen({
   quoteId?: string;
 }) {
   const router = useRouter();
+  const canViewProject = usePermission("projects.view");
+  const [bomItemIndex, setBomItemIndex] = useState<number | null>(null);
   const createQuoteMutation = useCreateQuote();
   const updateQuoteMutation = useUpdateQuote(quoteId ?? "");
   const quoteQuery = useQuote(mode === "edit" ? quoteId ?? "" : "");
@@ -136,6 +141,7 @@ export function QuoteFormScreen({
           name: item.name,
           description: item.description ?? "",
           unit: item.unit ?? "",
+          bomId: item.bomId ?? null,
           quantity: item.quantity,
           unitPrice: item.unitPrice
         }))
@@ -144,6 +150,18 @@ export function QuoteFormScreen({
   }, [form, mode, quoteQuery.data]);
 
   const selectedProjectId = form.watch("projectId");
+  const projectBomsQuery = useProjectBoms(canViewProject ? selectedProjectId : "");
+  const previousProjectId = useRef(selectedProjectId);
+  useEffect(() => {
+    if (previousProjectId.current && previousProjectId.current !== selectedProjectId) {
+      // BOM links belong to one project and must never follow a project change.
+      form.getValues("items").forEach((_, index) => {
+        form.setValue(`items.${index}.bomId`, null, { shouldDirty: true });
+      });
+      setBomItemIndex(null);
+    }
+    previousProjectId.current = selectedProjectId;
+  }, [form, selectedProjectId]);
   const watchedItems = form.watch("items") ?? [];
   const watchedTaxRate = form.watch("taxRate") ?? 0;
   const watchedTableColumnWidths = form.watch("tableColumnWidths") ?? defaultQuoteTableColumnWidths;
@@ -336,7 +354,7 @@ export function QuoteFormScreen({
                 <QuoteTemplateControls
                   disabled={!isEditableQuote}
                   getSnapshot={() => ({
-                    items: form.getValues("items"),
+                    items: form.getValues("items").map(({ bomId: _bomId, ...item }) => item),
                     terms: form.getValues("terms"),
                     deliveryTerms: form.getValues("deliveryTerms")
                   })}
@@ -362,6 +380,8 @@ export function QuoteFormScreen({
                 taxRate={Number(watchedTaxRate) || 0}
                 taxAmount={taxAmount}
                 grandTotal={grandTotal}
+                boms={projectBomsQuery.data ?? []}
+                onAttachBom={canViewProject && selectedProjectId ? setBomItemIndex : undefined}
               />
             </CardContent>
           </Card>
@@ -584,6 +604,46 @@ export function QuoteFormScreen({
           </Card>
         </div>
       </form>
+      <Dialog open={bomItemIndex !== null} onOpenChange={(open) => { if (!open) setBomItemIndex(null); }}>
+        <DialogContent aria-labelledby="quote-bom-title">
+          <DialogHeader>
+            <DialogTitle id="quote-bom-title">Gắn BOM</DialogTitle>
+            <DialogDescription>Chọn BOM của cùng dự án để tính giá vốn dự kiến cho dòng báo giá.</DialogDescription>
+          </DialogHeader>
+          {projectBomsQuery.isError ? (
+            <p role="alert" className="rounded-lg bg-danger-bg p-3 text-sm text-danger">
+              {getApiErrorMessage(projectBomsQuery.error, "Không thể tải BOM của dự án.")}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <label htmlFor="quote-item-bom" className="text-sm font-semibold text-text-primary">BOM dự án</label>
+              <Select
+                id="quote-item-bom"
+                disabled={projectBomsQuery.isLoading}
+                value={bomItemIndex === null ? "" : watchedItems[bomItemIndex]?.bomId ?? ""}
+                onChange={(event) => {
+                  if (bomItemIndex !== null) {
+                    form.setValue(`items.${bomItemIndex}.bomId`, event.target.value || null, { shouldDirty: true });
+                  }
+                }}
+              >
+                <option value="">{projectBomsQuery.isLoading ? "Đang tải..." : "Không gắn BOM"}</option>
+                {(projectBomsQuery.data ?? []).map((bom) => (
+                  <option key={bom.id} value={bom.id}>
+                    {bom.code} · {bom.name} · {BOM_STATUS_LABELS[bom.status]} · {formatVND(bom.total)}
+                  </option>
+                ))}
+              </Select>
+              {!projectBomsQuery.isLoading && !projectBomsQuery.data?.length ? (
+                <p className="text-sm text-text-secondary">Dự án chưa có BOM. Tạo BOM ở tab BOM / Dự toán của dự án.</p>
+              ) : null}
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" onClick={() => setBomItemIndex(null)}>Xong</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

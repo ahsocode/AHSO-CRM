@@ -90,9 +90,9 @@ export function SaveAsModelDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+      <DialogContent aria-labelledby="save-model-title" className="max-h-[90vh] max-w-xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Lưu thành mẫu máy</DialogTitle>
+          <DialogTitle id="save-model-title">Lưu thành mẫu máy</DialogTitle>
           <DialogDescription>
             Tạo một phiên bản mẫu máy (bản nháp) từ BOM này để dùng lại cho các dự án sau.
           </DialogDescription>

@@ -38,7 +38,8 @@ export function BomEditor({ bomId }: { bomId: string }) {
   const canEditProject = usePermission("projects.edit");
   const canEditModel = usePermission("materials.edit");
   const canEdit = bom?.kind === "MODEL" ? canEditModel : canEditProject;
-  const canSaveAsModel = usePermission("materials.edit") && usePermission("projects.view");
+  const canViewProject = usePermission("projects.view");
+  const canSaveAsModel = canEditModel && canViewProject;
 
   const [rows, setRows] = useState<EditorRow[]>([]);
   const [name, setName] = useState("");
@@ -82,8 +83,8 @@ export function BomEditor({ bomId }: { bomId: string }) {
       toast.error("Còn dòng chưa hợp lệ, hãy kiểm tra lại.");
       return false;
     }
-    if (!name.trim()) {
-      setErrors(["Tên BOM không được để trống."]);
+    if (name.trim().length < 2 || name.trim().length > 200) {
+      setErrors(["Tên BOM phải có từ 2 đến 200 ký tự."]);
       return false;
     }
     setErrors([]);

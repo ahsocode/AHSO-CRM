@@ -28,6 +28,7 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime, normalizeItemDescription } from "@/lib/format";
 import type { DocumentTemplateVariant, QuoteDetail, QuoteStatus, QuoteTableColumnWidths } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { QuoteCostEstimate } from "./quote-cost-estimate";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
 
@@ -45,6 +46,7 @@ function buildQuoteUpdatePayload(quote: QuoteDetail, tableColumnWidths: QuoteTab
       name: item.name,
       description: item.description ?? "",
       unit: item.unit ?? "",
+      bomId: item.bomId ?? null,
       quantity: item.quantity,
       unitPrice: item.unitPrice
     }))
@@ -328,6 +330,8 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
         <MetricCard label="Tổng cộng" value={<CurrencyDisplay amount={quote.total} />} />
         <MetricCard label="Số hạng mục" value={`${quote.itemCount}`} />
       </div>
+
+      {quote.costEstimate ? <QuoteCostEstimate quote={quote} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">

@@ -24,6 +24,7 @@ export type Project360Tab =
   | "payments"
   | "handover"
   | "materials"
+  | "boms"
   | "costs";
 
 export type AppIconName = ComponentProps<typeof AppIcon>["name"];
@@ -38,6 +39,7 @@ export const TABS: Array<{ key: Project360Tab; label: string; icon: AppIconName 
   { key: "delivery", label: "Triển khai", icon: "briefcase" },
   { key: "payments", label: "Thanh toán", icon: "analytics" },
   { key: "materials", label: "Vật tư", icon: "factory" },
+  { key: "boms", label: "BOM / Dự toán", icon: "factory" },
   { key: "costs", label: "Chi phí & lãi gộp", icon: "analytics" },
   { key: "handover", label: "Ghi chú / Quyết định", icon: "history" }
 ];

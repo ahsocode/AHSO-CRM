@@ -54,6 +54,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ProjectCostsTab } from "./project-costs-tab";
 import { ProjectMaterialsTab } from "./project-materials-tab";
+import { ProjectBomsTab } from "./project-boms-tab";
 import {
   DOCUMENT_GROUPS,
   DOCUMENT_PRESETS,
@@ -334,6 +335,12 @@ export function ProjectDetailClient({ projectId }: { projectId: string }) {
       {activeTab === "delivery" ? <DeliveryPanel project={project} /> : null}
       {activeTab === "payments" ? <PaymentsPanel project={project} /> : null}
       {activeTab === "materials" ? <MaterialsPanel projectId={projectId} /> : null}
+      {activeTab === "boms" ? (
+        <Card>
+          <CardHeader><CardTitle>BOM / Dự toán</CardTitle></CardHeader>
+          <CardContent><ProjectBomsTab projectId={projectId} /></CardContent>
+        </Card>
+      ) : null}
       {activeTab === "costs" ? <CostsPanel projectId={projectId} /> : null}
       {activeTab === "handover" ? <HandoverPanel project={project} overview={overview} /> : null}
     </div>

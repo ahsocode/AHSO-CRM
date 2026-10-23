@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Copy, FileText, GripVertical, MoreHorizontal, Trash2 } from "lucide-react";
+import { Copy, FileText, GripVertical, Link2, MoreHorizontal, Trash2 } from "lucide-react";
 import { AppIcon } from "@/components/shared/app-icon";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { BomListItem } from "@/types/bom";
 import { createEmptyQuoteItem, type QuoteFormValues } from "./form-schemas";
 import { MaterialPickerButton } from "./material-picker-button";
 
@@ -71,7 +72,9 @@ export function QuoteItemsTable({
   subtotal,
   taxRate,
   taxAmount,
-  grandTotal
+  grandTotal,
+  boms,
+  onAttachBom
 }: {
   form: UseFormReturn<QuoteFormValues>;
   itemsFieldArray: UseFieldArrayReturn<QuoteFormValues, "items">;
@@ -81,6 +84,8 @@ export function QuoteItemsTable({
   taxRate: number;
   taxAmount: number;
   grandTotal: number;
+  boms: BomListItem[];
+  onAttachBom?: (index: number) => void;
 }) {
   const { fields, append, remove, insert, move } = itemsFieldArray;
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(() => new Set());
@@ -261,6 +266,12 @@ export function QuoteItemsTable({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {onAttachBom ? (
+                                <DropdownMenuItem onSelect={() => onAttachBom(index)}>
+                                  <Link2 className="mr-2 h-4 w-4" />
+                                  Gắn BOM
+                                </DropdownMenuItem>
+                              ) : null}
                               <DropdownMenuItem onSelect={() => expandDescription(field.id)}>
                                 <FileText className="mr-2 h-4 w-4" />
                                 Thêm mô tả
@@ -283,6 +294,12 @@ export function QuoteItemsTable({
                           <span />
                         )}
                       </div>
+
+                      {items[index]?.bomId ? (
+                        <p className="mt-1 pl-[52px] text-xs text-primary">
+                          BOM: {boms.find((bom) => bom.id === items[index].bomId)?.name ?? "Đã gắn BOM dự án"}
+                        </p>
+                      ) : null}
 
                       {showDescription ? (
                         <div className="mt-1.5 pl-[52px] pr-9">

@@ -59,6 +59,7 @@ export const NAV_ITEMS = [
   { href: "/suppliers", label: "Nhà cung cấp", icon: "truck" },
   { href: "/materials", label: "Vật tư", icon: "inventory" },
   { href: "/inventory", label: "Kho hàng", icon: "warehouse" },
+  { href: "/inventory/models", label: "Mẫu máy", icon: "factory" },
   { href: "/reports", label: "Báo cáo", icon: "analytics" },
   { href: "/users", label: "Người dùng", icon: "briefcase" }
 ] as const;

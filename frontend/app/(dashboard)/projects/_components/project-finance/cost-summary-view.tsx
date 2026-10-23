@@ -141,7 +141,7 @@ export function CostSummaryView({ summary }: { summary: ProjectCostSummary }) {
                       </tr>
                       {isOpen
                         ? lines.map((line) => (
-                            <tr key={line.bomLineId} className="text-text-secondary">
+                            <tr key={line.bomLineId} className="text-text-secondary" data-testid="variance-line">
                               <td className="py-1.5 pl-6 pr-4">
                                 {line.bomCode} · {line.name}
                               </td>

@@ -110,6 +110,9 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
     [costsQuery.data, allocation?.id, salesInvoiceDate]
   );
   const selectedCostIds = costIds ?? (allocation?.costs ?? []).map((cost) => cost.id);
+  const unavailableSelectedCosts = (costsQuery.data ?? []).filter(
+    (cost) => selectedCostIds.includes(cost.id) && !attachableCosts.some((item) => item.id === cost.id)
+  );
 
   const totalValue = rows.reduce((sum, row) => {
     const lot = lots.find((item) => item.id === row.stockLotId) ?? row.snapshot;
@@ -129,7 +132,8 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
       const result = await suggest.mutateAsync({
         bomId,
         salesInvoiceDate,
-        quantityMultiplier: multiplier > 0 ? multiplier : 1
+        quantityMultiplier: multiplier > 0 ? multiplier : 1,
+        allocationId: allocation?.id
       });
       setSuggestion(result);
       setRows(
@@ -161,11 +165,18 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
       toast({ title: "Thiếu ngày hóa đơn bán ra", variant: "destructive" });
       return;
     }
+    if (rows.some((row) => !row.stockLotId || !Number.isFinite(row.quantity) || row.quantity <= 0)) {
+      toast({ title: "Chọn lô nhập và nhập số lượng hợp lệ cho từng dòng", variant: "destructive" });
+      return;
+    }
     const items = rows
-      .filter((row) => row.stockLotId && Number(row.quantity) > 0)
       .map((row) => ({ stockLotId: row.stockLotId, quantity: Number(row.quantity), bomLineId: row.bomLineId }));
     if (items.length === 0) {
       toast({ title: "Chưa chọn lô vật tư", variant: "destructive" });
+      return;
+    }
+    if (unavailableSelectedCosts.length > 0) {
+      toast({ title: "Bỏ chọn chi phí có ngày hóa đơn sau ngày hóa đơn bán", variant: "destructive" });
       return;
     }
     const payload = {
@@ -209,7 +220,10 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
             id="alloc-sales-date"
             type="date"
             value={salesInvoiceDate}
-            onChange={(event) => setSalesInvoiceDate(event.target.value)}
+            onChange={(event) => {
+              setSalesInvoiceDate(event.target.value);
+              setSuggestion(null);
+            }}
           />
         </div>
         <div className="space-y-1.5">
@@ -223,7 +237,10 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="alloc-bom">BOM dự án</Label>
-          <Select id="alloc-bom" value={bomId} onChange={(event) => setBomId(event.target.value)}>
+          <Select id="alloc-bom" value={bomId} onChange={(event) => {
+            setBomId(event.target.value);
+            setSuggestion(null);
+          }}>
             <option value="">Chọn BOM...</option>
             {boms.map((bom) => (
               <option key={bom.id} value={bom.id}>
@@ -240,7 +257,10 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
             min={1}
             step="1"
             value={multiplier || ""}
-            onChange={(event) => setMultiplier(Number(event.target.value))}
+            onChange={(event) => {
+              setMultiplier(Number(event.target.value));
+              setSuggestion(null);
+            }}
           />
         </div>
       </div>
@@ -287,12 +307,19 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
         rows={rows}
         eligibleLots={lots}
         lotsLoading={eligibleLots.isLoading}
+        salesInvoiceDate={salesInvoiceDate}
         canAdd={Boolean(salesInvoiceDate)}
         disabled={isBusy}
         onChange={setRows}
       />
 
-      {attachableCosts.length > 0 ? (
+      {bomsQuery.isError || costsQuery.isError || eligibleLots.isError ? (
+        <p role="alert" className="text-sm text-danger">
+          {getApiErrorMessage(bomsQuery.error ?? costsQuery.error ?? eligibleLots.error, "Không thể tải dữ liệu phân bổ. Vui lòng thử lại.")}
+        </p>
+      ) : null}
+
+      {attachableCosts.length > 0 || unavailableSelectedCosts.length > 0 ? (
         <div className="space-y-2">
           <p className="text-sm font-semibold text-text-primary">Chi phí trực tiếp tính vào đợt này</p>
           {attachableCosts.map((cost) => (
@@ -304,6 +331,14 @@ export function AllocationBatchEditor({ projectId, allocation, onClose }: Alloca
               <span>
                 {COST_GROUP_LABELS[cost.group]} · {cost.description} · {formatDate(cost.invoiceDate)} ·{" "}
                 {formatVND(cost.amount)}
+              </span>
+            </label>
+          ))}
+          {unavailableSelectedCosts.map((cost) => (
+            <label key={cost.id} className="flex items-center gap-3 text-sm text-danger">
+              <Checkbox checked onCheckedChange={() => toggleCost(cost.id, false)} />
+              <span>
+                {cost.description} · {formatDate(cost.invoiceDate)} · Ngày hóa đơn sau ngày hóa đơn bán, cần bỏ chọn.
               </span>
             </label>
           ))}

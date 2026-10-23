@@ -7,6 +7,7 @@ import { usePermission } from "@/components/shared/permission-gate";
 import { Button } from "@/components/ui/button";
 import { useProjectMaterialAllocations } from "@/hooks/use-project-costs";
 import { useStockIssues } from "@/hooks/use-stock-issues";
+import { getApiErrorMessage } from "@/lib/api-client";
 import { STOCK_DOC_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatVND } from "@/lib/format";
 import type { ProjectMaterialAllocation } from "@/lib/types";
@@ -48,6 +49,12 @@ export function ProjectMaterialsTab({ projectId }: { projectId: string }) {
           </Button>
         ) : null}
       </div>
+
+      {allocationsQuery.isError || issues.isError ? (
+        <p role="alert" className="text-sm text-danger">
+          {getApiErrorMessage(allocationsQuery.error ?? issues.error, "Không thể tải vật tư dự án. Vui lòng thử lại.")}
+        </p>
+      ) : null}
 
       {editor ? (
         <AllocationBatchEditor

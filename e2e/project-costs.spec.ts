@@ -1,185 +1,262 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import ExcelJS from "../frontend/node_modules/exceljs";
 import { getUserIdFromAccessToken } from "./api-auth";
 import { login } from "./helpers";
 
 const API_URL = process.env.E2E_API_URL ?? "http://127.0.0.1:3001/api";
-
-// Dates used by the scenario: one lot bought before the sales invoice, one after it.
 const EARLY_LOT_DATE = "2026-01-10"; // qa-static: not-ui
 const LATE_LOT_DATE = "2026-06-01"; // qa-static: not-ui
 const SALES_INVOICE_DATE = "2026-03-31"; // qa-static: not-ui
-
-async function getAccessTokenFromPage(page: Page) {
-  const accessToken = await page.evaluate(() => window.sessionStorage.getItem("ahso_access_token"));
-  expect(accessToken).toBeTruthy();
-  return accessToken as string;
-}
-
-function authHeaders(accessToken: string) {
-  return { Authorization: `Bearer ${accessToken}` };
-}
+const SECOND_SALES_DATE = "2026-07-31"; // qa-static: not-ui
 
 function unwrap<T>(payload: unknown): T {
-  if (payload && typeof payload === "object" && "data" in payload) {
-    return (payload as { data: T }).data;
-  }
-  return payload as T;
+  return payload && typeof payload === "object" && "data" in payload
+    ? (payload as { data: T }).data
+    : payload as T;
 }
 
 async function apiSend<T>(
   request: APIRequestContext,
-  method: "post" | "put",
+  method: "post" | "put" | "get",
   path: string,
   headers: Record<string, string>,
-  data: unknown
+  data?: unknown
 ): Promise<T> {
   const response = await request[method](`${API_URL}${path}`, { headers, data });
   expect(response.ok(), `${method.toUpperCase()} ${path}: ${await response.text()}`).toBeTruthy(); // qa-static: not-ui
   return unwrap<T>(await response.json());
 }
 
-test.describe("Chi phí và lãi gộp dự án", () => {
-  test("[Chi phí] gợi ý theo BOM bỏ lô mua sau hóa đơn bán, báo thiếu hàng và tính lãi gộp", async ({ page, request }) => {
-    test.setTimeout(120_000);
-    await login(page);
-    const accessToken = await getAccessTokenFromPage(page);
-    const headers = authHeaders(accessToken);
-    const userId = getUserIdFromAccessToken(accessToken);
-    const stamp = Date.now();
-    const invoiceNo = `HD-E2E-${stamp}`; // qa-static: not-ui
+async function captureSaved(page: Page, method: "POST" | "PUT", path: string, action: () => Promise<void>) {
+  const responsePromise = page.waitForResponse((response) =>
+    response.request().method() === method && new URL(response.url()).pathname === `/api${path}` && response.ok()
+  );
+  await action();
+  return unwrap<{ id: string }>(await (await responsePromise).json());
+}
 
-    let customerId: string | null = null;
-    let projectId: string | null = null;
-    let contractId: string | null = null;
-    let materialId: string | null = null;
-    let warehouseId: string | null = null;
+test.describe("Giá vốn dự án", () => {
+  test("gợi ý FIFO đúng ngày, nhiều đợt, khóa chi phí, xuất bảng kê và tính lãi gộp trước VAT", async ({ page, request }) => {
+    test.setTimeout(180_000);
+    await login(page);
+    const accessToken = await page.evaluate(() => window.sessionStorage.getItem("ahso_access_token"));
+    expect(accessToken).toBeTruthy();
+    const headers = { Authorization: `Bearer ${accessToken}` };
+    const userId = getUserIdFromAccessToken(accessToken!);
+    const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const invoiceNo = `HD-E2E-${stamp}`; // qa-static: not-ui
+    const costDescription = `Lập trình PLC ${stamp}`; // qa-static: not-ui
+    const lateDescription = `Chi phí sau ngày bán ${stamp}`; // qa-static: not-ui
+    const cleanup: string[] = [];
+    const send = <T>(method: "post" | "put" | "get", path: string, data?: unknown) =>
+      apiSend<T>(request, method, path, headers, data);
+    const create = async (path: string, data: unknown, deletePath = path) => {
+      const result = await send<{ id: string; code: string }>("post", path, data);
+      cleanup.unshift(`${deletePath}/${result.id}`);
+      return result;
+    };
 
     try {
-      const warehouse = await apiSend<{ id: string }>(request, "post", "/warehouses", headers, {
-        code: `E2E-WH-${stamp}`, // qa-static: not-ui
-        name: `Kho chi phí ${stamp}`, // qa-static: not-ui
-        isActive: true
+      const warehouse = await create("/warehouses", {
+        code: `E2E-WH-${stamp}`, name: `Kho chi phí ${stamp}`, isActive: true // qa-static: not-ui
       });
-      warehouseId = warehouse.id;
-
-      const material = await apiSend<{ id: string }>(request, "post", "/materials", headers, {
-        code: `E2E-CP-${stamp}`, // qa-static: not-ui
-        name: `Vật tư chi phí ${stamp}`, // qa-static: not-ui
-        unit: "Cái",
-        kind: "STOCK",
-        minStock: 0,
-        isActive: true
+      const material = await create("/materials", {
+        code: `E2E-CP-${stamp}`, name: `Vật tư chi phí ${stamp}`, unit: "Cái", kind: "STOCK" // qa-static: not-ui
       });
-      materialId = material.id;
-
-      // Lot A: bought before the sales invoice (3 pcs). Lot B: bought after it (10 pcs) and must not be used.
       for (const [date, quantity, unitPrice] of [
-        [EARLY_LOT_DATE, 3, 100000],
-        [LATE_LOT_DATE, 10, 200000]
+        [EARLY_LOT_DATE, 3, 100000], [LATE_LOT_DATE, 10, 200000]
       ] as const) {
-        const receipt = await apiSend<{ id: string }>(request, "post", "/stock-receipts", headers, {
-          warehouseId,
-          date: new Date(`${date}T03:00:00.000Z`).toISOString(),
-          items: [{ materialId, quantity, unitPrice }]
+        const receipt = await send<{ id: string }>("post", "/stock-receipts", {
+          warehouseId: warehouse.id, date, purchaseInvoiceNo: `MUA-${date}-${stamp}`, // qa-static: not-ui
+          items: [{ materialId: material.id, quantity, unitPrice }]
         });
-        await apiSend(request, "post", `/stock-receipts/${receipt.id}/confirm`, headers, {});
+        await send("post", `/stock-receipts/${receipt.id}/confirm`, {});
       }
-
-      const customerResponse = await request.post(`${API_URL}/customers`, {
-        headers,
-        data: { name: `Khách chi phí QA ${stamp}`, status: "LEAD", isVip: false, assignedToId: userId } // qa-static: not-ui
+      const customer = await create("/customers", {
+        name: `Khách chi phí QA ${stamp}`, status: "LEAD", assignedToId: userId // qa-static: not-ui
       });
-      expect(customerResponse.ok(), await customerResponse.text()).toBeTruthy(); // qa-static: not-ui
-      customerId = unwrap<{ id: string }>(await customerResponse.json()).id;
-
-      const project = await apiSend<{ id: string }>(request, "post", "/projects", headers, {
-        customerId,
-        name: `Dự án chi phí QA ${stamp}`, // qa-static: not-ui
-        status: "DELIVERING"
+      const project = await create("/projects", {
+        customerId: customer.id, name: `Dự án chi phí QA ${stamp}`, status: "DELIVERING" // qa-static: not-ui
       });
-      projectId = project.id;
-
-      const contract = await apiSend<{ id: string }>(request, "post", "/contracts", headers, {
-        projectId,
-        value: 10000000,
-        signDate: "2026-02-01"
+      const quote = await create("/quotes", {
+        projectId: project.id, taxRate: 10, status: "ACCEPTED",
+        items: [{ name: "Máy kiểm tra", quantity: 1, unitPrice: 10000000 }] // qa-static: not-ui
       });
-      contractId = contract.id;
-
-      const bom = await apiSend<{ id: string }>(request, "post", `/projects/${projectId}/boms`, headers, {
+      await create("/contracts", {
+        projectId: project.id, sourceQuoteId: quote.id, value: 11000000, signDate: "2026-02-01" // qa-static: not-ui
+      });
+      const bom = await send<{ id: string }>("post", `/projects/${project.id}/boms`, {
         name: `BOM chi phí ${stamp}` // qa-static: not-ui
       });
-      await apiSend(request, "put", `/boms/${bom.id}/lines`, headers, {
-        lines: [
-          { group: "MECHANICAL", materialId, name: "Khung máy", quantity: 5, estUnitCost: 100000 },
-          { group: "SOFTWARE", name: "Phần mềm điều khiển", quantity: 1, estUnitCost: 5000000 } // qa-static: not-ui
-        ]
+      await send("put", `/boms/${bom.id}/lines`, { lines: [
+        { group: "MECHANICAL", materialId: material.id, name: "Khung máy", quantity: 5, estUnitCost: 100000 }, // qa-static: not-ui
+        { group: "SOFTWARE", name: "Phần mềm điều khiển", quantity: 1, estUnitCost: 1000000 } // qa-static: not-ui
+      ] });
+      const detail = await send<{ lines: Array<{ id: string; group: string }> }>("get", `/boms/${bom.id}`);
+      const softwareLine = detail.lines.find((line) => line.group === "SOFTWARE")!;
+
+      // Existing projects using the old singular endpoint still render in the batch list.
+      const legacyProject = await create("/projects", {
+        customerId: customer.id, name: `Dự án phân bổ cũ ${stamp}`, status: "COMPLETED", salesInvoiceDate: SALES_INVOICE_DATE // qa-static: not-ui
       });
+      const eligible = await send<Array<{ id: string; materialId: string }>>(
+        "get", `/projects/${legacyProject.id}/eligible-stock-lots?salesInvoiceDate=${SALES_INVOICE_DATE}`
+      );
+      const legacyLot = eligible.find((lot) => lot.materialId === material.id)!;
+      await send("post", `/projects/${legacyProject.id}/material-allocation`, {
+        salesInvoiceDate: SALES_INVOICE_DATE, items: [{ stockLotId: legacyLot.id, quantity: 1 }]
+      });
+      await page.goto(`/projects/${legacyProject.id}?tab=materials`);
+      const legacyBatch = page.getByTestId("allocation-batch");
+      await expect(legacyBatch).toHaveCount(1);
+      await expect(legacyBatch).toHaveAttribute("data-status", "DRAFT");
+      await expect(legacyBatch).toContainText("100.000");
+      await legacyBatch.getByRole("button", { name: "Hủy đợt", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Xác nhận hủy", exact: true }).click();
+      await expect(legacyBatch).toHaveCount(0);
 
-      // --- Tab Vật tư: create a batch from the BOM suggestion ---
-      await page.goto(`/projects/${projectId}?tab=materials`);
-      await page.getByRole("button", { name: "Tạo đợt phân bổ" }).click();
-      await page.getByLabel("Ngày hóa đơn bán").fill(SALES_INVOICE_DATE);
-      await page.getByLabel("Số hóa đơn bán").fill(invoiceNo);
-      await page.getByLabel("BOM dự án").selectOption(bom.id);
-      await page.getByRole("button", { name: "Gợi ý theo BOM" }).click();
-
-      // Only the early lot is used (3 of 5), so 2 pcs are short; the later lot is ignored.
-      const shortages = page.getByTestId("allocation-shortages");
-      await expect(shortages).toBeVisible();
-      await expect(shortages).toContainText("thiếu 2");
-      await expect(page.getByTestId("allocation-service-lines")).toContainText("Phần mềm điều khiển");
-      const rows = page.getByTestId("allocation-row");
-      await expect(rows).toHaveCount(1);
-      await expect(rows.first().locator("input[type=number]")).toHaveValue("3");
-
-      await page.getByRole("button", { name: "Lưu đợt nháp" }).click();
-      const batch = page.getByTestId("allocation-batch");
-      await expect(batch).toHaveCount(1);
+      await page.goto(`/projects/${project.id}?tab=materials`);
+      await page.getByRole("button", { name: "Tạo đợt phân bổ", exact: true }).click();
+      const editor = page.getByTestId("allocation-editor");
+      await editor.getByLabel("Ngày hóa đơn bán", { exact: true }).fill(SALES_INVOICE_DATE);
+      await editor.getByLabel("Số hóa đơn bán", { exact: true }).fill(invoiceNo);
+      await editor.getByLabel("BOM dự án", { exact: true }).selectOption(bom.id);
+      await editor.getByRole("button", { name: "Gợi ý theo BOM", exact: true }).click();
+      await expect(page.getByTestId("allocation-shortages")).toContainText("thiếu 2");
+      await expect(page.getByTestId("allocation-service-lines")).toContainText("Phần mềm điều khiển"); // qa-static: not-ui
+      await expect(page.getByTestId("allocation-row")).toHaveCount(1);
+      await expect(editor.getByLabel("Số lượng", { exact: true })).toHaveValue("3");
+      const lotId = await editor.getByLabel("Lô nhập", { exact: true }).inputValue();
+      await editor.getByLabel("Lô nhập", { exact: true }).selectOption(lotId);
+      await editor.getByLabel("Số lượng", { exact: true }).fill("2");
+      await editor.getByLabel("Số lượng", { exact: true }).fill("3");
+      const earlyOptions = await editor.getByLabel("Lô nhập", { exact: true }).locator("option").allTextContents();
+      expect(earlyOptions.join(" ")).not.toContain("01/06/2026");
+      const allocation = await captureSaved(page, "POST", `/projects/${project.id}/material-allocations`, () =>
+        editor.getByRole("button", { name: "Lưu đợt nháp", exact: true }).click()
+      );
+      const batch = page.getByTestId("allocation-batch").filter({ hasText: invoiceNo });
       await expect(batch).toHaveAttribute("data-status", "DRAFT");
 
-      // --- Direct cost via the cost tab ---
-      await page.getByRole("tab", { name: /Chi phí & lãi gộp/ }).click();
-      await page.getByRole("button", { name: "Thêm chi phí" }).click();
-      await page.getByLabel("Mô tả").fill(`Lập trình PLC ${stamp}`); // qa-static: not-ui
-      await page.getByLabel("Ngày hóa đơn").fill("2026-02-15");
-      await page.getByLabel(/Số tiền trước VAT/).fill("2000000");
-      await page.getByRole("button", { name: "Lưu chi phí" }).click();
+      await page.getByRole("tab", { name: "Chi phí & lãi gộp", exact: true }).click(); // qa-static: not-ui — label comes from the project tab configuration.
+      await page.getByRole("button", { name: "Thêm chi phí", exact: true }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel("Nhóm", { exact: true }).selectOption("SOFTWARE");
+      await dialog.getByLabel("Mô tả", { exact: true }).fill(costDescription);
+      await dialog.getByLabel("Ngày hóa đơn", { exact: true }).fill("2026-02-15"); // qa-static: not-ui
+      await dialog.getByLabel("Số tiền trước VAT (₫)", { exact: true }).fill("1900000");
+      await dialog.getByLabel("Dòng BOM liên quan", { exact: true }).selectOption(softwareLine.id);
+      const cost = await captureSaved(page, "POST", `/projects/${project.id}/costs`, () =>
+        dialog.getByRole("button", { name: "Lưu chi phí", exact: true }).click()
+      );
+      await expect(dialog).toHaveCount(0);
+      const costRow = page.getByTestId("project-cost-row").filter({ hasText: costDescription });
+      await expect(costRow.locator("td").first()).toHaveText("Phần mềm"); // qa-static: not-ui — dynamic cost-group label.
+      await costRow.getByRole("button", { name: "Sửa", exact: true }).click();
+      await expect(dialog.getByLabel("Số tiền trước VAT (₫)", { exact: true })).toHaveValue("1900000");
+      await dialog.getByLabel("Số tiền trước VAT (₫)", { exact: true }).fill("2000000");
+      await dialog.getByRole("button", { name: "Lưu chi phí", exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      await expect(costRow).toContainText("2.000.000");
+      const savedCosts = await send<Array<{ id: string; group: string; amount: number }>>("get", `/projects/${project.id}/costs`);
+      expect(savedCosts.find((item) => item.id === cost.id)).toMatchObject({ group: "SOFTWARE", amount: 2000000 });
+
+      await page.getByRole("tab", { name: "Vật tư", exact: true }).click();
+      await batch.getByRole("button", { name: "Sửa đợt nháp", exact: true }).click();
+      await editor.getByLabel("BOM dự án", { exact: true }).selectOption(bom.id);
+      await editor.getByRole("button", { name: "Gợi ý theo BOM", exact: true }).click();
+      // Refreshing a draft must reuse its own reserved 3 pieces.
+      await expect(editor.getByLabel("Số lượng", { exact: true })).toHaveValue("3");
+      await expect(page.getByTestId("allocation-shortages")).toContainText("thiếu 2");
+      await expect(page.getByTestId("allocation-service-lines")).toHaveCount(0);
+      await editor.getByRole("checkbox", { name: new RegExp(costDescription) }).check();
+      await editor.getByRole("button", { name: "Lưu đợt nháp", exact: true }).click();
+      await expect(editor).toHaveCount(0);
+
+      const lateCost = await send<{ id: string }>("post", `/projects/${project.id}/costs`, {
+        group: "OTHER", description: lateDescription, invoiceDate: LATE_LOT_DATE, amount: 50000
+      });
+      const rejected = await request.put(`${API_URL}/material-allocations/${allocation.id}`, {
+        headers, data: { salesInvoiceDate: SALES_INVOICE_DATE, items: [{ stockLotId: lotId, quantity: 3 }], costIds: [cost.id, lateCost.id] }
+      });
+      expect(rejected.status()).toBe(400);
+      expect(await rejected.text()).toContain("có ngày hóa đơn sau ngày hóa đơn bán ra");
+
+      await page.goto(`/projects/${project.id}?tab=costs`);
+      await costRow.getByRole("button", { name: "Sửa", exact: true }).click();
+      await dialog.getByLabel("Ngày hóa đơn", { exact: true }).fill(LATE_LOT_DATE);
+      const invalidDateResponse = page.waitForResponse((response) =>
+        response.request().method() === "PATCH" && new URL(response.url()).pathname === `/api/project-costs/${cost.id}`
+      );
+      await dialog.getByRole("button", { name: "Lưu chi phí", exact: true }).click();
+      expect((await invalidDateResponse).status()).toBe(400);
+      await expect(page.getByText("Không thể lưu chi phí: Ngày hóa đơn chi phí không được sau ngày hóa đơn bán ra của đợt phân bổ", { exact: true })).toBeVisible(); // qa-static: not-ui — the toast wrapper combines its title with the API validation message.
+      await dialog.getByRole("button", { name: "Đóng", exact: true }).click();
+      await page.getByTestId("project-cost-row").filter({ hasText: lateDescription }).getByRole("button", { name: "Xóa", exact: true }).click();
+      await dialog.getByRole("button", { name: "Xác nhận xóa", exact: true }).click();
       await expect(page.getByTestId("project-cost-row")).toHaveCount(1);
 
-      // --- Confirm the batch and export the cost sheet ---
-      await page.getByRole("tab", { name: "Vật tư" }).click();
-      await page.getByRole("button", { name: "Xác nhận xuất kho" }).click();
-      await expect(page.getByTestId("allocation-batch")).toHaveAttribute("data-status", "CONFIRMED");
+      await page.getByRole("tab", { name: "Vật tư", exact: true }).click();
+      await batch.getByRole("button", { name: "Xác nhận xuất kho", exact: true }).click();
+      await expect(batch).toHaveAttribute("data-status", "CONFIRMED");
+      await expect(batch.getByRole("button", { name: "Sửa đợt nháp", exact: true })).toHaveCount(0);
+      await expect(batch.getByRole("button", { name: "Hủy đợt", exact: true })).toHaveCount(0);
       const [download] = await Promise.all([
         page.waitForEvent("download"),
-        page.getByRole("button", { name: "Xuất bảng kê giá vốn" }).click()
+        batch.getByRole("button", { name: "Xuất bảng kê giá vốn", exact: true }).click()
       ]);
       expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
+      const exported = new ExcelJS.Workbook();
+      await exported.xlsx.readFile((await download.path())!);
+      const sheet = exported.worksheets[0];
+      expect(sheet.getCell("A1").value).toBe(`Bảng kê giá vốn hóa đơn bán số ${invoiceNo}`);
+      expect(sheet.getCell("B7").value).toBe(material.code);
+      expect(sheet.getCell("E7").value).toBe(3);
+      expect(sheet.getCell("G7").value).toBe(300000);
+      const costSheetRows = sheet.getSheetValues().flatMap((row) => Array.isArray(row) ? [row] : []);
+      expect(costSheetRows.some((row) => row[3] === costDescription && row[7] === 2000000)).toBeTruthy();
+      expect(sheet.lastRow?.getCell(7).value).toBe(2300000);
 
-      // --- Gross margin: 10.000.000 - 3 x 100.000 - 2.000.000 = 7.700.000 (77%) ---
-      await page.getByRole("tab", { name: /Chi phí & lãi gộp/ }).click();
+      await page.getByRole("tab", { name: "Chi phí & lãi gộp", exact: true }).click(); // qa-static: not-ui — label comes from the project tab configuration.
+      await expect(costRow).toContainText("Đã khóa theo đợt phân bổ đã xác nhận");
+      await expect(costRow.getByRole("button")).toHaveCount(0);
+      for (const method of ["patch", "delete"] as const) {
+        const response = await request[method](`${API_URL}/project-costs/${cost.id}`, { headers, data: method === "patch" ? { amount: 1 } : undefined });
+        expect(response.status()).toBe(400);
+        expect(await response.text()).toContain("Chi phí đã gắn vào đợt phân bổ đã xác nhận");
+      }
       await expect(page.getByTestId("summary-revenue")).toContainText("10.000.000");
       await expect(page.getByTestId("summary-material-cost")).toContainText("300.000");
       await expect(page.getByTestId("summary-direct-cost")).toContainText("2.000.000");
       await expect(page.getByTestId("summary-gross-profit")).toContainText("7.700.000");
       await expect(page.getByTestId("summary-gross-margin")).toContainText("77%");
+      const softwareGroup = page.getByTestId("variance-group-SOFTWARE");
+      await expect(softwareGroup.locator("td").last()).toHaveClass(/text-danger/);
+      await softwareGroup.getByRole("button").click();
+      await expect(page.getByTestId("variance-line").filter({ hasText: "Phần mềm điều khiển" })).toContainText("2.000.000"); // qa-static: not-ui
+
+      // The second sales invoice uses only the remaining BOM demand: 5 - 3 = 2.
+      await page.getByRole("tab", { name: "Vật tư", exact: true }).click();
+      await page.getByRole("button", { name: "Tạo đợt phân bổ", exact: true }).click();
+      await editor.getByLabel("Ngày hóa đơn bán", { exact: true }).fill(SECOND_SALES_DATE);
+      await editor.getByLabel("Số hóa đơn bán", { exact: true }).fill(`${invoiceNo}-2`);
+      await editor.getByLabel("BOM dự án", { exact: true }).selectOption(bom.id);
+      await editor.getByRole("button", { name: "Gợi ý theo BOM", exact: true }).click();
+      await expect(editor.getByLabel("Số lượng", { exact: true })).toHaveValue("2");
+      await expect(page.getByTestId("allocation-shortages")).toHaveCount(0);
+      await editor.getByRole("button", { name: "Lưu đợt nháp", exact: true }).click();
+      await expect(page.getByTestId("allocation-batch")).toHaveCount(2);
+      const secondBatch = page.getByTestId("allocation-batch").filter({ hasText: `${invoiceNo}-2` });
+      await secondBatch.getByRole("button", { name: "Xác nhận xuất kho", exact: true }).click();
+      await expect(secondBatch).toHaveAttribute("data-status", "CONFIRMED");
+      await page.getByRole("tab", { name: "Chi phí & lãi gộp", exact: true }).click(); // qa-static: not-ui — label comes from the project tab configuration.
+      await expect(page.getByTestId("summary-material-cost")).toContainText("700.000");
+      await expect(page.getByTestId("summary-gross-profit")).toContainText("7.300.000");
+      await expect(page.getByTestId("summary-gross-margin")).toContainText("73%");
     } finally {
-      if (contractId) {
-        await request.delete(`${API_URL}/contracts/${contractId}`, { headers }).catch(() => undefined);
-      }
-      if (projectId) {
-        await request.delete(`${API_URL}/projects/${projectId}`, { headers }).catch(() => undefined);
-      }
-      if (customerId) {
-        await request.delete(`${API_URL}/customers/${customerId}`, { headers }).catch(() => undefined);
-      }
-      // Confirmed allocations keep stock history, so these may be refused by the API; best effort only.
-      if (materialId) {
-        await request.delete(`${API_URL}/materials/${materialId}`, { headers }).catch(() => undefined);
-      }
-      if (warehouseId) {
-        await request.delete(`${API_URL}/warehouses/${warehouseId}`, { headers }).catch(() => undefined);
+      // Confirmed inventory movements remain as audit history; remove the CRM fixtures first.
+      for (const path of cleanup) {
+        await request.delete(`${API_URL}${path}`, { headers }).catch(() => undefined);
       }
     }
   });

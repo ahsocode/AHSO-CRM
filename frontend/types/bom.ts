@@ -233,6 +233,8 @@ export interface AllocationSuggestInput {
   bomId: string;
   salesInvoiceDate: string;
   quantityMultiplier?: number;
+  /** Exclude this draft's reservations when refreshing its suggestion. */
+  allocationId?: string;
 }
 
 export interface SuggestedAllocationItem {

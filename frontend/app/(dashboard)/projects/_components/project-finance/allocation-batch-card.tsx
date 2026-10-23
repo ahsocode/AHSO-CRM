@@ -80,7 +80,7 @@ export function AllocationBatchCard({ projectId, allocation, canEdit, onEdit }: 
   }
 
   return (
-    <div className="space-y-4 rounded-xl bg-bg-subtle p-4" data-testid="allocation-batch" data-status={allocation.status}>
+    <div className="space-y-4 rounded-xl bg-bg-subtle p-4" data-testid="allocation-batch" data-status={allocation.status} data-allocation-id={allocation.id}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">

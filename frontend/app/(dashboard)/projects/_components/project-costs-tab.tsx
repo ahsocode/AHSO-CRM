@@ -56,6 +56,11 @@ export function ProjectCostsTab({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-8">
+      {costsQuery.isError || summaryQuery.isError ? (
+        <p role="alert" className="text-sm text-danger">
+          {getApiErrorMessage(costsQuery.error ?? summaryQuery.error, "Không thể tải chi phí dự án. Vui lòng thử lại.")}
+        </p>
+      ) : null}
       {summary ? <CostSummaryView summary={summary} /> : null}
 
       <div className="space-y-3">
@@ -108,7 +113,10 @@ export function ProjectCostsTab({ projectId }: { projectId: string }) {
                       <td className="py-2 text-right">
                         {canEdit ? (
                           locked ? (
-                            <span className="text-xs text-text-secondary">Đã khóa theo đợt phân bổ</span>
+                            <span className="text-xs text-text-secondary">
+                              Đã khóa theo đợt phân bổ đã xác nhận
+                              {cost.allocation?.salesInvoiceNo ? ` · Hóa đơn ${cost.allocation.salesInvoiceNo}` : ""}
+                            </span>
                           ) : (
                             <div className="flex justify-end gap-2">
                               <Button type="button" variant="outline" onClick={() => openEdit(cost)}>

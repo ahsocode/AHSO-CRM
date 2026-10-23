@@ -11,7 +11,7 @@ export interface AllocationRow {
   stockLotId: string;
   quantity: number;
   bomLineId: string | null;
-  /** "saved" rows come from the server and are checked against the eligible list */
+  /** Preserve how the row was added while the user changes lots. */
   source: "saved" | "suggested" | "manual";
   /** Lot data kept for lots that are not in the eligible list (e.g. suggested or already held) */
   snapshot?: EligibleStockLot;
@@ -27,6 +27,7 @@ interface AllocationRowsEditorProps {
   rows: AllocationRow[];
   eligibleLots: EligibleStockLot[];
   lotsLoading: boolean;
+  salesInvoiceDate: string;
   canAdd: boolean;
   disabled?: boolean;
   onChange: (rows: AllocationRow[]) => void;
@@ -36,6 +37,7 @@ export function AllocationRowsEditor({
   rows,
   eligibleLots,
   lotsLoading,
+  salesInvoiceDate,
   canAdd,
   disabled,
   onChange
@@ -56,8 +58,11 @@ export function AllocationRowsEditor({
       ) : (
         rows.map((row) => {
           const lot = lotFor(row);
-          const isLotUnavailable =
-            row.source === "saved" && row.stockLotId !== "" && !lotsLoading && !eligibleById.has(row.stockLotId);
+          const isLotUnavailable = Boolean(
+            row.stockLotId && !lotsLoading &&
+            (!lot || lot.purchaseInvoiceDate.slice(0, 10) > salesInvoiceDate ||
+              lot.remainingQuantity <= 0)
+          );
           const lotInList = eligibleById.has(row.stockLotId);
           return (
             <div
@@ -66,6 +71,7 @@ export function AllocationRowsEditor({
               className="grid gap-3 rounded-lg bg-bg-subtle p-3 lg:grid-cols-[1fr_140px_84px]"
             >
               <Select
+                aria-label="Lô nhập"
                 value={row.stockLotId}
                 disabled={disabled}
                 onChange={(event) => {

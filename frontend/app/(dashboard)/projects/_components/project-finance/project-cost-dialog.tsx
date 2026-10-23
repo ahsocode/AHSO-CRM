@@ -59,7 +59,12 @@ interface ProjectCostDialogProps {
   onClose: () => void;
 }
 
-export function ProjectCostDialog({ projectId, open, cost, bomLines, onClose }: ProjectCostDialogProps) {
+export function ProjectCostDialog(props: ProjectCostDialogProps) {
+  // Each opening owns a fresh form, so an effect cannot reset fields after typing starts.
+  return props.open ? <ProjectCostForm key={props.cost?.id ?? "new"} {...props} /> : null;
+}
+
+function ProjectCostForm({ projectId, open, cost, bomLines, onClose }: ProjectCostDialogProps) {
   const suppliers = useSuppliersSelect();
   const createCost = useCreateProjectCost(projectId);
   const updateCost = useUpdateProjectCost(projectId);
@@ -67,12 +72,18 @@ export function ProjectCostDialog({ projectId, open, cost, bomLines, onClose }: 
     resolver: zodResolver(costFormSchema),
     defaultValues: toFormValues(cost)
   });
-  const { register, handleSubmit, reset, formState } = form;
+  const { register, handleSubmit, setValue, formState } = form;
   const { errors } = formState;
 
   useEffect(() => {
-    if (open) reset(toFormValues(cost));
-  }, [open, cost, reset]);
+    if (!open || formState.dirtyFields.supplierId) return;
+    setValue("supplierId", cost?.supplierId ?? "");
+  }, [open, cost?.supplierId, suppliers.data, formState.dirtyFields.supplierId, setValue]);
+
+  useEffect(() => {
+    if (!open || formState.dirtyFields.bomLineId) return;
+    setValue("bomLineId", cost?.bomLineId ?? "");
+  }, [open, cost?.bomLineId, bomLines, formState.dirtyFields.bomLineId, setValue]);
 
   async function onSubmit(values: CostFormValues) {
     const payload: ProjectCostInput = {
@@ -108,7 +119,7 @@ export function ProjectCostDialog({ projectId, open, cost, bomLines, onClose }: 
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent aria-label={cost ? "Sửa chi phí trực tiếp" : "Thêm chi phí trực tiếp"} className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{cost ? "Sửa chi phí trực tiếp" : "Thêm chi phí trực tiếp"}</DialogTitle>
           <DialogDescription>
@@ -177,6 +188,9 @@ export function ProjectCostDialog({ projectId, open, cost, bomLines, onClose }: 
             <Label htmlFor="cost-bom-line">Dòng BOM liên quan</Label>
             <Select id="cost-bom-line" {...register("bomLineId")}>
               <option value="">Không gắn dòng BOM</option>
+              {cost?.bomLine && !bomLines.some((line) => line.bomLineId === cost.bomLineId) ? (
+                <option value={cost.bomLine.id}>{cost.bomLine.bomCode} · {cost.bomLine.name}</option>
+              ) : null}
               {bomLines.map((line) => (
                 <option key={line.bomLineId} value={line.bomLineId}>
                   {line.bomCode} · {COST_GROUP_LABELS[line.group]} · {line.name}

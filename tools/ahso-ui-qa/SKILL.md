@@ -90,6 +90,9 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
   `getApiErrorMessage(error, "<câu mặc định>")`.
 - **Endpoint quên guard:** khi thêm controller, mọi `@Get` đều phải có `JwtAuthGuard` + quyền phù hợp.
   Kiểm tra nhanh trên stack QA: `curl -s -o /dev/null -w "%{http_code}" http://localhost:3101/api/<route>` phải ra 401.
+- **`docker compose up` fail, postgres exit (1) sau ~1s:** ổ đĩa Docker Desktop đầy do build cache/image cũ
+  (`initdb: No space left on device`). Dọn: `docker builder prune -f` rồi `docker image prune -a -f`
+  (không prune volume — có dữ liệu dev). Xem dung lượng: `docker system df`.
 - **Chuỗi trong e2e không phải selector** (dữ liệu test, thông báo từ backend) → thêm `// qa-static: not-ui`
   cuối dòng để `static_checks.py` bỏ qua.
 

@@ -17,6 +17,7 @@ export const materialFilterSchema = paginationSchema.extend({
   search: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
   categoryId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   supplierId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  kind: z.preprocess(emptyToUndefined, z.enum(["STOCK", "SERVICE", "PRODUCT"]).optional()),
   isActive: coerceBoolean,
   lowStockOnly: coerceBoolean,
 });

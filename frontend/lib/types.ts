@@ -1,3 +1,10 @@
+import type {
+  CostGroup,
+  QuoteCostEstimateSummary,
+  QuoteItemBomRef,
+  QuoteItemCostEstimate
+} from "@/types/bom";
+
 export type Role = "ADMIN" | "MANAGER" | "STAFF";
 export type CustomerStatus = "LEAD" | "PROSPECT" | "ACTIVE" | "INACTIVE";
 export type ProjectStatus = "SURVEY" | "QUOTING" | "NEGOTIATING" | "WON" | "LOST" | "DELIVERING" | "COMPLETED";
@@ -1110,6 +1117,11 @@ export interface QuoteDetailItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  /** BOM of the same project (internal cost breakdown) */
+  bomId?: string | null;
+  bom?: QuoteItemBomRef | null;
+  /** Internal only (projects.view) — never printed */
+  costEstimate?: QuoteItemCostEstimate | null;
 }
 
 export interface QuoteTableColumnWidths {
@@ -1144,6 +1156,8 @@ export interface QuoteDetail {
   createdBy: Pick<UserListItem, "id" | "name" | "role"> & { email?: string };
   project: QuoteDetailProject;
   items: QuoteDetailItem[];
+  /** Internal only (projects.view) — never printed */
+  costEstimate?: QuoteCostEstimateSummary | null;
 }
 
 export interface QuoteCreateItemInput {
@@ -1152,6 +1166,8 @@ export interface QuoteCreateItemInput {
   unit?: string;
   quantity: number;
   unitPrice: number;
+  /** Link a BOM of the same project (null clears it) */
+  bomId?: string | null;
 }
 
 export interface QuoteCreateInput {
@@ -1939,11 +1955,14 @@ export interface MaterialCategoryItem {
 }
 
 // Materials
+export type MaterialKind = "STOCK" | "SERVICE" | "PRODUCT";
+
 export interface MaterialListItem {
   id: string;
   code: string;
   name: string;
   unit: string;
+  kind: MaterialKind;
   salePrice: number;
   costPrice: number;
   minStock: number | null;
@@ -1977,6 +1996,7 @@ export interface MaterialSelectItem {
   code: string;
   name: string;
   unit: string;
+  kind: MaterialKind;
   salePrice: number;
 }
 export interface MaterialListMeta {
@@ -2105,6 +2125,8 @@ export interface ProjectMaterialAllocationItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  bomLineId?: string | null;
+  bomLine?: { id: string; name: string; group: CostGroup } | null;
   purchaseInvoiceDate: string;
   purchaseInvoiceNo?: string | null;
   receipt: { id: string; receiptNo: string; date: string; purchaseInvoiceNo?: string | null } | null;
@@ -2115,6 +2137,7 @@ export interface ProjectMaterialAllocation {
   id: string;
   projectId: string;
   salesInvoiceDate: string;
+  salesInvoiceNo?: string | null;
   status: ProjectMaterialAllocationStatus;
   notes?: string | null;
   confirmedAt?: string | null;
@@ -2122,6 +2145,16 @@ export interface ProjectMaterialAllocation {
   createdAt: string;
   updatedAt: string;
   totalAmount: number;
+  /** Sum of direct costs attached to this allocation */
+  costTotal?: number;
+  costs?: Array<{
+    id: string;
+    group: CostGroup;
+    description: string;
+    invoiceNo: string | null;
+    invoiceDate: string;
+    amount: number;
+  }>;
   items: ProjectMaterialAllocationItem[];
   stockIssues: Array<{
     id: string;

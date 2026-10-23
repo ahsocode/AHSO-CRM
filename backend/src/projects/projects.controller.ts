@@ -230,6 +230,28 @@ export class ProjectsController {
     return this.projectsService.confirmMaterialAllocation(id, user);
   }
 
+  @RequirePermissions("projects.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/material-allocations" })
+  @Get(":id/material-allocations")
+  listMaterialAllocations(
+    @Param("id") id: string,
+    @Query("includeCancelled") includeCancelled: string | undefined,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.listMaterialAllocations(id, user, includeCancelled === "true");
+  }
+
+  @RequirePermissions("projects.edit")
+  @ApiOperation({ summary: "POST /api/projects/:id/material-allocations" })
+  @Post(":id/material-allocations")
+  createMaterialAllocation(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(upsertProjectMaterialAllocationSchema)) dto: UpsertProjectMaterialAllocationDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.projectsService.createMaterialAllocation(id, dto, user);
+  }
+
   @RequirePermissions("projects.delete")
   @ApiOperation({ summary: "DELETE /api/projects/:id" })
   @Delete(":id")

@@ -162,7 +162,9 @@ export function useEligibleStockLots(projectId: string, salesInvoiceDate?: strin
 export interface ProjectMaterialAllocationInput {
   salesInvoiceDate: string;
   notes?: string;
-  items: Array<{ stockLotId: string; quantity: number }>;
+  salesInvoiceNo?: string;
+  items: Array<{ stockLotId: string; quantity: number; bomLineId?: string | null }>;
+  costIds?: string[];
 }
 
 export function useSaveProjectMaterialAllocation(projectId: string) {

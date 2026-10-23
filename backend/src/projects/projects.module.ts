@@ -3,12 +3,13 @@ import { CustomFieldsModule } from "../custom-fields/custom-fields.module";
 import { DocumentsModule } from "../documents/documents.module";
 import { DomainEventsModule } from "../domain-events/domain-events.module";
 import { InventoryModule } from "../inventory/inventory.module";
+import { MaterialAllocationsController } from "./material-allocations.controller";
 import { ProjectsController } from "./projects.controller";
 import { ProjectsService } from "./projects.service";
 
 @Module({
   imports: [DomainEventsModule, CustomFieldsModule, DocumentsModule, InventoryModule],
-  controllers: [ProjectsController],
+  controllers: [ProjectsController, MaterialAllocationsController],
   providers: [ProjectsService]
 })
 export class ProjectsModule {}

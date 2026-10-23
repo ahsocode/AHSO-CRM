@@ -153,9 +153,22 @@ export function materialAllocationInclude() {
           }
         },
         warehouse: { select: { id: true, code: true, name: true } },
-        material: { select: { id: true, code: true, name: true, unit: true } }
+        material: { select: { id: true, code: true, name: true, unit: true } },
+        bomLine: { select: { id: true, name: true, group: true } }
       },
       orderBy: { id: "asc" as const }
+    },
+    costs: {
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        group: true,
+        description: true,
+        invoiceNo: true,
+        invoiceDate: true,
+        amount: true
+      },
+      orderBy: { invoiceDate: "asc" as const }
     },
     stockIssues: {
       select: {
@@ -212,15 +225,26 @@ export function mapMaterialAllocation(allocation: {
   id: string;
   projectId: string;
   salesInvoiceDate: Date;
+  salesInvoiceNo: string | null;
   status: string;
   notes: string | null;
   confirmedAt: Date | null;
   cancelledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  costs: Array<{
+    id: string;
+    group: string;
+    description: string;
+    invoiceNo: string | null;
+    invoiceDate: Date;
+    amount: DecimalLike;
+  }>;
   items: Array<{
     id: string;
     stockLotId: string;
+    bomLineId: string | null;
+    bomLine: { id: string; name: string; group: string } | null;
     warehouseId: string;
     warehouse: { id: string; code: string; name: string };
     materialId: string;
@@ -255,6 +279,7 @@ export function mapMaterialAllocation(allocation: {
     id: allocation.id,
     projectId: allocation.projectId,
     salesInvoiceDate: allocation.salesInvoiceDate,
+    salesInvoiceNo: allocation.salesInvoiceNo,
     status: allocation.status,
     notes: allocation.notes,
     confirmedAt: allocation.confirmedAt,
@@ -262,9 +287,13 @@ export function mapMaterialAllocation(allocation: {
     createdAt: allocation.createdAt,
     updatedAt: allocation.updatedAt,
     totalAmount: allocation.items.reduce((sum, item) => sum + decimalToNumber(item.total), 0),
+    costTotal: allocation.costs.reduce((sum, cost) => sum + decimalToNumber(cost.amount), 0),
+    costs: allocation.costs.map((cost) => ({ ...cost, amount: decimalToNumber(cost.amount) })),
     items: allocation.items.map((item) => ({
       id: item.id,
       stockLotId: item.stockLotId,
+      bomLineId: item.bomLineId,
+      bomLine: item.bomLine,
       warehouseId: item.warehouseId,
       warehouse: item.warehouse,
       materialId: item.materialId,

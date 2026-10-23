@@ -63,6 +63,46 @@ export const NAV_ITEMS = [
   { href: "/users", label: "Người dùng", icon: "briefcase" }
 ] as const;
 
+export const MATERIAL_KIND_LABELS = {
+  STOCK: "Hàng tồn kho",
+  SERVICE: "Dịch vụ / phần mềm",
+  PRODUCT: "Thành phẩm (máy)"
+} as const;
+
+export const BOM_KIND_LABELS = {
+  PROJECT: "BOM dự án",
+  MODEL: "Mẫu máy"
+} as const;
+
+export const BOM_STATUS_LABELS = {
+  DRAFT: "Nháp",
+  APPROVED: "Đã duyệt",
+  ARCHIVED: "Ngừng dùng"
+} as const;
+
+export const COST_GROUP_LABELS = {
+  MECHANICAL: "Cơ khí",
+  ELECTRICAL: "Điện – điều khiển",
+  VISION: "Vision – camera",
+  SOFTWARE: "Phần mềm",
+  LABOR: "Nhân công",
+  OUTSOURCE: "Thuê ngoài – gia công",
+  SHIPPING: "Vận chuyển",
+  OTHER: "Khác"
+} as const;
+
+/** Display order of cost groups (same as the backend). */
+export const COST_GROUP_ORDER = [
+  "MECHANICAL",
+  "ELECTRICAL",
+  "VISION",
+  "SOFTWARE",
+  "LABOR",
+  "OUTSOURCE",
+  "SHIPPING",
+  "OTHER"
+] as const;
+
 export const PROJECT_STATUS_LABELS = {
   SURVEY: "Khảo sát",
   QUOTING: "Báo giá",

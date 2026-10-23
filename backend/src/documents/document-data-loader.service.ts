@@ -83,8 +83,12 @@ export class DocumentDataLoaderService {
       total: Prisma.Decimal;
     }>
   ) {
+    // Explicit field list: internal BOM / cost links (bomId…) must never reach print templates
     return items.map((item) => ({
-      ...item,
+      id: item.id,
+      order: item.order,
+      name: item.name,
+      unit: item.unit,
       description: normalizeDescription(item.description),
       quantity: Number(item.quantity),
       unitPrice: Number(item.unitPrice),

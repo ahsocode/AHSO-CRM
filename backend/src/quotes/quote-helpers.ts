@@ -55,6 +55,7 @@ export function buildQuoteItemsCreateInput(
     unit?: string;
     quantity: number;
     unitPrice: number;
+    bomId?: string | null;
   }>
 ) {
   return items.map((item, index) => ({
@@ -64,7 +65,8 @@ export function buildQuoteItemsCreateInput(
     unit: item.unit,
     quantity: item.quantity,
     unitPrice: item.unitPrice,
-    total: Math.round(item.quantity * item.unitPrice)
+    total: Math.round(item.quantity * item.unitPrice),
+    ...(item.bomId ? { bomId: item.bomId } : {})
   }));
 }
 

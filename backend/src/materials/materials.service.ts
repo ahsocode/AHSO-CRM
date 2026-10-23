@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+import { MaterialKind, type Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { CreateMaterialDto } from "./dto/create-material.dto";
@@ -28,7 +28,7 @@ export class MaterialsService {
       const totalStock = m.stockBalances.reduce((sum, b) => sum + Number(b.quantity), 0);
       const isLowStock = m.minStock !== null && totalStock < Number(m.minStock);
       return {
-        id: m.id, code: m.code, name: m.name, unit: m.unit,
+        id: m.id, code: m.code, name: m.name, unit: m.unit, kind: m.kind,
         salePrice: Number(m.salePrice), costPrice: Number(m.costPrice),
         minStock: m.minStock !== null ? Number(m.minStock) : null,
         categoryId: m.categoryId, category: m.category, isActive: m.isActive,
@@ -59,8 +59,11 @@ export class MaterialsService {
     };
   }
 
-  async findAllSelect(_user: JwtUser, search?: string) {
+  async findAllSelect(_user: JwtUser, search?: string, kind?: string) {
     const where: Prisma.MaterialWhereInput = { deletedAt: null, isActive: true };
+    if (kind && (Object.values(MaterialKind) as string[]).includes(kind)) {
+      where.kind = kind as MaterialKind;
+    }
     if (search?.trim()) {
       where.OR = [
         { name: { contains: search.trim(), mode: "insensitive" } },
@@ -71,7 +74,7 @@ export class MaterialsService {
       where,
       take: 300,
       orderBy: { name: "asc" },
-      select: { id: true, code: true, name: true, unit: true, salePrice: true },
+      select: { id: true, code: true, name: true, unit: true, kind: true, salePrice: true },
     });
     return items.map((m) => ({ ...m, salePrice: Number(m.salePrice) }));
   }
@@ -115,6 +118,7 @@ export class MaterialsService {
           code: dto.code,
           name: dto.name,
           unit: dto.unit,
+          kind: dto.kind ?? "STOCK",
           salePrice: dto.salePrice ?? 0,
           costPrice: dto.costPrice ?? 0,
           minStock: dto.minStock,
@@ -152,6 +156,7 @@ export class MaterialsService {
         ...(dto.code !== undefined && { code: dto.code }),
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.unit !== undefined && { unit: dto.unit }),
+        ...(dto.kind !== undefined && { kind: dto.kind }),
         ...(dto.salePrice !== undefined && { salePrice: dto.salePrice }),
         ...(dto.costPrice !== undefined && { costPrice: dto.costPrice }),
         ...(dto.minStock !== undefined && { minStock: dto.minStock }),
@@ -211,6 +216,10 @@ export class MaterialsService {
 
     if (filters.categoryId) {
       where.categoryId = filters.categoryId;
+    }
+
+    if (filters.kind) {
+      where.kind = filters.kind;
     }
 
     if (filters.isActive !== undefined) {

@@ -16,6 +16,7 @@ import { UsersModule } from "./users/users.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { CustomersModule } from "./customers/customers.module";
 import { ContactsModule } from "./contacts/contacts.module";
+import { BomsModule } from "./boms/boms.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { QuotesModule } from "./quotes/quotes.module";
 import { ContractsModule } from "./contracts/contracts.module";
@@ -76,6 +77,7 @@ import { StockCountsModule } from "./stock-counts/stock-counts.module";
     CustomersModule,
     ContactsModule,
     ProjectsModule,
+    BomsModule,
     QuotesModule,
     ContractsModule,
     ActivitiesModule,

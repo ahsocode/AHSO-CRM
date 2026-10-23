@@ -351,4 +351,85 @@ describe("QuotesService", () => {
     expect(tx.quote.aggregate).not.toHaveBeenCalled();
     expect(tx.quote.create).not.toHaveBeenCalled();
   });
+
+  describe("BOM link on quote items (R8)", () => {
+    const baseDto = {
+      projectId: "project-1",
+      status: "DRAFT" as const,
+      taxRate: 10,
+      items: [{ name: "Máy dán nhãn", quantity: 2, unitPrice: 1000, bomId: "bom-9" }]
+    };
+
+    it("rejects a BOM that does not belong to the quote's project", async () => {
+      tx.project.findFirst.mockResolvedValue({ id: "project-1", status: "SURVEY" });
+      (tx as unknown as { bom: { count: jest.Mock } }).bom = { count: jest.fn().mockResolvedValue(0) };
+
+      await expect(service.create(baseDto, user)).rejects.toThrow("BOM gắn vào hạng mục phải thuộc cùng dự án");
+      expect(tx.quote.create).not.toHaveBeenCalled();
+    });
+
+    it("stores bomId on the item when the BOM belongs to the project", async () => {
+      tx.project.findFirst.mockResolvedValue({ id: "project-1", status: "SURVEY" });
+      (tx as unknown as { bom: { count: jest.Mock } }).bom = { count: jest.fn().mockResolvedValue(1) };
+      tx.quote.aggregate.mockResolvedValue({ _max: { version: 0 } });
+      tx.quote.findFirst.mockResolvedValue(null);
+      tx.quote.create.mockResolvedValue({ id: "q1", quoteNo: "BG-1" });
+
+      await service.create(baseDto, user);
+
+      const data = tx.quote.create.mock.calls[0][0].data;
+      expect(data.items.create[0]).toEqual(expect.objectContaining({ bomId: "bom-9", total: 2000 }));
+    });
+
+    it("returns an internal cost estimate per BOM line and for the whole quote", async () => {
+      const quoteRow = {
+        id: "q1", quoteNo: "BG-1", version: 1, status: "DRAFT", validUntil: null,
+        subtotal: 3000, taxRate: 10, taxAmount: 300, total: 3300, tableColumnWidths: null,
+        terms: null, deliveryTerms: null, internalNote: null, sentAt: null, acceptedAt: null,
+        acceptedItemIds: [], createdAt: new Date(), updatedAt: new Date(),
+        createdBy: { id: "u", name: "A", email: "a@a", role: "ADMIN" },
+        project: {
+          id: "p", code: "P", name: "P", status: "QUOTING", estimatedValue: 0, contract: null,
+          customer: { id: "c", name: "C", shortName: null, taxCode: null, address: null, status: "ACTIVE", assignedTo: null, contacts: [] }
+        },
+        items: [
+          { id: "i1", order: 1, name: "Máy", description: null, unit: null, quantity: 2, unitPrice: 1000, total: 2000, bomId: "bom-9" },
+          { id: "i2", order: 2, name: "Dịch vụ", description: null, unit: null, quantity: 1, unitPrice: 1000, total: 1000, bomId: null }
+        ]
+      };
+      jest.spyOn(service as unknown as { findAccessibleQuote: () => Promise<unknown> }, "findAccessibleQuote").mockResolvedValue(quoteRow);
+      Object.assign(prisma, {
+        bom: { findMany: jest.fn().mockResolvedValue([{ id: "bom-9", code: "BOM-1", name: "Máy", status: "APPROVED", version: 1 }]) },
+        bomLine: {
+          findMany: jest.fn().mockResolvedValue([
+            { id: "l1", bomId: "bom-9", order: 0, group: "MECHANICAL", materialId: null, childBomId: null, name: "x", unit: null, quantity: 1, estUnitCost: 600, material: null }
+          ])
+        }
+      });
+
+      const detail = await service.findOne("q1", user);
+
+      expect(detail.items[0].costEstimate).toEqual({ cost: 1200, margin: 800, marginPct: 40 });
+      expect(detail.items[1].costEstimate).toBeNull();
+      expect(detail.costEstimate).toEqual(
+        expect.objectContaining({ cost: 1200, revenue: 2000, margin: 800, coveredItemCount: 1, itemCount: 2, isComplete: false })
+      );
+    });
+
+    it("hides the estimate from users without projects.view", async () => {
+      const limited = { ...user, role: "STAFF" as never, permissions: ["quotes.view"] };
+      jest.spyOn(service as unknown as { findAccessibleQuote: () => Promise<unknown> }, "findAccessibleQuote").mockResolvedValue({
+        id: "q1", quoteNo: "BG-1", version: 1, status: "DRAFT", validUntil: null, subtotal: 0, taxRate: 10, taxAmount: 0, total: 0,
+        tableColumnWidths: null, terms: null, deliveryTerms: null, internalNote: null, sentAt: null, acceptedAt: null,
+        acceptedItemIds: [], createdAt: new Date(), updatedAt: new Date(), createdBy: null,
+        project: { id: "p", code: "P", name: "P", status: "QUOTING", estimatedValue: 0, contract: null,
+          customer: { id: "c", name: "C", shortName: null, taxCode: null, address: null, status: "ACTIVE", assignedTo: null, contacts: [] } },
+        items: [{ id: "i1", order: 1, name: "Máy", description: null, unit: null, quantity: 1, unitPrice: 0, total: 0, bomId: "bom-9" }]
+      });
+
+      const detail = await service.findOne("q1", limited);
+      expect(detail.costEstimate).toBeNull();
+      expect(detail.items[0].costEstimate).toBeNull();
+    });
+  });
 });

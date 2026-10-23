@@ -7,6 +7,7 @@ import type {
   MaterialCategoryItem,
   MaterialDetail,
   MaterialListItem,
+  MaterialKind,
   MaterialListMeta,
   MaterialSelectItem,
 } from "@/lib/types";
@@ -16,6 +17,7 @@ export interface MaterialFilters {
   limit: number;
   search?: string;
   categoryId?: string;
+  kind?: MaterialKind;
   isActive?: boolean;
   lowStockOnly?: boolean;
 }
@@ -24,6 +26,7 @@ export interface MaterialCreateInput {
   code: string;
   name: string;
   unit: string;
+  kind?: MaterialKind;
   salePrice?: number;
   costPrice?: number;
   minStock?: number;
@@ -76,12 +79,12 @@ export function useMaterial(id?: string) {
   });
 }
 
-export function useMaterialsSelect(search?: string) {
+export function useMaterialsSelect(search?: string, kind?: MaterialSelectItem["kind"]) {
   return useQuery({
-    queryKey: ["materials", "select", search],
+    queryKey: ["materials", "select", search, kind],
     queryFn: async () => {
       const res = await apiClient.get<ApiResponse<MaterialSelectItem[]>>("/materials/select", {
-        params: search ? { search } : {},
+        params: { ...(search ? { search } : {}), ...(kind ? { kind } : {}) },
       });
       return res.data.data;
     },

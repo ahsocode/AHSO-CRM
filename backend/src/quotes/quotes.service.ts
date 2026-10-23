@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ModuleRef } from "@nestjs/core";
 import type { Prisma } from "@prisma/client";
-import { JwtUser } from "../auth/auth.types";
+import { hasPermission, JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { loadBomTotals } from "../boms/bom-graph";
 import {
   buildQuoteItemsCreateInput,
   buildQuoteTotals,
@@ -155,6 +156,7 @@ export class QuotesService {
 
   async findOne(id: string, user: JwtUser) {
     const quote = await this.findAccessibleQuote(id, user);
+    const costing = await this.buildCostEstimates(quote.items, user);
 
     return {
       id: quote.id,
@@ -218,8 +220,13 @@ export class QuotesService {
         unit: item.unit,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
-        total: Number(item.total)
-      }))
+        total: Number(item.total),
+        bomId: item.bomId,
+        bom: item.bomId ? costing.boms.get(item.bomId) ?? null : null,
+        costEstimate: costing.byItem.get(item.id) ?? null
+      })),
+      // Internal only (projects.edit): never part of the printed quote / PDF
+      costEstimate: costing.summary
     };
   }
 
@@ -239,6 +246,8 @@ export class QuotesService {
       if (!project) {
         throw new NotFoundException("Không tìm thấy dự án để tạo báo giá");
       }
+
+      await this.assertBomsBelongToProject(tx, dto.projectId, dto.items);
 
       const nextVersion = await tx.quote.aggregate({
         _max: {
@@ -304,6 +313,8 @@ export class QuotesService {
       if (!EDITABLE_QUOTE_STATUSES.includes(quote.status as (typeof EDITABLE_QUOTE_STATUSES)[number])) {
         throw new BadRequestException("Chỉ có thể sửa báo giá ở trạng thái nháp hoặc bị từ chối");
       }
+
+      await this.assertBomsBelongToProject(tx, quote.projectId, dto.items);
 
       const totals = buildQuoteTotals(dto.items, dto.taxRate);
       const updatedQuote = await tx.quote.update({
@@ -375,7 +386,8 @@ export class QuotesService {
         description: item.description ?? undefined,
         unit: item.unit ?? undefined,
         quantity: Number(item.quantity),
-        unitPrice: Number(item.unitPrice)
+        unitPrice: Number(item.unitPrice),
+        bomId: item.bomId
       }));
       const totals = buildQuoteTotals(itemInputs, Number(quote.taxRate));
       const duplicatedQuote = await tx.quote.create({
@@ -672,6 +684,85 @@ export class QuotesService {
     });
 
     return { success: true, id: quote.id };
+  }
+
+  /** R8: every linked BOM must be a live BOM of the quote's own project. */
+  private async assertBomsBelongToProject(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    items: Array<{ bomId?: string | null }>
+  ) {
+    const bomIds = [...new Set(items.map((item) => item.bomId).filter((value): value is string => Boolean(value)))];
+    if (bomIds.length === 0) return;
+
+    const count = await tx.bom.count({
+      where: { id: { in: bomIds }, projectId, kind: "PROJECT", deletedAt: null }
+    });
+    if (count !== bomIds.length) {
+      throw new BadRequestException("BOM gắn vào hạng mục phải thuộc cùng dự án của báo giá");
+    }
+  }
+
+  /** Internal margin estimate per line with a BOM (R8). Empty when the user may not see project costs. */
+  private async buildCostEstimates(
+    items: Array<{ id: string; bomId: string | null; total: Prisma.Decimal; quantity: Prisma.Decimal }>,
+    user: JwtUser
+  ) {
+    const empty = {
+      boms: new Map<string, { id: string; code: string; name: string; status: string; version: number }>(),
+      byItem: new Map<string, { cost: number; margin: number; marginPct: number | null }>(),
+      summary: null as null | {
+        cost: number;
+        revenue: number;
+        margin: number;
+        marginPct: number | null;
+        coveredItemCount: number;
+        itemCount: number;
+        isComplete: boolean;
+      }
+    };
+    const bomIds = [...new Set(items.map((item) => item.bomId).filter((value): value is string => Boolean(value)))];
+    if (bomIds.length === 0 || !hasPermission(user, "projects.edit")) {
+      return empty;
+    }
+
+    const [boms, totals] = await Promise.all([
+      this.prisma.bom.findMany({
+        where: { id: { in: bomIds } },
+        select: { id: true, code: true, name: true, status: true, version: true }
+      }),
+      loadBomTotals(this.prisma, bomIds)
+    ]);
+    for (const bom of boms) empty.boms.set(bom.id, bom);
+
+    let costSum = 0;
+    let revenueSum = 0;
+    let covered = 0;
+    for (const item of items) {
+      if (!item.bomId) continue;
+      const cost = Math.round(Number(item.quantity) * (totals.get(item.bomId)?.total ?? 0));
+      const revenue = Number(item.total);
+      const margin = revenue - cost;
+      empty.byItem.set(item.id, {
+        cost,
+        margin,
+        marginPct: revenue > 0 ? Math.round((margin / revenue) * 1000) / 10 : null
+      });
+      costSum += cost;
+      revenueSum += revenue;
+      covered += 1;
+    }
+    const margin = revenueSum - costSum;
+    empty.summary = {
+      cost: costSum,
+      revenue: revenueSum,
+      margin,
+      marginPct: revenueSum > 0 ? Math.round((margin / revenueSum) * 1000) / 10 : null,
+      coveredItemCount: covered,
+      itemCount: items.length,
+      isComplete: covered === items.length
+    };
+    return empty;
   }
 
   private async findAccessibleQuote(id: string, user: JwtUser) {

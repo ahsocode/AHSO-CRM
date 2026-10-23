@@ -19,12 +19,15 @@ export const eligibleStockLotsSchema = z.object({
 
 export const projectMaterialAllocationItemSchema = z.object({
   stockLotId: z.string().trim().min(1, "Chọn lô nhập"),
-  quantity: z.coerce.number().positive("Số lượng phải lớn hơn 0")
+  quantity: z.coerce.number().positive("Số lượng phải lớn hơn 0"),
+  bomLineId: z.preprocess(emptyToUndefined, z.string().trim().min(1).nullish())
 });
 
 export const upsertProjectMaterialAllocationSchema = z.object({
   salesInvoiceDate: z.coerce.date(),
+  salesInvoiceNo: optionalString(60),
   notes: optionalString(2000),
+  costIds: z.array(z.string().trim().min(1)).max(200).optional(),
   items: z
     .array(projectMaterialAllocationItemSchema)
     .min(1, "Phải có ít nhất một lô vật tư")

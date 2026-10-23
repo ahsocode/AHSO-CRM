@@ -1538,6 +1538,11 @@ export class ProjectsService {
     return lots.map((lot) => mapStockLot(lot));
   }
 
+  // ─── Material allocations ───────────────────────────────────────────────────
+  // A project can have several allocations (R10), one per sales invoice. The
+  // singular endpoints below act on the latest non-cancelled allocation so the
+  // pre-BOM UI keeps working.
+
   async getMaterialAllocation(id: string, user: JwtUser) {
     await this.findAccessibleProjectRecord(id, user);
     const allocation = await this.prisma.projectMaterialAllocation.findFirst({
@@ -1549,43 +1554,69 @@ export class ProjectsService {
     return allocation ? mapMaterialAllocation(allocation) : null;
   }
 
+  async listMaterialAllocations(projectId: string, user: JwtUser, includeCancelled = false) {
+    await this.findAccessibleProjectRecord(projectId, user);
+    const allocations = await this.prisma.projectMaterialAllocation.findMany({
+      where: { projectId, ...(includeCancelled ? {} : { status: { not: "CANCELLED" } }) },
+      orderBy: { createdAt: "desc" },
+      include: materialAllocationInclude()
+    });
+    const items = allocations.map((allocation) => mapMaterialAllocation(allocation));
+    return { items, meta: { total: items.length, page: 1, limit: items.length, totalPages: 1 } };
+  }
+
+  async getMaterialAllocationById(allocationId: string, user: JwtUser) {
+    const allocation = await this.prisma.projectMaterialAllocation.findFirst({
+      where: { id: allocationId },
+      include: materialAllocationInclude()
+    });
+    if (!allocation) {
+      throw new NotFoundException("Không tìm thấy đợt phân bổ vật tư");
+    }
+    await this.findAccessibleProjectRecord(allocation.projectId, user);
+    return mapMaterialAllocation(allocation);
+  }
+
+  async createMaterialAllocation(projectId: string, dto: UpsertProjectMaterialAllocationDto, user: JwtUser) {
+    await this.findAccessibleProjectRecord(projectId, user);
+    return this.prisma.$transaction((tx) => this.saveAllocation(tx, projectId, null, dto));
+  }
+
+  async updateMaterialAllocationById(allocationId: string, dto: UpsertProjectMaterialAllocationDto, user: JwtUser) {
+    const allocation = await this.findAccessibleAllocation(allocationId, user);
+    return this.prisma.$transaction((tx) => this.saveAllocation(tx, allocation.projectId, allocation.id, dto));
+  }
+
+  async cancelMaterialAllocation(allocationId: string, user: JwtUser) {
+    const allocation = await this.findAccessibleAllocation(allocationId, user);
+    if (allocation.status === "CANCELLED") {
+      throw new BadRequestException("Đợt phân bổ đã được hủy");
+    }
+    if (allocation.status === "CONFIRMED") {
+      throw new BadRequestException("Đợt phân bổ đã xác nhận (đã xuất kho), không thể hủy");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.projectCost.updateMany({ where: { allocationId }, data: { allocationId: null } });
+      const cancelled = await tx.projectMaterialAllocation.update({
+        where: { id: allocationId },
+        data: { status: "CANCELLED", cancelledAt: new Date() },
+        include: materialAllocationInclude()
+      });
+      return mapMaterialAllocation(cancelled);
+    });
+  }
+
+  /** Legacy singular endpoint: writes the latest non-cancelled allocation, or creates the first one. */
   async upsertMaterialAllocation(id: string, dto: UpsertProjectMaterialAllocationDto, user: JwtUser) {
     const project = await this.findAccessibleProjectRecord(id, user);
     if (project.status !== "COMPLETED") {
       throw new BadRequestException("Chỉ phân bổ vật tư sau khi dự án đã hoàn thành");
     }
 
-    const stockLotIds = dto.items.map((item) => item.stockLotId);
-    if (new Set(stockLotIds).size !== stockLotIds.length) {
-      throw new BadRequestException("Không được chọn trùng một lô nhập trong cùng phân bổ");
-    }
-
     return this.prisma.$transaction(async (tx) => {
-      const lots = await tx.stockLot.findMany({
-        where: { id: { in: stockLotIds } },
-        select: {
-          id: true,
-          warehouseId: true,
-          materialId: true,
-          purchaseInvoiceDate: true,
-          remainingQuantity: true,
-          unitPrice: true
-        }
-      });
-      const lotById = new Map(lots.map((lot) => [lot.id, lot]));
-
-      for (const item of dto.items) {
-        const lot = lotById.get(item.stockLotId);
-        if (!lot) {
-          throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
-        }
-        if (lot.purchaseInvoiceDate.getTime() > dto.salesInvoiceDate.getTime()) {
-          throw new BadRequestException("Không thể phân bổ lô nhập sau ngày hóa đơn bán ra");
-        }
-        if (toDecimal(lot.remainingQuantity).lessThan(item.quantity)) {
-          throw new BadRequestException("Số lượng phân bổ vượt quá tồn còn lại của lô nhập");
-        }
-      }
+      // Validate before the "already confirmed" check so error precedence matches the old behaviour
+      await this.validateAllocationItems(tx, id, dto);
 
       const existing = await tx.projectMaterialAllocation.findFirst({
         where: { projectId: id, status: { not: "CANCELLED" } },
@@ -1601,58 +1632,220 @@ export class ProjectsService {
         data: { salesInvoiceDate: dto.salesInvoiceDate }
       });
 
-      const itemCreates = dto.items.map((item) => {
-        const lot = lotById.get(item.stockLotId);
-        if (!lot) throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
-        const quantity = toDecimal(item.quantity);
-        const unitPrice = toDecimal(lot.unitPrice);
-        return {
-          stockLotId: lot.id,
-          warehouseId: lot.warehouseId,
-          materialId: lot.materialId,
-          quantity,
-          unitPrice,
-          total: quantity.mul(unitPrice).toDecimalPlaces(0)
-        };
-      });
-
-      const allocation = existing
-        ? await tx.projectMaterialAllocation.update({
-            where: { id: existing.id },
-            data: {
-              salesInvoiceDate: dto.salesInvoiceDate,
-              notes: dto.notes,
-              items: {
-                deleteMany: {},
-                create: itemCreates
-              }
-            },
-            include: materialAllocationInclude()
-          })
-        : await tx.projectMaterialAllocation.create({
-            data: {
-              projectId: id,
-              salesInvoiceDate: dto.salesInvoiceDate,
-              notes: dto.notes,
-              items: { create: itemCreates }
-            },
-            include: materialAllocationInclude()
-          });
-
-      return mapMaterialAllocation(allocation);
+      return this.saveAllocation(tx, id, existing?.id ?? null, dto);
     });
   }
 
+  /** Legacy singular endpoint: confirms the latest draft allocation of the project. */
   async confirmMaterialAllocation(id: string, user: JwtUser) {
     await this.findAccessibleProjectRecord(id, user);
+    const draft = await this.prisma.projectMaterialAllocation.findFirst({
+      where: { projectId: id, status: "DRAFT" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true }
+    });
+    if (!draft) {
+      throw new NotFoundException("Không tìm thấy phân bổ vật tư nháp");
+    }
+    return this.confirmAllocationRecord(draft.id, id, user);
+  }
+
+  async confirmMaterialAllocationById(allocationId: string, user: JwtUser) {
+    const allocation = await this.findAccessibleAllocation(allocationId, user);
+    return this.confirmAllocationRecord(allocation.id, allocation.projectId, user);
+  }
+
+  private async findAccessibleAllocation(allocationId: string, user: JwtUser) {
+    const allocation = await this.prisma.projectMaterialAllocation.findFirst({
+      where: { id: allocationId },
+      select: { id: true, projectId: true, status: true }
+    });
+    if (!allocation) {
+      throw new NotFoundException("Không tìm thấy đợt phân bổ vật tư");
+    }
+    await this.findAccessibleProjectRecord(allocation.projectId, user);
+    return allocation;
+  }
+
+  private async validateAllocationItems(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    dto: UpsertProjectMaterialAllocationDto
+  ) {
+    const stockLotIds = dto.items.map((item) => item.stockLotId);
+    if (new Set(stockLotIds).size !== stockLotIds.length) {
+      throw new BadRequestException("Không được chọn trùng một lô nhập trong cùng phân bổ");
+    }
+
+    const lots = await tx.stockLot.findMany({
+      where: { id: { in: stockLotIds } },
+      select: {
+        id: true,
+        warehouseId: true,
+        materialId: true,
+        purchaseInvoiceDate: true,
+        remainingQuantity: true,
+        unitPrice: true
+      }
+    });
+    const lotById = new Map(lots.map((lot) => [lot.id, lot]));
+
+    const bomLineIds = [...new Set(dto.items.map((item) => item.bomLineId).filter((value): value is string => Boolean(value)))];
+    const bomLines = bomLineIds.length
+      ? await tx.bomLine.findMany({
+          where: { id: { in: bomLineIds }, bom: { projectId, kind: "PROJECT", deletedAt: null } },
+          select: { id: true, materialId: true }
+        })
+      : [];
+    const bomLineById = new Map(bomLines.map((line) => [line.id, line]));
+
+    for (const item of dto.items) {
+      const lot = lotById.get(item.stockLotId);
+      if (!lot) {
+        throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
+      }
+      if (lot.purchaseInvoiceDate.getTime() > dto.salesInvoiceDate.getTime()) {
+        throw new BadRequestException("Không thể phân bổ lô nhập sau ngày hóa đơn bán ra");
+      }
+      if (toDecimal(lot.remainingQuantity).lessThan(item.quantity)) {
+        throw new BadRequestException("Số lượng phân bổ vượt quá tồn còn lại của lô nhập");
+      }
+      if (item.bomLineId) {
+        const line = bomLineById.get(item.bomLineId);
+        if (!line) {
+          throw new BadRequestException("Dòng BOM không thuộc dự án này");
+        }
+        if (line.materialId && line.materialId !== lot.materialId) {
+          throw new BadRequestException("Lô nhập không cùng vật tư với dòng BOM đã chọn");
+        }
+      }
+    }
+
+    return lotById;
+  }
+
+  /** Attaches direct costs to an allocation (R9: invoice date must not be after the sales invoice). */
+  private async syncAllocationCosts(
+    tx: Prisma.TransactionClient,
+    allocationId: string,
+    projectId: string,
+    costIds: string[] | undefined,
+    salesInvoiceDate: Date
+  ) {
+    const attached = await tx.projectCost.findMany({
+      where: { allocationId, deletedAt: null },
+      select: { id: true }
+    });
+    const targetIds = costIds ? [...new Set(costIds)] : attached.map((cost) => cost.id);
+
+    const costs = targetIds.length
+      ? await tx.projectCost.findMany({
+          where: { id: { in: targetIds }, projectId, deletedAt: null },
+          select: { id: true, description: true, invoiceDate: true, allocationId: true }
+        })
+      : [];
+    if (costs.length !== targetIds.length) {
+      throw new BadRequestException("Có chi phí không tồn tại hoặc không thuộc dự án này");
+    }
+    for (const cost of costs) {
+      if (cost.invoiceDate.getTime() > salesInvoiceDate.getTime()) {
+        throw new BadRequestException(`Chi phí "${cost.description}" có ngày hóa đơn sau ngày hóa đơn bán ra`);
+      }
+      if (cost.allocationId && cost.allocationId !== allocationId) {
+        throw new BadRequestException(`Chi phí "${cost.description}" đã được gắn vào một đợt phân bổ khác`);
+      }
+    }
+
+    if (costIds) {
+      await tx.projectCost.updateMany({
+        where: { allocationId, id: { notIn: targetIds } },
+        data: { allocationId: null }
+      });
+      if (targetIds.length > 0) {
+        await tx.projectCost.updateMany({ where: { id: { in: targetIds } }, data: { allocationId } });
+      }
+    }
+  }
+
+  /** Creates (allocationId = null) or replaces a DRAFT allocation inside the caller's transaction. */
+  private async saveAllocation(
+    tx: Prisma.TransactionClient,
+    projectId: string,
+    allocationId: string | null,
+    dto: UpsertProjectMaterialAllocationDto
+  ) {
+    const lotById = await this.validateAllocationItems(tx, projectId, dto);
+
+    if (allocationId) {
+      const current = await tx.projectMaterialAllocation.findFirst({
+        where: { id: allocationId },
+        select: { status: true }
+      });
+      if (!current) throw new NotFoundException("Không tìm thấy đợt phân bổ vật tư");
+      if (current.status === "CONFIRMED") {
+        throw new BadRequestException("Phân bổ vật tư đã xác nhận, không thể chỉnh sửa");
+      }
+      if (current.status === "CANCELLED") {
+        throw new BadRequestException("Đợt phân bổ đã hủy, không thể chỉnh sửa");
+      }
+    }
+
+    const itemCreates = dto.items.map((item) => {
+      const lot = lotById.get(item.stockLotId);
+      if (!lot) throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
+      const quantity = toDecimal(item.quantity);
+      const unitPrice = toDecimal(lot.unitPrice);
+      return {
+        stockLotId: lot.id,
+        warehouseId: lot.warehouseId,
+        materialId: lot.materialId,
+        quantity,
+        unitPrice,
+        total: quantity.mul(unitPrice).toDecimalPlaces(0),
+        bomLineId: item.bomLineId ?? null
+      };
+    });
+
+    const allocation = allocationId
+      ? await tx.projectMaterialAllocation.update({
+          where: { id: allocationId },
+          data: {
+            salesInvoiceDate: dto.salesInvoiceDate,
+            ...(dto.salesInvoiceNo !== undefined ? { salesInvoiceNo: dto.salesInvoiceNo } : {}),
+            notes: dto.notes,
+            items: { deleteMany: {}, create: itemCreates }
+          },
+          select: { id: true }
+        })
+      : await tx.projectMaterialAllocation.create({
+          data: {
+            projectId,
+            salesInvoiceDate: dto.salesInvoiceDate,
+            salesInvoiceNo: dto.salesInvoiceNo,
+            notes: dto.notes,
+            items: { create: itemCreates }
+          },
+          select: { id: true }
+        });
+
+    await this.syncAllocationCosts(tx, allocation.id, projectId, dto.costIds, dto.salesInvoiceDate);
+
+    const saved = await tx.projectMaterialAllocation.findUniqueOrThrow({
+      where: { id: allocation.id },
+      include: materialAllocationInclude()
+    });
+    return mapMaterialAllocation(saved);
+  }
+
+  private async confirmAllocationRecord(allocationId: string, projectId: string, user: JwtUser) {
+    const id = projectId;
 
     return this.prisma.$transaction(async (tx) => {
       // Serialize concurrent confirms for the same project to prevent double-deduction
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('confirm_material_alloc_' || ${id}))`;
 
       const allocation = await tx.projectMaterialAllocation.findFirst({
-        where: { projectId: id, status: "DRAFT" },
-        orderBy: { createdAt: "desc" },
+        where: { id: allocationId, projectId: id, status: "DRAFT" },
         include: {
           project: { select: { id: true, code: true, salesInvoiceDate: true } },
           items: {

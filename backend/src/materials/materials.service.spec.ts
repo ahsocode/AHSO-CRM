@@ -80,10 +80,13 @@ describe("MaterialsService", () => {
       const created = { id: "m2", code: "CAP002", name: "Cáp 2" };
       prisma.material.create.mockResolvedValue(created);
 
-      const dto = { code: "CAP002", name: "Cáp 2", unit: "m", salePrice: 0, costPrice: 0, isActive: true };
+      const dto = { code: "CAP002", name: "Cáp 2", unit: "m", kind: "SERVICE" as const, salePrice: 0, costPrice: 0, isActive: true };
       const result = await service.create(dto, user);
 
       expect(result).toEqual(created);
+      expect(prisma.material.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ kind: "SERVICE" }) })
+      );
     });
   });
 

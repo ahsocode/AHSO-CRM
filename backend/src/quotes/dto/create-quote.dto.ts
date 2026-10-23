@@ -19,7 +19,9 @@ export const createQuoteItemSchema = z.object({
   description: optionalString(1000),
   unit: optionalString(40),
   quantity: z.coerce.number().positive("Số lượng phải lớn hơn 0").max(1_000_000),
-  unitPrice: z.coerce.number().min(0, "Đơn giá không được âm").max(999_999_999_999)
+  unitPrice: z.coerce.number().min(0, "Đơn giá không được âm").max(999_999_999_999),
+  // Internal cost breakdown (BOM of the same project); never printed on the quote
+  bomId: z.preprocess(emptyToUndefined, z.string().trim().min(1).nullish())
 });
 
 export const quoteTableColumnWidthsSchema = z.object({

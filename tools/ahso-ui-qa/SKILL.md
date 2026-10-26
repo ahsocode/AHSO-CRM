@@ -109,6 +109,9 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
   (`initdb: No space left on device`). Dọn: `docker builder prune -f` rồi `docker image prune -a -f`
   (không prune volume — có dữ liệu dev). Xem dung lượng: `docker system df`.
   Từ 26/10/2026 `prepush.sh` tự dọn build cache cũ khi vượt ngưỡng; vẫn lỗi thì dọn tay như trên.
+- **E2E pass trên Mac nhưng fail trên GitHub Actions `Cannot find module '../frontend/node_modules/…'`:** máy Mac
+  có sẵn `frontend/node_modules`, job e2e trên CI chỉ `npm ci` ở root. Spec e2e import thư viện của frontend
+  (ví dụ `exceljs`) → job e2e phải cài thêm `npm ci --prefix frontend` (đã thêm trong `.github/workflows/ci.yml`).
 - **Chuỗi trong e2e không phải selector** (dữ liệu test, thông báo từ backend) → thêm `// qa-static: not-ui`
   cuối dòng để `static_checks.py` bỏ qua.
 - **Playwright `ENOTEMPTY` trước khi chạy test trên exFAT:** AppleDouble có thể xuất hiện khi Playwright

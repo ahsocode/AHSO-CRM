@@ -82,6 +82,10 @@ jobs:
           node-version: 20
       - name: Install root dependencies
         run: npm ci
+      # BOM e2e specs build/read Excel files with the frontend's exceljs
+      # (import "../frontend/node_modules/exceljs"); install frontend deps too.
+      - name: Install frontend dependencies (exceljs for e2e)
+        run: npm ci --prefix frontend --ignore-scripts --no-audit --no-fund
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
       # Do not use actions/cache or type=gha Docker layer cache here.

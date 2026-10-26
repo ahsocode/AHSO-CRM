@@ -1,10 +1,12 @@
 "use client";
 
+import { ProjectCombobox } from "@/components/shared/project-combobox";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
 import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
@@ -20,7 +22,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { useContract, useCreateContract, useUpdateContract } from "@/hooks/use-contracts";
-import { useProject, useProjects } from "@/hooks/use-projects";
+import { useProject } from "@/hooks/use-projects";
 import { useQuote } from "@/hooks/use-quotes";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { CONTRACT_STATUS_LABELS } from "@/lib/constants";
@@ -80,10 +82,6 @@ export function ContractFormScreen({
   const updateContractMutation = useUpdateContract(contractId ?? "");
   const contractQuery = useContract(mode === "edit" ? contractId ?? "" : "");
   const customFieldsQuery = useCustomFields("contract");
-  const projectsQuery = useProjects({
-    page: 1,
-    limit: 100
-  });
   const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
   const [selectedQuoteItemIds, setSelectedQuoteItemIds] = useState<string[]>([]);
   const form = useForm<ContractFormValues>({
@@ -106,21 +104,6 @@ export function ContractFormScreen({
     }
   }, [form, initialProjectId, initialSourceQuoteId, mode]);
 
-  // Native <select> shows a preselected value (?projectId= / ?sourceQuoteId=)
-  // only once its <option> exists; the value was set before the project list
-  // loaded, so the dropdown looked empty while the form already held it.
-  useEffect(() => {
-    if (
-      mode === "create" &&
-      initialProjectId &&
-      projectsQuery.data?.items.some((project) => project.id === initialProjectId)
-    ) {
-      form.setValue("projectId", initialProjectId);
-      if (initialSourceQuoteId) {
-        form.setValue("sourceQuoteId", initialSourceQuoteId);
-      }
-    }
-  }, [form, initialProjectId, initialSourceQuoteId, mode, projectsQuery.data]);
 
   useEffect(() => {
     if (mode === "edit" && contractQuery.data) {
@@ -145,16 +128,8 @@ export function ContractFormScreen({
   const selectedProjectQuery = useProject(selectedProjectId || "");
   const selectedSourceQuoteDetailQuery = useQuote(mode === "create" ? selectedSourceQuoteId ?? "" : "");
   const activeContract = contractQuery.data;
-  const availableProjects = useMemo(
-    () =>
-      (projectsQuery.data?.items ?? []).filter(
-        (project) => mode === "edit" || !project.contract || project.id === selectedProjectId
-      ),
-    [mode, projectsQuery.data?.items, selectedProjectId]
-  );
-  const selectedProjectListItem =
-    (projectsQuery.data?.items ?? []).find((project) => project.id === selectedProjectId) ?? null;
   const selectedProject = selectedProjectQuery.data;
+  const selectedProjectListItem = selectedProject;
   const acceptedQuotes = (selectedProject?.quotes ?? []).filter((quote) => quote.status === "ACCEPTED");
   const selectedSourceQuote =
     acceptedQuotes.find((quote) => quote.id === selectedSourceQuoteId) ?? null;
@@ -345,20 +320,9 @@ export function ContractFormScreen({
             <CardContent className="grid gap-4 md:grid-cols-2">
               <Field className="md:col-span-2">
                 <Label htmlFor="projectId">Dự án</Label>
-                <Select
-                  id="projectId"
-                  disabled={projectsQuery.isLoading || mode === "edit"}
-                  {...form.register("projectId")}
-                >
-                  <option value="">
-                    {projectsQuery.isLoading ? "Đang tải danh sách dự án..." : "Chọn dự án để tạo hợp đồng"}
-                  </option>
-                  {availableProjects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.code} · {project.name}
-                    </option>
-                  ))}
-                </Select>
+                <Controller control={form.control} name="projectId" render={({ field }) => (
+                  <ProjectCombobox {...field} id="projectId" value={field.value ?? ""} disabled={mode === "edit"} placeholder="Chọn dự án để tạo hợp đồng" excludeContracted={mode === "create"} />
+                )} />
                 <ErrorText message={form.formState.errors.projectId?.message} />
                 {mode === "edit" ? (
                   <p className="text-sm text-text-secondary">

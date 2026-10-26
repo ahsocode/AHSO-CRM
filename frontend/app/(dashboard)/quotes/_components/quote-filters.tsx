@@ -1,15 +1,14 @@
+import { ProjectCombobox } from "@/components/shared/project-combobox";
 import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Select } from "@/components/ui/select";
 import { QUOTE_STATUS_LABELS } from "@/lib/constants";
-import { ProjectListItem, QuoteStatus } from "@/lib/types";
+import { QuoteStatus } from "@/lib/types";
 
 export function QuoteFilters({
   search,
   status,
   projectId,
   canReset,
-  projects,
-  projectsUnavailable,
   onSearchChange,
   onStatusChange,
   onProjectIdChange,
@@ -19,8 +18,6 @@ export function QuoteFilters({
   status: QuoteStatus | "";
   projectId: string;
   canReset: boolean;
-  projects: ProjectListItem[];
-  projectsUnavailable: boolean;
   onSearchChange: (value: string) => void;
   onStatusChange: (value: QuoteStatus | "") => void;
   onProjectIdChange: (value: string) => void;
@@ -54,23 +51,10 @@ export function QuoteFilters({
         </Select>
       </label>
 
-      <label className="w-[150px]" htmlFor="quote-project">
-        <span className="sr-only">Dự án</span>
-        <Select
-          id="quote-project"
-          disabled={projectsUnavailable}
-          value={projectId}
-          onChange={(event) => onProjectIdChange(event.target.value)}
-          className="h-9 rounded-lg bg-white text-[12.5px]"
-        >
-          <option value="">{projectsUnavailable ? "Không tải được dự án" : "Dự án"}</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.code} · {project.name}
-            </option>
-          ))}
-        </Select>
-      </label>
+      <div className="w-[150px]">
+        <label className="sr-only" htmlFor="quote-project">Dự án</label>
+        <ProjectCombobox id="quote-project" value={projectId} onChange={onProjectIdChange} placeholder="Dự án" className="h-9 rounded-lg bg-bg-card text-[12.5px]" />
+      </div>
     </CompactFilterToolbar>
   );
 }

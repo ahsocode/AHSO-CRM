@@ -5,7 +5,6 @@ import { useDeferredValue, useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { useContracts } from "@/hooks/use-contracts";
-import { useProjects } from "@/hooks/use-projects";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { ContractStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -26,10 +25,6 @@ export function ContractsClient() {
     setPage(1);
   }, [deferredSearch, projectId, status]);
 
-  const projectsQuery = useProjects({
-    page: 1,
-    limit: 100
-  });
   const contractsQuery = useContracts({
     page,
     limit: PAGE_SIZE,
@@ -79,8 +74,6 @@ export function ContractsClient() {
             onSearchChange={setSearch}
             onStatusChange={setStatus}
             projectId={projectId}
-            projects={projectsQuery.data?.items ?? []}
-            projectsUnavailable={projectsQuery.isError}
             search={search}
             status={status}
           />

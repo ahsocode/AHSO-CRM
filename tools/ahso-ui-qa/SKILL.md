@@ -60,6 +60,13 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
 
 ## Bẫy đã gặp (đừng lặp lại)
 
+- **Ô chọn khách hàng/dự án có tìm kiếm:** giá trị RHF vẫn là ID, input hiển thị tên. E2E kiểm tra tên
+  thay vì `toHaveValue(id)`; tải chi tiết theo ID để giá trị chọn sẵn không phụ thuộc trang kết quả.
+- **Popup không portal trong bộ lọc/dialog:** `overflow-x-auto` cắt popup tuyệt đối; dùng vị trí fixed
+  ngoài dialog, vị trí cục bộ trong dialog có transform, chọn hướng mở theo khoảng trống. Enter chỉ
+  chọn gợi ý, không được gửi biểu mẫu cha; xóa/đổi khách hàng phải giữ đúng lọc và xóa dự án phụ thuộc.
+- **Điều khoản báo giá tải chậm:** chỉ điền trường chưa bị người dùng chỉnh, không reset cả biểu mẫu.
+  Giá trị gõ rồi xóa về rỗng có thể làm RHF hết dirty; cần ghi nhận tương tác để không điền lại ngoài ý muốn.
 - **Dịch nhãn tạo chữ trùng** trên cùng trang → Playwright strict mode fail. Bậc 1 bắt được (`eyebrow`, `e2e WARN`).
 - **Sửa một dòng lỗi e2e rồi push ngay** → test fail ở dòng kế tiếp. Luôn đọc hết test đó và chạy `--grep` trên Mac.
 - **Grep chỉ bắt chữ giữa thẻ JSX** → sót chuỗi trong prop (`eyebrow=`, `placeholder=`…). `static_checks.py` quét cả prop.

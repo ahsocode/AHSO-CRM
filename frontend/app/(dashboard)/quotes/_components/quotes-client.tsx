@@ -8,7 +8,6 @@ import { Select } from "@/components/ui/select";
 import { useBulkQuotes, useQuotes } from "@/hooks/use-quotes";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { useProjects } from "@/hooks/use-projects";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { buildCsv, downloadCsv } from "@/lib/csv";
@@ -42,10 +41,6 @@ export function QuotesClient() {
     setSelectedIds([]);
   }, [page, deferredSearch, projectId, status]);
 
-  const projectsQuery = useProjects({
-    page: 1,
-    limit: 100
-  });
   const quotesQuery = useQuotes({
     page,
     limit: PAGE_SIZE,
@@ -179,8 +174,6 @@ export function QuotesClient() {
             onSearchChange={setSearch}
             onStatusChange={setStatus}
             projectId={projectId}
-            projects={projectsQuery.data?.items ?? []}
-            projectsUnavailable={projectsQuery.isError}
             search={search}
             status={status}
           />

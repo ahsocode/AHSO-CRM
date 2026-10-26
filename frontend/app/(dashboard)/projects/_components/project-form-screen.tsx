@@ -1,10 +1,12 @@
 "use client";
 
+import { CustomerCombobox } from "@/components/shared/customer-combobox";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CustomFieldRenderer } from "@/components/shared/custom-field-renderer";
 import { CustomerQuickCreateDialog } from "@/components/shared/customer-quick-create-dialog";
@@ -15,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCustomFields } from "@/hooks/use-custom-fields";
-import { useCustomerContacts, useCustomers } from "@/hooks/use-customers";
+import { useCustomerContacts, useCustomer } from "@/hooks/use-customers";
 import {
   useCreateProject,
   useDeleteProject,
@@ -25,47 +27,13 @@ import {
 import { PRIORITY_LABELS, PROJECT_STATUS_LABELS } from "@/lib/constants";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
-import { CustomerListItem, CustomFieldValues } from "@/lib/types";
+import { CustomFieldValues } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   defaultProjectFormValues,
   projectFormSchema,
   type ProjectFormValues
 } from "./form-schemas";
-
-function getCustomerOptions(
-  customers: CustomerListItem[],
-  fallbackCustomer?: {
-    id: string;
-    name: string;
-  }
-) {
-  const options = [...customers];
-
-  if (fallbackCustomer && !options.some((customer) => customer.id === fallbackCustomer.id)) {
-    options.push({
-      id: fallbackCustomer.id,
-      name: fallbackCustomer.name,
-      shortName: null,
-      taxCode: null,
-      industry: null,
-      address: null,
-      status: "ACTIVE",
-      isVip: false,
-      assignedTo: {
-        id: "",
-        name: "Không xác định",
-        role: "STAFF"
-      },
-      primaryContact: null,
-      projectCount: 0,
-      createdAt: new Date(0).toISOString(),
-      updatedAt: new Date(0).toISOString()
-    });
-  }
-
-  return options;
-}
 
 export function ProjectFormScreen({
   mode,
@@ -76,18 +44,12 @@ export function ProjectFormScreen({
 }) {
   const router = useRouter();
   const projectQuery = useProject(mode === "edit" ? projectId ?? "" : "");
-  const customersQuery = useCustomers({
-    page: 1,
-    limit: 100
-  });
   const customFieldsQuery = useCustomFields("project");
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject(projectId ?? "");
   const deleteProjectMutation = useDeleteProject(projectId ?? "");
   const [customFieldValues, setCustomFieldValues] = useState<CustomFieldValues>({});
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
-  // Customer just created from the dialog: shown as an option until the list refetches.
-  const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string } | null>(null);
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -128,22 +90,12 @@ export function ProjectFormScreen({
         mode === "create" ? "Không thể tạo dự án." : "Không thể cập nhật dự án."
       )
     : null;
-  const customerOptions = getCustomerOptions(
-    customersQuery.data?.items ?? [],
-    projectQuery.data?.customer ?? createdCustomer ?? undefined
-  );
   const isSubmitting = activeMutation.isPending || deleteProjectMutation.isPending;
   const watchedCustomerId = form.watch("customerId");
 
-  // Select the new customer only after its <option> is rendered — a native select
-  // silently shows "" when given a value that has no matching option yet.
-  useEffect(() => {
-    if (createdCustomer && customerOptions.some((c) => c.id === createdCustomer.id) && watchedCustomerId !== createdCustomer.id) {
-      form.setValue("customerId", createdCustomer.id, { shouldValidate: true, shouldDirty: true });
-    }
-  }, [createdCustomer, customerOptions, form, watchedCustomerId]);
   const watchedStatus = form.watch("status");
-  const selectedCustomer = customerOptions.find((customer) => customer.id === watchedCustomerId) ?? null;
+  const selectedCustomerQuery = useCustomer(watchedCustomerId ?? "");
+  const selectedCustomer = selectedCustomerQuery.data;
   const contactsQuery = useCustomerContacts(watchedCustomerId ?? "");
 
   const prevCustomerIdRef = useRef(watchedCustomerId);
@@ -264,16 +216,9 @@ export function ProjectFormScreen({
                   + Tạo khách hàng mới
                 </button>
               </div>
-              <Select id="customerId" disabled={customersQuery.isLoading} {...form.register("customerId")}>
-                <option value="">
-                  {customersQuery.isLoading ? "Đang tải khách hàng..." : "Chọn khách hàng cho dự án"}
-                </option>
-                {customerOptions.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </Select>
+              <Controller control={form.control} name="customerId" render={({ field }) => (
+                  <CustomerCombobox {...field} id="customerId" value={field.value ?? ""} placeholder="Chọn khách hàng cho dự án" />
+                )} />
               <ErrorText message={form.formState.errors.customerId?.message} />
             </Field>
 
@@ -517,7 +462,7 @@ export function ProjectFormScreen({
       <CustomerQuickCreateDialog
         open={quickCreateOpen}
         onOpenChange={setQuickCreateOpen}
-        onCreated={(customer) => setCreatedCustomer(customer)}
+        onCreated={(customer) => form.setValue("customerId", customer.id, { shouldValidate: true, shouldDirty: true })}
       />
     </div>
   );

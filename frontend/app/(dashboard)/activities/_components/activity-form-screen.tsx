@@ -1,4 +1,7 @@
-'use client';
+"use client";
+
+import { CustomerCombobox } from "@/components/shared/customer-combobox";
+import { ProjectCombobox } from "@/components/shared/project-combobox";
 
 import { useEffect } from 'react';
 import type { Route } from 'next';
@@ -26,8 +29,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useActivity, useCreateActivity, useUpdateActivity } from '@/hooks/use-activities';
-import { useCustomers } from '@/hooks/use-customers';
-import { useProjects } from '@/hooks/use-projects';
 import { activityFormSchema, ActivityFormValues } from './form-schemas';
 import { LoadingSkeleton } from '@/components/shared/loading-skeleton';
 import { ArrowLeft } from 'lucide-react';
@@ -69,11 +70,6 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
   const { data: activity, isLoading: isLoadingActivity } = useActivity(id || '');
   const createMutation = useCreateActivity();
   const updateMutation = useUpdateActivity();
-  const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
-    page: 1,
-    limit: 100,
-  });
-  const customers = customersData?.items ?? [];
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
@@ -90,15 +86,6 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
   });
 
   const selectedCustomerId = form.watch('customerId');
-  const { data: projectsData, isLoading: isLoadingProjects } = useProjects(
-    {
-      page: 1,
-      limit: 100,
-      customerId: selectedCustomerId || undefined,
-    },
-    Boolean(selectedCustomerId)
-  );
-  const projects = projectsData?.items ?? [];
 
   useEffect(() => {
     if (activity) {
@@ -261,38 +248,8 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                   name="customerId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-text-primary">Khách hàng</FormLabel>
-                      <SelectRoot
-                        value={field.value || 'none'}
-                        onValueChange={(value) => {
-                          const next = value === 'none' ? '' : value;
-                          field.onChange(next);
-                          // Reset project when customer changes
-                          if (next !== field.value) {
-                            form.setValue('projectId', '');
-                          }
-                        }}
-                        disabled={isLoadingCustomers}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="border-border">
-                            <SelectValue
-                              placeholder={
-                                isLoadingCustomers ? 'Đang tải...' : 'Chọn khách hàng (nếu có)'
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">— Không chọn —</SelectItem>
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              {customer.name}
-                              {customer.shortName ? ` (${customer.shortName})` : ''}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </SelectRoot>
+                      <FormLabel htmlFor="customerId" className="text-text-primary">Khách hàng</FormLabel>
+                      <FormControl><CustomerCombobox {...field} id="customerId" value={field.value ?? ""} onChange={(value) => { field.onChange(value); if (value !== field.value) form.setValue("projectId", ""); }}  placeholder="Chọn khách hàng" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -303,38 +260,8 @@ export function ActivityFormScreen({ id }: ActivityFormScreenProps) {
                   name="projectId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-text-primary">Dự án</FormLabel>
-                      <SelectRoot
-                        value={field.value || 'none'}
-                        onValueChange={(value) =>
-                          field.onChange(value === 'none' ? '' : value)
-                        }
-                        disabled={!selectedCustomerId || isLoadingProjects}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="border-border">
-                            <SelectValue
-                              placeholder={
-                                !selectedCustomerId
-                                  ? 'Chọn khách hàng trước'
-                                  : isLoadingProjects
-                                    ? 'Đang tải...'
-                                    : projects.length === 0
-                                      ? 'Khách hàng chưa có dự án'
-                                      : 'Chọn dự án (nếu có)'
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">— Không chọn —</SelectItem>
-                          {projects.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.code} - {project.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </SelectRoot>
+                      <FormLabel htmlFor="projectId" className="text-text-primary">Dự án</FormLabel>
+                      <FormControl><ProjectCombobox {...field} id="projectId" value={field.value ?? ""} onChange={field.onChange} customerId={selectedCustomerId || undefined} disabled={!selectedCustomerId} placeholder="Chọn dự án (nếu có)" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

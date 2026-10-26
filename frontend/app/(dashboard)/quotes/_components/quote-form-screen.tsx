@@ -1,10 +1,12 @@
 "use client";
 
+import { ProjectCombobox } from "@/components/shared/project-combobox";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, Controller, useForm } from "react-hook-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -23,7 +25,7 @@ import {
   useQuote,
   useUpdateQuote
 } from "@/hooks/use-quotes";
-import { useProject, useProjects } from "@/hooks/use-projects";
+import { useProject } from "@/hooks/use-projects";
 import { usePolicies } from "@/hooks/use-settings";
 import { useProjectBoms } from "@/hooks/use-boms";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -67,10 +69,6 @@ export function QuoteFormScreen({
   const updateQuoteMutation = useUpdateQuote(quoteId ?? "");
   const quoteQuery = useQuote(mode === "edit" ? quoteId ?? "" : "");
   const policiesQuery = usePolicies();
-  const projectsQuery = useProjects({
-    page: 1,
-    limit: 100
-  });
 
   const form = useForm<QuoteFormValues>({
     resolver: zodResolver(quoteFormSchema),
@@ -87,43 +85,23 @@ export function QuoteFormScreen({
 
   // Track which quoteId has already been loaded to prevent re-reset on background refetches.
   const initializedQuoteIdRef = useRef<string | undefined>(undefined);
+  const editedPolicyFieldsRef = useRef(new Set<"terms" | "deliveryTerms">());
 
   useEffect(() => {
-    if (mode !== "create") {
-      return;
+    if (mode !== "create") return;
+    // Async policy defaults may fill untouched fields, but must never reset line
+    // items or a project the user has already selected.
+    if (!editedPolicyFieldsRef.current.has("terms") && !form.getFieldState("terms").isDirty && !form.getValues("terms") && policiesQuery.data?.paymentTerms) {
+      form.setValue("terms", policiesQuery.data.paymentTerms);
     }
-    // Default payment/delivery terms arrive asynchronously. Once the user has
-    // started typing, never reset — a slow policies response used to wipe the
-    // line items they had already entered. Fill only still-empty term fields.
-    if (form.formState.isDirty) {
-      if (!form.getValues("terms") && policiesQuery.data?.paymentTerms) {
-        form.setValue("terms", policiesQuery.data.paymentTerms);
-      }
-      if (!form.getValues("deliveryTerms") && policiesQuery.data?.deliveryTerms) {
-        form.setValue("deliveryTerms", policiesQuery.data.deliveryTerms);
-      }
-      return;
+    if (!editedPolicyFieldsRef.current.has("deliveryTerms") && !form.getFieldState("deliveryTerms").isDirty && !form.getValues("deliveryTerms") && policiesQuery.data?.deliveryTerms) {
+      form.setValue("deliveryTerms", policiesQuery.data.deliveryTerms);
     }
-    form.reset({
-      ...defaultQuoteFormValues,
-      projectId: initialProjectId,
-      terms: policiesQuery.data?.paymentTerms ?? "",
-      deliveryTerms: policiesQuery.data?.deliveryTerms ?? ""
-    });
-  }, [form, initialProjectId, mode, policiesQuery.data]);
+  }, [form, mode, policiesQuery.data]);
 
-  // A native <select> can only display the preselected project (?projectId=)
-  // once its <option> exists. The value was set before the project list loaded,
-  // so the field looked empty although it was filled — re-apply after load.
   useEffect(() => {
-    if (
-      mode === "create" &&
-      initialProjectId &&
-      projectsQuery.data?.items.some((project) => project.id === initialProjectId)
-    ) {
-      form.setValue("projectId", initialProjectId);
-    }
-  }, [form, initialProjectId, mode, projectsQuery.data]);
+    if (mode === "create") form.setValue("projectId", initialProjectId);
+  }, [form, initialProjectId, mode]);
 
   useEffect(() => {
     if (mode === "edit" && quoteQuery.data && initializedQuoteIdRef.current !== quoteQuery.data.id) {
@@ -275,20 +253,9 @@ export function QuoteFormScreen({
             <CardContent className="grid gap-4 md:grid-cols-2">
               <Field className="md:col-span-2">
                 <Label htmlFor="projectId">Dự án</Label>
-                <Select
-                  id="projectId"
-                  disabled={projectsQuery.isLoading || mode === "edit"}
-                  {...form.register("projectId")}
-                >
-                  <option value="">
-                    {projectsQuery.isLoading ? "Đang tải danh sách dự án..." : "Chọn dự án để báo giá"}
-                  </option>
-                  {(projectsQuery.data?.items ?? []).map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.code} · {project.name}
-                    </option>
-                  ))}
-                </Select>
+                <Controller control={form.control} name="projectId" render={({ field }) => (
+                  <ProjectCombobox {...field} id="projectId" value={field.value ?? ""} disabled={mode === "edit"} placeholder="Chọn dự án để báo giá" />
+                )} />
                 <ErrorText message={form.formState.errors.projectId?.message} />
                 {mode === "edit" ? (
                   <p className="text-sm text-text-secondary">
@@ -460,7 +427,7 @@ export function QuoteFormScreen({
                   id="terms"
                   disabled={!isEditableQuote}
                   placeholder="Ví dụ: 50% khi xác nhận PO, 50% khi nghiệm thu."
-                  {...form.register("terms")}
+                  {...form.register("terms", { onChange: () => { editedPolicyFieldsRef.current.add("terms"); } })}
                 />
                 <ErrorText message={form.formState.errors.terms?.message} />
               </Field>
@@ -479,7 +446,7 @@ export function QuoteFormScreen({
                   id="deliveryTerms"
                   disabled={!isEditableQuote}
                   placeholder="Ví dụ: triển khai trong 21 ngày kể từ PO."
-                  {...form.register("deliveryTerms")}
+                  {...form.register("deliveryTerms", { onChange: () => { editedPolicyFieldsRef.current.add("deliveryTerms"); } })}
                 />
                 <ErrorText message={form.formState.errors.deliveryTerms?.message} />
               </Field>
@@ -562,11 +529,7 @@ export function QuoteFormScreen({
               <CardTitle>Kiểm tra trước khi lưu</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {projectsQuery.isError ? (
-                <div className="rounded-xl bg-warning-bg/80 px-4 py-3 text-sm text-warning">
-                  Không tải được danh sách dự án. Bạn vẫn có thể tiếp tục nếu dự án đã được chọn hợp lệ.
-                </div>
-              ) : null}
+
 
               {selectedProject ? (
                 <div className="rounded-2xl bg-bg-subtle p-4 text-sm text-text-secondary">

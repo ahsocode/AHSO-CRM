@@ -610,10 +610,10 @@ async function firstProjectId(page: Page, request: APIRequestContext) {
   const accessToken = await getAccessTokenFromPage(page);
   const response = await request.get(`${API_URL}/projects?page=1&limit=1`, { headers: authHeaders(accessToken) });
   expect(response.ok()).toBeTruthy();
-  const items = unwrap<Array<{ id: string }> | { items: Array<{ id: string }> }>(await response.json());
+  const items = unwrap<Array<{ id: string; name: string }> | { items: Array<{ id: string; name: string }> }>(await response.json());
   const list = Array.isArray(items) ? items : items.items;
   expect(list.length, "seed must contain at least one project").toBeGreaterThan(0);
-  return { id: list[0].id, accessToken };
+  return { id: list[0].id, name: list[0].name, accessToken };
 }
 
 test.describe("QA thủ công — hồi quy", () => {
@@ -644,7 +644,7 @@ test.describe("QA thủ công — hồi quy", () => {
 
       await expect(dialog).toBeHidden();
       await expect(page.getByPlaceholder("Ví dụ: Nâng cấp hệ thống PLC trạm bơm")).toHaveValue(projectName);
-      await expect(page.locator("#customerId")).toHaveValue(customerId);
+      await expect(page.locator("#customerId")).toHaveValue(customerName);
       expect(projectPosts, "project form must not be submitted").toEqual([]);
     } finally {
       if (customerId) {
@@ -657,16 +657,16 @@ test.describe("QA thủ công — hồi quy", () => {
   test("[Báo giá] ?projectId preselects the project in the quote form", async ({ page, request }) => {
     // Bug: value set before the project list loaded → native select looked empty.
     await login(page);
-    const { id } = await firstProjectId(page, request);
+    const { id, name } = await firstProjectId(page, request);
     await page.goto(`/quotes/new?projectId=${id}`);
-    await expect(page.locator("#projectId")).toHaveValue(id);
+    await expect(page.locator("#projectId")).toHaveValue(name);
   });
 
   test("[Hợp đồng] ?projectId preselects the project in the contract form", async ({ page, request }) => {
     await login(page);
-    const { id } = await firstProjectId(page, request);
+    const { id, name } = await firstProjectId(page, request);
     await page.goto(`/contracts/new?projectId=${id}`);
-    await expect(page.locator("#projectId")).toHaveValue(id);
+    await expect(page.locator("#projectId")).toHaveValue(name);
   });
 
   test("[Báo giá] quote detail shows exact totals, not abbreviated", async ({ page, request }) => {

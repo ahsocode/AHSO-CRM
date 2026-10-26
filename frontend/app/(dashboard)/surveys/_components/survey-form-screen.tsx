@@ -1,5 +1,8 @@
 "use client";
 
+import { CustomerCombobox } from "@/components/shared/customer-combobox";
+import { ProjectCombobox } from "@/components/shared/project-combobox";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -10,11 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SelectRoot, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateSurvey, useSurvey, useUpdateSurvey } from "@/hooks/use-surveys";
-import { useCustomers } from "@/hooks/use-customers";
-import { useProjects } from "@/hooks/use-projects";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { surveyFormSchema, SurveyFormValues } from "./form-schemas";
 
@@ -28,15 +28,7 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
   const createMutation = useCreateSurvey("");
   const updateMutation = useUpdateSurvey();
 
-  const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({ page: 1, limit: 100 });
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
-  // Customer just created from the dialog: shown as an option until the list refetches.
-  const [createdCustomer, setCreatedCustomer] = useState<{ id: string; name: string } | null>(null);
-  const fetchedCustomers = customersData?.items ?? [];
-  const customers =
-    createdCustomer && !fetchedCustomers.some((c) => c.id === createdCustomer.id)
-      ? [...fetchedCustomers, { ...createdCustomer, shortName: null }]
-      : fetchedCustomers;
 
   const form = useForm<SurveyFormValues>({
     resolver: zodResolver(surveyFormSchema),
@@ -54,11 +46,6 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
   });
 
   const selectedCustomerId = form.watch("customerId");
-  const { data: projectsData, isLoading: isLoadingProjects } = useProjects(
-    { page: 1, limit: 100, customerId: selectedCustomerId || undefined },
-    Boolean(selectedCustomerId)
-  );
-  const projects = projectsData?.items ?? [];
 
   useEffect(() => {
     if (survey) {
@@ -150,7 +137,7 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
                   render={({ field }) => (
                     <FormItem>
                       <div className="flex items-center justify-between">
-                        <FormLabel>Khách hàng *</FormLabel>
+                        <FormLabel htmlFor="customerId">Khách hàng *</FormLabel>
                         <button
                           type="button"
                           className="text-xs font-semibold text-primary-mid hover:text-primary"
@@ -159,28 +146,7 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
                           + Tạo mới
                         </button>
                       </div>
-                      <SelectRoot
-                        value={field.value || "none"}
-                        onValueChange={(v) => {
-                          const next = v === "none" ? "" : v;
-                          field.onChange(next);
-                          if (next !== field.value) form.setValue("projectId", "");
-                        }}
-                        disabled={isLoadingCustomers}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingCustomers ? "Đang tải..." : "Chọn khách hàng"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {customers.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}{c.shortName ? ` (${c.shortName})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </SelectRoot>
+                      <FormControl><CustomerCombobox {...field} id="customerId" value={field.value ?? ""} onChange={(value) => { field.onChange(value); if (value !== field.value) form.setValue("projectId", ""); }}  placeholder="Chọn khách hàng" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -191,36 +157,8 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
                   name="projectId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Dự án</FormLabel>
-                      <SelectRoot
-                        value={field.value || "none"}
-                        onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
-                        disabled={!selectedCustomerId || isLoadingProjects}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                !selectedCustomerId
-                                  ? "Chọn khách hàng trước"
-                                  : isLoadingProjects
-                                  ? "Đang tải..."
-                                  : projects.length === 0
-                                  ? "Khách hàng chưa có dự án"
-                                  : "Chọn dự án (nếu có)"
-                              }
-                            />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">— Không chọn —</SelectItem>
-                          {projects.map((p) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.code} – {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </SelectRoot>
+                      <FormLabel htmlFor="projectId">Dự án</FormLabel>
+                      <FormControl><ProjectCombobox {...field} id="projectId" value={field.value ?? ""} onChange={field.onChange} customerId={selectedCustomerId || undefined} disabled={!selectedCustomerId} placeholder="Chọn dự án (nếu có)" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -329,7 +267,7 @@ export function SurveyFormScreen({ id }: SurveyFormScreenProps) {
             open={quickCreateOpen}
             onOpenChange={setQuickCreateOpen}
             onCreated={(customer) => {
-              setCreatedCustomer(customer);
+
               form.setValue("customerId", customer.id, { shouldValidate: true, shouldDirty: true });
               form.setValue("projectId", "");
             }}

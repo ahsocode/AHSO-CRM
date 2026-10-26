@@ -1,11 +1,12 @@
 "use client";
 
+import { ProjectCombobox } from "@/components/shared/project-combobox";
+
 import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
 import { useStockIssues } from "@/hooks/use-stock-issues";
 import { useWarehousesSelect } from "@/hooks/use-warehouses";
-import { useProjects } from "@/hooks/use-projects";
 import { PageHeader } from "@/components/layout/page-header";
 import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { getApiErrorMessage } from "@/lib/api-client";
@@ -29,7 +30,6 @@ export function StockIssueClient() {
   const [page, setPage] = useState(1);
 
   const warehousesSelect = useWarehousesSelect();
-  const projectsQuery = useProjects({ page: 1, limit: 100 });
 
   const query = useStockIssues({
     page,
@@ -104,17 +104,7 @@ export function StockIssueClient() {
                 <option key={w.id} value={w.id}>{w.name}</option>
               ))}
             </Select>
-            <Select
-              aria-label="Dự án"
-              value={projectId}
-              onChange={(e) => { setProjectId(e.target.value); setPage(1); }}
-              className="h-9 w-[118px] rounded-lg bg-white text-[12.5px]"
-            >
-              <option value="">Dự án</option>
-              {(projectsQuery.data?.items ?? []).map((p) => (
-                <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
-              ))}
-            </Select>
+            <div className="w-[170px]"><ProjectCombobox aria-label="Dự án" value={projectId} onChange={(value) => { setProjectId(value); setPage(1); }} placeholder="Dự án" className="h-9 rounded-lg bg-bg-card text-[12.5px]" /></div>
             <Input
               aria-label="Từ ngày"
               type="date"

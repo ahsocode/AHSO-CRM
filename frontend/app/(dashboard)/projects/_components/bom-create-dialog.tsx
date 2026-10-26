@@ -1,5 +1,7 @@
 "use client";
 
+import { ProjectCombobox } from "@/components/shared/project-combobox";
+
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useBomModels, useCreateProjectBom, useProjectBoms } from "@/hooks/use-boms";
-import { useProjects } from "@/hooks/use-projects";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatVND } from "@/lib/format";
 import type { BomCreateInput } from "@/types/bom";
@@ -37,7 +38,6 @@ export function BomCreateDialog({
   const [sourceId, setSourceId] = useState("");
   const [sourceProjectId, setSourceProjectId] = useState(projectId);
   const [error, setError] = useState<string | null>(null);
-  const projectsQuery = useProjects({ page: 1, limit: 100 }, open && mode === "copy");
   const sourceBomsQuery = useProjectBoms(open && mode === "copy" ? sourceProjectId : "");
   const sourceBoms = sourceBomsQuery.data ?? [];
   const modelsQuery = useBomModels({ status: "APPROVED", latestOnly: true, limit: 100 }, open && mode === "model");
@@ -156,23 +156,7 @@ export function BomCreateDialog({
               <label htmlFor="bom-create-source-project" className="text-sm font-semibold text-text-primary">
                 Dự án nguồn
               </label>
-              <Select
-                id="bom-create-source-project"
-                value={sourceProjectId}
-                onChange={(event) => {
-                  setSourceProjectId(event.target.value);
-                  setSourceId("");
-                }}
-              >
-                {(projectsQuery.data?.items ?? []).map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.code} · {project.name}
-                  </option>
-                ))}
-                {!projectsQuery.data?.items.some((project) => project.id === sourceProjectId) ? (
-                  <option value={sourceProjectId}>Dự án hiện tại</option>
-                ) : null}
-              </Select>
+              <ProjectCombobox id="bom-create-source-project" value={sourceProjectId} onChange={(value) => { setSourceProjectId(value); setSourceId(""); }} placeholder="Chọn dự án nguồn" />
               <label htmlFor="bom-create-copy" className="text-sm font-semibold text-text-primary">
                 BOM cần sao chép
               </label>

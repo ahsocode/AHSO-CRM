@@ -1,14 +1,15 @@
 "use client";
 
+import { ProjectCombobox } from "@/components/shared/project-combobox";
+
 import { useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useCreateBusinessDocument, useUploadBusinessDocumentFile } from "@/hooks/use-business-documents";
-import { useProjects } from "@/hooks/use-projects";
 import { useQueryClient } from "@tanstack/react-query";
 import { BusinessDocumentSource, BusinessDocumentType } from "@/lib/types";
 
@@ -90,9 +91,9 @@ export function DocumentUploadDialog({
 
   const createDocument = useCreateBusinessDocument("");
   const uploadFile = useUploadBusinessDocumentFile("");
-  const projectsQuery = useProjects({ page: 1, limit: 100 });
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
@@ -210,14 +211,7 @@ export function DocumentUploadDialog({
             <label className="text-sm font-semibold text-text-primary" htmlFor="upload-project">
               Dự án liên kết
             </label>
-            <Select id="upload-project" {...register("projectId")} disabled={projectsQuery.isError}>
-              <option value="">{projectsQuery.isError ? "Không tải được dự án" : "Không gắn dự án"}</option>
-              {(projectsQuery.data?.items ?? []).map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.code} · {project.name}
-                </option>
-              ))}
-            </Select>
+            <Controller control={control} name="projectId" render={({ field }) => (<ProjectCombobox {...field} id="upload-project" value={field.value ?? ""} placeholder="Không gắn dự án" />)} />
           </div>
 
           <div className="space-y-1.5">

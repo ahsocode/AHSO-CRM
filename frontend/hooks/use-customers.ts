@@ -31,6 +31,26 @@ export function useCustomers(filters: CustomerFilters) {
   });
 }
 
+/** Import matching needs every accessible customer, loaded only when its dialog opens. */
+export function useCustomersForImport(enabled: boolean) {
+  return useQuery({
+    queryKey: ["customers", "project-import-lookup"],
+    enabled,
+    queryFn: async () => {
+      const items: CustomerListItem[] = [];
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const response = await apiClient.get<ApiResponse<CustomerListItem[]>>("/customers", { params: { page, limit: 100 } });
+        items.push(...response.data.data);
+        totalPages = (response.data.meta as CustomerListMeta).totalPages;
+        page += 1;
+      } while (page <= totalPages);
+      return items;
+    }
+  });
+}
+
 export function useDeletedCustomers(filters: CustomerFilters, enabled = true) {
   return useQuery({
     enabled,

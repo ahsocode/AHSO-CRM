@@ -11,7 +11,7 @@ import { Select } from "@/components/ui/select";
 import { useAuthStore } from "@/hooks/use-auth";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useBulkProjects, useCreateProject, useDeletedProjects, useProjectKanban, useProjects, useRestoreProject, useUpdateProjectStatus } from "@/hooks/use-projects";
-import { useCustomers } from "@/hooks/use-customers";
+import { useCustomersForImport } from "@/hooks/use-customers";
 import { useUsers } from "@/hooks/use-users";
 import { useToast } from "@/hooks/use-toast";
 import { isLeadershipRole } from "@/lib/auth";
@@ -91,8 +91,8 @@ export function ProjectsClient() {
   const restoreProject = useRestoreProject();
   const queryClient = useQueryClient();
   const { error: showError, success } = useToast();
-  const importCustomersQuery = useCustomers({ page: 1, limit: 200 });
-  const customerLookup = importCustomersQuery.data?.items ?? [];
+  const importCustomersQuery = useCustomersForImport(importOpen);
+  const customerLookup = importCustomersQuery.data ?? [];
 
   useEffect(() => {
     const syncViewFromUrl = () => setView(getProjectViewFromUrl());
@@ -308,8 +308,13 @@ export function ProjectsClient() {
         }
       />
 
+      {importOpen && importCustomersQuery.isLoading ? <p role="status" className="rounded-lg bg-bg-subtle p-4 text-sm text-text-secondary">Đang tải danh mục khách hàng để nhập dự án...</p> : null}
+      {importOpen && importCustomersQuery.isError ? <div role="alert" className="rounded-lg bg-danger-bg p-4 text-sm text-danger">
+        {getApiErrorMessage(importCustomersQuery.error, "Không thể tải khách hàng để nhập dự án.")}
+        <Button type="button" variant="outline" onClick={() => void importCustomersQuery.refetch()}>Thử lại</Button>
+      </div> : null}
       <CsvImportDialog<ProjectUpsertInput>
-        open={importOpen}
+        open={importOpen && importCustomersQuery.isSuccess}
         onClose={() => setImportOpen(false)}
         title="Nhập danh sách dự án từ CSV"
         description="Khách hàng phải tồn tại trước. Dùng Mã số thuế hoặc Tên KH để tra cứu."

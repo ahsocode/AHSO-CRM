@@ -1,11 +1,13 @@
 "use client";
 
+import { ProjectCombobox } from "@/components/shared/project-combobox";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
@@ -22,7 +24,6 @@ import {
   useUpdateStockIssue,
 } from "@/hooks/use-stock-issues";
 import { useWarehousesSelect } from "@/hooks/use-warehouses";
-import { useProjects } from "@/hooks/use-projects";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import {
@@ -68,7 +69,6 @@ export function StockIssueFormScreen({
   const updateMutation = useUpdateStockIssue(issueId ?? "");
   const issueQuery = useStockIssue(mode === "edit" ? issueId : undefined);
   const warehousesSelect = useWarehousesSelect();
-  const projectsQuery = useProjects({ page: 1, limit: 100 });
 
   const form = useForm<IssueFormValues>({
     resolver: zodResolver(issueFormSchema),
@@ -195,12 +195,9 @@ export function StockIssueFormScreen({
 
               <Field>
                 <Label htmlFor="projectId">Dự án (tùy chọn)</Label>
-                <Select id="projectId" disabled={!isEditable || projectsQuery.isLoading} {...form.register("projectId")}>
-                  <option value="">{projectsQuery.isLoading ? "Đang tải..." : "Chọn dự án (tùy chọn)"}</option>
-                  {(projectsQuery.data?.items ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
-                  ))}
-                </Select>
+                <Controller control={form.control} name="projectId" render={({ field }) => (
+                  <ProjectCombobox {...field} id="projectId" value={field.value ?? ""} disabled={!isEditable} placeholder="Chọn dự án (tùy chọn)" />
+                )} />
               </Field>
 
               <Field>

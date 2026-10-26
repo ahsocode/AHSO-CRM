@@ -1,14 +1,13 @@
+import { ProjectCombobox } from "@/components/shared/project-combobox";
 import { CompactFilterToolbar } from "@/components/shared/compact-filter-toolbar";
 import { Select } from "@/components/ui/select";
 import { CONTRACT_STATUS_LABELS } from "@/lib/constants";
-import { ContractStatus, ProjectListItem } from "@/lib/types";
+import { ContractStatus } from "@/lib/types";
 
 export function ContractFilters({
   search,
   status,
   projectId,
-  projects,
-  projectsUnavailable,
   canReset,
   onSearchChange,
   onStatusChange,
@@ -18,8 +17,6 @@ export function ContractFilters({
   search: string;
   status: ContractStatus | "";
   projectId: string;
-  projects: ProjectListItem[];
-  projectsUnavailable: boolean;
   canReset: boolean;
   onSearchChange: (value: string) => void;
   onStatusChange: (value: ContractStatus | "") => void;
@@ -53,23 +50,10 @@ export function ContractFilters({
         </Select>
       </label>
 
-      <label className="w-[160px]" htmlFor="contract-project">
-        <span className="sr-only">Dự án</span>
-        <Select
-          id="contract-project"
-          disabled={projectsUnavailable}
-          value={projectId}
-          onChange={(event) => onProjectIdChange(event.target.value)}
-          className="h-9 rounded-lg bg-white text-[12.5px]"
-        >
-          <option value="">{projectsUnavailable ? "Không tải được dự án" : "Dự án"}</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.code} · {project.name}
-            </option>
-          ))}
-        </Select>
-      </label>
+      <div className="w-[160px]">
+        <label className="sr-only" htmlFor="contract-project">Dự án</label>
+        <ProjectCombobox id="contract-project" value={projectId} onChange={onProjectIdChange} placeholder="Dự án" className="h-9 rounded-lg bg-bg-card text-[12.5px]" />
+      </div>
     </CompactFilterToolbar>
   );
 }

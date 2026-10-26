@@ -74,8 +74,6 @@ export function useProjectKanban(filters: Omit<ProjectFilters, "page" | "limit">
       const response = await apiClient.get<ApiResponse<ProjectKanbanColumn[]>>("/projects", {
         params: {
           ...filters,
-          page: 1,
-          limit: 100,
           view: "kanban"
         }
       });

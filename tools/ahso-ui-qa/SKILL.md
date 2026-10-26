@@ -17,6 +17,11 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
 | 3. E2E chuyên sâu | Mac (Docker) | `npm run qa:prepush` | ~10 phút, 0 token |
 | 4. Trực quan | Claude + Chrome | chỉ các trang trong diff | ~1–2k token/trang |
 
+> Bậc 1 gồm cả check `guard` (`controller_guards.py`): quét **mọi** controller backend; route không có
+> `@UseGuards`/`@Public()` = ERROR, có đăng nhập nhưng thiếu `@RequirePermissions`/`@Roles` = WARN.
+> Route công khai có chủ đích phải gắn `@Public()` kèm comment lý do (ví dụ `auth/logout` dùng refresh cookie).
+> Bậc 3 tự dọn build cache Docker cũ (`docker-cache.sh`) trước khi build; không bao giờ đụng volume.
+
 > Sandbox của Claude **không chạy được** Docker, Vitest, Playwright (node_modules cài trên macOS).
 > Bậc 2–3 phải chạy trên Mac của Henry. Claude giao lệnh, Henry dán **chỉ phần lỗi** về.
 
@@ -103,6 +108,7 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
 - **`docker compose up` fail, postgres exit (1) sau ~1s:** ổ đĩa Docker Desktop đầy do build cache/image cũ
   (`initdb: No space left on device`). Dọn: `docker builder prune -f` rồi `docker image prune -a -f`
   (không prune volume — có dữ liệu dev). Xem dung lượng: `docker system df`.
+  Từ 26/10/2026 `prepush.sh` tự dọn build cache cũ khi vượt ngưỡng; vẫn lỗi thì dọn tay như trên.
 - **Chuỗi trong e2e không phải selector** (dữ liệu test, thông báo từ backend) → thêm `// qa-static: not-ui`
   cuối dòng để `static_checks.py` bỏ qua.
 - **Playwright `ENOTEMPTY` trước khi chạy test trên exFAT:** AppleDouble có thể xuất hiện khi Playwright

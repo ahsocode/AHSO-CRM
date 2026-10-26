@@ -118,6 +118,8 @@ trap cleanup EXIT
 
 # Fresh database every run (seed must start from empty).
 "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
+source "$HERE/docker-cache.sh"
+prune_old_docker_build_cache || fail "Docker build cache prune"
 "${COMPOSE[@]}" build backend frontend || fail "docker build"
 "${COMPOSE[@]}" up -d postgres redis backend frontend || fail "docker compose up"
 

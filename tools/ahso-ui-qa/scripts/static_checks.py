@@ -9,6 +9,7 @@ Each check encodes a bug class that actually reached CI or production:
   hex         hardcoded hex colors in className (Token Rule)
   money       VND formatted by hand instead of formatVND()
   fsync       file size on disk != readable bytes (exFAT/sandbox desync) and ._* junk
+  guard       all backend controller routes missing guards or authorization metadata
 
 Usage:
   python3 static_checks.py                 # only files changed vs origin/main (fast, default)
@@ -27,6 +28,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from controller_guards import check_controller_guards
 
 ROOT = Path(subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True).stdout.strip() or ".")
 FRONTEND = ROOT / "frontend"
@@ -281,7 +283,7 @@ def check_fsync() -> list[str]:
     return out
 
 
-CHECKS = ("english", "eyebrow", "e2e", "hex", "money", "fsync")
+CHECKS = ("english", "eyebrow", "e2e", "hex", "money", "fsync", "guard")
 
 
 def main() -> int:
@@ -300,6 +302,7 @@ def main() -> int:
     if "money" in only: results += check_money(files)
     if "hex" in only: results += check_hex(files)
     if "e2e" in only: results += check_e2e(a.base)
+    if "guard" in only: results += check_controller_guards(ROOT)
 
     errors = sum(r.startswith("ERROR") for r in results)
     warns = len(results) - errors

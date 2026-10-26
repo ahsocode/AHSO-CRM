@@ -52,3 +52,7 @@ frontend/.env.*.local
 */\ 2/
 * 2/
 ? 2/
+
+# Python bytecode (QA scripts)
+__pycache__/
+*.pyc

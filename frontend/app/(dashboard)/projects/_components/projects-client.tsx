@@ -247,7 +247,7 @@ export function ProjectsClient() {
       }
     },
     {
-      header: "Giá trị dự kiến (VNĐ)",
+      header: "Giá trị dự kiến (₫)",
       key: "estimatedValue",
       example: "1200000000",
       transform: (v) => parseNumberVND(v)

@@ -833,7 +833,7 @@ export class ProjectsService {
         id: `quote:${quote.id}`,
         type: "quote",
         title: `Báo giá ${quote.quoteNo} v${quote.version}`,
-        description: `Trạng thái ${quote.status}, giá trị ${Number(quote.total).toLocaleString("vi-VN")} VND`,
+        description: `Trạng thái ${quote.status}, giá trị ${Number(quote.total).toLocaleString("vi-VN")} ₫`,
         happenedAt: quote.acceptedAt ?? quote.sentAt ?? quote.createdAt,
         actorName: quote.createdBy.name,
         link: `/quotes/${quote.id}`,
@@ -848,7 +848,7 @@ export class ProjectsService {
               id: `contract:${contract.id}`,
               type: "contract",
               title: `Hợp đồng ${contract.contractNo}`,
-              description: `Trạng thái ${contract.status}, giá trị ${Number(contract.value).toLocaleString("vi-VN")} VND`,
+              description: `Trạng thái ${contract.status}, giá trị ${Number(contract.value).toLocaleString("vi-VN")} ₫`,
               happenedAt: contract.signDate ?? contract.createdAt,
               actorName: null,
               link: `/contracts/${contract.id}`,
@@ -862,7 +862,7 @@ export class ProjectsService {
       ...payments.map((payment) => ({
         id: `payment:${payment.id}`,
         type: "payment",
-        title: `Thanh toán ${Number(payment.amount).toLocaleString("vi-VN")} VND`,
+        title: `Thanh toán ${Number(payment.amount).toLocaleString("vi-VN")} ₫`,
         description: payment.reference ?? payment.method ?? payment.notes ?? payment.contract?.contractNo ?? payment.quote?.quoteNo,
         happenedAt: payment.paidAt,
         actorName: null,
@@ -2221,7 +2221,7 @@ export class ProjectsService {
 
     if (nextPaidAmount.greaterThan(paymentLimit)) {
       throw new BadRequestException(
-        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} VND) không được vượt giá trị ${sourceLabel} (${this.formatNumber(paymentLimit)} VND)`
+        `Tổng thanh toán (${this.formatNumber(nextPaidAmount)} ₫) không được vượt giá trị ${sourceLabel} (${this.formatNumber(paymentLimit)} ₫)`
       );
     }
   }

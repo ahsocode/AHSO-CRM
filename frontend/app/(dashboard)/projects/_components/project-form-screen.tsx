@@ -26,7 +26,7 @@ import {
 } from "@/hooks/use-projects";
 import { PRIORITY_LABELS, PROJECT_STATUS_LABELS } from "@/lib/constants";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatVND } from "@/lib/format";
 import { CustomFieldValues } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -383,7 +383,7 @@ export function ProjectFormScreen({
                 label="Giá trị dự kiến"
                 value={
                   form.watch("estimatedValue")
-                    ? new Intl.NumberFormat("vi-VN").format(form.watch("estimatedValue") ?? 0)
+                    ? formatVND(form.watch("estimatedValue") ?? 0)
                     : "Chưa nhập"
                 }
               />

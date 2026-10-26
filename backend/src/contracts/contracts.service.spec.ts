@@ -527,7 +527,7 @@ describe("ContractsService", () => {
         user
       )
     ).rejects.toThrow(
-      new BadRequestException("Tổng thanh toán (11.000.000 VND) không được vượt giá trị hợp đồng (10.000.000 VND)")
+      new BadRequestException("Tổng thanh toán (11.000.000 ₫) không được vượt giá trị hợp đồng (10.000.000 ₫)")
     );
 
     expect(tx.payment.create).not.toHaveBeenCalled();

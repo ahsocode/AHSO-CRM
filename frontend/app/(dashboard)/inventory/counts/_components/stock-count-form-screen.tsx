@@ -10,6 +10,7 @@ import { z } from "zod";
 import { PageHeader } from "@/components/layout/page-header";
 import { AppIcon } from "@/components/shared/app-icon";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { EmptyWarehouseNotice } from "../../_components/empty-warehouse-notice";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -162,6 +163,9 @@ export function StockCountFormScreen({
               <CardTitle>Thông tin cơ bản</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
+              {warehousesSelect.isSuccess && warehousesSelect.data.length === 0 ? (
+                <EmptyWarehouseNotice documentLabel="phiếu kiểm kê" />
+              ) : null}
               <Field>
                 <Label htmlFor="warehouseId">Kho kiểm kê *</Label>
                 <Select id="warehouseId" disabled={!isEditable || warehousesSelect.isLoading} {...form.register("warehouseId")}>

@@ -466,7 +466,7 @@ export class ContractsService {
 
       if (nextPaidAmount > contractValue) {
         throw new BadRequestException(
-          `Tổng thanh toán (${formatNumber(nextPaidAmount)} VND) không được vượt giá trị hợp đồng (${formatNumber(contractValue)} VND)`
+          `Tổng thanh toán (${formatNumber(nextPaidAmount)} ₫) không được vượt giá trị hợp đồng (${formatNumber(contractValue)} ₫)`
         );
       }
 

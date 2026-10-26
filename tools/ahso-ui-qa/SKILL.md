@@ -86,6 +86,9 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
 - **`<select>` gán giá trị trước khi option tải xong** (`?projectId=` trên báo giá/hợp đồng) → ô chọn trống.
   Gán lại bằng `setValue` trong `useEffect` khi danh sách đã về. Test: `expect(locator).toHaveValue(id)`.
 - **Effect reset form ghi đè dữ liệu người dùng đang nhập** khi query refetch → chặn bằng `formState.isDirty`.
+- **Reset trong effect khi mở dialog:** thao tác chọn nhóm/nhập tiền đầu tiên có thể bị reset sau paint.
+  Với biểu mẫu chi phí, mount một form mới mỗi lần mở và truyền `defaultValues` từ bản ghi cần sửa.
+  E2E phải đợi dialog tạo đóng trước khi mở sửa, kiểm tra giá trị điền sẵn và dữ liệu API sau lưu.
 - **`onError` dùng câu chung chung** ("Không thể xác nhận phiếu.") che mất lý do từ backend → luôn
   `getApiErrorMessage(error, "<câu mặc định>")`.
 - **Endpoint quên guard:** khi thêm controller, mọi `@Get` đều phải có `JwtAuthGuard` + quyền phù hợp.
@@ -95,6 +98,19 @@ script và Playwright làm (0 token). Claude chỉ nhìn giao diện ở những
   (không prune volume — có dữ liệu dev). Xem dung lượng: `docker system df`.
 - **Chuỗi trong e2e không phải selector** (dữ liệu test, thông báo từ backend) → thêm `// qa-static: not-ui`
   cuối dòng để `static_checks.py` bỏ qua.
+- **Playwright `ENOTEMPTY` trước khi chạy test trên exFAT:** AppleDouble có thể xuất hiện khi Playwright
+  dọn thư mục kết quả. `prepush.sh` dùng thư mục tạm trên ổ hệ thống cho `--output`; giữ đường dẫn
+  được in trong log để xem trace khi có lỗi.
+- **Dialog tùy biến không tự có tên truy cập:** thêm `aria-labelledby` trên `DialogContent` và `id`
+  tương ứng ở tiêu đề; E2E nên tìm dialog theo tên để không chọn nhầm các biểu mẫu cùng nhãn.
+- **Dự toán có nhiều máy và nhiều phiên bản:** chọn một phiên bản theo từng chuỗi BOM; tạo mẫu máy
+  không làm mất dự toán gốc. Giữ cả BOM nháp độc lập khi dự án đã có BOM khác được duyệt.
+- **Thuế trong lãi gộp:** giá trị hợp đồng đã gồm VAT; dùng thuế của báo giá nguồn trên hạng mục hợp
+  đồng, không lấy nhầm thuế của báo giá khác được chấp nhận sau đó.
+- **Xác nhận phân bổ đồng thời với sửa chi phí:** dùng cùng khóa giao dịch cho xác nhận, sửa/hủy đợt
+  và sửa/xóa chi phí; đọc lại trạng thái và kiểm tra ngày hóa đơn sau khi lấy khóa.
+- **Gợi ý lại đợt nháp:** gửi `allocationId` để trừ lượng các đợt nháp khác đang giữ, không trừ chính đợt
+  đang sửa. Backend phải kiểm tra đợt đó thuộc dự án và còn nháp trước khi loại khỏi phần giữ.
 
 ## Tiết kiệm token khi điều phối model rẻ hơn
 

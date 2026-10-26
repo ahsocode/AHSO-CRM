@@ -9,10 +9,12 @@
 |---|---|
 | Schema + migration `20261023090000_bom_project_costs` + đặc tả | ✅ commit `d32500b` |
 | Backend GĐ1–4 (BOM, chi phí trực tiếp, nhiều đợt phân bổ, gợi ý FIFO, lãi gộp, bảng kê, mẫu máy) + types/hooks frontend | ✅ commit `653839e`, jest 67/67 |
-| Frontend: loại vật tư, tab BOM, trình soạn BOM, nhập Excel, mẫu máy, tab phân bổ nhiều đợt, tab chi phí & lãi gộp, `e2e/project-costs.spec.ts` | 🟡 **đã viết nhưng chưa commit, chưa chạy thử**; `tsc` frontend pass |
-| Báo giá: "Gắn BOM" trên dòng + khối giá vốn nội bộ | ❌ chưa làm |
-| Menu "Mẫu máy" trong nhóm Kho | ❓ cần kiểm tra |
-| `e2e/bom.spec.ts` | ❌ chưa có |
+| Frontend: loại vật tư, BOM, nhập/xuất Excel, mẫu máy | ✅ WIP đã chốt `cec690a`; hoàn thiện bước 1 tại `3e79b20` |
+| Báo giá: "Gắn BOM" trên dòng + khối giá vốn nội bộ | ✅ `3e79b20`; kiểm thử giữ liên kết khi sửa, HTML/PDF không lộ giá vốn |
+| Menu "Mẫu máy" và tab "BOM / Dự toán" trong dự án | ✅ đã bổ sung, E2E pass |
+| `e2e/bom.spec.ts` | ✅ 4 ca UI; thêm 2 ca bảo mật trong `e2e/bom-security.spec.ts` |
+| Phân bổ nhiều đợt, chi phí trực tiếp và QA tổng | Xem kết quả chốt tại `docs/BOM_REVIEW.md` |
+| Lỗi FIFO khi nhiều dòng BOM dùng chung một lô | **Chặn push** — người dùng chọn giữ schema; bằng chứng và phương án sửa trong `docs/BOM_REVIEW.md` |
 
 ## Thứ tự thực hiện
 

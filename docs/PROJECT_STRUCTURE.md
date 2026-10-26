@@ -173,7 +173,7 @@ Backend modules under `backend/src/`:
 
 ```text
 auth/ users/ roles/ permissions/
-customers/ contacts/ projects/ quotes/ contracts/ activities/ surveys/
+customers/ contacts/ projects/ quotes/ contracts/ activities/ surveys/ boms/
 business-documents/ documents/
 suppliers/ materials/ inventory/ stock-receipts/ stock-issues/ stock-transfers/ stock-counts/
 mailbox/ email/ sms/ push/
@@ -199,6 +199,31 @@ frontend/components/ui/
 frontend/hooks/
 frontend/lib/
 ```
+
+BOM and project finance entry points:
+
+- `backend/src/boms/`: project BOMs, machine models, direct costs and cost reports;
+  `fifo-suggest.ts` expands component demand and suggests eligible lots without writing data.
+- Project BOM routes: `GET/POST /projects/:id/boms`; `GET/PATCH/DELETE /boms/:id`,
+  `PUT /boms/:id/lines`, and `POST /boms/:id/{approve,new-version,archive,save-as-model}`.
+- Model catalog: `GET /boms/models` and `GET /boms/models/:productId/versions`.
+- Direct costs: `GET/POST /projects/:id/costs`, `PATCH/DELETE /project-costs/:id`;
+  reports: `GET /projects/:id/cost-summary`, `GET /material-allocations/:id/cost-sheet`.
+- Allocation batches: `GET/POST /projects/:id/material-allocations`,
+  `POST /projects/:id/material-allocations/suggest`, `GET/PUT /material-allocations/:id`,
+  `POST /material-allocations/:id/{confirm,cancel}`. Legacy singular routes remain compatible.
+- `frontend/components/bom/`: shared editor, material/subassembly picker, Excel import and model saving.
+- `/projects/[id]/boms/[bomId]` edits project estimates; `/inventory/models` and
+  `/inventory/models/[bomId]` show machine models and version history.
+- Project tabs use `project-boms-tab.tsx`, `project-materials-tab.tsx`, `project-costs-tab.tsx`
+  and `projects/_components/project-finance/`; data hooks are `use-boms.ts` and `use-project-costs.ts`.
+- Quote `bomId` links and `costEstimate` stay internal; document data loading explicitly selects
+  printable item fields. Cost estimates require both `projects.view` and `projects.edit`.
+- Allocation confirmation, edits, cancellation and attached-cost changes share a project advisory lock.
+  Confirmation rechecks purchase invoice dates; costs on confirmed batches are immutable.
+- Cost summaries choose one version per project BOM family, prefer approved versions, and retain
+  independent machines. Contract revenue excludes VAT using source contract-item quote rates,
+  falling back to the accepted quote rate (zero when no quote exists).
 
 ---
 

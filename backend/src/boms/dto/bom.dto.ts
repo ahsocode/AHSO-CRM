@@ -49,6 +49,9 @@ export const bomLineInputSchema = z.object({
   quantity: z.coerce.number().positive("Số lượng phải lớn hơn 0").max(1_000_000_000),
   estUnitCost: z.coerce.number().min(0, "Đơn giá không được âm").max(999_999_999_999).default(0),
   notes: nullishString(1000)
+}).refine((line) => !(line.materialId && line.childBomId), {
+  message: "Một dòng chỉ được gắn vật tư hoặc BOM con",
+  path: ["childBomId"]
 });
 
 export const replaceBomLinesSchema = z.object({
@@ -81,6 +84,7 @@ export const saveAsModelSchema = z
 
 export const suggestAllocationSchema = z.object({
   bomId: z.string().trim().min(1, "Chọn BOM"),
+  allocationId: optionalId,
   salesInvoiceDate: z.coerce.date(),
   quantityMultiplier: z.coerce.number().positive().max(100_000).default(1)
 });

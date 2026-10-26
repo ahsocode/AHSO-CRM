@@ -1,7 +1,9 @@
+import { invoiceDayEnd } from "../common/utils/invoice-date";
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { DocumentType } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { JwtUser, isStaff } from "../auth/auth.types";
+import { lockProjectFinance } from "../boms/project-access";
 import { PrismaService } from "../common/prisma.service";
 import { projectProgressPercent } from "../common/utils/project-progress";
 import {
@@ -1513,7 +1515,7 @@ export class ProjectsService {
     const lots = await this.prisma.stockLot.findMany({
       where: {
         remainingQuantity: { gt: 0 },
-        purchaseInvoiceDate: { lte: salesInvoiceDate }
+        purchaseInvoiceDate: { lte: invoiceDayEnd(salesInvoiceDate) }
       },
       orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
       take: dto.limit ?? 200,
@@ -1597,6 +1599,11 @@ export class ProjectsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      await lockProjectFinance(tx, allocation.projectId);
+      const current = await tx.projectMaterialAllocation.findFirst({ where: { id: allocationId }, select: { status: true } });
+      if (!current || current.status !== "DRAFT") {
+        throw new BadRequestException("Chỉ có thể hủy đợt phân bổ nháp");
+      }
       await tx.projectCost.updateMany({ where: { allocationId }, data: { allocationId: null } });
       const cancelled = await tx.projectMaterialAllocation.update({
         where: { id: allocationId },
@@ -1704,7 +1711,7 @@ export class ProjectsService {
       if (!lot) {
         throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
       }
-      if (lot.purchaseInvoiceDate.getTime() > dto.salesInvoiceDate.getTime()) {
+      if (lot.purchaseInvoiceDate.getTime() > invoiceDayEnd(dto.salesInvoiceDate).getTime()) {
         throw new BadRequestException("Không thể phân bổ lô nhập sau ngày hóa đơn bán ra");
       }
       if (toDecimal(lot.remainingQuantity).lessThan(item.quantity)) {
@@ -1748,7 +1755,7 @@ export class ProjectsService {
       throw new BadRequestException("Có chi phí không tồn tại hoặc không thuộc dự án này");
     }
     for (const cost of costs) {
-      if (cost.invoiceDate.getTime() > salesInvoiceDate.getTime()) {
+      if (cost.invoiceDate.getTime() > invoiceDayEnd(salesInvoiceDate).getTime()) {
         throw new BadRequestException(`Chi phí "${cost.description}" có ngày hóa đơn sau ngày hóa đơn bán ra`);
       }
       if (cost.allocationId && cost.allocationId !== allocationId) {
@@ -1774,6 +1781,7 @@ export class ProjectsService {
     allocationId: string | null,
     dto: UpsertProjectMaterialAllocationDto
   ) {
+    await lockProjectFinance(tx, projectId);
     const lotById = await this.validateAllocationItems(tx, projectId, dto);
 
     if (allocationId) {
@@ -1842,7 +1850,7 @@ export class ProjectsService {
 
     return this.prisma.$transaction(async (tx) => {
       // Serialize concurrent confirms for the same project to prevent double-deduction
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('confirm_material_alloc_' || ${id}))`;
+      await lockProjectFinance(tx, id);
 
       const allocation = await tx.projectMaterialAllocation.findFirst({
         where: { id: allocationId, projectId: id, status: "DRAFT" },
@@ -1865,6 +1873,9 @@ export class ProjectsService {
         throw new BadRequestException("Phân bổ vật tư chưa có dòng vật tư");
       }
 
+      // Revalidate R9 under the same lock as edits to costs and invoice dates.
+      await this.syncAllocationCosts(tx, allocation.id, id, undefined, allocation.salesInvoiceDate);
+
       // Pass 1: validate balance sufficiency before any mutation
       for (const item of allocation.items) {
         const quantity = toDecimal(item.quantity);
@@ -1878,7 +1889,7 @@ export class ProjectsService {
           where: {
             id: item.stockLotId,
             remainingQuantity: { gte: quantity },
-            purchaseInvoiceDate: { lte: allocation.salesInvoiceDate }
+            purchaseInvoiceDate: { lte: invoiceDayEnd(allocation.salesInvoiceDate) }
           },
           data: {
             remainingQuantity: { decrement: quantity }

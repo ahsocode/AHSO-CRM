@@ -184,4 +184,16 @@ describe("ProjectsService material allocations (multi-allocation)", () => {
     expect((tx.stockIssue as Record<string, jest.Mock>).create).toHaveBeenCalledTimes(1);
     expect(result.status).toBe("CONFIRMED");
   });
+
+  it("rechecks cost invoice dates at confirmation before deducting stock", async () => {
+    (tx.projectMaterialAllocation as Record<string, jest.Mock>).findFirst
+      .mockResolvedValueOnce({ id: "alloc-2", projectId: "p1", status: "DRAFT" })
+      .mockResolvedValueOnce({ id: "alloc-2", projectId: "p1", salesInvoiceDate: salesDate, items: [{}] });
+    (tx.projectCost as Record<string, jest.Mock>).findMany
+      .mockResolvedValueOnce([{ id: "c1" }])
+      .mockResolvedValueOnce([{ id: "c1", description: "Software", invoiceDate: new Date("2026-07-01"), allocationId: "alloc-2" }]);
+    await expect(service.confirmMaterialAllocationById("alloc-2", user)).rejects.toThrow(/sau ngày hóa đơn bán ra/);
+    expect((tx.stockLot as Record<string, jest.Mock>).updateMany).not.toHaveBeenCalled();
+    expect(inventoryBalance.adjustBalance).not.toHaveBeenCalled();
+  });
 });

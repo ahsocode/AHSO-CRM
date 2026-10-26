@@ -34,7 +34,7 @@ describe("BomsService", () => {
       update: jest.fn(),
       create: jest.fn()
     };
-    tx = { $executeRaw: jest.fn(), bom, bomLine, material: { findFirst: jest.fn(), create: jest.fn() } };
+    tx = { $executeRaw: jest.fn(), $queryRaw: jest.fn(), bom, bomLine, material: { findFirst: jest.fn(), create: jest.fn() } };
     prisma = {
       bom,
       bomLine,
@@ -71,6 +71,12 @@ describe("BomsService", () => {
     it("refuses to rename an approved BOM", async () => {
       bom.findFirst.mockResolvedValue({ ...draftProjectBom, status: "APPROVED" });
       await expect(service.update("b1", { name: "Khác" }, admin)).rejects.toThrow(BadRequestException);
+    });
+
+    it("rechecks the draft after acquiring the lock when approval happened concurrently", async () => {
+      bom.findFirst.mockResolvedValueOnce(draftProjectBom).mockResolvedValueOnce({ status: "APPROVED" });
+      await expect(service.replaceLines("b1", { lines: [] }, admin)).rejects.toThrow(/tạo phiên bản mới/);
+      expect(bomLine.deleteMany).not.toHaveBeenCalled();
     });
 
     it("only allows a new version from an approved BOM", async () => {
@@ -215,6 +221,12 @@ describe("BomsService", () => {
       const viewer: JwtUser = { ...staff, permissions: ["projects.view"] };
       await expect(service.update("b1", { name: "Khác" }, viewer)).rejects.toThrow(ForbiddenException);
     });
+
+    it("requires materials.view before copying an approved model", async () => {
+      bom.findFirst.mockResolvedValue({ ...draftProjectBom, kind: "MODEL", status: "APPROVED", projectId: null, productId: "prod" });
+      await expect(service.createProjectBom("p1", { name: "New", sourceBomId: "b1" }, staff)).rejects.toThrow(ForbiddenException);
+      expect(bom.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("R12 deletion", () => {
@@ -235,5 +247,32 @@ describe("BomsService", () => {
       await service.remove("b1", admin);
       expect(bom.update).toHaveBeenCalledWith({ where: { id: "b1" }, data: { deletedAt: expect.any(Date) } });
     });
+  });
+
+  it("keeps a recorded zero actual service cost when saving an actual model", async () => {
+    bom.findFirst.mockResolvedValue(draftProjectBom);
+    bomLine.findMany.mockResolvedValue([{
+      id: "l1", name: "Software", group: "SOFTWARE", materialId: null, childBomId: null,
+      quantity: 2, estUnitCost: 500000, specification: null, unit: "Gói", notes: null
+    }]);
+    (prisma.projectCost as Mocks).findMany.mockResolvedValue([{ bomLineId: "l1", amount: 0 }]);
+    (tx.material as Mocks).findFirst.mockResolvedValue({ id: "prod", kind: "PRODUCT" });
+
+    await service.saveAsModel("b1", { productId: "prod", source: "ACTUAL" }, admin);
+
+    const line = bom.create.mock.calls[0][0].data.lines.create[0];
+    expect(Number(line.quantity)).toBe(2);
+    expect(Number(line.estUnitCost)).toBe(0);
+  });
+
+  it("refuses to silently label a subassembly estimate as an actual model", async () => {
+    bom.findFirst.mockResolvedValue(draftProjectBom);
+    bomLine.findMany.mockResolvedValue([{
+      id: "assembly", name: "Control cabinet", group: "ELECTRICAL", materialId: null,
+      childBomId: "child", quantity: 1, estUnitCost: 0
+    }]);
+    (prisma.projectCost as Mocks).findMany.mockResolvedValue([{ bomLineId: "assembly", amount: 2000000 }]);
+    await expect(service.saveAsModel("b1", { productId: "prod", source: "ACTUAL" }, admin)).rejects.toThrow(/cụm con/);
+    expect(bom.create).not.toHaveBeenCalled();
   });
 });

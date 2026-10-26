@@ -1,10 +1,11 @@
+import { invoiceDayEnd } from "../common/utils/invoice-date";
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { decimalToNumber } from "../common/utils/decimal";
 import type { CreateProjectCostDto, ProjectCostFilterDto, UpdateProjectCostDto } from "./dto/project-cost.dto";
-import { findAccessibleProject } from "./project-access";
+import { findAccessibleProject, lockProjectFinance } from "./project-access";
 
 const COST_SELECT = {
   id: true,
@@ -93,50 +94,60 @@ export class ProjectCostsService {
   }
 
   async update(id: string, dto: UpdateProjectCostDto, user: JwtUser) {
-    const cost = await this.findAccessibleCost(id, user);
-    if (cost.allocation?.status === "CONFIRMED") {
-      throw new BadRequestException("Chi phí đã gắn vào đợt phân bổ đã xác nhận, không thể sửa");
-    }
-    if (dto.supplierId !== undefined || dto.bomLineId !== undefined) {
-      await this.validateReferences(cost.projectId, dto.supplierId, dto.bomLineId);
-    }
-    // R9: a cost attached to a draft allocation must not be dated after that sales invoice
-    if (
-      dto.invoiceDate &&
-      cost.allocation &&
-      dto.invoiceDate.getTime() > cost.allocation.salesInvoiceDate.getTime()
-    ) {
-      throw new BadRequestException("Ngày hóa đơn chi phí không được sau ngày hóa đơn bán ra của đợt phân bổ");
-    }
+    const accessible = await this.findAccessibleCost(id, user);
+    return this.prisma.$transaction(async (tx) => {
+      await lockProjectFinance(tx, accessible.projectId);
+      const cost = await tx.projectCost.findFirst({ where: { id, deletedAt: null }, select: COST_SELECT });
+      if (!cost) throw new NotFoundException("Không tìm thấy chi phí");
+      if (cost.allocation?.status === "CONFIRMED") {
+        throw new BadRequestException("Chi phí đã gắn vào đợt phân bổ đã xác nhận, không thể sửa");
+      }
+      if (dto.supplierId !== undefined || dto.bomLineId !== undefined) {
+        await this.validateReferences(cost.projectId, dto.supplierId, dto.bomLineId);
+      }
+      // R9: a cost attached to a draft allocation must not be dated after that sales invoice
+      if (
+        dto.invoiceDate &&
+        cost.allocation &&
+        dto.invoiceDate.getTime() > invoiceDayEnd(cost.allocation.salesInvoiceDate).getTime()
+      ) {
+        throw new BadRequestException("Ngày hóa đơn chi phí không được sau ngày hóa đơn bán ra của đợt phân bổ");
+      }
 
-    const updated = await this.prisma.projectCost.update({
-      where: { id },
-      data: {
-        ...(dto.group !== undefined ? { group: dto.group } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
-        ...(dto.supplierId !== undefined ? { supplierId: dto.supplierId } : {}),
-        ...(dto.invoiceNo !== undefined ? { invoiceNo: dto.invoiceNo } : {}),
-        ...(dto.invoiceDate !== undefined ? { invoiceDate: dto.invoiceDate } : {}),
-        ...(dto.amount !== undefined ? { amount: Math.round(dto.amount) } : {}),
-        ...(dto.vatRate !== undefined ? { vatRate: dto.vatRate } : {}),
-        ...(dto.bomLineId !== undefined ? { bomLineId: dto.bomLineId } : {}),
-        ...(dto.notes !== undefined ? { notes: dto.notes } : {})
-      },
-      select: COST_SELECT
+      const updated = await tx.projectCost.update({
+        where: { id },
+        data: {
+          ...(dto.group !== undefined ? { group: dto.group } : {}),
+          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.supplierId !== undefined ? { supplierId: dto.supplierId } : {}),
+          ...(dto.invoiceNo !== undefined ? { invoiceNo: dto.invoiceNo } : {}),
+          ...(dto.invoiceDate !== undefined ? { invoiceDate: dto.invoiceDate } : {}),
+          ...(dto.amount !== undefined ? { amount: Math.round(dto.amount) } : {}),
+          ...(dto.vatRate !== undefined ? { vatRate: dto.vatRate } : {}),
+          ...(dto.bomLineId !== undefined ? { bomLineId: dto.bomLineId } : {}),
+          ...(dto.notes !== undefined ? { notes: dto.notes } : {})
+        },
+        select: COST_SELECT
+      });
+      return mapProjectCost(updated);
     });
-    return mapProjectCost(updated);
   }
 
   async remove(id: string, user: JwtUser) {
-    const cost = await this.findAccessibleCost(id, user);
-    if (cost.allocation?.status === "CONFIRMED") {
-      throw new BadRequestException("Chi phí đã gắn vào đợt phân bổ đã xác nhận, không thể xóa");
-    }
-    await this.prisma.projectCost.update({
-      where: { id },
-      data: { deletedAt: new Date(), allocationId: null }
+    const accessible = await this.findAccessibleCost(id, user);
+    return this.prisma.$transaction(async (tx) => {
+      await lockProjectFinance(tx, accessible.projectId);
+      const cost = await tx.projectCost.findFirst({ where: { id, deletedAt: null }, select: COST_SELECT });
+      if (!cost) throw new NotFoundException("Không tìm thấy chi phí");
+      if (cost.allocation?.status === "CONFIRMED") {
+        throw new BadRequestException("Chi phí đã gắn vào đợt phân bổ đã xác nhận, không thể xóa");
+      }
+      await tx.projectCost.update({
+        where: { id },
+        data: { deletedAt: new Date(), allocationId: null }
+      });
+      return { success: true, id };
     });
-    return { success: true, id };
   }
 
   private async findAccessibleCost(id: string, user: JwtUser) {

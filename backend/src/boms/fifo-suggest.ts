@@ -1,8 +1,9 @@
+import { invoiceDayEnd } from "../common/utils/invoice-date";
 import { Decimal } from "@prisma/client/runtime/library";
 import type { CostGroup } from "@prisma/client";
 import { STOCK_COST_GROUPS } from "./bom-cost";
 
-const MAX_EXPANSION_DEPTH = 10;
+const MAX_EXPANSION_DEPTH = 20;
 const QTY_DP = 3;
 
 export interface FifoBomLine {
@@ -82,7 +83,7 @@ export function expandBomDemand(
         continue;
       }
 
-      if (!line.materialId) continue; // guarded by R5 before expansion
+      if (!line.materialId || line.materialKind !== "STOCK") continue; // guarded by R5 before expansion
 
       const key = `${topId}:${line.materialId}`;
       const previous = stock.get(key);
@@ -158,7 +159,7 @@ export function demandKey(bomLineId: string, materialId: string) {
 
 /** Pure FIFO suggestion (spec §4). Does not touch the database. */
 export function suggestFifo(input: FifoSuggestInput): FifoSuggestResult {
-  const salesTime = input.salesInvoiceDate.getTime();
+  const salesTime = invoiceDayEnd(input.salesInvoiceDate).getTime();
 
   const eligibleByMaterial = new Map<string, Array<FifoLot & { available: Decimal }>>();
   const sortedLots = [...input.lots].sort(

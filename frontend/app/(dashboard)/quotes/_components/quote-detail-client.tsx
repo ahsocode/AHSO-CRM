@@ -279,7 +279,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
             <p className="mt-5 max-w-3xl text-sm text-text-secondary">
               Báo giá này đang phục vụ dự án <strong className="text-text-primary">{quote.project.name}</strong>. Tất cả
-              hạng mục, điều khoản thương mại và thông tin liên hệ đã được gom để sales và delivery dùng chung.
+              hạng mục, điều khoản thương mại và thông tin liên hệ đã được gom để bộ phận kinh doanh và triển khai dùng chung.
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">

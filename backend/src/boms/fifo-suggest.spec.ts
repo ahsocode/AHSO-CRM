@@ -87,6 +87,15 @@ describe("suggestFifo", () => {
     expect(result.shortages[0].missingQty).toBe(5);
   });
 
+  it("includes purchases later on the same calendar invoice date", () => {
+    const result = suggestFifo({
+      demands: [demand("l1", "m1", 5)], salesInvoiceDate: salesDate,
+      lots: [lot("same-day", "m1", "2026-06-30T16:00:00Z", 5), lot("next-day", "m1", "2026-07-01", 100)]
+    });
+    expect(result.items.map((item) => item.stockLotId)).toEqual(["same-day"]);
+    expect(result.shortages).toEqual([]);
+  });
+
   it("subtracts quantity already allocated in confirmed allocations", () => {
     const result = suggestFifo({
       demands: [demand("l1", "m1", 10)],
@@ -149,6 +158,10 @@ describe("suggestFifo", () => {
 });
 
 describe("expandBomDemand", () => {
+  it("does not allocate finished products as stocked components", () => {
+    const result = expandBomDemand([bomLine({ id: "product", materialId: "prod", materialKind: "PRODUCT" })], new Map());
+    expect(result.stock).toEqual([]);
+  });
   it("expands sub-assemblies, multiplies quantities and attributes demand to the top-level line", () => {
     const root = [
       bomLine({ id: "top-1", materialId: "m1", materialCode: "M1", materialName: "Vít", quantity: 4 }),

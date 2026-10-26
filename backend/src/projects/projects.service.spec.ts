@@ -272,7 +272,7 @@ describe("ProjectsService", () => {
       expect.objectContaining({
         where: expect.objectContaining({
           remainingQuantity: { gt: 0 },
-          purchaseInvoiceDate: { lte: salesInvoiceDate }
+          purchaseInvoiceDate: { lte: new Date(new Date(salesInvoiceDate).setUTCHours(23, 59, 59, 999)) }
         })
       })
     );

@@ -7,6 +7,7 @@ import { decimalToNumber } from "../common/utils/decimal";
 import { COST_GROUP_ORDER, lineAmount } from "./bom-cost";
 import { loadLineGraph, totalsFromGraph } from "./bom-graph";
 import { findAccessibleProject } from "./project-access";
+import { selectEstimateBoms } from "./estimate-basis";
 
 function pct(numerator: Decimal, denominator: Decimal): number | null {
   if (denominator.lte(0)) return null;
@@ -24,11 +25,14 @@ export class CostReportsService {
     const [contract, acceptedQuote, allocations, costs, boms] = await Promise.all([
       this.prisma.contract.findFirst({
         where: { projectId, deletedAt: null },
-        select: { id: true, contractNo: true, value: true }
+        select: {
+          id: true, contractNo: true, value: true,
+          items: { select: { total: true, quoteItem: { select: { quote: { select: { taxRate: true } } } } } }
+        }
       }),
       this.prisma.quote.findFirst({
         where: { projectId, status: "ACCEPTED", deletedAt: null },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ acceptedAt: "desc" }, { createdAt: "desc" }],
         select: { id: true, quoteNo: true, subtotal: true, taxRate: true, acceptedItemIds: true, items: { select: { id: true, total: true } } }
       }),
       this.prisma.projectMaterialAllocation.findMany({
@@ -47,7 +51,7 @@ export class CostReportsService {
       }),
       this.prisma.bom.findMany({
         where: { projectId, kind: "PROJECT", deletedAt: null, status: { not: "ARCHIVED" }, ...(bomId ? { id: bomId } : {}) },
-        select: { id: true, code: true, name: true, status: true, derivedBoms: { where: { deletedAt: null, status: "APPROVED" }, select: { id: true } } }
+        select: { id: true, code: true, name: true, status: true, sourceBomId: true, version: true }
       })
     ]);
 
@@ -57,7 +61,15 @@ export class CostReportsService {
     let revenueRef: { id: string; no: string } | null = null;
     const quoteTaxRate = acceptedQuote ? new Decimal(acceptedQuote.taxRate) : new Decimal(0);
     if (contract) {
-      revenue = new Decimal(contract.value).div(quoteTaxRate.div(100).plus(1)).toDecimalPlaces(0);
+      // A later accepted quote may use a different VAT rate from the contract's source items.
+      const netItems = contract.items.reduce((sum, item) => sum.plus(item.total), new Decimal(0));
+      const grossItems = contract.items.reduce((sum, item) => {
+        const rate = item.quoteItem?.quote.taxRate ?? quoteTaxRate;
+        return sum.plus(new Decimal(item.total).mul(new Decimal(rate).div(100).plus(1)));
+      }, new Decimal(0));
+      revenue = netItems.gt(0) && grossItems.gt(0)
+        ? new Decimal(contract.value).mul(netItems).div(grossItems).toDecimalPlaces(0)
+        : new Decimal(contract.value).div(quoteTaxRate.div(100).plus(1)).toDecimalPlaces(0);
       revenueSource = "CONTRACT";
       revenueRef = { id: contract.id, no: contract.contractNo };
     } else if (acceptedQuote) {
@@ -101,11 +113,9 @@ export class CostReportsService {
       }
     }
 
-    // Estimates: approved BOMs that are not superseded by a newer approved version; else drafts.
-    const approved = boms.filter((bom) => bom.status === "APPROVED" && bom.derivedBoms.length === 0);
+    const usedBoms = selectEstimateBoms(boms);
     const estimateBasis: "APPROVED" | "DRAFT" | "NONE" =
-      approved.length > 0 ? "APPROVED" : boms.some((bom) => bom.status === "DRAFT") ? "DRAFT" : "NONE";
-    const usedBoms = estimateBasis === "APPROVED" ? approved : estimateBasis === "DRAFT" ? boms.filter((bom) => bom.status === "DRAFT") : [];
+      usedBoms.some((bom) => bom.status === "APPROVED") ? "APPROVED" : usedBoms.length ? "DRAFT" : "NONE";
 
     const graph = await loadLineGraph(this.prisma, usedBoms.map((bom) => bom.id));
     const totalsMap = totalsFromGraph(graph);

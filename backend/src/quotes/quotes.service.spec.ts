@@ -416,8 +416,8 @@ describe("QuotesService", () => {
       );
     });
 
-    it("hides the estimate from users without projects.view", async () => {
-      const limited = { ...user, role: "STAFF" as never, permissions: ["quotes.view"] };
+    it.each([["quotes.view", "projects.view"], ["quotes.view", "projects.edit"]])("hides estimates unless both project view and edit permissions are granted (%s)", async (...permissions) => {
+      const limited = { ...user, role: "STAFF" as never, permissions };
       jest.spyOn(service as unknown as { findAccessibleQuote: () => Promise<unknown> }, "findAccessibleQuote").mockResolvedValue({
         id: "q1", quoteNo: "BG-1", version: 1, status: "DRAFT", validUntil: null, subtotal: 0, taxRate: 10, taxAmount: 0, total: 0,
         tableColumnWidths: null, terms: null, deliveryTerms: null, internalNote: null, sentAt: null, acceptedAt: null,

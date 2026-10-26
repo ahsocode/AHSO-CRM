@@ -9,6 +9,8 @@ to inspect visually and the `--grep` filter for Playwright. Never QA pages you d
 | `app/(dashboard)/customers/**`, `components/shared/avatar-initials.tsx` | `/customers`, `/customers/[id]` | `customers.spec.ts`, `ui-regression.spec.ts` | `Khách hàng` |
 | `app/(dashboard)/projects/_components/project-kanban-board.tsx`, `projects-client.tsx` | `/projects?view=kanban` | `projects.spec.ts`, `ui-regression.spec.ts` | `Kanban` |
 | `app/(dashboard)/projects/_components/project-detail*` | `/projects/[id]` | `projects.spec.ts` | `Project 360` |
+| `components/bom/**`, `lib/bom-*`, `projects/[id]/boms/**`, `project-boms-tab.tsx`, `bom-create-dialog.tsx`, `inventory/models/**` | `/projects/[id]?tab=boms`, `/projects/[id]/boms/[bomId]`, `/inventory/models` | `bom.spec.ts`, `bom-security.spec.ts` | `BOM` |
+| `projects/_components/project-finance/**`, `project-materials-tab.tsx`, `project-costs-tab.tsx`, `hooks/use-project-costs.ts` | `/projects/[id]?tab=materials`, `/projects/[id]?tab=costs` | `project-costs.spec.ts`, `bom-security.spec.ts` | `Giá vốn dự án\|BOM bảo mật` |
 | `app/(dashboard)/quotes/**` | `/quotes/new`, `/quotes/[id]` | `quotes.spec.ts`, `ui-regression.spec.ts` | `Báo giá` |
 | `app/(dashboard)/contracts/**` | `/contracts`, `/contracts/[id]` | `contracts.spec.ts` | `Hợp đồng` |
 | `app/(dashboard)/suppliers/**` | `/suppliers`, `/suppliers/[id]` | `suppliers.spec.ts`, `ui-regression.spec.ts` | `Nhà cung cấp` |

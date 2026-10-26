@@ -85,7 +85,7 @@ if [[ $E2E_ONLY -eq 0 ]]; then
   ok "typecheck + lint"
 
   stage "3/4 unit tests"
-  (cd backend && npx jest --silent) || fail "backend unit tests"
+  (cd backend && npx jest --runInBand --silent) || fail "backend unit tests"
   (cd frontend && npx vitest run) || fail "frontend unit tests"
   ok "unit tests"
 fi
@@ -147,7 +147,11 @@ fi
 [[ -d "$HOME/Library/Caches/ms-playwright" ]] && ls "$HOME/Library/Caches/ms-playwright" | grep -q chromium \
   || npx --no-install playwright install chromium
 
-PW_ARGS=(--reporter=line)
+# Playwright recursively clears its output directory. AppleDouble files on exFAT
+# can appear during that removal and cause ENOTEMPTY before any test runs.
+PW_OUTPUT="$(mktemp -d "${TMPDIR:-/tmp}/ahso-qa-results.XXXXXX")"
+echo "[qa] Playwright results: $PW_OUTPUT"
+PW_ARGS=(--reporter=line --output "$PW_OUTPUT")
 [[ -n "$GREP" ]] && PW_ARGS+=(--grep "$GREP")
 if ! npx --no-install playwright test "${PW_ARGS[@]}"; then
   printf '\n[qa] Playwright failed. Report: npx playwright show-report\n'

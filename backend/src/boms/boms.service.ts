@@ -1,3 +1,4 @@
+import { invoiceDayEnd } from "../common/utils/invoice-date";
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
@@ -117,12 +118,11 @@ export class BomsService {
     let sourceLines: Array<Prisma.BomLineUncheckedCreateWithoutBomInput> = [];
     if (dto.sourceBomId) {
       const source = await this.findBomOrThrow(dto.sourceBomId, "Không tìm thấy BOM nguồn");
+      await this.assertBomAccess(source, user, "view");
       if (source.kind === "MODEL") {
         if (source.status !== "APPROVED") {
           throw new BadRequestException("Chỉ có thể tạo từ mẫu máy đã duyệt");
         }
-      } else {
-        await this.assertBomAccess(source, user, "view");
       }
       sourceLines = await this.copyLineData(source.id);
     }
@@ -152,12 +152,15 @@ export class BomsService {
     await this.assertBomAccess(bom, user, "edit");
     this.assertDraft(bom.status);
 
-    await this.prisma.bom.update({
-      where: { id },
-      data: {
-        ...(dto.name !== undefined ? { name: dto.name } : {}),
-        ...(dto.notes !== undefined ? { notes: dto.notes } : {})
-      }
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockDraft(tx, id);
+      await tx.bom.update({
+        where: { id },
+        data: {
+          ...(dto.name !== undefined ? { name: dto.name } : {}),
+          ...(dto.notes !== undefined ? { notes: dto.notes } : {})
+        }
+      });
     });
     return this.buildDetail(id);
   }
@@ -170,6 +173,7 @@ export class BomsService {
     await this.validateLines(bom.id, dto.lines);
 
     await this.prisma.$transaction(async (tx) => {
+      await this.lockDraft(tx, id);
       const keepIds = dto.lines.map((line) => line.id).filter((lineId): lineId is string => Boolean(lineId));
       await tx.bomLine.deleteMany({ where: { bomId: id, id: { notIn: keepIds } } });
 
@@ -192,18 +196,21 @@ export class BomsService {
     await this.assertBomAccess(bom, user, "edit");
     this.assertDraft(bom.status);
 
-    const lines = await this.prisma.bomLine.findMany({
-      where: { bomId: id },
-      select: { name: true, group: true, materialId: true, childBomId: true }
-    });
-    if (lines.length === 0) {
-      throw new BadRequestException("BOM chưa có dòng nào, không thể duyệt");
-    }
-    if (bom.kind === "MODEL") {
-      this.assertAllLinesHaveMaterial(lines);
-    }
+    await this.prisma.$transaction(async (tx) => {
+      await this.lockDraft(tx, id);
+      const lines = await tx.bomLine.findMany({
+        where: { bomId: id },
+        select: { name: true, group: true, materialId: true, childBomId: true }
+      });
+      if (lines.length === 0) {
+        throw new BadRequestException("BOM chưa có dòng nào, không thể duyệt");
+      }
+      if (bom.kind === "MODEL") {
+        this.assertAllLinesHaveMaterial(lines);
+      }
 
-    await this.prisma.bom.update({ where: { id }, data: { status: "APPROVED", approvedAt: new Date() } });
+      await tx.bom.update({ where: { id }, data: { status: "APPROVED", approvedAt: new Date() } });
+    });
     return this.buildDetail(id);
   }
 
@@ -307,6 +314,11 @@ export class BomsService {
     this.assertAllLinesHaveMaterial(sourceLines);
 
     const actuals = dto.source === "ACTUAL" ? await this.loadActuals(sourceLines.map((line) => line.id)) : null;
+    if (sourceLines.some((line) => line.childBomId && actuals?.has(line.id))) {
+      throw new BadRequestException(
+        "Chưa thể lưu mẫu thực tế cho cụm con đã phát sinh chi phí. Hãy chọn nguồn Dự toán hoặc bung cụm thành các dòng vật tư trước."
+      );
+    }
     const lineData = sourceLines.map((line, index): Prisma.BomLineUncheckedCreateWithoutBomInput => {
       let quantity: Decimal.Value = line.quantity;
       let estUnitCost: Decimal.Value = line.estUnitCost;
@@ -315,7 +327,7 @@ export class BomsService {
         if (actual.quantity.gt(0)) {
           quantity = actual.quantity;
           estUnitCost = actual.amount.div(actual.quantity).toDecimalPlaces(0);
-        } else if (actual.amount.gt(0) && new Decimal(line.quantity).gt(0)) {
+        } else if (new Decimal(line.quantity).gt(0)) {
           estUnitCost = actual.amount.div(line.quantity).toDecimalPlaces(0);
         }
       }
@@ -385,6 +397,12 @@ export class BomsService {
 
   async suggestAllocation(projectId: string, dto: SuggestAllocationDto, user: JwtUser) {
     await findAccessibleProject(this.prisma, projectId, user);
+    if (dto.allocationId) {
+      const draft = await this.prisma.projectMaterialAllocation.findFirst({
+        where: { id: dto.allocationId, projectId, status: "DRAFT" }, select: { id: true }
+      });
+      if (!draft) throw new NotFoundException("Không tìm thấy đợt phân bổ nháp của dự án");
+    }
     const bom = await this.prisma.bom.findFirst({
       where: { id: dto.bomId, projectId, kind: "PROJECT", deletedAt: null },
       select: { id: true, code: true, name: true }
@@ -419,7 +437,7 @@ export class BomsService {
         where: {
           materialId: { in: materialIds },
           remainingQuantity: { gt: 0 },
-          purchaseInvoiceDate: { lte: dto.salesInvoiceDate }
+          purchaseInvoiceDate: { lte: invoiceDayEnd(dto.salesInvoiceDate) }
         },
         orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
         select: {
@@ -435,11 +453,14 @@ export class BomsService {
         }
       }),
       this.prisma.projectMaterialAllocationItem.findMany({
-        where: { allocation: { status: "DRAFT" }, materialId: { in: materialIds } },
+        where: {
+          allocation: { status: "DRAFT", ...(dto.allocationId ? { id: { not: dto.allocationId } } : {}) },
+          materialId: { in: materialIds }
+        },
         select: { stockLotId: true, quantity: true }
       }),
       this.prisma.projectCost.findMany({
-        where: { projectId, deletedAt: null, bomLineId: { not: null } },
+        where: { projectId, deletedAt: null, bomLineId: { not: null }, invoiceDate: { lte: invoiceDayEnd(dto.salesInvoiceDate) } },
         select: { bomLineId: true }
       })
     ]);
@@ -519,6 +540,13 @@ export class BomsService {
     if (status !== "DRAFT") {
       throw new BadRequestException("BOM đã duyệt hoặc ngừng dùng, không thể sửa. Hãy tạo phiên bản mới.");
     }
+  }
+
+  private async lockDraft(tx: Prisma.TransactionClient, id: string) {
+    await tx.$queryRaw`SELECT id FROM "Bom" WHERE id = ${id} FOR UPDATE`;
+    const current = await tx.bom.findFirst({ where: { id, deletedAt: null }, select: { status: true } });
+    if (!current) throw new NotFoundException("Không tìm thấy BOM");
+    this.assertDraft(current.status);
   }
 
   private missingMaterialMessage(names: string[]) {

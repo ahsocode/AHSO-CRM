@@ -722,7 +722,7 @@ export class QuotesService {
       }
     };
     const bomIds = [...new Set(items.map((item) => item.bomId).filter((value): value is string => Boolean(value)))];
-    if (bomIds.length === 0 || !hasPermission(user, "projects.edit")) {
+    if (bomIds.length === 0 || !hasPermission(user, "projects.view") || !hasPermission(user, "projects.edit")) {
       return empty;
     }
 

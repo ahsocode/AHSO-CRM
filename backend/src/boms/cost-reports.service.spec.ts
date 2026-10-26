@@ -43,6 +43,22 @@ describe("CostReportsService", () => {
     expect(result).toMatchObject({ revenue: 10000000, materialCost: 300000, directCost: 2000000, grossProfit: 7700000, grossMarginPct: 77 });
   });
 
+  it("assumes standard VAT when a contract has no items and no accepted quote", async () => {
+    prisma.contract.findFirst.mockResolvedValue({ id: "c", contractNo: "HD-2", value: 11000000, items: [] });
+    prisma.quote.findFirst.mockResolvedValue(null);
+    expect(await service.getCostSummary("p", user)).toMatchObject({
+      revenue: 10000000, revenueSource: "CONTRACT", revenueVatAssumed: true, revenueVatRate: 10
+    });
+  });
+
+  it("assumes standard VAT for manual contract items without a source quote", async () => {
+    prisma.contract.findFirst.mockResolvedValue({
+      id: "c", contractNo: "HD-3", value: 11000000, items: [{ total: 10000000, quoteItem: null }]
+    });
+    prisma.quote.findFirst.mockResolvedValue(null);
+    expect(await service.getCostSummary("p", user)).toMatchObject({ revenue: 10000000, revenueVatAssumed: true });
+  });
+
   it("counts only accepted quote items when there is no contract", async () => {
     prisma.quote.findFirst.mockResolvedValue({
       id: "q", quoteNo: "BG-1", taxRate: 10, subtotal: 3000, acceptedItemIds: ["i1"],

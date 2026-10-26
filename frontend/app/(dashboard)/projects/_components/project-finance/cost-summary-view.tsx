@@ -54,6 +54,9 @@ function varianceClass(variance: number): string {
 export function CostSummaryView({ summary }: { summary: ProjectCostSummary }) {
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const profitTone = summary.grossProfit < 0 ? "danger" : "success";
+  const revenueRefNo = summary.revenueRef ? ` ${summary.revenueRef.no}` : "";
+  const vatNote = summary.revenueVatAssumed ? ` (giả định VAT ${summary.revenueVatRate}%)` : "";
+  const revenueHint = `${REVENUE_SOURCE_LABELS[summary.revenueSource]}${revenueRefNo} · trước VAT${vatNote}`;
 
   const groupRows = COST_GROUP_ORDER.map((group) => summary.byGroup.find((row) => row.group === group)).filter(
     (row): row is NonNullable<typeof row> => Boolean(row) && (row?.estimated !== 0 || row?.actual !== 0)
@@ -74,7 +77,7 @@ export function CostSummaryView({ summary }: { summary: ProjectCostSummary }) {
           testId="summary-revenue"
           label="Doanh thu"
           value={formatVND(summary.revenue)}
-          hint={`${REVENUE_SOURCE_LABELS[summary.revenueSource]}${summary.revenueRef ? ` ${summary.revenueRef.no}` : ""} · trước VAT`}
+          hint={revenueHint}
         />
         <SummaryCard testId="summary-material-cost" label="Giá vốn vật tư" value={formatVND(summary.materialCost)} />
         <SummaryCard testId="summary-direct-cost" label="Chi phí trực tiếp" value={formatVND(summary.directCost)} />

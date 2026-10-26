@@ -329,6 +329,9 @@ export interface ProjectCostSummary {
   /** Revenue before VAT */
   revenue: number;
   revenueSource: "CONTRACT" | "QUOTE" | "NONE";
+  /** True when the contract had no source quote VAT rate and revenueVatRate was assumed. */
+  revenueVatAssumed: boolean;
+  revenueVatRate: number | null;
   revenueRef: { id: string; no: string } | null;
   materialCost: number;
   directCost: number;

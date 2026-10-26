@@ -9,6 +9,9 @@ import { loadLineGraph, totalsFromGraph } from "./bom-graph";
 import { findAccessibleProject } from "./project-access";
 import { selectEstimateBoms } from "./estimate-basis";
 
+/** Standard Vietnamese VAT rate, also the Quote.taxRate default in the schema. */
+const DEFAULT_VAT_RATE = 10;
+
 function pct(numerator: Decimal, denominator: Decimal): number | null {
   if (denominator.lte(0)) return null;
   return numerator.div(denominator).mul(100).toDecimalPlaces(1).toNumber();
@@ -59,17 +62,23 @@ export class CostReportsService {
     let revenue = new Decimal(0);
     let revenueSource: "CONTRACT" | "QUOTE" | "NONE" = "NONE";
     let revenueRef: { id: string; no: string } | null = null;
-    const quoteTaxRate = acceptedQuote ? new Decimal(acceptedQuote.taxRate) : new Decimal(0);
+    // Contract value includes VAT. When no source quote tells us the rate, assume the
+    // standard rate instead of treating the gross value as net (would inflate margin ~10%).
+    let revenueVatAssumed = false;
+    const fallbackTaxRate = acceptedQuote ? new Decimal(acceptedQuote.taxRate) : new Decimal(DEFAULT_VAT_RATE);
     if (contract) {
       // A later accepted quote may use a different VAT rate from the contract's source items.
       const netItems = contract.items.reduce((sum, item) => sum.plus(item.total), new Decimal(0));
       const grossItems = contract.items.reduce((sum, item) => {
-        const rate = item.quoteItem?.quote.taxRate ?? quoteTaxRate;
+        const sourceRate = item.quoteItem?.quote.taxRate;
+        if (sourceRate === undefined && !acceptedQuote) revenueVatAssumed = true;
+        const rate = sourceRate ?? fallbackTaxRate;
         return sum.plus(new Decimal(item.total).mul(new Decimal(rate).div(100).plus(1)));
       }, new Decimal(0));
+      if (!(netItems.gt(0) && grossItems.gt(0)) && !acceptedQuote) revenueVatAssumed = true;
       revenue = netItems.gt(0) && grossItems.gt(0)
         ? new Decimal(contract.value).mul(netItems).div(grossItems).toDecimalPlaces(0)
-        : new Decimal(contract.value).div(quoteTaxRate.div(100).plus(1)).toDecimalPlaces(0);
+        : new Decimal(contract.value).div(fallbackTaxRate.div(100).plus(1)).toDecimalPlaces(0);
       revenueSource = "CONTRACT";
       revenueRef = { id: contract.id, no: contract.contractNo };
     } else if (acceptedQuote) {
@@ -174,6 +183,8 @@ export class CostReportsService {
       projectId,
       revenue: revenue.toNumber(),
       revenueSource,
+      revenueVatAssumed,
+      revenueVatRate: revenueVatAssumed ? DEFAULT_VAT_RATE : null,
       revenueRef,
       materialCost: materialCost.toNumber(),
       directCost: directCost.toNumber(),

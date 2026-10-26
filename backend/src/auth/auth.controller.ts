@@ -5,6 +5,7 @@ import { Throttle } from "@nestjs/throttler";
 import type { Request, Response } from "express";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { Public } from "../common/decorators/public.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { JwtUser } from "./auth.types";
 import { AuthService } from "./auth.service";
@@ -80,6 +81,8 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
+  // The refresh cookie identifies the session even after the access token expires.
+  @Public()
   @ApiOperation({ summary: "POST /api/auth/logout" })
   @Post("logout")
   async logout(

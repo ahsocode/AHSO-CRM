@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Controller,
-  ForbiddenException,
   Post,
   UploadedFile,
   UseGuards,
@@ -9,9 +8,7 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { JwtUser } from "../auth/auth.types";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
-import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { PrismaService } from "../common/prisma.service";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
@@ -29,27 +26,11 @@ export class UploadController {
     private readonly prisma: PrismaService
   ) {}
 
-  @ApiOperation({ summary: "POST /api/upload" })
-  @Post()
+  // Single handler for both routes; "/upload" is kept for existing external clients.
+  @ApiOperation({ summary: "POST /api/upload and POST /api/upload/file" })
+  @Post(["", "file"])
   @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
-  async upload(
-    @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user: JwtUser
-  ) {
-    void user;
-    this.ensureFilePresent(file);
-    this.ensureAllowedFile(file);
-    return this.uploadService.saveFile(file, "files");
-  }
-
-  @ApiOperation({ summary: "POST /api/upload/file" })
-  @Post("file")
-  @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
-  async uploadFile(
-    @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user: JwtUser
-  ) {
-    void user;
+  async upload(@UploadedFile() file: Express.Multer.File) {
     this.ensureFilePresent(file);
     this.ensureAllowedFile(file);
     return this.uploadService.saveFile(file, "files");
@@ -58,11 +39,7 @@ export class UploadController {
   @ApiOperation({ summary: "POST /api/upload/avatar" })
   @Post("avatar")
   @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
-  async uploadAvatar(
-    @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user: JwtUser
-  ) {
-    void user;
+  async uploadAvatar(@UploadedFile() file: Express.Multer.File) {
     this.ensureFilePresent(file);
 
     if (!this.uploadService.validateAvatarType(file)) {
@@ -81,12 +58,8 @@ export class UploadController {
   @UseGuards(PermissionsGuard)
   @RequirePermissions("settings.edit")
   @UseInterceptors(FileInterceptor("file", FILE_UPLOAD_OPTIONS))
-  async uploadLogo(
-    @UploadedFile() file: Express.Multer.File,
-    @CurrentUser() user: JwtUser
-  ) {
+  async uploadLogo(@UploadedFile() file: Express.Multer.File) {
     this.ensureFilePresent(file);
-    void user;
 
     if (!this.uploadService.validateLogoType(file)) {
       throw new BadRequestException("Logo chỉ chấp nhận PNG, JPG, SVG hoặc WEBP");

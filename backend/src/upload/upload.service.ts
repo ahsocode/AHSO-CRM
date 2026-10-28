@@ -19,17 +19,41 @@ export class UploadService {
   readonly maxLogoSize = 5 * 1024 * 1024;
   readonly maxAvatarSize = 5 * 1024 * 1024;
   readonly maxFileSize = 10 * 1024 * 1024;
-  private readonly dangerousExtensions = new Set([".html", ".htm", ".php", ".exe", ".sh"]);
+  // Second line of defence only: the stored extension never comes from the client
+  // filename (see resolveExtension), but obviously executable names are still refused.
+  private readonly dangerousExtensions = new Set([
+    ".html", ".htm", ".xhtml", ".xht", ".shtml", ".shtm", ".mht", ".mhtml", ".hta",
+    ".xml", ".xsl", ".xslt", ".svgz",
+    ".js", ".mjs", ".cjs", ".jsx", ".ts", ".wasm", ".swf",
+    ".php", ".php3", ".php4", ".php5", ".phtml", ".phar",
+    ".jsp", ".jspx", ".asp", ".aspx", ".cgi", ".pl", ".py",
+    ".exe", ".dll", ".msi", ".bat", ".cmd", ".com", ".ps1", ".vbs", ".sh"
+  ]);
 
+  // The ONLY source of stored file extensions. Covers every MIME type that callers
+  // (upload controller, business documents, surveys, mailbox attachments/sync) pass to
+  // saveFile/saveBuffer today; anything else is stored as ".bin".
   private readonly extensionMap: Record<string, string> = {
     "application/pdf": ".pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "application/msword": ".doc",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.ms-powerpoint": ".ppt",
+    "application/zip": ".zip",
+    "text/plain": ".txt",
+    "text/csv": ".csv",
     "image/jpeg": ".jpg",
     "image/png": ".png",
+    "image/gif": ".gif",
     "image/svg+xml": ".svg",
-    "image/webp": ".webp"
+    "image/webp": ".webp",
+    "video/mp4": ".mp4",
+    "video/quicktime": ".mov",
+    "video/webm": ".webm"
   };
+  private readonly fallbackExtension = ".bin";
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -64,7 +88,7 @@ export class UploadService {
   async saveFile(file: Express.Multer.File, subfolder: string): Promise<UploadResponseDto> {
     const uploadRoot = this.getUploadRoot();
     const targetDirectory = resolve(uploadRoot, subfolder);
-    const extension = this.resolveExtension(file.originalname, file.mimetype);
+    const extension = this.resolveExtension(file.mimetype);
     const filename = `${randomUUID()}${extension}`;
 
     await mkdir(targetDirectory, { recursive: true });
@@ -89,7 +113,8 @@ export class UploadService {
   ): Promise<UploadResponseDto> {
     const uploadRoot = this.getUploadRoot();
     const targetDirectory = resolve(uploadRoot, options.subfolder);
-    const extension = this.resolveExtension(options.originalName ?? "", options.mimeType);
+    // options.originalName is intentionally ignored for the stored name.
+    const extension = this.resolveExtension(options.mimeType);
     const filename = `${randomUUID()}${extension}`;
 
     await mkdir(targetDirectory, { recursive: true });
@@ -170,14 +195,11 @@ export class UploadService {
       : resolve(process.cwd(), configuredUploadDir);
   }
 
-  private resolveExtension(originalName: string, mimeType: string) {
-    const extensionFromName = extname(originalName).trim().toLowerCase();
-
-    if (extensionFromName) {
-      return extensionFromName;
-    }
-
-    return this.extensionMap[mimeType] ?? "";
+  // Never derive the stored extension from the client-supplied filename: that let a
+  // file declared as image/webp be stored as ".svg"/".js" and served from the API origin.
+  private resolveExtension(mimeType: string) {
+    const normalizedMimeType = (mimeType ?? "").split(";")[0].trim().toLowerCase();
+    return this.extensionMap[normalizedMimeType] ?? this.fallbackExtension;
   }
 
   private resolveStoredPath(filePathOrUrl?: string | null) {
@@ -244,6 +266,65 @@ export class UploadService {
     if (mimeType === "application/pdf" && !this.isPdf(buffer)) {
       throw new BadRequestException("Nội dung tệp PDF không hợp lệ");
     }
+    if (mimeType === "image/webp" && !this.isWebp(buffer)) {
+      throw new BadRequestException("Nội dung tệp WEBP không hợp lệ");
+    }
+    if (
+      (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+        mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") &&
+      !this.isZip(buffer)
+    ) {
+      throw new BadRequestException("Nội dung tệp DOCX/XLSX không hợp lệ");
+    }
+    if (mimeType === "image/svg+xml" && !this.isSafeSvg(buffer)) {
+      throw new BadRequestException("Nội dung tệp SVG không hợp lệ hoặc chứa mã thực thi");
+    }
+  }
+
+  private isWebp(buffer: Buffer) {
+    return (
+      buffer.length >= 12 &&
+      buffer.toString("latin1", 0, 4) === "RIFF" &&
+      buffer.toString("latin1", 8, 12) === "WEBP"
+    );
+  }
+
+  private isZip(buffer: Buffer) {
+    return (
+      buffer.length >= 4 &&
+      buffer[0] === 0x50 &&
+      buffer[1] === 0x4b &&
+      buffer[2] === 0x03 &&
+      buffer[3] === 0x04
+    );
+  }
+
+  // Best-effort SVG filter only. It cannot catch every obfuscation (entities, CDATA, etc.);
+  // the primary protection is the CSP sandbox + nosniff headers applied when /uploads
+  // serves .svg files (see common/config/uploads-headers.ts).
+  private isSafeSvg(buffer: Buffer) {
+    const text = buffer
+      .toString("utf8")
+      .replace(/^\uFEFF/, "")
+      // Editors often prepend comments or a plain DOCTYPE (no internal subset "[").
+      .replace(/^(?:\s*(?:<!--[\s\S]*?-->|<!doctype[^>[]*>))+/i, "")
+      .trimStart();
+    const lower = text.toLowerCase();
+
+    if (!lower.startsWith("<svg") && !lower.startsWith("<?xml")) {
+      return false;
+    }
+
+    if (
+      lower.includes("<script") ||
+      lower.includes("javascript:") ||
+      lower.includes("<foreignobject") ||
+      /[\s/"'`]on[a-z]+\s*=/i.test(text)
+    ) {
+      return false;
+    }
+
+    return true;
   }
 
   private isJpeg(buffer: Buffer) {

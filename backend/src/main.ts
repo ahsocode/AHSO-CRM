@@ -4,12 +4,12 @@ import { NestFactory } from "@nestjs/core";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import type { Request, Response } from "express";
 import helmet from "helmet";
 import { WinstonModule } from "nest-winston";
 import { join } from "path";
 import { AppModule } from "./app.module";
 import { buildCorsOptions } from "./common/config/cors.config";
+import { blockPrivateUploadsMiddleware, uploadsHeadersMiddleware } from "./common/config/uploads-headers";
 import { isSwaggerEnabled } from "./common/config/swagger.config";
 import { createWinstonLoggerOptions } from "./common/logger/winston.config";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
@@ -59,12 +59,12 @@ async function bootstrap() {
   // Keep HTTP and Socket.IO CORS in sync. Defaults include localhost and
   // 127.0.0.1 because Playwright and browsers may hit either host in dev/CI.
   app.enableCors(buildCorsOptions(configService));
-  app.use(
-    ["/uploads/documents", "/uploads/business-documents", "/uploads/surveys", "/uploads/email-attachments"],
-    (_request: Request, response: Response) => {
-      response.status(404).send("Không tìm thấy tài liệu.");
-    }
-  );
+  // Private folders must never be served statically. Decision is made on the decoded path
+  // (see isBlockedUploadPath); matching the raw URL is bypassable.
+  app.use("/uploads", blockPrivateUploadsMiddleware);
+  // Safe headers for uploaded files (nosniff, SVG sandbox CSP, forced download for
+  // unknown/legacy extensions). Must run before useStaticAssets.
+  app.use("/uploads", uploadsHeadersMiddleware);
   app.useStaticAssets(join(__dirname, "..", "uploads"), {
     prefix: "/uploads/"
   });

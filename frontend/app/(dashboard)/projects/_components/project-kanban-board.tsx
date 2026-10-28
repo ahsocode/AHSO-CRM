@@ -197,8 +197,8 @@ function DroppableKanbanColumn({
           type="button"
           onClick={() => setCollapsed(false)}
           className="flex h-full w-full flex-col items-center gap-3 text-text-secondary hover:text-text-primary"
-          title={`Mở rộng cột ${column.label}`}
-          aria-label={`Mở rộng cột ${column.label}: ${column.itemCount} dự án, ${formatVNDShort(column.totalValue)}`}
+          title={`Mở cột ${column.label}`}
+          aria-label={`Mở cột ${column.label}: ${column.itemCount} dự án, ${formatVNDShort(column.totalValue)}`}
           aria-expanded={false}
         >
           <span

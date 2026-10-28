@@ -4,11 +4,10 @@ import * as React from "react";
 import { formatMoney, parseMoney } from "./money-format";
 import { NumericTextInput, type NumericTextInputProps } from "./numeric-text-input";
 
-export interface MoneyInputProps
-  extends Omit<NumericTextInputProps, "parse" | "format" | "inputMode" | "caretChars" | "transformPaste"> {
+export type MoneyInputProps = Omit<NumericTextInputProps, "parse" | "format" | "inputMode" | "caretChars" | "transformPaste"> & {
   /** Allow a leading "-" (refunds, adjustments). Default: false. */
   allowNegative?: boolean;
-}
+};
 
 const CARET_CHARS = /[\d-]/;
 

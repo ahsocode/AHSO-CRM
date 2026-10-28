@@ -4,12 +4,11 @@ import * as React from "react";
 import { formatDecimal, parseDecimal } from "./money-format";
 import { NumericTextInput, type NumericTextInputProps } from "./numeric-text-input";
 
-export interface NumberInputProps
-  extends Omit<NumericTextInputProps, "parse" | "format" | "inputMode" | "caretChars" | "transformPaste"> {
+export type NumberInputProps = Omit<NumericTextInputProps, "parse" | "format" | "inputMode" | "caretChars" | "transformPaste"> & {
   /** Max digits after the decimal separator. 0 = integers only. Default: 2. */
   maxFractionDigits?: number;
   allowNegative?: boolean;
-}
+};
 
 const CARET_CHARS = /[\d,.-]/;
 

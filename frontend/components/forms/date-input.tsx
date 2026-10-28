@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { isoToVi } from "./date-format";
 
-export interface DateInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "defaultValue" | "onChange" | "type"> {
+export type DateInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "defaultValue" | "onChange" | "type"> & {
   /** ISO "yyyy-mm-dd" or empty. */
   value?: string | null;
   /** ISO "yyyy-mm-dd" or `undefined` when cleared. */
@@ -14,7 +13,7 @@ export interface DateInputProps
   /** ISO min/max. */
   min?: string;
   max?: string;
-}
+};
 
 /** Native date picker. Value is always ISO; the dd/mm/yyyy reading is exposed through aria-label. */
 export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(function DateInput(

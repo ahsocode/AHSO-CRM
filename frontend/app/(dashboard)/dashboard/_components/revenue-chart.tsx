@@ -4,6 +4,7 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
+  LabelList,
   Line,
   ResponsiveContainer,
   Tooltip,
@@ -15,6 +16,7 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { formatVNDShort } from "@/lib/format";
 import { RevenueChartPoint } from "@/lib/types";
 import { CHART_COLORS } from "@/lib/constants";
+import { formatBarLabel, summarizeRevenue } from "./action-items-helpers";
 
 export function RevenueChart({
   data,
@@ -33,9 +35,10 @@ export function RevenueChart({
           <LoadingSkeleton className="h-[280px] w-full" />
         ) : (
           <div className="space-y-3">
-            <div className="h-[200px] md:h-[280px]">
+            <p className="sr-only">{summarizeRevenue(data)}</p>
+            <div className="h-[200px] md:h-[280px]" role="img" aria-label={summarizeRevenue(data)}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data}>
+                <ComposedChart data={data} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="4 4" stroke="rgba(213,216,220,0.5)" vertical={false} />
                   <XAxis dataKey="month" stroke={CHART_COLORS.axis} tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
                   <YAxis
@@ -54,7 +57,15 @@ export function RevenueChart({
                     fill={CHART_COLORS.primaryMid}
                     radius={[4, 4, 0, 0]}
                     maxBarSize={36}
-                  />
+                  >
+                    <LabelList
+                      dataKey="revenue"
+                      position="top"
+                      formatter={formatBarLabel}
+                      fill={CHART_COLORS.label}
+                      fontSize={11}
+                    />
+                  </Bar>
                   <Line
                     dataKey="target"
                     type="linear"

@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import { DashboardFilterDto } from "./dto/dashboard-filter.dto";
 
 const ACTIVE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING"] as const;
@@ -9,6 +11,33 @@ const RECEIVABLE_CONTRACT_STATUSES = ["ACTIVE", "SUSPENDED", "COMPLETED"] as con
 const APP_TIME_ZONE = "Asia/Ho_Chi_Minh";
 const APP_TIME_ZONE_OFFSET = "+07:00";
 const DAY_MS = 24 * 60 * 60 * 1000;
+const ACTION_ITEMS_LIMIT = 8;
+const STALE_DRAFT_QUOTE_DAYS = 7;
+const TERMINAL_PROJECT_STATUSES = ["COMPLETED", "LOST"] as const;
+
+export type ActionItemKind = "QUOTE" | "PROJECT" | "CONTRACT" | "ACTIVITY";
+
+export interface ActionItem {
+  id: string;
+  kind: ActionItemKind;
+  title: string;
+  context: string;
+  /** Days overdue / waiting (>= 0). For activities without a date this is the age since creation. */
+  ageDays: number;
+  /** True when the item is past its due date (project, activity); false for "waiting" items. */
+  overdue: boolean;
+  /** Remaining debt (contracts) or quote total; null when not applicable. */
+  amount: number | null;
+}
+
+// Lower tier = shown first. Money owed and late projects outrank stale drafts and loose tasks.
+const ACTION_TIER: Record<ActionItemKind, number> = {
+  PROJECT: 0,
+  CONTRACT: 1,
+  ACTIVITY: 2,
+  QUOTE: 3
+};
+
 const PIPELINE_STAGE_CONFIG = [
   { status: "SURVEY", label: "Khảo sát", color: "stage-survey" },
   { status: "QUOTING", label: "Báo giá", color: "stage-quoting" },
@@ -211,6 +240,144 @@ export class DashboardService {
     }));
   }
 
+  /**
+   * Prioritised "Cần làm ngay" list. STAFF only sees rows tied to customers assigned to them
+   * (scopeCustomerWhereToUser) plus their own activities; ADMIN/MANAGER see everything.
+   */
+  async getActionItems(user: JwtUser) {
+    const now = new Date();
+    const todayStart = this.parseDateOnlyStart(this.getBusinessDate(now));
+    const tomorrowStart = new Date(todayStart.getTime() + DAY_MS);
+    const staleBefore = new Date(now.getTime() - STALE_DRAFT_QUOTE_DAYS * DAY_MS);
+    const customerWhere = scopeCustomerWhereToUser({ deletedAt: null }, user);
+
+    const [draftQuotes, lateProjects, contracts, activities] = await Promise.all([
+      this.prisma.quote.findMany({
+        where: {
+          deletedAt: null,
+          status: "DRAFT",
+          sentAt: null,
+          createdAt: { lt: staleBefore },
+          project: { deletedAt: null, customer: customerWhere }
+        },
+        include: { project: { include: { customer: true } } },
+        orderBy: { createdAt: "asc" },
+        take: ACTION_ITEMS_LIMIT
+      }),
+      this.prisma.project.findMany({
+        where: {
+          deletedAt: null,
+          status: { notIn: [...TERMINAL_PROJECT_STATUSES] },
+          expectedEndDate: { lt: todayStart },
+          customer: customerWhere
+        },
+        include: { customer: true },
+        orderBy: { expectedEndDate: "asc" },
+        take: ACTION_ITEMS_LIMIT
+      }),
+      this.prisma.contract.findMany({
+        where: {
+          deletedAt: null,
+          status: "ACTIVE",
+          project: { deletedAt: null, customer: customerWhere }
+        },
+        include: { payments: true, project: { include: { customer: true } } }
+      }),
+      this.prisma.activity.findMany({
+        where: {
+          deletedAt: null,
+          isCompleted: false,
+          OR: [{ scheduledAt: null }, { scheduledAt: { lt: tomorrowStart } }],
+          ...(isStaff(user)
+            ? {
+                AND: [
+                  {
+                    OR: [
+                      { userId: user.sub },
+                      { customer: { assignedToId: user.sub, deletedAt: null } },
+                      {
+                        project: {
+                          deletedAt: null,
+                          customer: { assignedToId: user.sub, deletedAt: null }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            : {})
+        },
+        include: { customer: true },
+        orderBy: [{ scheduledAt: "asc" }, { createdAt: "desc" }],
+        take: ACTION_ITEMS_LIMIT
+      })
+    ]);
+
+    const daysBetween = (from: Date, to: Date) => Math.max(0, Math.floor((to.getTime() - from.getTime()) / DAY_MS));
+
+    const quoteItems: ActionItem[] = draftQuotes.map((q) => ({
+      id: q.id,
+      kind: "QUOTE",
+      title: q.quoteNo,
+      context: `${q.project.customer.name} · ${q.project.name} · bản nháp chưa gửi`,
+      ageDays: daysBetween(q.createdAt, now),
+      overdue: false,
+      amount: Number(q.total)
+    }));
+
+    const projectItems: ActionItem[] = lateProjects.map((p) => ({
+      id: p.id,
+      kind: "PROJECT",
+      title: p.name,
+      context: `${p.customer.name} · ${p.code} · quá hạn dự kiến kết thúc`,
+      ageDays: daysBetween(p.expectedEndDate as Date, now),
+      overdue: true,
+      amount: null
+    }));
+
+    const contractItems: ActionItem[] = contracts
+      .map((c) => ({
+        contract: c,
+        remaining: Number(c.value) - this.sumCurrency(c.payments.map((pay) => pay.amount))
+      }))
+      .filter((row) => row.remaining > 0)
+      .map(({ contract: c, remaining }) => ({
+        id: c.id,
+        kind: "CONTRACT" as const,
+        title: c.contractNo,
+        context: `${c.project.customer.name} · ${c.project.name} · còn nợ`,
+        ageDays: daysBetween(c.signDate ?? c.createdAt, now),
+        overdue: false,
+        amount: remaining
+      }));
+
+    const activityItems: ActionItem[] = activities.map((a) => {
+      const dated = a.scheduledAt !== null;
+      return {
+        id: a.id,
+        kind: "ACTIVITY",
+        title: a.title,
+        context: `${a.customer?.name ?? "Chưa gắn khách hàng"} · ${dated ? "đến hạn" : "chưa đặt lịch"}`,
+        ageDays: dated ? daysBetween(a.scheduledAt as Date, now) : daysBetween(a.createdAt, now),
+        overdue: dated && (a.scheduledAt as Date) < todayStart,
+        amount: null
+      };
+    });
+
+    const totals = {
+      QUOTE: quoteItems.length,
+      PROJECT: projectItems.length,
+      CONTRACT: contractItems.length,
+      ACTIVITY: activityItems.length
+    };
+
+    const items = [...projectItems, ...contractItems, ...activityItems, ...quoteItems]
+      .sort((a, b) => ACTION_TIER[a.kind] - ACTION_TIER[b.kind] || b.ageDays - a.ageDays)
+      .slice(0, ACTION_ITEMS_LIMIT);
+
+    return { items, totals };
+  }
+
   async getRecentActivity(filters: DashboardFilterDto = {}) {
     const range = this.resolveDateRange(filters);
 
@@ -305,6 +472,15 @@ export class DashboardService {
 
   private parseDateOnlyStart(value: string) {
     return new Date(`${value}T00:00:00.000${APP_TIME_ZONE_OFFSET}`);
+  }
+
+  private getBusinessDate(date: Date) {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: APP_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(date);
   }
 
   private getCurrentBusinessYear() {

@@ -4,8 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import {
   ApiResponse,
+  DashboardActionItems,
   DashboardKpis,
-  DashboardTask,
   PipelineStage,
   RecentActivityItem,
   RevenueChartPoint
@@ -52,11 +52,11 @@ export function usePipelinePreview(filters: DashboardFilters = {}) {
   });
 }
 
-export function useTasksToday() {
+export function useActionItems() {
   return useQuery({
-    queryKey: ["dashboard", "tasks-today"],
+    queryKey: ["dashboard", "action-items"],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<DashboardTask[]>>("/dashboard/tasks-today");
+      const response = await apiClient.get<ApiResponse<DashboardActionItems>>("/dashboard/action-items");
       return response.data.data;
     }
   });

@@ -11,6 +11,7 @@ import { BulkCustomerDto } from "./dto/bulk-customer.dto";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { CustomerFilterDto } from "./dto/customer-filter.dto";
 import { UpdateCustomerDto } from "./dto/update-customer.dto";
+import { buildCustomerOrderBy, QUOTE_VALUE_STATUSES, sumByCustomer } from "./customer-list.util";
 
 const ACTIVE_PROJECT_STATUSES = ["SURVEY", "QUOTING", "NEGOTIATING", "WON", "DELIVERING"] as const;
 
@@ -39,7 +40,7 @@ export class CustomersService {
         where,
         skip,
         take: limit,
-        orderBy: [{ isVip: "desc" }, { updatedAt: "desc" }],
+        orderBy: buildCustomerOrderBy(filters.sortBy, filters.sortDir),
         include: {
           assignedTo: {
             select: {
@@ -102,6 +103,30 @@ export class CustomersService {
         })
       : { _sum: { amount: null } };
 
+    // One grouped read per metric for the current page only (no N+1).
+    // quoteValue: see QUOTE_VALUE_STATUSES. revenue: payments received (all time)
+    // on the customer's non-deleted projects.
+    const pageIds = customers.map((customer) => customer.id);
+    const [quoteRows, paymentRows] =
+      pageIds.length > 0
+        ? await Promise.all([
+            this.prisma.quote.findMany({
+              where: {
+                deletedAt: null,
+                status: { in: [...QUOTE_VALUE_STATUSES] },
+                project: { customerId: { in: pageIds }, deletedAt: null }
+              },
+              select: { total: true, project: { select: { customerId: true } } }
+            }),
+            this.prisma.payment.findMany({
+              where: { project: { customerId: { in: pageIds }, deletedAt: null } },
+              select: { amount: true, project: { select: { customerId: true } } }
+            })
+          ])
+        : [[], []];
+    const quoteValueByCustomer = sumByCustomer(quoteRows.map((row) => ({ amount: row.total, project: row.project })));
+    const revenueByCustomer = sumByCustomer(paymentRows);
+
     const activeCustomerCount = matchingCustomers.filter((customer) => customer.status === "ACTIVE").length;
     const newCustomerCount = matchingCustomers.filter((customer) => customer.createdAt >= lastThirtyDays).length;
 
@@ -127,6 +152,8 @@ export class CustomersService {
           }
         : null,
       projectCount: customer._count.projects,
+      quoteValue: quoteValueByCustomer.get(customer.id) ?? 0,
+      revenue: revenueByCustomer.get(customer.id) ?? 0,
       createdAt: customer.createdAt,
       updatedAt: customer.updatedAt
     }));

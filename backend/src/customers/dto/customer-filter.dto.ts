@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { paginationSchema } from "../../common/dto/pagination.dto";
+import { CUSTOMER_SORT_FIELDS } from "../customer-list.util";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") {
@@ -11,6 +12,9 @@ const emptyToUndefined = (value: unknown) => {
 };
 
 export const customerFilterSchema = paginationSchema.extend({
+  // Allow-list: only these columns can be sorted on (no arbitrary field names).
+  sortBy: z.enum(CUSTOMER_SORT_FIELDS).optional(),
+  sortDir: z.enum(["asc", "desc"]).optional(),
   status: z.enum(["LEAD", "PROSPECT", "ACTIVE", "INACTIVE"]).optional(),
   industry: z.preprocess(emptyToUndefined, z.string().max(120).optional()),
   assignedToId: z.preprocess(emptyToUndefined, z.string().min(1).optional()),

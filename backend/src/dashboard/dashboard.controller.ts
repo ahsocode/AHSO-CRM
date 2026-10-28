@@ -1,5 +1,7 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
+import { JwtUser } from "../auth/auth.types";
 import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
@@ -46,6 +48,13 @@ export class DashboardController {
   @Get("tasks-today")
   getTasksToday() {
     return this.dashboardService.getTasksToday();
+  }
+
+  @RequirePermissions("reports.view")
+  @ApiOperation({ summary: "GET /api/dashboard/action-items" })
+  @Get("action-items")
+  getActionItems(@CurrentUser() user: JwtUser) {
+    return this.dashboardService.getActionItems(user);
   }
 
   @RequirePermissions("reports.view")

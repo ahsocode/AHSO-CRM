@@ -38,7 +38,7 @@ export function CalendarOverviewCards({
     {
       label: "Cần xử lý",
       value: meta?.summary.openCount ?? 0,
-      helper: "Các việc chưa hoàn tất",
+      helper: "Việc chưa hoàn tất, gồm cả việc chưa lên lịch",
       tone: "accent" as const
     },
     {

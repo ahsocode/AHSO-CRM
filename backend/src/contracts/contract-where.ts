@@ -72,6 +72,41 @@ export function buildWhere(filters: Partial<ContractFilterDto>, user: JwtUser): 
   return where;
 }
 
+/**
+ * List filter: same as buildWhere, but hides CANCELLED contracts unless the caller
+ * asks for them (includeCancelled) or filters by an explicit status.
+ */
+export function buildListWhere(filters: Partial<ContractFilterDto>, user: JwtUser): Prisma.ContractWhereInput {
+  const where = buildWhere(filters, user);
+
+  if (!filters.status && !filters.includeCancelled) {
+    where.status = { not: "CANCELLED" };
+  }
+
+  return where;
+}
+
+export function isCancelledMixed(filters: Partial<ContractFilterDto>): boolean {
+  return !filters.status && Boolean(filters.includeCancelled) && !filters.sortBy;
+}
+
+export const DEFAULT_CONTRACT_ORDER: Prisma.ContractOrderByWithRelationInput[] = [
+  { updatedAt: "desc" },
+  { createdAt: "desc" }
+];
+
+export function buildContractOrderBy(
+  filters: Partial<ContractFilterDto>
+): Prisma.ContractOrderByWithRelationInput[] {
+  if (!filters.sortBy) {
+    return DEFAULT_CONTRACT_ORDER;
+  }
+
+  const dir = filters.sortDir ?? "desc";
+  const primary = { [filters.sortBy]: dir } as Prisma.ContractOrderByWithRelationInput;
+  return [primary, { createdAt: "desc" }];
+}
+
 export function buildAccessibleProjectWhere(user: JwtUser): Prisma.ProjectWhereInput {
   const customerWhere = scopeCustomerWhereToUser({ deletedAt: null }, user);
 

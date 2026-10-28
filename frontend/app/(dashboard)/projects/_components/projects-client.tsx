@@ -26,6 +26,7 @@ import { ProjectFilters } from "./project-filters";
 import { ProjectKanbanBoard } from "./project-kanban-board";
 import { ProjectOverviewCards } from "./project-overview-cards";
 import { ProjectTable } from "./project-table";
+import { nextProjectSort, type ProjectSortField, type ProjectSortState } from "./project-list-helpers";
 
 const PAGE_SIZE = 8;
 
@@ -76,6 +77,8 @@ export function ProjectsClient() {
     }
   }, [setStatus]);
 
+  const [includeClosed, setIncludeClosed] = useState(false);
+  const [sort, setSort] = useState<ProjectSortState>({});
   const [page, setPage] = useState(1);
   const [view, setView] = useState<ProjectViewMode>(getProjectViewFromUrl);
   const [importOpen, setImportOpen] = useState(false);
@@ -112,11 +115,11 @@ export function ProjectsClient() {
 
   useEffect(() => {
     setPage(1);
-  }, [assignedToId, deferredSearch, priority, status, view]);
+  }, [assignedToId, deferredSearch, includeClosed, priority, sort, status, view]);
 
   useEffect(() => {
     setSelectedIds([]);
-  }, [page, assignedToId, deferredSearch, priority, status, view]);
+  }, [page, assignedToId, deferredSearch, includeClosed, priority, sort, status, view]);
 
   useEffect(() => {
     setDeletedPage(1);
@@ -130,7 +133,10 @@ export function ProjectsClient() {
       search: deferredSearch || undefined,
       status: status || undefined,
       priority: priority || undefined,
-      assignedToId: assignedToId || undefined
+      assignedToId: assignedToId || undefined,
+      sortBy: sort.sortBy,
+      sortDir: sort.sortDir,
+      includeClosed: includeClosed || undefined
     },
     view === "list"
   );
@@ -508,6 +514,8 @@ export function ProjectsClient() {
           items={projectsQuery.data?.items ?? []}
           meta={projectsQuery.data?.meta}
           onPageChange={setPage}
+          onSortChange={(field: ProjectSortField) => setSort((current) => nextProjectSort(current, field))}
+          sort={sort}
           toolbar={
             <ProjectFilters
               assignedToId={assignedToId}
@@ -519,6 +527,7 @@ export function ProjectsClient() {
                 setStatus("");
                 setPriority("");
                 setAssignedToId("");
+                setIncludeClosed(false);
                 setPage(1);
               }}
               onSearchChange={setSearch}
@@ -528,6 +537,8 @@ export function ProjectsClient() {
               status={status}
               users={usersQuery.data ?? []}
               usersUnavailable={!canManageUsers || usersQuery.isError}
+              includeClosed={includeClosed}
+              onIncludeClosedChange={setIncludeClosed}
               variant="ledger"
             />
           }

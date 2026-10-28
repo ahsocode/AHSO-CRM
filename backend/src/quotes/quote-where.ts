@@ -3,7 +3,11 @@ import { JwtUser, isStaff } from "../auth/auth.types";
 import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
 import type { QuoteFilterDto } from "./dto/quote-filter.dto";
 
-export function buildWhere(filters: Partial<QuoteFilterDto>, user: JwtUser): Prisma.QuoteWhereInput {
+export function buildWhere(
+  filters: Partial<QuoteFilterDto>,
+  user: JwtUser,
+  now: Date = new Date()
+): Prisma.QuoteWhereInput {
   const projectWhere: Prisma.ProjectWhereInput = buildAccessibleProjectWhere(user);
 
   if (filters.projectId) {
@@ -21,6 +25,17 @@ export function buildWhere(filters: Partial<QuoteFilterDto>, user: JwtUser): Pri
 
   if (filters.status) {
     where.status = filters.status;
+  }
+
+  if (filters.expiringWithinDays) {
+    // Same definition as isExpiringSoon(): only open quotes that are still valid.
+    const boundary = new Date(now.getTime() + filters.expiringWithinDays * 24 * 60 * 60 * 1000);
+    const openStatuses = ["DRAFT", "SENT"] as const;
+    where.status =
+      !filters.status || (openStatuses as readonly string[]).includes(filters.status)
+        ? filters.status ?? { in: [...openStatuses] }
+        : { in: [] };
+    where.validUntil = { gte: now, lte: boundary };
   }
 
   if (filters.createdById && !isStaff(user)) {

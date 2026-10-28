@@ -24,6 +24,7 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHART_COLORS, CHART_STAGE_COLORS } from "@/lib/constants";
 import { formatDate, formatVNDShort } from "@/lib/format";
+import { isTerminalProjectStatus } from "./project-list-helpers";
 import { ProjectKanbanColumn, ProjectListItem, ProjectListMeta, ProjectStatus } from "@/lib/types";
 
 // Ngưỡng cảnh báo deal ứ đọng (số ngày ở một stage)
@@ -96,6 +97,9 @@ function ProjectCardContent({ project }: { project: ProjectListItem }) {
         <span className={`text-xs ${project.isOverdue ? "font-semibold text-danger" : "text-text-secondary"}`}>
           {project.expectedEndDate ? formatDate(project.expectedEndDate) : "Chưa có hạn"}
         </span>
+        {project.isOverdue && !isTerminalProjectStatus(project.status) ? (
+          <span className="rounded-full bg-danger-bg px-1.5 py-0.5 text-[10px] font-bold text-danger">Quá hạn</span>
+        ) : null}
         <AvatarInitials
           name={project.customer.assignedTo.name}
           className="ml-auto h-6 w-6 rounded-full text-[10px]"
@@ -176,7 +180,7 @@ function DroppableKanbanColumn({
   updatingProjectId?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.key });
-  const [collapsed, setCollapsed] = useState(column.key === "LOST");
+  const [collapsed, setCollapsed] = useState(isTerminalProjectStatus(column.key));
   const color = CHART_STAGE_COLORS[column.key];
 
   if (collapsed) {
@@ -193,8 +197,9 @@ function DroppableKanbanColumn({
           type="button"
           onClick={() => setCollapsed(false)}
           className="flex h-full w-full flex-col items-center gap-3 text-text-secondary hover:text-text-primary"
-          title={`Mở cột ${column.label}`}
-          aria-label={`Mở cột ${column.label}`}
+          title={`Mở rộng cột ${column.label}`}
+          aria-label={`Mở rộng cột ${column.label}: ${column.itemCount} dự án, ${formatVNDShort(column.totalValue)}`}
+          aria-expanded={false}
         >
           <span
             className="rounded-full px-2 py-0.5 text-[11px] font-bold"
@@ -204,6 +209,12 @@ function DroppableKanbanColumn({
           </span>
           <span className="text-xs font-semibold" style={{ writingMode: "vertical-rl" }}>
             {column.label}
+          </span>
+          <span className="text-[11px] font-semibold text-text-secondary" style={{ writingMode: "vertical-rl" }}>
+            {formatVNDShort(column.totalValue)}
+          </span>
+          <span className="text-[11px] font-semibold text-primary" aria-hidden="true">
+            »
           </span>
         </button>
       </div>
@@ -227,13 +238,14 @@ function DroppableKanbanColumn({
           >
             {column.itemCount}
           </span>
-          {column.key === "LOST" ? (
+          {isTerminalProjectStatus(column.key) ? (
             <button
               type="button"
               onClick={() => setCollapsed(true)}
               className="rounded px-1 text-xs text-text-secondary hover:bg-bg-hover"
               title="Thu gọn cột"
-              aria-label="Thu gọn cột"
+              aria-label={`Thu gọn cột ${column.label}`}
+              aria-expanded={true}
             >
               «
             </button>

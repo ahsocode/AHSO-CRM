@@ -4,6 +4,14 @@ import { JwtUser, isStaff } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { CalendarFilterDto } from "./dto/calendar-filter.dto";
 
+const UNSCHEDULED_LIMIT = 20;
+
+const eventInclude = {
+  user: { select: { id: true, name: true, role: { select: { name: true } } } },
+  customer: { select: { id: true, name: true, status: true } },
+  project: { select: { id: true, code: true, name: true, status: true } }
+} satisfies Prisma.ActivityInclude;
+
 @Injectable()
 export class CalendarService {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,34 +27,7 @@ export class CalendarService {
 
     const matchingActivities = await this.prisma.activity.findMany({
       where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            role: {
-              select: {
-                name: true
-              }
-            }
-          }
-        },
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            status: true
-          }
-        },
-        project: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            status: true
-          }
-        }
-      }
+      include: eventInclude
     });
 
     const sortedActivities = matchingActivities
@@ -56,46 +37,27 @@ export class CalendarService {
       }))
       .sort((left, right) => left.anchorAt.getTime() - right.anchorAt.getTime());
 
+    const unscheduled = await this.findUnscheduled(filters, user);
+
     const total = sortedActivities.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const pagedActivities = sortedActivities.slice((page - 1) * limit, page * limit);
 
     return {
-      items: pagedActivities.map((activity) => ({
-        id: activity.id,
-        title: activity.title,
-        content: activity.content,
-        type: activity.type,
-        scheduledAt: activity.scheduledAt,
-        doneAt: activity.doneAt,
-        isCompleted: activity.isCompleted,
-        updatedAt: activity.updatedAt,
-        anchorAt: activity.anchorAt,
-        user: activity.user,
-        customer: activity.customer
-          ? {
-              id: activity.customer.id,
-              name: activity.customer.name,
-              status: activity.customer.status
-            }
-          : null,
-        project: activity.project
-          ? {
-              id: activity.project.id,
-              code: activity.project.code,
-              name: activity.project.name,
-              status: activity.project.status
-            }
-          : null
-      })),
+      items: pagedActivities.map((activity) => this.toEventItem(activity)),
       meta: {
         total,
         page,
         limit,
         totalPages,
+        unscheduled,
         summary: {
           total,
-          openCount: sortedActivities.filter((activity) => !activity.isCompleted).length,
+          // "Cần xử lý" = open activities in the date range PLUS open activities that have
+          // no scheduledAt at all (they never match a date range, so would stay invisible).
+          openCount:
+            sortedActivities.filter((activity) => !activity.isCompleted).length + unscheduled.total,
+          unscheduledCount: unscheduled.total,
           completedCount: sortedActivities.filter((activity) => activity.isCompleted).length,
           overdueCount: sortedActivities.filter(
             (activity) =>
@@ -111,6 +73,65 @@ export class CalendarService {
           ).length
         }
       }
+    };
+  }
+
+  /**
+   * Pending (not completed) activities without a scheduled date, newest first.
+   * Uses the same buildWhere scoping as the calendar (STAFF restriction included) but
+   * ignores the date range. doneAt must be null so these never overlap the ranged list.
+   */
+  private async findUnscheduled(filters: CalendarFilterDto, user: JwtUser) {
+    if (filters.isCompleted === true) {
+      return { total: 0, items: [] as ReturnType<CalendarService["toEventItem"]>[] };
+    }
+    const base = this.buildWhere(
+      { ...filters, isCompleted: undefined, dateFrom: undefined, dateTo: undefined },
+      user
+    );
+    const where: Prisma.ActivityWhereInput = {
+      AND: [base, { scheduledAt: null, isCompleted: false, doneAt: null }]
+    };
+    const [total, rows] = await Promise.all([
+      this.prisma.activity.count({ where }),
+      this.prisma.activity.findMany({
+        where,
+        include: eventInclude,
+        orderBy: { createdAt: "desc" },
+        take: UNSCHEDULED_LIMIT
+      })
+    ]);
+    return {
+      total,
+      items: rows.map((row) => this.toEventItem({ ...row, anchorAt: row.updatedAt }))
+    };
+  }
+
+  private toEventItem(
+    activity: Prisma.ActivityGetPayload<{ include: typeof eventInclude }> & { anchorAt: Date }
+  ) {
+    return {
+      id: activity.id,
+      title: activity.title,
+      content: activity.content,
+      type: activity.type,
+      scheduledAt: activity.scheduledAt,
+      doneAt: activity.doneAt,
+      isCompleted: activity.isCompleted,
+      updatedAt: activity.updatedAt,
+      anchorAt: activity.anchorAt,
+      user: activity.user,
+      customer: activity.customer
+        ? { id: activity.customer.id, name: activity.customer.name, status: activity.customer.status }
+        : null,
+      project: activity.project
+        ? {
+            id: activity.project.id,
+            code: activity.project.code,
+            name: activity.project.name,
+            status: activity.project.status
+          }
+        : null
     };
   }
 

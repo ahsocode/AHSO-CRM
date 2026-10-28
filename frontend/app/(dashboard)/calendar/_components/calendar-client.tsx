@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { CalendarWeekView } from "./calendar-week-view";
 import { CalendarMonthView, getMonthGridDays } from "./calendar-month-view";
 import { CalendarFilters } from "./calendar-filters";
+import { CalendarUnscheduledPanel } from "./calendar-unscheduled-panel";
 import { CalendarOverviewCards } from "./calendar-overview-cards";
 import {
   calculateDaysDiff,
@@ -331,6 +332,8 @@ export function CalendarClient() {
           onMonthChange={handleMonthChange}
         />
       )}
+
+      <CalendarUnscheduledPanel unscheduled={calendarQuery.data?.meta.unscheduled} />
     </div>
   );
 }

@@ -9,7 +9,37 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatRelativeTime } from "@/lib/format";
-import { ContractListItem, ContractListMeta } from "@/lib/types";
+import { ContractListItem, ContractListMeta, ContractSortField } from "@/lib/types";
+
+function SortableTh({
+  field,
+  label,
+  sortBy,
+  sortDir,
+  onSort
+}: {
+  field: ContractSortField;
+  label: string;
+  sortBy?: ContractSortField | "";
+  sortDir?: "asc" | "desc";
+  onSort?: (field: ContractSortField) => void;
+}) {
+  const active = sortBy === field;
+  return (
+    <th className="px-4" aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+      <button
+        type="button"
+        onClick={() => onSort?.(field)}
+        className="inline-flex items-center gap-1 uppercase tracking-[0.18em] hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+      >
+        {label}
+        <span aria-hidden="true" className={active ? "text-primary" : "opacity-40"}>
+          {active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 export function ContractTable({
   items,
@@ -18,6 +48,9 @@ export function ContractTable({
   isError,
   errorMessage,
   onPageChange,
+  onSort,
+  sortBy,
+  sortDir,
   toolbar
 }: {
   items: ContractListItem[];
@@ -26,6 +59,9 @@ export function ContractTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  onSort?: (field: ContractSortField) => void;
+  sortBy?: ContractSortField | "";
+  sortDir?: "asc" | "desc";
   toolbar?: ReactNode;
 }) {
   const currentPage = meta?.page ?? 1;
@@ -118,10 +154,10 @@ export function ContractTable({
           <table className="min-w-full border-separate border-spacing-y-3">
             <thead>
               <tr className="text-left text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                <th className="px-4">Hợp đồng</th>
+                <SortableTh field="contractNo" label="Hợp đồng" onSort={onSort} sortBy={sortBy} sortDir={sortDir} />
                 <th className="px-4">Dự án & khách hàng</th>
-                <th className="px-4">Giá trị & công nợ</th>
-                <th className="px-4">Dòng thời gian</th>
+                <SortableTh field="value" label="Giá trị & công nợ" onSort={onSort} sortBy={sortBy} sortDir={sortDir} />
+                <SortableTh field="updatedAt" label="Dòng thời gian" onSort={onSort} sortBy={sortBy} sortDir={sortDir} />
               </tr>
             </thead>
             <tbody>

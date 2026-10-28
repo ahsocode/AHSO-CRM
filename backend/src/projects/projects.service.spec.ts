@@ -380,7 +380,7 @@ describe("ProjectsService", () => {
       ])
       .mockResolvedValueOnce([openProject, completedProject, lostProject]);
 
-    await expect(service.findAll({ page: 1, limit: 10, view: "list" }, user)).resolves.toMatchObject({
+    await expect(service.findAll({ page: 1, limit: 10, view: "list", sortBy: "updatedAt", sortDir: "desc", includeClosed: true }, user)).resolves.toMatchObject({
       items: [
         { id: "project-open" },
         { id: "project-completed" },

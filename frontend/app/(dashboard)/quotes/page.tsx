@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { QuotesClient } from "./_components/quotes-client";
 
 export default function QuotesPage() {
-  return <QuotesClient />;
+  return (
+    <Suspense fallback={null}>
+      <QuotesClient />
+    </Suspense>
+  );
 }

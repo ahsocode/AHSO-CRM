@@ -15,7 +15,7 @@ import { useInlineUpdateCustomer } from "@/hooks/use-customers";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { getRoleLabelByName } from "@/lib/constants";
-import { formatDate, formatRelativeTime } from "@/lib/format";
+import { formatDate, formatRelativeTime, formatVND } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CustomerListItem, CustomerListMeta, CustomerStatus } from "@/lib/types";
 
@@ -72,6 +72,42 @@ function InlineStatusCell({ customer }: { customer: CustomerListItem }) {
   );
 }
 
+export type CustomerSortField = "updatedAt" | "name";
+type CustomerSort = { sortBy?: CustomerSortField; sortDir?: "asc" | "desc" };
+
+const QUOTE_VALUE_HINT =
+  "Tổng giá trị (gồm VAT) các báo giá đã gửi và đã chấp nhận của khách hàng. Không tính báo giá nháp, bị từ chối hoặc hết hạn.";
+const REVENUE_HINT = "Doanh thu = tổng tiền đã thu (thanh toán đã ghi nhận) trên các dự án của khách hàng.";
+
+function SortableHeader({
+  label,
+  field,
+  sort,
+  onSortChange
+}: {
+  label: string;
+  field: CustomerSortField;
+  sort: CustomerSort;
+  onSortChange: (next: CustomerSort) => void;
+}) {
+  const active = sort.sortBy === field;
+  const dir = active ? sort.sortDir ?? (field === "name" ? "asc" : "desc") : undefined;
+  const nextDir = active ? (dir === "asc" ? "desc" : "asc") : field === "name" ? "asc" : "desc";
+
+  return (
+    <th className="px-4 py-2.5" aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 uppercase hover:text-primary"
+        onClick={() => onSortChange({ sortBy: field, sortDir: nextDir })}
+      >
+        {label}
+        <span aria-hidden="true">{active ? (dir === "asc" ? "↑" : "↓") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
 export function CustomerTable({
   items,
   meta,
@@ -85,7 +121,9 @@ export function CustomerTable({
   onToggleSelectAll,
   hasActiveFilters = false,
   onResetFilters,
-  toolbar
+  toolbar,
+  sort = {},
+  onSortChange
 }: {
   items: CustomerListItem[];
   meta?: CustomerListMeta;
@@ -100,6 +138,8 @@ export function CustomerTable({
   hasActiveFilters?: boolean;
   onResetFilters?: () => void;
   toolbar?: ReactNode;
+  sort?: CustomerSort;
+  onSortChange?: (next: CustomerSort) => void;
 }) {
   const currentPage = meta?.page ?? 1;
   const totalPages = Math.max(meta?.totalPages ?? 1, 1);
@@ -213,12 +253,26 @@ export function CustomerTable({
                 <th className="w-10 px-4 py-2.5">
                   <Checkbox checked={allVisibleSelected} onCheckedChange={onToggleSelectAll} />
                 </th>
-                <th className="px-4 py-2.5">Khách hàng</th>
+                {onSortChange ? (
+                  <SortableHeader label="Khách hàng" field="name" sort={sort} onSortChange={onSortChange} />
+                ) : (
+                  <th className="px-4 py-2.5">Khách hàng</th>
+                )}
                 <th className="px-4 py-2.5">Liên hệ chính</th>
                 <th className="px-4 py-2.5">Trạng thái</th>
                 <th className="px-4 py-2.5">Dự án</th>
+                <th className="px-4 py-2.5 text-right" title={QUOTE_VALUE_HINT}>
+                  <span className="cursor-help border-b border-dotted border-text-muted">Giá trị báo giá</span>
+                </th>
+                <th className="px-4 py-2.5 text-right" title={REVENUE_HINT}>
+                  <span className="cursor-help border-b border-dotted border-text-muted">Doanh thu</span>
+                </th>
                 <th className="px-4 py-2.5">Phụ trách</th>
-                <th className="px-4 py-2.5">Cập nhật</th>
+                {onSortChange ? (
+                  <SortableHeader label="Cập nhật" field="updatedAt" sort={sort} onSortChange={onSortChange} />
+                ) : (
+                  <th className="px-4 py-2.5">Cập nhật</th>
+                )}
                 <th className="w-12 px-4 py-2.5" />
               </tr>
             </thead>
@@ -261,6 +315,14 @@ export function CustomerTable({
 
                   <td className="px-4 py-3 align-middle">
                     <p className="whitespace-nowrap text-[13px] font-semibold text-text-primary">{customer.projectCount} dự án</p>
+                  </td>
+
+                  <td className="whitespace-nowrap px-4 py-3 text-right align-middle text-[13px] text-text-primary">
+                    {customer.quoteValue ? formatVND(customer.quoteValue) : <span className="text-text-muted">—</span>}
+                  </td>
+
+                  <td className="whitespace-nowrap px-4 py-3 text-right align-middle text-[13px] font-semibold text-text-primary">
+                    {customer.revenue ? formatVND(customer.revenue) : <span className="text-text-muted">—</span>}
                   </td>
 
                   <td className="min-w-[160px] px-4 py-3 align-middle">

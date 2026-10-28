@@ -5,50 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AppIcon } from "@/components/shared/app-icon";
 import { Button } from "@/components/ui/button";
+import { GO_TO_ROUTES, resolveCreateRoute, resolveGoTo, shouldIgnoreShortcut } from "@/components/layout/shortcut-helpers";
 
 const SEQUENCE_TIMEOUT_MS = 900;
 
-const GO_TO_ROUTES: Record<string, { href: Route; label: string }> = {
-  d: { href: "/dashboard", label: "Dashboard" },
-  k: { href: "/customers", label: "Khách hàng" },
-  p: { href: "/projects", label: "Dự án" },
-  b: { href: "/quotes", label: "Báo giá" },
-  h: { href: "/contracts", label: "Hợp đồng" },
-  a: { href: "/activities", label: "Hoạt động" },
-  l: { href: "/calendar", label: "Lịch" },
-  r: { href: "/reports", label: "Báo cáo" }
-};
-
-const CREATE_ROUTES: Array<{ prefix: string; href: Route; label: string }> = [
-  { prefix: "/customers", href: "/customers/new", label: "Khách hàng" },
-  { prefix: "/projects", href: "/projects/new", label: "Dự án" },
-  { prefix: "/quotes", href: "/quotes/new", label: "Báo giá" },
-  { prefix: "/contracts", href: "/contracts/new", label: "Hợp đồng" },
-  { prefix: "/activities", href: "/activities/new", label: "Hoạt động" },
-  { prefix: "/surveys", href: "/surveys/new", label: "Khảo sát" },
-  { prefix: "/materials", href: "/materials/new", label: "Vật tư" },
-  { prefix: "/suppliers", href: "/suppliers/new", label: "Nhà cung cấp" },
-  { prefix: "/inventory/receipts", href: "/inventory/receipts/new", label: "Phiếu nhập" },
-  { prefix: "/inventory/issues", href: "/inventory/issues/new", label: "Phiếu xuất" },
-  { prefix: "/inventory/transfers", href: "/inventory/transfers/new", label: "Phiếu chuyển" },
-  { prefix: "/inventory/counts", href: "/inventory/counts/new", label: "Phiếu kiểm kê" },
-  { prefix: "/inventory/warehouses", href: "/inventory/warehouses/new", label: "Kho" }
-];
-
-function isTypingTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  const tagName = target.tagName.toLowerCase();
-  return (
-    tagName === "input" ||
-    tagName === "textarea" ||
-    tagName === "select" ||
-    target.isContentEditable ||
-    Boolean(target.closest("[contenteditable='true']"))
-  );
-}
+const GO_TO_ENTRIES = Object.entries(GO_TO_ROUTES);
 
 function ShortcutKeys({ keys }: { keys: string[] }) {
   return (
@@ -71,9 +32,7 @@ export function GlobalShortcuts() {
     timer: null
   });
 
-  const createTarget = useMemo(() => {
-    return CREATE_ROUTES.find((route) => pathname.startsWith(route.prefix)) ?? CREATE_ROUTES[0];
-  }, [pathname]);
+  const createTarget = useMemo(() => resolveCreateRoute(pathname), [pathname]);
 
   useEffect(() => {
     return () => {
@@ -100,7 +59,14 @@ export function GlobalShortcuts() {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || isTypingTarget(event.target)) {
+      const el = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        shouldIgnoreShortcut(event, el && {
+          tagName: el.tagName,
+          isContentEditable: el.isContentEditable,
+          insideContentEditable: Boolean(el.closest("[contenteditable='true']"))
+        })
+      ) {
         return;
       }
 
@@ -120,12 +86,12 @@ export function GlobalShortcuts() {
       const key = event.key.toLowerCase();
 
       if (sequenceRef.current.key === "g") {
-        const target = GO_TO_ROUTES[key];
+        const target = resolveGoTo(key);
         resetSequence();
 
         if (target) {
           event.preventDefault();
-          router.push(target.href);
+          router.push(target.href as Route);
         }
         return;
       }
@@ -136,9 +102,9 @@ export function GlobalShortcuts() {
         return;
       }
 
-      if (key === "c" && createTarget) {
+      if ((key === "n" || key === "c") && createTarget) {
         event.preventDefault();
-        router.push(createTarget.href);
+        router.push(createTarget.href as Route);
       }
     };
 
@@ -176,15 +142,15 @@ export function GlobalShortcuts() {
           <section className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Tạo mới</p>
             <div className="flex items-center justify-between gap-4 rounded-lg bg-bg-hover/50 px-4 py-3">
-              <span className="text-sm font-medium text-text-primary">Tạo {createTarget?.label.toLowerCase() ?? "bản ghi"} theo ngữ cảnh</span>
-              <ShortcutKeys keys={["c"]} />
+              <span className="text-sm font-medium text-text-primary">{createTarget ? `Tạo ${createTarget.label.toLowerCase()} mới` : "Tạo mới (chỉ ở trang có chức năng tạo)"}</span>
+              <ShortcutKeys keys={["n"]} />
             </div>
           </section>
 
           <section className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">Điều hướng</p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {Object.entries(GO_TO_ROUTES).map(([key, item]) => (
+              {GO_TO_ENTRIES.map(([key, item]) => (
                 <div key={key} className="flex items-center justify-between gap-4 rounded-lg bg-bg-hover/50 px-4 py-3">
                   <span className="text-sm font-medium text-text-primary">{item.label}</span>
                   <ShortcutKeys keys={["g", key]} />

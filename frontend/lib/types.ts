@@ -354,6 +354,21 @@ export interface PipelineStage {
   items: PipelineItem[];
 }
 
+export interface DashboardActionItem {
+  id: string;
+  kind: "QUOTE" | "PROJECT" | "CONTRACT" | "ACTIVITY";
+  title: string;
+  context: string;
+  ageDays: number;
+  overdue: boolean;
+  amount: number | null;
+}
+
+export interface DashboardActionItems {
+  items: DashboardActionItem[];
+  totals: Record<DashboardActionItem["kind"], number>;
+}
+
 export interface DashboardTask {
   id: string;
   title: string;
@@ -425,6 +440,10 @@ export interface CustomerListItem {
   };
   primaryContact: CustomerPrimaryContact | null;
   projectCount: number;
+  /** Tổng giá trị (gồm VAT) các báo giá ĐÃ GỬI + ĐÃ CHẤP NHẬN của khách (VND). */
+  quoteValue?: number;
+  /** Tổng tiền đã thu (thanh toán) trên các dự án của khách (VND). */
+  revenue?: number;
   language?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -450,6 +469,8 @@ export interface CustomerListMeta {
 export interface CustomerFilters {
   page: number;
   limit: number;
+  sortBy?: "updatedAt" | "createdAt" | "name";
+  sortDir?: "asc" | "desc";
   search?: string;
   status?: CustomerStatus;
   industry?: string;
@@ -633,6 +654,10 @@ export interface ProjectFilters {
   priority?: Priority;
   assignedToId?: string;
   customerId?: string;
+  sortBy?: "updatedAt" | "createdAt" | "code" | "estimatedValue" | "expectedEndDate" | "name";
+  sortDir?: "asc" | "desc";
+  /** List view hides COMPLETED/LOST unless true (an explicit status always wins). */
+  includeClosed?: boolean;
 }
 
 export interface ProjectUpsertInput {
@@ -1087,6 +1112,7 @@ export interface QuoteFilters {
   projectId?: string;
   customerId?: string;
   createdById?: string;
+  expiringWithinDays?: number;
 }
 
 export interface QuoteDetailProject {
@@ -1260,7 +1286,12 @@ export interface ContractFilters {
   status?: ContractStatus;
   projectId?: string;
   customerId?: string;
+  includeCancelled?: boolean;
+  sortBy?: ContractSortField;
+  sortDir?: "asc" | "desc";
 }
+
+export type ContractSortField = "updatedAt" | "createdAt" | "contractNo" | "value" | "signDate" | "startDate";
 
 export interface ContractDetailStats {
   paidAmount: number;
@@ -1425,6 +1456,7 @@ export interface CalendarSummary {
   completedCount: number;
   overdueCount: number;
   todayCount: number;
+  unscheduledCount?: number;
 }
 
 export interface CalendarListMeta {
@@ -1433,6 +1465,8 @@ export interface CalendarListMeta {
   limit: number;
   totalPages: number;
   summary: CalendarSummary;
+  /** Pending activities without a scheduled date (newest first, max 20). */
+  unscheduled?: { total: number; items: CalendarEventItem[] };
 }
 
 export interface CalendarFilters {

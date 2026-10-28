@@ -48,8 +48,14 @@ export class QuotesService {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
-    const where = buildWhere(filters, user);
     const now = new Date();
+    const where = buildWhere(filters, user, now);
+    // KPI cards double as filters, so the summary ignores status/expiry filters to keep every card meaningful.
+    const summaryWhere = buildWhere(
+      { ...filters, status: undefined, expiringWithinDays: undefined },
+      user,
+      now
+    );
     const expiringSoonBoundary = new Date(now.getTime() + EXPIRING_SOON_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
     const [quotes, total, matchingQuotes] = await this.prisma.$transaction([
@@ -103,7 +109,7 @@ export class QuotesService {
       }),
       this.prisma.quote.count({ where }),
       this.prisma.quote.findMany({
-        where,
+        where: summaryWhere,
         select: {
           id: true,
           status: true,

@@ -5,6 +5,7 @@ import { EmailService } from "../email/email.service";
 import { PrismaService } from "../common/prisma.service";
 import { UploadService } from "../upload/upload.service";
 import { ContractsService } from "./contracts.service";
+import { contractFilterSchema } from "./dto/contract-filter.dto";
 
 describe("ContractsService", () => {
   const user = {
@@ -636,5 +637,88 @@ describe("ContractsService", () => {
       expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) })
     );
     expect(tx.contract.update).not.toHaveBeenCalled();
+  });
+  describe("findAll ordering and cancelled filter", () => {
+    let list: { findMany: jest.Mock; count: jest.Mock };
+
+    const row = (id: string) => ({
+      id,
+      contractNo: id,
+      status: "ACTIVE",
+      value: 0,
+      payments: [],
+      _count: { payments: 0, milestones: 0 },
+      project: { id: "p", code: "P", name: "P", status: "ACTIVE", customer: { id: "c", name: "C", shortName: null, status: "ACTIVE", assignedTo: { id: "u", name: "U", role: "STAFF" } } }
+    });
+    const setup = (rows: Array<ReturnType<typeof row>>[], counts: number[]) => {
+      list = { findMany: jest.fn(), count: jest.fn() };
+      rows.forEach((r) => list.findMany.mockResolvedValueOnce(r));
+      counts.forEach((c) => list.count.mockResolvedValueOnce(c));
+      list.findMany.mockResolvedValue([]);
+      list.count.mockResolvedValue(0);
+      (prisma as unknown as { contract: typeof list }).contract = list;
+      prisma.$transaction.mockImplementation(async (ops: unknown) => Promise.all(ops as Promise<unknown>[]));
+    };
+
+    it("hides CANCELLED by default and orders by recency", async () => {
+      setup([[row("a")], []], [1]);
+      await service.findAll({ page: 1, limit: 10 } as never, user);
+
+      const listCall = list.findMany.mock.calls[0][0];
+      expect(listCall.where.status).toEqual({ not: "CANCELLED" });
+      expect(listCall.orderBy).toEqual([{ updatedAt: "desc" }, { createdAt: "desc" }]);
+      // KPI summary query keeps its original scope (no hidden cancelled filter)
+      const summaryCall = list.findMany.mock.calls[1][0];
+      expect(summaryCall.where.status).toBeUndefined();
+    });
+
+    it("explicit status filter wins over the default hide", async () => {
+      setup([[], []], [0]);
+      await service.findAll({ page: 1, limit: 10, status: "CANCELLED" } as never, user);
+
+      expect(list.findMany.mock.calls[0][0].where.status).toBe("CANCELLED");
+    });
+
+    it("puts cancelled contracts after non-cancelled when includeCancelled is on", async () => {
+      // 1 active total; page of 3 -> 1 active + 2 cancelled
+      setup([[row("act")], [row("c1"), row("c2")]], [1, 3]);
+      await service.findAll({ page: 1, limit: 3, includeCancelled: true } as never, user);
+
+      const [activeCall, cancelledCall] = list.findMany.mock.calls;
+      expect(activeCall[0].where.status).toEqual({ not: "CANCELLED" });
+      expect(cancelledCall[0].where.status).toBe("CANCELLED");
+      expect(cancelledCall[0].skip).toBe(0);
+      expect(cancelledCall[0].take).toBe(2);
+    });
+
+    it("skips into the cancelled group on later pages", async () => {
+      setup([[row("c3")]], [3]);
+      await service.findAll({ page: 2, limit: 4, includeCancelled: true } as never, user);
+
+      const first = list.findMany.mock.calls[0][0];
+      expect(first.where.status).toBe("CANCELLED");
+      expect(first.skip).toBe(1);
+    });
+
+    it("uses sortBy directly without the cancelled-last split", async () => {
+      setup([[], []], []);
+      await service.findAll(
+        { page: 1, limit: 10, includeCancelled: true, sortBy: "value", sortDir: "asc" } as never,
+        user
+      );
+
+      const call = list.findMany.mock.calls[0][0];
+      expect(call.orderBy).toEqual([{ value: "asc" }, { createdAt: "desc" }]);
+      expect(call.where.status).toBeUndefined();
+    });
+  });
+
+  describe("contractFilterSchema sort allow-list", () => {
+    it("accepts allowed fields and rejects others", () => {
+      expect(contractFilterSchema.safeParse({ sortBy: "contractNo", sortDir: "asc" }).success).toBe(true);
+      expect(contractFilterSchema.safeParse({ sortBy: "passwordHash" }).success).toBe(false);
+      expect(contractFilterSchema.safeParse({ sortDir: "sideways" }).success).toBe(false);
+      expect(contractFilterSchema.parse({ includeCancelled: "true" }).includeCancelled).toBe(true);
+    });
   });
 });

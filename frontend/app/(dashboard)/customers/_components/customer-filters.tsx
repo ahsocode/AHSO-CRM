@@ -14,6 +14,12 @@ const STATUS_OPTIONS: Array<{ label: string; value: CustomerStatus }> = [
   { label: "Không hoạt động", value: "INACTIVE" }
 ];
 
+const QUICK_STATUS_CHIPS: Array<{ label: string; value: CustomerStatus | "" }> = [
+  { label: "Tất cả", value: "" },
+  { label: "Tiềm năng", value: "LEAD" },
+  { label: "Đang HĐ", value: "ACTIVE" }
+];
+
 export function CustomerFilters({
   search,
   onSearchChange,
@@ -55,6 +61,20 @@ export function CustomerFilters({
       searchPlaceholder="Tên công ty, MST, email..."
       searchValue={search}
     >
+      <div className="flex items-center gap-1" role="group" aria-label="Lọc nhanh theo trạng thái">
+        {QUICK_STATUS_CHIPS.map((chip) => (
+          <button
+            key={chip.label}
+            type="button"
+            aria-pressed={status === chip.value}
+            className={cn("v2-chip h-9 whitespace-nowrap rounded-lg px-3", status === chip.value && "border-accent bg-accent-bg text-accent")}
+            onClick={() => onStatusChange(chip.value)}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
       <label className="w-[112px]">
         <span className="sr-only">Trạng thái</span>
         <Select

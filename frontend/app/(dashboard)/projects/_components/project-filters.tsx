@@ -18,6 +18,8 @@ export function ProjectFilters({
   canReset,
   users,
   usersUnavailable,
+  includeClosed,
+  onIncludeClosedChange,
   variant = "card"
 }: {
   search: string;
@@ -32,6 +34,9 @@ export function ProjectFilters({
   canReset: boolean;
   users: UserListItem[];
   usersUnavailable: boolean;
+  /** List view only: show COMPLETED/LOST projects. Ignored by the backend when a status is chosen. */
+  includeClosed?: boolean;
+  onIncludeClosedChange?: (value: boolean) => void;
   variant?: "card" | "ledger";
 }) {
   if (variant === "ledger") {
@@ -93,6 +98,18 @@ export function ProjectFilters({
             ))}
           </Select>
         </label>
+        {onIncludeClosedChange ? (
+          <label className="flex h-9 cursor-pointer items-center gap-1.5 whitespace-nowrap text-[12.5px] font-medium text-text-secondary">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={Boolean(includeClosed) || status !== ""}
+              disabled={status !== ""}
+              onChange={(event) => onIncludeClosedChange(event.target.checked)}
+            />
+            Hiện dự án đã hoàn thành / không thành
+          </label>
+        ) : null}
 
       </CompactFilterToolbar>
     );

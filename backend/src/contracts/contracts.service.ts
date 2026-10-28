@@ -10,7 +10,13 @@ import {
   resolveMilestoneCompletedAt,
   resolveSelectedQuoteItems
 } from "./contract-helpers";
-import { buildAccessibleProjectWhere, buildWhere } from "./contract-where";
+import {
+  buildAccessibleProjectWhere,
+  buildContractOrderBy,
+  buildListWhere,
+  buildWhere,
+  isCancelledMixed
+} from "./contract-where";
 import { ContractFilterDto } from "./dto/contract-filter.dto";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
@@ -40,16 +46,11 @@ export class ContractsService {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
-    const where = buildWhere(filters, user);
+    // The list hides CANCELLED by default; the KPI summary keeps its original scope.
+    const where = buildListWhere(filters, user);
+    const summaryWhere = buildWhere(filters, user);
     const now = new Date();
-
-    const [contracts, total, matchingContracts] = await this.prisma.$transaction([
-      this.prisma.contract.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-        include: {
+    const listInclude = {
           project: {
             select: {
               id: true,
@@ -84,11 +85,14 @@ export class ContractsService {
               milestones: true
             }
           }
-        }
-      }),
+        } as const;
+
+    const contracts = await this.findListRows(where, filters, skip, limit, listInclude);
+
+    const [total, matchingContracts] = await this.prisma.$transaction([
       this.prisma.contract.count({ where }),
       this.prisma.contract.findMany({
-        where,
+        where: summaryWhere,
         select: {
           id: true,
           status: true,
@@ -159,6 +163,45 @@ export class ContractsService {
         }
       }
     };
+  }
+
+  private async findListRows<I extends Prisma.ContractInclude>(
+    where: Prisma.ContractWhereInput,
+    filters: ContractFilterDto,
+    skip: number,
+    limit: number,
+    include: I
+  ) {
+    const orderBy = buildContractOrderBy(filters);
+
+    if (!isCancelledMixed(filters)) {
+      return this.prisma.contract.findMany({ where, skip, take: limit, orderBy, include });
+    }
+
+    // Non-cancelled first (by recency), cancelled contracts always last.
+    const activeWhere: Prisma.ContractWhereInput = { ...where, status: { not: "CANCELLED" } };
+    const cancelledWhere: Prisma.ContractWhereInput = { ...where, status: "CANCELLED" };
+    const activeTotal = await this.prisma.contract.count({ where: activeWhere });
+
+    const active =
+      skip < activeTotal
+        ? await this.prisma.contract.findMany({ where: activeWhere, skip, take: limit, orderBy, include })
+        : [];
+    const remaining = limit - active.length;
+
+    if (remaining <= 0) {
+      return active;
+    }
+
+    const cancelled = await this.prisma.contract.findMany({
+      where: cancelledWhere,
+      skip: Math.max(0, skip - activeTotal),
+      take: remaining,
+      orderBy,
+      include
+    });
+
+    return [...active, ...cancelled];
   }
 
   async create(dto: CreateContractDto, user: JwtUser) {

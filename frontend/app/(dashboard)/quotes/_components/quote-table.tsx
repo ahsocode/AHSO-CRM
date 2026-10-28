@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select } from "@/components/ui/select";
+import { QUOTE_PAGE_SIZES } from "@/lib/quote-list";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { QuoteListItem, QuoteListMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,8 @@ export function QuoteTable({
   isError,
   errorMessage,
   onPageChange,
+  pageSize,
+  onPageSizeChange,
   selectedIds,
   allVisibleSelected,
   onToggleSelect,
@@ -34,6 +38,8 @@ export function QuoteTable({
   isError: boolean;
   errorMessage?: string;
   onPageChange: (page: number) => void;
+  pageSize: number;
+  onPageSizeChange: (size: number) => void;
   selectedIds: string[];
   allVisibleSelected: boolean;
   onToggleSelect: (id: string) => void;
@@ -48,7 +54,26 @@ export function QuoteTable({
       metaText={`${meta?.total ?? items.length} báo giá · trang ${currentPage}/${totalPages}`}
       onPageChange={onPageChange}
       title="Danh sách báo giá"
-      toolbar={toolbar}
+      toolbar={
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1">{toolbar}</div>
+          <label className="flex items-center gap-1.5 text-xs text-text-secondary" htmlFor="quote-page-size">
+            Hiển thị
+            <Select
+              id="quote-page-size"
+              value={String(pageSize)}
+              onChange={(event) => onPageSizeChange(Number(event.target.value))}
+              className="h-9 w-[72px] rounded-lg bg-white text-[12.5px]"
+            >
+              {QUOTE_PAGE_SIZES.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </Select>
+          </label>
+        </div>
+      }
       totalPages={totalPages}
     />
   );
@@ -58,7 +83,7 @@ export function QuoteTable({
       <Card className="border border-white/70">
         {ledgerHeader}
         <CardContent className="space-y-2">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: Math.min(pageSize, 10) }).map((_, i) => (
             <LoadingSkeleton key={i} className="h-14 w-full rounded-xl" />
           ))}
         </CardContent>

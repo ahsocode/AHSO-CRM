@@ -15,6 +15,7 @@ import {
   materialAllocationInclude
 } from "./project-mappers";
 import { buildDeletedWhere, buildWhere } from "./project-where";
+import { DEFAULT_PROJECT_ORDER_BY, TERMINAL_PROJECT_STATUSES, buildExplicitOrderBy, planGroupedPage } from "./project-order";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
@@ -133,8 +134,13 @@ export class ProjectsService {
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
-    const where = buildWhere(filters, user);
     const view = filters.view ?? "list";
+    const baseWhere = buildWhere(filters, user);
+    // List view hides terminal statuses by default; explicit status filter or includeClosed shows them.
+    const hideClosed = view === "list" && !filters.status && !filters.includeClosed;
+    const where: Prisma.ProjectWhereInput = hideClosed
+      ? { AND: [baseWhere, { status: { notIn: [...TERMINAL_PROJECT_STATUSES] } }] }
+      : baseWhere;
     const now = new Date();
     const dueSoonBoundary = new Date(now.getTime() + DUE_SOON_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
@@ -191,7 +197,7 @@ export class ProjectsService {
     if (view === "kanban") {
       const projects = await this.prisma.project.findMany({
         where,
-        orderBy: [{ expectedEndDate: "asc" }, { updatedAt: "desc" }],
+        orderBy: DEFAULT_PROJECT_ORDER_BY,
         include: projectListInclude
       });
 
@@ -217,13 +223,7 @@ export class ProjectsService {
       };
     }
 
-    const projects = await this.prisma.project.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: [{ expectedEndDate: "asc" }, { updatedAt: "desc" }],
-      include: projectListInclude
-    });
+    const projects = await this.findListPage(where, filters, skip, limit, hideClosed);
 
     const upcomingIds = await this.getProjectIdsWithUpcomingActivity(
       projects.map((project) => project.id),
@@ -234,6 +234,54 @@ export class ProjectsService {
       items: projects.map((project) => this.mapProjectListItem(project, now, upcomingIds)),
       meta
     };
+  }
+
+  private async findListPage(
+    where: Prisma.ProjectWhereInput,
+    filters: ProjectFilterDto,
+    skip: number,
+    limit: number,
+    hideClosed: boolean
+  ): Promise<ProjectListRecord[]> {
+    if (filters.sortBy || hideClosed) {
+      return this.prisma.project.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: filters.sortBy ? buildExplicitOrderBy(filters.sortBy, filters.sortDir ?? "desc") : DEFAULT_PROJECT_ORDER_BY,
+        include: projectListInclude
+      });
+    }
+
+    // Default: active statuses first, then terminal ones; newest first inside each group.
+    const terminal = [...TERMINAL_PROJECT_STATUSES];
+    const activeWhere: Prisma.ProjectWhereInput = { AND: [where, { status: { notIn: terminal } }] };
+    const terminalWhere: Prisma.ProjectWhereInput = { AND: [where, { status: { in: terminal } }] };
+    const activeCount = await this.prisma.project.count({ where: activeWhere });
+    const plan = planGroupedPage(skip, limit, activeCount);
+
+    const activeRows =
+      plan.active.take > 0
+        ? await this.prisma.project.findMany({
+            where: activeWhere,
+            skip: plan.active.skip,
+            take: plan.active.take,
+            orderBy: DEFAULT_PROJECT_ORDER_BY,
+            include: projectListInclude
+          })
+        : [];
+    const terminalRows =
+      plan.terminal.take > 0
+        ? await this.prisma.project.findMany({
+            where: terminalWhere,
+            skip: plan.terminal.skip,
+            take: plan.terminal.take,
+            orderBy: DEFAULT_PROJECT_ORDER_BY,
+            include: projectListInclude
+          })
+        : [];
+
+    return [...activeRows, ...terminalRows];
   }
 
   // "Nguyên tắc Pipedrive": mọi deal đang mở phải có một hành động kế tiếp.

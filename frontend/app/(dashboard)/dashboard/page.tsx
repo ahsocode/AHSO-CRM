@@ -6,7 +6,7 @@ import { KpiCards } from "./_components/kpi-cards";
 import { RevenueChart } from "./_components/revenue-chart";
 import { TopProjects } from "./_components/top-projects";
 import { PipelinePreview } from "./_components/pipeline-preview";
-import { TaskChecklist } from "./_components/task-checklist";
+import { PriorityActions } from "./_components/priority-actions";
 import { ActivityFeed } from "./_components/activity-feed";
 import {
   DashboardDateRangeFilter,
@@ -17,7 +17,7 @@ import {
   usePipelinePreview,
   useRecentActivity,
   useRevenueChart,
-  useTasksToday
+  useActionItems
 } from "@/hooks/use-dashboard";
 
 export default function DashboardPage() {
@@ -27,7 +27,7 @@ export default function DashboardPage() {
   const kpisQuery = useDashboardKpis(dashboardFilters);
   const revenueChartQuery = useRevenueChart(dashboardFilters);
   const pipelineQuery = usePipelinePreview(dashboardFilters);
-  const tasksQuery = useTasksToday();
+  const actionItemsQuery = useActionItems();
   const activityQuery = useRecentActivity(dashboardFilters);
 
   return (
@@ -45,9 +45,9 @@ export default function DashboardPage() {
 
       <KpiCards data={kpisQuery.data} isLoading={kpisQuery.isLoading} />
 
-      {/* Mobile priority: tasks + activity first */}
+      {/* Mobile priority: action items + activity first */}
       <div className="grid gap-4 md:hidden">
-        <TaskChecklist data={tasksQuery.data} isLoading={tasksQuery.isLoading} />
+        <PriorityActions data={actionItemsQuery.data} isLoading={actionItemsQuery.isLoading} />
         <ActivityFeed data={activityQuery.data} isLoading={activityQuery.isLoading} />
       </div>
 
@@ -61,9 +61,9 @@ export default function DashboardPage() {
         <PipelinePreview data={pipelineQuery.data} isLoading={pipelineQuery.isLoading} />
       </div>
 
-      {/* Desktop: tasks + activity */}
-      <div className="hidden md:grid gap-5 xl:grid-cols-[1fr_1.4fr]">
-        <TaskChecklist data={tasksQuery.data} isLoading={tasksQuery.isLoading} />
+      {/* Desktop: action items + activity */}
+      <div className="hidden md:grid gap-5 xl:grid-cols-[1.4fr_1fr]">
+        <PriorityActions data={actionItemsQuery.data} isLoading={actionItemsQuery.isLoading} />
         <ActivityFeed data={activityQuery.data} isLoading={activityQuery.isLoading} />
       </div>
     </div>

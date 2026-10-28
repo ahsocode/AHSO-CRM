@@ -23,7 +23,7 @@ import { buildCsv, downloadCsv } from "@/lib/csv";
 import { downloadExcelRows } from "@/lib/utils";
 import { CustomerFilters, type VipFilterValue } from "./customer-filters";
 import { CustomerOverviewCards } from "./customer-overview-cards";
-import { CustomerTable } from "./customer-table";
+import { CustomerTable, type CustomerSortField } from "./customer-table";
 
 const PAGE_SIZE = 20;
 
@@ -60,6 +60,7 @@ export function CustomersClient() {
   const [assignedToId, setAssignedToId] = usePersistentState("crm:filters:customers:assignedToId", "");
   const [vipFilter, setVipFilter] = usePersistentState<VipFilterValue>("crm:filters:customers:vip", "all");
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{ sortBy?: CustomerSortField; sortDir?: "asc" | "desc" }>({});
   const [importOpen, setImportOpen] = useState(false);
   const [dedupeOpen, setDedupeOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -93,6 +94,8 @@ export function CustomersClient() {
   const customersQuery = useCustomers({
     page,
     limit: PAGE_SIZE,
+    sortBy: sort.sortBy,
+    sortDir: sort.sortBy ? sort.sortDir : undefined,
     search: deferredSearch || undefined,
     status: status || undefined,
     industry: normalizedIndustry || undefined,
@@ -422,6 +425,11 @@ export function CustomersClient() {
         isError={customersQuery.isError}
         errorMessage={getErrorMessage(customersQuery.error)}
         onPageChange={setPage}
+        sort={sort}
+        onSortChange={(next) => {
+          setSort(next);
+          setPage(1);
+        }}
         hasActiveFilters={canReset}
         onResetFilters={resetFilters}
         toolbar={

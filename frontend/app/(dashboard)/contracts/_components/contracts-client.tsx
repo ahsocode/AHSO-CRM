@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { useContracts } from "@/hooks/use-contracts";
 import { getApiErrorMessage } from "@/lib/api-client";
-import { ContractStatus } from "@/lib/types";
+import { ContractSortField, ContractStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ContractFilters } from "./contract-filters";
 import { ContractOverviewCards } from "./contract-overview-cards";
@@ -18,22 +18,38 @@ export function ContractsClient() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ContractStatus | "">("");
   const [projectId, setProjectId] = useState("");
+  const [includeCancelled, setIncludeCancelled] = useState(false);
+  const [sortBy, setSortBy] = useState<ContractSortField | "">("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const deferredSearch = useDeferredValue(search.trim());
 
   useEffect(() => {
     setPage(1);
-  }, [deferredSearch, projectId, status]);
+  }, [deferredSearch, projectId, status, includeCancelled, sortBy, sortDir]);
 
   const contractsQuery = useContracts({
     page,
     limit: PAGE_SIZE,
     search: deferredSearch || undefined,
     status: status || undefined,
-    projectId: projectId || undefined
+    projectId: projectId || undefined,
+    includeCancelled: includeCancelled || undefined,
+    sortBy: sortBy || undefined,
+    sortDir: sortBy ? sortDir : undefined
   });
 
-  const canReset = search.length > 0 || status.length > 0 || projectId.length > 0;
+  const handleSort = (field: ContractSortField) => {
+    if (sortBy === field) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortBy(field);
+    setSortDir(field === "contractNo" ? "asc" : "desc");
+  };
+
+  const canReset =
+    search.length > 0 || status.length > 0 || projectId.length > 0 || includeCancelled || sortBy !== "";
 
   return (
     <div className="space-y-8">
@@ -61,6 +77,9 @@ export function ContractsClient() {
         items={contractsQuery.data?.items ?? []}
         meta={contractsQuery.data?.meta}
         onPageChange={setPage}
+        onSort={handleSort}
+        sortBy={sortBy}
+        sortDir={sortDir}
         toolbar={
           <ContractFilters
             canReset={canReset}
@@ -69,8 +88,13 @@ export function ContractsClient() {
               setSearch("");
               setStatus("");
               setProjectId("");
+              setIncludeCancelled(false);
+              setSortBy("");
+              setSortDir("desc");
               setPage(1);
             }}
+            includeCancelled={includeCancelled}
+            onIncludeCancelledChange={setIncludeCancelled}
             onSearchChange={setSearch}
             onStatusChange={setStatus}
             projectId={projectId}

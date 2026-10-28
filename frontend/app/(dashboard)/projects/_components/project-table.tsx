@@ -15,6 +15,7 @@ import { PRIORITY_LABELS } from "@/lib/constants";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { ProjectListItem, ProjectListMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ariaSortFor, type ProjectSortField, type ProjectSortState } from "./project-list-helpers";
 
 const PRIORITY_CONFIG = {
   LOW: { label: PRIORITY_LABELS.LOW, variant: "neutral" as const },
@@ -28,6 +29,39 @@ const CONTRACT_STATUS_CONFIG = {
   COMPLETED: { label: "Hoàn tất", variant: "success" as const },
   CANCELLED: { label: "Hủy", variant: "danger" as const }
 };
+
+function SortableTh({
+  field,
+  label,
+  sort,
+  onSortChange,
+  className
+}: {
+  field: ProjectSortField;
+  label: string;
+  sort: ProjectSortState;
+  onSortChange?: (field: ProjectSortField) => void;
+  className?: string;
+}) {
+  const ariaSort = ariaSortFor(sort, field);
+  const indicator = ariaSort === "ascending" ? "▲" : ariaSort === "descending" ? "▼" : "↕";
+
+  return (
+    <th aria-sort={ariaSort} className={cn("px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary", className)}>
+      <button
+        type="button"
+        onClick={() => onSortChange?.(field)}
+        className="inline-flex items-center gap-1 uppercase tracking-[0.16em] hover:text-text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        title={`Sắp xếp theo ${label}`}
+      >
+        {label}
+        <span aria-hidden="true" className={cn("text-[10px]", ariaSort === "none" && "opacity-40")}>
+          {indicator}
+        </span>
+      </button>
+    </th>
+  );
+}
 
 const PROGRESS_COLOR = (pct: number) => {
   if (pct >= 85) return "bg-success";
@@ -47,7 +81,9 @@ export function ProjectTable({
   allVisibleSelected,
   onToggleSelect,
   onToggleSelectAll,
-  toolbar
+  toolbar,
+  sort = {},
+  onSortChange
 }: {
   items: ProjectListItem[];
   meta?: ProjectListMeta;
@@ -60,6 +96,8 @@ export function ProjectTable({
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
   toolbar?: ReactNode;
+  sort?: ProjectSortState;
+  onSortChange?: (field: ProjectSortField) => void;
 }) {
   const currentPage = meta?.page ?? 1;
   const totalPages = Math.max(meta?.totalPages ?? 1, 1);
@@ -177,18 +215,12 @@ export function ProjectTable({
                 <th className="w-10 px-4 py-2.5">
                   <Checkbox checked={allVisibleSelected} onCheckedChange={onToggleSelectAll} />
                 </th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
-                  Dự án
-                </th>
+                <SortableTh field="name" label="Dự án" sort={sort} onSortChange={onSortChange} />
                 <th className="w-44 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
                   Khách hàng
                 </th>
-                <th className="w-36 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
-                  Giá trị
-                </th>
-                <th className="w-48 px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-[0.16em] text-text-secondary">
-                  Tiến độ
-                </th>
+                <SortableTh field="estimatedValue" label="Giá trị" sort={sort} onSortChange={onSortChange} className="w-36" />
+                <SortableTh field="expectedEndDate" label="Tiến độ" sort={sort} onSortChange={onSortChange} className="w-48" />
                 <th className="w-16 px-3 py-2.5" />
               </tr>
             </thead>

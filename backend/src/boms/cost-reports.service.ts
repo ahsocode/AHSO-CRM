@@ -9,8 +9,8 @@ import { loadLineGraph, totalsFromGraph } from "./bom-graph";
 import { findAccessibleProject } from "./project-access";
 import { selectEstimateBoms } from "./estimate-basis";
 
-/** Standard Vietnamese VAT rate, also the Quote.taxRate default in the schema. */
-const DEFAULT_VAT_RATE = 10;
+/** Standard VAT rate (8% in 2026) assumed when a contract has no source quote lines; same as the Quote.taxRate default. */
+const DEFAULT_VAT_RATE = 8;
 
 function pct(numerator: Decimal, denominator: Decimal): number | null {
   if (denominator.lte(0)) return null;
@@ -63,7 +63,7 @@ export class CostReportsService {
     let revenueSource: "CONTRACT" | "QUOTE" | "NONE" = "NONE";
     let revenueRef: { id: string; no: string } | null = null;
     // Contract value includes VAT. When no source quote tells us the rate, assume the
-    // standard rate instead of treating the gross value as net (would inflate margin ~10%).
+    // standard rate instead of treating the gross value as net (would inflate margin ~8%).
     let revenueVatAssumed = false;
     const fallbackTaxRate = acceptedQuote ? new Decimal(acceptedQuote.taxRate) : new Decimal(DEFAULT_VAT_RATE);
     if (contract) {

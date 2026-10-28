@@ -64,7 +64,7 @@ export const quoteFormSchema = z.object({
 
 export type QuoteFormValues = z.infer<typeof quoteFormSchema>;
 
-export const createEmptyQuoteItem = (defaultTaxRate = 10): QuoteFormValues["items"][number] => ({
+export const createEmptyQuoteItem = (defaultTaxRate = 8): QuoteFormValues["items"][number] => ({
   name: "",
   description: "",
   unit: "",
@@ -78,7 +78,7 @@ const defaultValidUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOS
 export const defaultQuoteFormValues: QuoteFormValues = {
   projectId: "",
   validUntil: defaultValidUntil,
-  taxRate: 10,
+  taxRate: 8,
   tableColumnWidths: defaultQuoteTableColumnWidths,
   terms: "",
   deliveryTerms: "",

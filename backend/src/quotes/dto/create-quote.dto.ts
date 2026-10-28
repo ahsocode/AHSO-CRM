@@ -67,7 +67,7 @@ export const quoteTableColumnWidthsSchema = z.object({
 export const createQuoteSchema = z.object({
   projectId: z.string().trim().min(1, "Dự án là bắt buộc"),
   validUntil: optionalDate,
-  taxRate: z.coerce.number().min(0, "Thuế suất phải từ 0%").max(100, "Thuế suất tối đa 100%").default(10),
+  taxRate: z.coerce.number().min(0, "Thuế suất phải từ 0%").max(100, "Thuế suất tối đa 100%").default(8),
   tableColumnWidths: quoteTableColumnWidthsSchema.optional(),
   terms: optionalString(2000),
   deliveryTerms: optionalString(2000),

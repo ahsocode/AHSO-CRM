@@ -16,6 +16,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { Copy, FileText, GripVertical, Link2, MoreHorizontal, Trash2 } from "lucide-react";
 import { AppIcon } from "@/components/shared/app-icon";
 import { CurrencyDisplay } from "@/components/shared/currency-display";
+import { formatVND } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   formatVatGroupLabel,
+  shouldShowVatBase,
   optionValueToVatRate,
   vatOptionsFor,
   vatRateToOptionValue,
@@ -138,6 +140,8 @@ export function QuoteItemsTable({
     const source = form.getValues(`items.${index}`);
     insert(index + 1, { ...source });
   }
+
+  const showVatBase = shouldShowVatBase(taxBreakdown);
 
   return (
     <div className="space-y-3">
@@ -375,7 +379,7 @@ export function QuoteItemsTable({
                 key={group.rate === null ? "kct" : group.rate}
                 className="flex items-center justify-between text-text-secondary"
               >
-                <span>{formatVatGroupLabel(group.rate)}</span>
+                <span>{formatVatGroupLabel(group.rate, showVatBase ? formatVND(group.base) : undefined)}</span>
                 <span className="tabular-nums text-text-primary">
                   <CurrencyDisplay amount={group.tax} />
                 </span>

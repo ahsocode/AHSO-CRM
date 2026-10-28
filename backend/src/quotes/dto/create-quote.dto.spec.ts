@@ -55,6 +55,13 @@ describe("createQuoteSchema total limits", () => {
   });
 });
 
+describe("createQuoteSchema default taxRate", () => {
+  it("defaults the quote-level VAT to 8% when omitted", () => {
+    const result = createQuoteSchema.safeParse({ projectId: "project-1", items: [{ name: "Hạng mục", quantity: 1, unitPrice: 100 }] });
+    expect(result.success && result.data.taxRate).toBe(8);
+  });
+});
+
 describe("createQuoteSchema per-line taxRate", () => {
   const base = { projectId: "project-1", taxRate: 10 };
   const parseItem = (taxRate: unknown) =>

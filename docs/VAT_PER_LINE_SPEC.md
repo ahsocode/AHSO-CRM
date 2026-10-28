@@ -11,7 +11,7 @@ Mỗi dòng báo giá (`QuoteItem`) có thuế suất VAT riêng: KCT, 0%, 5%, 8
 ## Hợp đồng API (JSON)
 Ghi (create/update quote):
 - `items[].taxRate?: number | null` — 0..100, tối đa 2 chữ số thập phân. `null` = KCT. **Bỏ trống (undefined) = lấy `quote.taxRate`**. Luôn lưu giá trị đã resolve xuống DB.
-- `taxRate` cấp báo giá giữ nguyên (mặc định 10).
+- `taxRate` cấp báo giá giữ nguyên (mặc định **8%** từ 2026, trước đây 10%; chỉ áp cho báo giá/dòng mới, dữ liệu cũ không đổi; migration `20261028150000_quote_default_vat_8`).
 Đọc:
 - `items[].taxRate: number | null`
 - `taxRate` (mặc định), `taxAmount` (= tổng thuế các dòng), `total`

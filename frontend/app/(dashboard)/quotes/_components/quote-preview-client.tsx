@@ -14,10 +14,10 @@ import { useCompanyInfo, useLogo, usePolicies } from "@/hooks/use-settings";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { resolveAssetUrl } from "@/lib/auth";
-import { formatDate, normalizeItemDescription } from "@/lib/format";
+import { formatDate, formatVND, normalizeItemDescription } from "@/lib/format";
 import type { QuoteDetail, QuoteTableColumnWidths } from "@/lib/types";
 import { cn, downloadBlob } from "@/lib/utils";
-import { computeQuoteTotals, formatVatGroupLabel } from "@/lib/vat";
+import { computeQuoteTotals, formatVatGroupLabel, shouldShowVatBase } from "@/lib/vat";
 
 const EDITABLE_QUOTE_STATUSES = ["DRAFT", "REJECTED"] as const;
 
@@ -213,6 +213,9 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
       }
     });
   };
+
+  const previewBreakdown = quote.taxBreakdown ?? computeQuoteTotals(quote.items, quote.taxRate).breakdown;
+  const previewShowVatBase = shouldShowVatBase(previewBreakdown);
 
   return (
     <div className="space-y-8 print:space-y-0">
@@ -478,10 +481,10 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
           <section className="mt-6 flex justify-end">
             <div className="w-full max-w-[320px] space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
               <SummaryRow label="Tạm tính" value={<CurrencyDisplay amount={quote.subtotal} />} />
-              {(quote.taxBreakdown ?? computeQuoteTotals(quote.items, quote.taxRate).breakdown).map((group) => (
+              {previewBreakdown.map((group) => (
                 <SummaryRow
                   key={group.rate === null ? "kct" : group.rate}
-                  label={formatVatGroupLabel(group.rate)}
+                  label={formatVatGroupLabel(group.rate, previewShowVatBase ? formatVND(group.base) : undefined)}
                   value={<CurrencyDisplay amount={group.tax} />}
                 />
               ))}

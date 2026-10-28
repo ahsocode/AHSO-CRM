@@ -17,6 +17,8 @@ describe("vat", () => {
     expect(formatVatRate(7.5)).toBe("7.5%");
     expect(formatVatGroupLabel(null)).toBe("Không chịu thuế (KCT)");
     expect(formatVatGroupLabel(10)).toBe("VAT 10%");
+    expect(formatVatGroupLabel(8, "226.000.000 ₫")).toBe("VAT 8% (trên 226.000.000 ₫)");
+    expect(formatVatGroupLabel(null, "69.000.000 ₫")).toBe("Không chịu thuế (KCT) (trên 69.000.000 ₫)");
     expect(VAT_PRESETS.map((p) => p.value)).toEqual([null, 0, 5, 8, 10]);
   });
 

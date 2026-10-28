@@ -59,16 +59,16 @@ describe("CostReportsService", () => {
   });
 
   it("assumes standard VAT when a contract has no items and no accepted quote", async () => {
-    prisma.contract.findFirst.mockResolvedValue({ id: "c", contractNo: "HD-2", value: 11000000, items: [] });
+    prisma.contract.findFirst.mockResolvedValue({ id: "c", contractNo: "HD-2", value: 10800000, items: [] });
     prisma.quote.findFirst.mockResolvedValue(null);
     expect(await service.getCostSummary("p", user)).toMatchObject({
-      revenue: 10000000, revenueSource: "CONTRACT", revenueVatAssumed: true, revenueVatRate: 10
+      revenue: 10000000, revenueSource: "CONTRACT", revenueVatAssumed: true, revenueVatRate: 8
     });
   });
 
   it("assumes standard VAT for manual contract items without a source quote", async () => {
     prisma.contract.findFirst.mockResolvedValue({
-      id: "c", contractNo: "HD-3", value: 11000000, items: [{ total: 10000000, quoteItem: null }]
+      id: "c", contractNo: "HD-3", value: 10800000, items: [{ total: 10000000, quoteItem: null }]
     });
     prisma.quote.findFirst.mockResolvedValue(null);
     expect(await service.getCostSummary("p", user)).toMatchObject({ revenue: 10000000, revenueVatAssumed: true });

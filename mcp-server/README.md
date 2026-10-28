@@ -115,7 +115,10 @@ Hoặc dùng `npm run dev` để test với stdio transport:
 | Tool | Mô tả | Ví dụ câu lệnh |
 |------|--------|----------------|
 | `list_quotes` | Danh sách báo giá theo trạng thái | "Báo giá nào đang chờ phản hồi?" |
-| `get_quote_detail` | Chi tiết báo giá và hạng mục | "Chi tiết BG-2026-001" |
+| `get_quote_detail` | Chi tiết báo giá, VAT theo dòng/nhóm, tổng | "Chi tiết BG-2026-001" |
+| `create_quote` | Tạo báo giá (VAT mặc định `defaultVatRate`, mặc định 0.08) | "Tạo báo giá cho dự án X" |
+| `add_quote_items` | Thay danh sách hạng mục; mỗi dòng `taxRate` (%), `vatRate` (0.08) hoặc `taxExempt` (KCT) | "Thêm 3 thiết bị vào BG-2026-012" |
+| `update_quote` | Sửa ghi chú, hiệu lực, VAT mặc định (DRAFT/REJECTED; giữ VAT từng dòng) | "Gia hạn BG-2026-012 thêm 30 ngày" |
 
 ### Hợp đồng
 

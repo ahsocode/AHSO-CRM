@@ -1,6 +1,7 @@
 import { getApiClient, extractData } from "../auth/api-client.js";
 import { formatVND, stageLabel, truncate } from "../formatters/common.formatter.js";
 import type { McpTool } from "./index.js";
+import { resolveItemTax, vatFractionToPercent } from "./quote.tools.js";
 
 export const searchTools: McpTool[] = [
   {
@@ -124,11 +125,10 @@ export const searchTools: McpTool[] = [
         notes: { type: "string", description: "Ghi chú thêm (tuỳ chọn)" },
         itemName: { type: "string", description: "Tên hạng mục đầu tiên (tuỳ chọn, mặc định 'Hạng mục báo giá')" },
         itemPrice: { type: "number", description: "Đơn giá hạng mục đầu tiên (tuỳ chọn)" },
-        taxRate: { type: "number", description: "VAT mặc định cho dòng mới, % (0, 5, 8, 10; mặc định 10)" },
-        itemTaxRate: {
-          type: ["number", "null"],
-          description: "VAT của hạng mục đầu tiên, %: 0, 5, 8, 10; null = KCT (không chịu thuế). Bỏ trống = dùng taxRate mặc định",
-        },
+        defaultVatRate: { type: "number", minimum: 0, maximum: 1, description: "VAT mặc định cho dòng mới, PHÂN SỐ 0..1 (0.08 = 8%, mặc định 0.08; 0.1 = 10%)" },
+        itemVatRate: { type: "number", minimum: 0, maximum: 1, description: "VAT hạng mục đầu tiên, phân số 0..1 (0.08 = 8%). Bỏ trống = dùng defaultVatRate" },
+        itemTaxExempt: { type: "boolean", description: "true = hạng mục đầu tiên KCT (không chịu thuế)" },
+        itemTaxRate: { type: ["number", "null"], description: "VAT hạng mục đầu tiên theo % (8, 10); null = KCT. Ưu tiên dùng itemVatRate/itemTaxExempt" },
       },
       required: ["projectId"],
     },
@@ -146,18 +146,30 @@ export const searchTools: McpTool[] = [
       validUntil.setDate(validUntil.getDate() + validDays);
 
       // Backend yêu cầu ít nhất 1 hạng mục — tạo placeholder nếu không có
-      const firstItem = {
+      let defaultPct = 8;
+      if (args["defaultVatRate"] !== undefined) {
+        const d = vatFractionToPercent(args["defaultVatRate"], "defaultVatRate");
+        if (!d.ok) return `❌ ${d.error}`;
+        defaultPct = d.value;
+      }
+      const itemTax = resolveItemTax({
+        taxRate: args["itemTaxRate"],
+        vatRate: args["itemVatRate"],
+        taxExempt: args["itemTaxExempt"],
+      });
+      if (!itemTax.ok) return `❌ ${itemTax.error}`;
+      const firstItem: Record<string, unknown> = {
         name: (args["itemName"] as string) || "Hạng mục báo giá",
         quantity: 1,
         unitPrice: (args["itemPrice"] as number) ?? 0,
-        ...("itemTaxRate" in args ? { taxRate: args["itemTaxRate"] as number | null } : {}),
       };
+      if (itemTax.value !== undefined) firstItem["taxRate"] = itemTax.value;
 
       const payload: Record<string, unknown> = {
         projectId: args["projectId"],
         validUntil: validUntil.toISOString(),
         status: "DRAFT",
-        taxRate: (args["taxRate"] as number | undefined) ?? 10,
+        taxRate: defaultPct,
         items: [firstItem],
       };
       if (args["notes"]) payload["internalNote"] = args["notes"];

@@ -1,0 +1,1024 @@
+{
+  "generatedAt": "2026-10-28T14:49:30.364Z",
+  "mode": "dry-run",
+  "rows": [
+    {
+      "id": "cmos4yww500109ywbm7sffnv7",
+      "quoteNo": "BG-2026-003",
+      "status": "ACCEPTED",
+      "customer": "VPC",
+      "updatedAt": "2026-05-05T04:36:26.501Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 616000000,
+      "newTotal": 604800000,
+      "delta": -11200000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmotpce34000egou6n64u52qs",
+      "quoteNo": "BG-2026-004",
+      "status": "SENT",
+      "customer": "Novas EZ",
+      "updatedAt": "2026-05-06T06:54:33.808Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 178200000,
+      "newTotal": 178200000,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmotz74o6000iikzckv9u989z",
+      "quoteNo": "BG-2026-005",
+      "status": "DRAFT",
+      "customer": "MONDELEZ",
+      "updatedAt": "2026-05-22T04:26:54.729Z",
+      "category": "NO_CHANGE",
+      "currentTotal": 3942000000,
+      "newTotal": 3942000000,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmp3o07af000f1qg0u9zb1271",
+      "quoteNo": "BG-2026-006",
+      "status": "DRAFT",
+      "customer": "PIMVINA",
+      "updatedAt": "2026-05-22T03:28:28.679Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 1274900000,
+      "newTotal": 1251720000,
+      "delta": -23180000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmpgdkkkf000joxziehrjdcon",
+      "quoteNo": "BG-2026-007",
+      "status": "DRAFT",
+      "customer": "NHO",
+      "updatedAt": "2026-05-22T07:36:24.027Z",
+      "category": "NO_CHANGE",
+      "currentTotal": 7387200,
+      "newTotal": 7387200,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmpgfcep80008f23gdhpb9078",
+      "quoteNo": "BG-2026-008",
+      "status": "DRAFT",
+      "customer": "MONDELEZ",
+      "updatedAt": "2026-05-23T06:15:43.174Z",
+      "category": "NO_CHANGE",
+      "currentTotal": 4050000000,
+      "newTotal": 4050000000,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmpkmoznp000bj87i295f5jd5",
+      "quoteNo": "BG-2026-009",
+      "status": "DRAFT",
+      "customer": "TL",
+      "updatedAt": "2026-05-25T05:30:09.242Z",
+      "category": "NO_CHANGE",
+      "currentTotal": 162000000,
+      "newTotal": 162000000,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmpkugzg4000ee86w3stkuddx",
+      "quoteNo": "BG-2026-010",
+      "status": "ACCEPTED",
+      "customer": "PWB",
+      "updatedAt": "2026-05-25T11:18:44.924Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 27315792,
+      "newTotal": 27315792,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmpm9x056000i2iu34dq27xom",
+      "quoteNo": "BG-2026-011",
+      "status": "DRAFT",
+      "customer": "DRB",
+      "updatedAt": "2026-05-26T07:42:28.600Z",
+      "category": "SKIP_MIXED",
+      "currentTotal": 430812000,
+      "newTotal": 423692000,
+      "delta": -7120000,
+      "kctLines": [
+        {
+          "name": "Phần mềm kiểm tra lỗi bề mặt cao su",
+          "amount": 89000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        8,
+        8,
+        8,
+        null,
+        8
+      ]
+    },
+    {
+      "id": "cmprmcii9000511jf485slshr",
+      "quoteNo": "BG-2026-012",
+      "status": "SENT",
+      "customer": "EIU",
+      "updatedAt": "2026-05-30T08:02:48.169Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 831600000,
+      "newTotal": 816480000,
+      "delta": -15120000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmps2cl8n001g2rltphzwpnmv",
+      "quoteNo": "BG-2026-013",
+      "status": "DRAFT",
+      "customer": "SHV",
+      "updatedAt": "2026-05-30T08:02:48.071Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 0,
+      "newTotal": 0,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmps2rcp9005a2rltk3fofmjv",
+      "quoteNo": "BG-2026-016",
+      "status": "DRAFT",
+      "customer": "EIU",
+      "updatedAt": "2026-05-30T11:42:50.604Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 5228850000,
+      "newTotal": 5133780000,
+      "delta": -95070000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmqj43zjn001v4pgbopejuvej",
+      "quoteNo": "BG-2026-020",
+      "status": "DRAFT",
+      "customer": "ADR",
+      "updatedAt": "2026-06-18T06:21:59.126Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 29700000,
+      "newTotal": 29160000,
+      "delta": -540000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmsrdilgi00348nfp7yzbs8xz",
+      "quoteNo": "BG-2026-025",
+      "status": "ACCEPTED",
+      "customer": "SHV",
+      "updatedAt": "2026-08-13T10:27:56.101Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 7700000,
+      "newTotal": 7560000,
+      "delta": -140000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdivj700488nfpm2dthsg7",
+      "quoteNo": "BG-2026-033",
+      "status": "ACCEPTED",
+      "customer": "INB",
+      "updatedAt": "2026-08-13T10:28:01.011Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 10120000,
+      "newTotal": 9936000,
+      "delta": -184000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdiwd8004d8nfp799dsdit",
+      "quoteNo": "BG-2026-034",
+      "status": "ACCEPTED",
+      "customer": "INB",
+      "updatedAt": "2026-08-13T10:28:01.573Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 10120000,
+      "newTotal": 9936000,
+      "delta": -184000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdixnx004i8nfpld08rg5z",
+      "quoteNo": "BG-2026-035",
+      "status": "ACCEPTED",
+      "customer": "INB",
+      "updatedAt": "2026-08-13T10:28:02.143Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 10120000,
+      "newTotal": 9936000,
+      "delta": -184000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdiyh0004n8nfpipm6slkv",
+      "quoteNo": "BG-2026-036",
+      "status": "ACCEPTED",
+      "customer": "SHV",
+      "updatedAt": "2026-08-13T10:28:03.193Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 7700000,
+      "newTotal": 7560000,
+      "delta": -140000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdizr6004s8nfpszj0848x",
+      "quoteNo": "BG-2026-037",
+      "status": "ACCEPTED",
+      "customer": "CÔNG TY CỔ PHẦN TECHLAB GLOBAL",
+      "updatedAt": "2026-08-13T10:28:03.744Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 3762000,
+      "newTotal": 3693600,
+      "delta": -68400,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdj10l004x8nfpoy45xiyl",
+      "quoteNo": "BG-2026-038",
+      "status": "ACCEPTED",
+      "customer": "SHV",
+      "updatedAt": "2026-08-13T10:28:04.325Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 7700000,
+      "newTotal": 7560000,
+      "delta": -140000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdj29700528nfp2nwdy3w1",
+      "quoteNo": "BG-2026-039",
+      "status": "ACCEPTED",
+      "customer": "SHV",
+      "updatedAt": "2026-08-13T10:28:04.849Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 7700000,
+      "newTotal": 7560000,
+      "delta": -140000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdj33o00578nfpmoovyicn",
+      "quoteNo": "BG-2026-040",
+      "status": "ACCEPTED",
+      "customer": "ADR",
+      "updatedAt": "2026-08-13T10:28:05.379Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 198000,
+      "newTotal": 194400,
+      "delta": -3600,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdj51h005h8nfpeg3n3yca",
+      "quoteNo": "BG-2026-042",
+      "status": "ACCEPTED",
+      "customer": "INB",
+      "updatedAt": "2026-08-13T10:28:06.258Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 10120000,
+      "newTotal": 9936000,
+      "delta": -184000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdtyu800h88nfpp3uqsfak",
+      "quoteNo": "BG-2026-043",
+      "status": "ACCEPTED",
+      "customer": "DRB",
+      "updatedAt": "2026-08-13T10:36:15.682Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 172150000,
+      "newTotal": 162620000,
+      "delta": -9530000,
+      "kctLines": [
+        {
+          "name": "Phần mềm AI kiểm tra mã sản phẩm của Gang Cầu",
+          "amount": 80000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        8,
+        null
+      ]
+    },
+    {
+      "id": "cmsrdu0h700hd8nfptuu36xpk",
+      "quoteNo": "BG-2026-044",
+      "status": "ACCEPTED",
+      "customer": "VINATABA",
+      "updatedAt": "2026-08-13T10:36:16.546Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 110000000,
+      "newTotal": 104000000,
+      "delta": -6000000,
+      "kctLines": [
+        {
+          "name": "Phần mềm kiểm soát thiếu điếu trong gói",
+          "amount": 50000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        8,
+        null
+      ]
+    },
+    {
+      "id": "cmsrdu1ay00hi8nfpkxjqsr1w",
+      "quoteNo": "BG-2026-045",
+      "status": "ACCEPTED",
+      "customer": "DRB",
+      "updatedAt": "2026-08-13T10:36:17.113Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 63140000,
+      "newTotal": 61992000,
+      "delta": -1148000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdu2os00hn8nfpj9np6016",
+      "quoteNo": "BG-2026-046",
+      "status": "ACCEPTED",
+      "customer": "CÔNG TY TNHH ẮC QUY GS VIỆT NAM",
+      "updatedAt": "2026-08-13T10:36:17.656Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 174900000,
+      "newTotal": 171720000,
+      "delta": -3180000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdu3tl00hs8nfp5ioewpaa",
+      "quoteNo": "BG-2026-047",
+      "status": "ACCEPTED",
+      "customer": "ADR",
+      "updatedAt": "2026-08-13T10:36:18.740Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 19800000,
+      "newTotal": 19440000,
+      "delta": -360000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmsrdu54v00hx8nfptlts8kta",
+      "quoteNo": "BG-2026-048",
+      "status": "ACCEPTED",
+      "customer": "ORS",
+      "updatedAt": "2026-08-13T10:36:19.320Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 17050000,
+      "newTotal": 16740000,
+      "delta": -310000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsrdu6d700i28nfp8dgfsswr",
+      "quoteNo": "BG-2026-049",
+      "status": "ACCEPTED",
+      "customer": "ADR",
+      "updatedAt": "2026-08-13T10:36:20.414Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 215600000,
+      "newTotal": 201280000,
+      "delta": -14320000,
+      "kctLines": [
+        {
+          "name": "Phần mềm kiểm tra Chip RFID",
+          "amount": 130000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        8,
+        null,
+        8
+      ]
+    },
+    {
+      "id": "cmsrdu7m800i78nfps0nt3uhv",
+      "quoteNo": "BG-2026-050",
+      "status": "ACCEPTED",
+      "customer": "SHC",
+      "updatedAt": "2026-08-13T10:36:21.155Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 22000000,
+      "newTotal": 20000000,
+      "delta": -2000000,
+      "kctLines": [
+        {
+          "name": "Phần mềm QR Code Reader",
+          "amount": 20000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        null
+      ]
+    },
+    {
+      "id": "cmsrdu8vj00ic8nfp9tux1i9v",
+      "quoteNo": "BG-2026-051",
+      "status": "ACCEPTED",
+      "customer": "PWB",
+      "updatedAt": "2026-08-13T10:36:21.468Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 27821640,
+      "newTotal": 27315792,
+      "delta": -505848,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmsrdu9fz00ih8nfpr2sciegj",
+      "quoteNo": "BG-2026-052",
+      "status": "ACCEPTED",
+      "customer": "Novas EZ",
+      "updatedAt": "2026-08-13T10:36:22.043Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 181500000,
+      "newTotal": 178200000,
+      "delta": -3300000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsre0ust00mr8nfpz3o0gg5m",
+      "quoteNo": "BG-2026-053",
+      "status": "ACCEPTED",
+      "customer": "SHV",
+      "updatedAt": "2026-08-13T10:41:01.689Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 7700000,
+      "newTotal": 7560000,
+      "delta": -140000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmsre0vqy00mw8nfp9701fqwl",
+      "quoteNo": "BG-2026-054",
+      "status": "ACCEPTED",
+      "customer": "INB",
+      "updatedAt": "2026-08-13T10:41:02.236Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 10120000,
+      "newTotal": 9936000,
+      "delta": -184000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmv7md6az001nvqo43nb5ml1r",
+      "quoteNo": "BG-2026-055",
+      "status": "DRAFT",
+      "customer": "CÔNG TY SBS",
+      "updatedAt": "2026-10-19T04:35:45.411Z",
+      "category": "NO_CHANGE",
+      "currentTotal": 171720000,
+      "newTotal": 171720000,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmv7s2lhk002jvqo4vnada7ck",
+      "quoteNo": "BG-2026-056",
+      "status": "DRAFT",
+      "customer": "CÔNG TY SBS",
+      "updatedAt": "2026-10-19T04:35:43.778Z",
+      "category": "NO_CHANGE",
+      "currentTotal": 85320000,
+      "newTotal": 85320000,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmv7uzxma003fvqo4nqsiixe6",
+      "quoteNo": "BG-2026-057",
+      "status": "DRAFT",
+      "customer": "Cty  Điện Cơ",
+      "updatedAt": "2026-10-14T08:45:30.216Z",
+      "category": "NO_CHANGE",
+      "currentTotal": 200880000,
+      "newTotal": 200880000,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmvadxk6l0023pcms103w5pj5",
+      "quoteNo": "BG-2026-058",
+      "status": "DRAFT",
+      "customer": "ORION",
+      "updatedAt": "2026-10-17T06:26:50.155Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 129800000,
+      "newTotal": 122320000,
+      "delta": -7480000,
+      "kctLines": [
+        {
+          "name": "Chương trình điều khiển PLC, HMI",
+          "amount": 25000000,
+          "alreadyKct": false
+        },
+        {
+          "name": "Phần mềm web quản lý, cơ sở dữ liệu",
+          "amount": 39000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        null,
+        null,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmvae1nmh002mpcmspfmmb1sr",
+      "quoteNo": "BG-2026-059",
+      "status": "DRAFT",
+      "customer": "ORION",
+      "updatedAt": "2026-10-17T06:26:56.197Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 54323500,
+      "newTotal": 51815800,
+      "delta": -2507700,
+      "kctLines": [
+        {
+          "name": "Chương trình PLC/HMI điều khiển và giám sát biến tần",
+          "amount": 19000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        8,
+        8,
+        8,
+        null,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmvanhc8w003npcmsovx2lg95",
+      "quoteNo": "BG-2026-060",
+      "status": "ACCEPTED",
+      "customer": "NHO",
+      "updatedAt": "2026-10-17T03:51:03.308Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 35233000,
+      "newTotal": 34592400,
+      "delta": -640600,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmvelxj9b000xjlzxytooa5oy",
+      "quoteNo": "BG-2026-061",
+      "status": "DRAFT",
+      "customer": "ORION",
+      "updatedAt": "2026-10-22T03:58:10.046Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 73205000,
+      "newTotal": 71874000,
+      "delta": -1331000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmveoql860029jlzxed2ewoua",
+      "quoteNo": "BG-2026-062",
+      "status": "DRAFT",
+      "customer": "SHC",
+      "updatedAt": "2026-10-19T03:19:05.700Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 1375000000,
+      "newTotal": 1350000000,
+      "delta": -25000000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmveosisc002rjlzx1keghgsr",
+      "quoteNo": "BG-2026-063",
+      "status": "DRAFT",
+      "customer": "PWB",
+      "updatedAt": "2026-10-19T03:20:38.521Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 0,
+      "newTotal": 0,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmvepice3003pjlzx9ydfhg01",
+      "quoteNo": "BG-2026-064",
+      "status": "DRAFT",
+      "customer": "CÔNG TY TNHH DONG YANG E&P HCM VINA",
+      "updatedAt": "2026-10-19T06:59:42.754Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 204600000,
+      "newTotal": 200880000,
+      "delta": -3720000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmveplazh004ejlzxlhzd1hh9",
+      "quoteNo": "BG-2026-065",
+      "status": "DRAFT",
+      "customer": "CÔNG TY TNHH DONG YANG E&P HCM VINA",
+      "updatedAt": "2026-10-19T06:59:45.587Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 418000000,
+      "newTotal": 410400000,
+      "delta": -7600000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmveplbgr004jjlzxqus6yplg",
+      "quoteNo": "BG-2026-066",
+      "status": "DRAFT",
+      "customer": "CÔNG TY TNHH DONG YANG E&P HCM VINA",
+      "updatedAt": "2026-10-19T06:59:49.173Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 424600000,
+      "newTotal": 416880000,
+      "delta": -7720000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmveplbyr004ojlzx5536gm2i",
+      "quoteNo": "BG-2026-067",
+      "status": "DRAFT",
+      "customer": "CÔNG TY TNHH DONG YANG E&P HCM VINA",
+      "updatedAt": "2026-10-19T06:59:52.567Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 17600000,
+      "newTotal": 17280000,
+      "delta": -320000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmverqtss005sjlzxoij5h4wn",
+      "quoteNo": "BG-2026-068",
+      "status": "ACCEPTED",
+      "customer": "SHC",
+      "updatedAt": "2026-10-19T04:43:17.368Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 55000000,
+      "newTotal": 50000000,
+      "delta": -5000000,
+      "kctLines": [
+        {
+          "name": "Phần mềm QR Code Reader và đồng bộ lên server",
+          "amount": 50000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        null
+      ]
+    },
+    {
+      "id": "cmverva00006ujlzxum1zm7eo",
+      "quoteNo": "BG-2026-070",
+      "status": "ACCEPTED",
+      "customer": "PWB",
+      "updatedAt": "2026-10-19T04:46:42.760Z",
+      "category": "SKIP_LOCKED",
+      "currentTotal": 16500000,
+      "newTotal": 16200000,
+      "delta": -300000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmvf176h30081jlzxbp1ky1i7",
+      "quoteNo": "BG-2026-071",
+      "status": "DRAFT",
+      "customer": "PWB",
+      "updatedAt": "2026-10-19T09:07:55.647Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 0,
+      "newTotal": 0,
+      "delta": 0,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmvg6ig01009ajlzx2wn9qjvo",
+      "quoteNo": "BG-2026-072",
+      "status": "DRAFT",
+      "customer": "Global Sourcing Services Pty Ltd (GSS)",
+      "updatedAt": "2026-10-20T04:43:06.051Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 400400000,
+      "newTotal": 393120000,
+      "delta": -7280000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmvj0ncxg002t3gz85hgxaim7",
+      "quoteNo": "BG-2026-073",
+      "status": "DRAFT",
+      "customer": "PMA",
+      "updatedAt": "2026-10-22T04:03:42.815Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 324500000,
+      "newTotal": 313080000,
+      "delta": -11420000,
+      "kctLines": [
+        {
+          "name": "Phần mềm giám sát thao tác (KCT)",
+          "amount": 69000000,
+          "alreadyKct": false
+        }
+      ],
+      "newRates": [
+        8,
+        null,
+        8
+      ]
+    },
+    {
+      "id": "cmvjbfo1y003v3gz8rufko4cj",
+      "quoteNo": "BG-2026-074",
+      "status": "DRAFT",
+      "customer": "NHO",
+      "updatedAt": "2026-10-22T09:18:39.887Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 42350000,
+      "newTotal": 41580000,
+      "delta": -770000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmvq5my5m000su2tba27j66ls",
+      "quoteNo": "BG-2026-075",
+      "status": "DRAFT",
+      "customer": "Công ty Nhựa Duy Tân",
+      "updatedAt": "2026-10-28T04:48:44.667Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 946000000,
+      "newTotal": 928800000,
+      "delta": -17200000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmvqgcf2r001iu2tbxfulin6a",
+      "quoteNo": "BG-2026-076",
+      "status": "DRAFT",
+      "customer": "CÔNG TY TNHH KỸ THUẬT CÔNG NGHIỆP ÁNH DƯƠNG",
+      "updatedAt": "2026-10-27T08:58:17.144Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 242000000,
+      "newTotal": 237600000,
+      "delta": -4400000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    },
+    {
+      "id": "cmvrggrmt0008cmsbrm29ltmg",
+      "quoteNo": "BG-2026-077",
+      "status": "DRAFT",
+      "customer": "ORION",
+      "updatedAt": "2026-10-28T01:50:54.656Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 286000000,
+      "newTotal": 280800000,
+      "delta": -5200000,
+      "kctLines": [],
+      "newRates": [
+        8,
+        8,
+        8
+      ]
+    },
+    {
+      "id": "cmvrmzjxt0017cmsba8c0zib4",
+      "quoteNo": "BG-2026-078",
+      "status": "DRAFT",
+      "customer": "FUJIKURA",
+      "updatedAt": "2026-10-28T04:51:07.264Z",
+      "category": "WILL_CHANGE",
+      "currentTotal": 204600000,
+      "newTotal": 200880000,
+      "delta": -3720000,
+      "kctLines": [],
+      "newRates": [
+        8
+      ]
+    }
+  ]
+}

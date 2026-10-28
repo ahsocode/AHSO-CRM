@@ -291,8 +291,8 @@ model Quote {
   status            QuoteStatus        @default(DRAFT)
   validUntil        DateTime?
   subtotal          Decimal            @default(0) @db.Decimal(15, 0)
-  // Default VAT rate for new lines. Totals use QuoteItem.taxRate, never this column.
-  taxRate           Decimal            @default(10) @db.Decimal(5, 2)
+  // Default VAT rate for new lines (8% from 2026; existing rows keep their stored value). Totals use QuoteItem.taxRate, never this column.
+  taxRate           Decimal            @default(8)  @db.Decimal(5, 2)
   taxAmount         Decimal            @default(0) @db.Decimal(15, 0)
   total             Decimal            @default(0) @db.Decimal(15, 0)
   tableColumnWidths Json?

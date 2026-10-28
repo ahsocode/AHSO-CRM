@@ -39,8 +39,14 @@ export function formatVatRate(rate: VatRate | undefined): string {
 }
 
 /** Nhãn dòng tổng: "VAT 8%" / "Không chịu thuế (KCT)". */
-export function formatVatGroupLabel(rate: VatRate): string {
-  return rate === null ? "Không chịu thuế (KCT)" : `VAT ${formatVatRate(rate)}`;
+export function formatVatGroupLabel(rate: VatRate, baseText?: string): string {
+  const label = rate === null ? "Không chịu thuế (KCT)" : `VAT ${formatVatRate(rate)}`;
+  return baseText ? `${label} (trên ${baseText})` : label;
+}
+
+/** Chỉ ghi rõ "trên …" khi báo giá có nhiều hơn một nhóm thuế hoặc có dòng KCT. */
+export function shouldShowVatBase(breakdown: ReadonlyArray<Pick<VatBreakdownGroup, "rate">>): boolean {
+  return breakdown.length > 1 || breakdown.some((group) => group.rate === null);
 }
 
 /** Tóm tắt ngắn: "VAT 8% + 10%", "KCT", "VAT 10% + KCT". */

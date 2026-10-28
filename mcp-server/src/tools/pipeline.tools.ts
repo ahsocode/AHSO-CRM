@@ -17,6 +17,12 @@ const STAGE_EMOJI: Record<string, string> = {
   LOST: "❌",
 };
 
+async function fetchProjectBrief(id: string): Promise<{ id: string; code?: string; name?: string; status?: string }> {
+  const res = await getApiClient().get<unknown>(`/projects/${id}`);
+  const p = extractData<{ code?: string; name?: string; status?: string }>(res.data);
+  return { id, code: p.code, name: p.name, status: p.status };
+}
+
 export const pipelineTools: McpTool[] = [
   {
     name: "get_pipeline_overview",
@@ -180,12 +186,13 @@ export const pipelineTools: McpTool[] = [
       if (args["assignedTo"]) payload["assignedToId"] = args["assignedTo"];
 
       const res = await client.post<unknown>("/projects", payload);
-      const p = extractData<{ id: string; code: string; name: string; status: string }>(res.data);
+      const created = extractData<{ id: string; code?: string }>(res.data);
+      const p = await fetchProjectBrief(created.id);
 
       return (
         `✅ Đã tạo deal mới:\n` +
-        `${STAGE_EMOJI[p.status] ?? "📌"} **${p.name}** (${p.code})\n` +
-        `Giai đoạn: ${stageLabel(p.status)}\n` +
+        `${STAGE_EMOJI[p.status ?? ""] ?? "📌"} **${p.name ?? payload["name"]}** (${p.code ?? created.code ?? "—"})\n` +
+        `Giai đoạn: ${stageLabel(p.status ?? (payload["status"] as string))}\n` +
         `ID: ${p.id}\n\n` +
         `💡 Dùng update_project_stage để chuyển giai đoạn khi có tiến triển.`
       );
@@ -236,13 +243,14 @@ export const pipelineTools: McpTool[] = [
       }
 
       const res = await client.patch<unknown>(`/projects/${id}/status`, payload);
-      const p = extractData<{ code: string; name: string; status: string }>(res.data);
+      const upd = extractData<{ id?: string }>(res.data);
+      const p = await fetchProjectBrief(upd?.id ?? id);
 
-      const emoji = STAGE_EMOJI[p.status] ?? "📌";
+      const emoji = STAGE_EMOJI[p.status ?? newStage] ?? "📌";
       return (
         `✅ Đã cập nhật giai đoạn:\n` +
-        `${emoji} **${p.name}** (${p.code})\n` +
-        `Giai đoạn mới: **${stageLabel(p.status)}**` +
+        `${emoji} **${p.name ?? id}** (${p.code ?? "—"})\n` +
+        `Giai đoạn mới: **${stageLabel(p.status ?? newStage)}**` +
         (salesInvoiceDate ? `\n📅 Ngày hóa đơn bán ra: ${salesInvoiceDate}` : "")
       );
     },
@@ -276,9 +284,10 @@ export const pipelineTools: McpTool[] = [
       }
 
       const res = await client.patch<unknown>(`/projects/${args["projectId"] as string}`, payload);
-      const p = extractData<{ code: string; name: string }>(res.data);
+      const upd = extractData<{ id?: string }>(res.data);
+      const p = await fetchProjectBrief(upd?.id ?? (args["projectId"] as string));
 
-      return `✅ Đã cập nhật dự án ${p.code} — ${p.name}`;
+      return `✅ Đã cập nhật dự án ${p.code ?? "—"} — ${p.name ?? "—"}${p.status ? ` (${stageLabel(p.status)})` : ""}`;
     },
   },
 

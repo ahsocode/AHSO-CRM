@@ -17,6 +17,10 @@ services:
   backend:
     image: ahso-crm-backend:qa
     restart: "no"
+    environment:
+      # The e2e suite (~60 tests) shares one IP and exceeds the default 100 req/min,
+      # which made late tests fail with 429. Applies to the throw-away QA stack only.
+      THROTTLE_LIMIT: "2000"
     volumes:
       - qa_uploads:/app/uploads
   frontend:

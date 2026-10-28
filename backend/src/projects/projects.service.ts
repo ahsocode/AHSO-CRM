@@ -1332,6 +1332,20 @@ export class ProjectsService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Serialize payment writes that share a "total paid must not exceed value" check.
+      // Without these locks, two concurrent requests both read the same paid total under
+      // Read Committed and can jointly overpay. Locks must be taken BEFORE any read below.
+      // Order is always project -> contract/quote to avoid lock-order deadlocks.
+      // The project lock covers the project-level limit, which sums ALL project payments
+      // (including contract/quote ones), so every branch of this path takes it.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`project_payment_${id}`}))`;
+      if (dto.contractId) {
+        // Same key as ContractsService.createPayment so both write paths exclude each other.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`contract_payment_${dto.contractId}`}))`;
+      } else if (dto.quoteId) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`quote_payment_${dto.quoteId}`}))`;
+      }
+
       const project = await tx.project.findFirst({
         where: {
           ...buildWhere({}, user),

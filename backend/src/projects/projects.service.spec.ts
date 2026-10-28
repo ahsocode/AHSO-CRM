@@ -17,6 +17,7 @@ describe("ProjectsService", () => {
   let service: ProjectsService;
   let prisma: {
     $transaction: jest.Mock;
+    $executeRaw: jest.Mock;
     customer: {
       findFirst: jest.Mock;
     };
@@ -62,6 +63,7 @@ describe("ProjectsService", () => {
       $transaction: jest.fn(async (operations: Array<Promise<unknown>> | ((client: typeof prisma) => Promise<unknown>)) =>
         typeof operations === "function" ? operations(prisma) : Promise.all(operations)
       ),
+      $executeRaw: jest.fn().mockResolvedValue(1),
       customer: {
         findFirst: jest.fn()
       },
@@ -484,6 +486,88 @@ describe("ProjectsService", () => {
       )
     ).rejects.toThrow("Báo giá không thuộc dự án này hoặc đã bị xóa");
 
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
+  const lockKeys = () =>
+    prisma.$executeRaw.mock.calls.map((call) => {
+      const [sqlParts, key] = call as [TemplateStringsArray, string];
+      expect(sqlParts.join("?")).toContain("pg_advisory_xact_lock(hashtext(");
+      return key;
+    });
+
+  const paymentProject = {
+    id: "project-1",
+    code: "AHSO-001",
+    estimatedValue: 0,
+    payments: [],
+    customer: { assignedTo: { id: "user-1" } }
+  };
+
+  it("takes the shared contract payment lock before any read on the contract branch", async () => {
+    prisma.project.findFirst.mockResolvedValue(paymentProject);
+    prisma.contract.findFirst.mockResolvedValue({
+      id: "contract-1",
+      contractNo: "HD-2026-001",
+      value: 10_000_000,
+      payments: [{ amount: 8_000_000 }]
+    });
+
+    await expect(
+      service.createPayment(
+        "project-1",
+        { amount: 3_000_000, paidAt: new Date("2026-05-25T00:00:00.000Z"), contractId: "contract-1" },
+        user
+      )
+    ).rejects.toThrow("không được vượt giá trị hợp đồng HD-2026-001");
+
+    // Must match ContractsService.createPayment's key so both write paths exclude each other.
+    expect(lockKeys()).toEqual(["project_payment_project-1", "contract_payment_contract-1"]);
+    const lastLock = Math.max(...prisma.$executeRaw.mock.invocationCallOrder);
+    expect(lastLock).toBeLessThan(prisma.project.findFirst.mock.invocationCallOrder[0]);
+    expect(lastLock).toBeLessThan(prisma.contract.findFirst.mock.invocationCallOrder[0]);
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
+
+  it("takes the quote payment lock before any read on the quote branch", async () => {
+    prisma.project.findFirst.mockResolvedValue(paymentProject);
+    prisma.quote.findFirst.mockResolvedValue({
+      id: "quote-1",
+      quoteNo: "BG-2026-001",
+      total: 10_000_000,
+      payments: []
+    });
+    prisma.payment.create.mockResolvedValue({
+      id: "payment-q",
+      amount: 5_000_000,
+      paidAt: new Date("2026-05-25T00:00:00.000Z"),
+      method: null,
+      reference: null,
+      notes: null
+    });
+
+    await service.createPayment(
+      "project-1",
+      { amount: 5_000_000, paidAt: new Date("2026-05-25T00:00:00.000Z"), quoteId: "quote-1" },
+      user
+    );
+
+    expect(lockKeys()).toEqual(["project_payment_project-1", "quote_payment_quote-1"]);
+    const lastLock = Math.max(...prisma.$executeRaw.mock.invocationCallOrder);
+    expect(lastLock).toBeLessThan(prisma.project.findFirst.mock.invocationCallOrder[0]);
+    expect(lastLock).toBeLessThan(prisma.quote.findFirst.mock.invocationCallOrder[0]);
+  });
+
+  it("takes only the project payment lock before reading on the project branch", async () => {
+    prisma.project.findFirst.mockResolvedValue({ ...paymentProject, estimatedValue: 10_000_000 });
+
+    await expect(
+      service.createPayment("project-1", { amount: 11_000_000, paidAt: new Date("2026-05-25T00:00:00.000Z") }, user)
+    ).rejects.toThrow("không được vượt giá trị dự án AHSO-001");
+
+    expect(lockKeys()).toEqual(["project_payment_project-1"]);
+    expect(prisma.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.project.findFirst.mock.invocationCallOrder[0]
+    );
     expect(prisma.payment.create).not.toHaveBeenCalled();
   });
 });

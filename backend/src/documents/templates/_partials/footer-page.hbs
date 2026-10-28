@@ -1,10 +1,5 @@
-{{!-- Running footer with page number + tiny brand line.
-       WeasyPrint handles page counters through CSS paged media, so this
-       partial is kept as a document-tail fallback for template variants. --}}
-<footer class="page-footer">
-  <div class="page-footer__brand">{{company.name}}{{#if company.website}} · {{company.website}}{{/if}}</div>
-  <div class="page-footer__meta">
-    <span class="page-footer__doc">{{#if docNumber}}{{docNumber}}{{/if}}</span>
-    <span class="page-footer__generated">{{t "page"}}: <span class="pageNumber"></span></span>
-  </div>
-</footer>
+{{!-- Page footer. Company name, document number and "Trang x / y" are printed in the @page
+       margin boxes on EVERY page (helpers/page-margin-css.ts, injected by DocumentsService).
+       The old document-tail footer (empty `.pageNumber` span) is gone: it produced a blank
+       last page when it overflowed (audit E-13 / E-14, PAYMENT_REQUEST). Kept as a partial so
+       existing templates and variants that include it keep compiling. --}}

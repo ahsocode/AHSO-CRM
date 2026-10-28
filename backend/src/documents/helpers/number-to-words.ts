@@ -1,8 +1,8 @@
 /**
  * Vietnamese number-to-words converter.
  *
- * Covers integers from 0 up to 999,999,999,999
- * (nine hundred ninety nine billion, i.e. 999 tỷ).
+ * Covers integers from 0 up to Number.MAX_SAFE_INTEGER (larger "tỷ" counts are read
+ * recursively: 1.000.000.000.000 → "một nghìn tỷ"); throws RangeError above that.
  *
  * Examples:
  *   0                 → "không"
@@ -69,6 +69,18 @@ function readChunk(n: number, isLeading: boolean): string {
   return parts.join(" ").trim();
 }
 
+/** Read 1..999.999.999 that follows a "tỷ" chunk (leading zeros spoken: "không trăm …"). */
+function readBelowBillion(value: number): string {
+  const millions = Math.floor(value / 1_000_000);
+  const thousands = Math.floor((value % 1_000_000) / 1_000);
+  const units = value % 1_000;
+  const parts: string[] = [];
+  if (millions > 0) parts.push(`${readChunk(millions, false)} triệu`);
+  if (thousands > 0) parts.push(`${readChunk(thousands, false)} nghìn`);
+  if (units > 0) parts.push(readChunk(units, false));
+  return parts.join(" ");
+}
+
 export function numberToVietnameseWords(input: number): string {
   if (!Number.isFinite(input)) {
     return "";
@@ -81,14 +93,20 @@ export function numberToVietnameseWords(input: number): string {
     return "không";
   }
 
-  if (n > 999_999_999_999) {
-    // Out of supported range
-    throw new RangeError("Số vượt quá phạm vi hỗ trợ (999.999.999.999)");
+  if (n > Number.MAX_SAFE_INTEGER) {
+    // Beyond exact integer precision: refuse instead of printing a wrong amount.
+    throw new RangeError("Số vượt quá phạm vi hỗ trợ");
   }
 
   // Break into [tỷ, triệu, nghìn, đơn vị] chunks of 3 digits each.
   const billions = Math.floor(n / 1_000_000_000);
   n -= billions * 1_000_000_000;
+  if (billions > 999) {
+    // >= 1.000 tỷ: read the "tỷ" count recursively ("một nghìn hai trăm tỷ …").
+    const rest = n === 0 ? "" : ` ${readBelowBillion(n)}`;
+    const result = `${numberToVietnameseWords(billions)} tỷ${rest}`.replace(/\s+/g, " ").trim();
+    return isNegative ? `âm ${result}` : result;
+  }
   const millions = Math.floor(n / 1_000_000);
   n -= millions * 1_000_000;
   const thousands = Math.floor(n / 1_000);

@@ -1,4 +1,14 @@
-export type DateMode = "short" | "long" | "long-en" | "iso";
+export type DateMode = "short" | "long" | "long-body" | "long-en" | "iso" | "year";
+
+/** Every printed date is a Vietnamese calendar date, independent of the container TZ (audit E-08). */
+export const DOCUMENT_TIME_ZONE = "Asia/Ho_Chi_Minh";
+
+const PARTS_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  timeZone: DOCUMENT_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit"
+});
 
 function toDate(value: unknown): Date | null {
   if (!value) return null;
@@ -10,16 +20,11 @@ function toDate(value: unknown): Date | null {
   return null;
 }
 
-function pad2(n: number): string {
-  return n.toString().padStart(2, "0");
-}
-
-function formatShort(d: Date): string {
-  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
-}
-
-function formatLongVi(d: Date): string {
-  return `ngày ${pad2(d.getDate())} tháng ${pad2(d.getMonth() + 1)} năm ${d.getFullYear()}`;
+/** Day / month / year of `d` as seen in Asia/Ho_Chi_Minh (zero padded). */
+export function vietnamDateParts(d: Date): { day: string; month: string; year: string } {
+  const parts = PARTS_FORMAT.formatToParts(d);
+  const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "";
+  return { day: pick("day"), month: pick("month"), year: pick("year") };
 }
 
 const EN_MONTHS = [
@@ -37,33 +42,30 @@ const EN_MONTHS = [
   "December"
 ];
 
-function formatLongEn(d: Date): string {
-  return `${EN_MONTHS[d.getMonth()]} ${pad2(d.getDate())}, ${d.getFullYear()}`;
-}
+const MODES: DateMode[] = ["short", "long", "long-body", "long-en", "iso", "year"];
 
 /**
- * Handlebars helper: {{date d}} | {{date d "long"}} | {{date d "long-en"}}
- * | {{date d "iso"}}
+ * Handlebars helper: {{date d}} (dd/MM/yyyy) | {{date d "long"}} (ngày dd tháng MM năm yyyy)
+ * | {{date d "long-body"}} (dd tháng MM năm yyyy — for sentences that already say "ngày")
+ * | {{date d "long-en"}} | {{date d "iso"}} | {{date d "year"}} (yyyy).
  */
 export function dateHelper(value: unknown, modeArg?: unknown): string {
   const d = toDate(value);
   if (!d) return "";
-
-  const mode: DateMode =
-    typeof modeArg === "string" &&
-    (modeArg === "long" || modeArg === "long-en" || modeArg === "iso" || modeArg === "short")
-      ? (modeArg as DateMode)
-      : "short";
-
+  const mode: DateMode = typeof modeArg === "string" && MODES.includes(modeArg as DateMode) ? (modeArg as DateMode) : "short";
+  if (mode === "iso") return d.toISOString();
+  const { day, month, year } = vietnamDateParts(d);
   switch (mode) {
     case "long":
-      return formatLongVi(d);
+      return `ngày ${day} tháng ${month} năm ${year}`;
+    case "long-body":
+      return `${day} tháng ${month} năm ${year}`;
     case "long-en":
-      return formatLongEn(d);
-    case "iso":
-      return d.toISOString();
+      return `${EN_MONTHS[Number(month) - 1]} ${day}, ${year}`;
+    case "year":
+      return year;
     case "short":
     default:
-      return formatShort(d);
+      return `${day}/${month}/${year}`;
   }
 }

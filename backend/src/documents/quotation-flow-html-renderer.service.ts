@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { DocumentLanguage } from "./dto/document-type.enum";
+import { shouldShowTaxBase } from "./helpers/quote-tax-breakdown";
 
 type Primitive = string | number | boolean | Date | null | undefined;
 type RecordValue = Primitive | Record<string, unknown> | Array<unknown>;
@@ -186,15 +187,26 @@ export class QuotationFlowHtmlRendererService {
           </tr>`;
     }
 
+    const showBase = shouldShowTaxBase(groups.map((raw) => this.asRecord(raw)));
+    const baseWord = language === "vi-en" ? "on" : "trên";
+    const unit = language === "vi" ? "đ" : "VND";
+
     return groups
       .map((raw) => {
         const group = this.asRecord(raw);
         const isKct = group.rate === null || group.rate === undefined;
-        const label = isKct
-          ? language === "vi-en"
-            ? "Không chịu thuế (KCT) / Non-taxable (KCT)"
-            : "Không chịu thuế (KCT)"
-          : `${labels.vat} (${this.formatPercent(this.toNumber(group.rate))})`;
+        const baseText = showBase
+          ? ` (${baseWord} ${this.formatCurrency(this.toNumber(group.base))} ${unit})`
+          : "";
+        let label: string;
+        if (isKct) {
+          const kct = language === "vi-en" ? "Không chịu thuế (KCT) / Non-taxable (KCT)" : "Không chịu thuế (KCT)";
+          label = `${kct}${baseText}`;
+        } else if (showBase) {
+          label = `VAT ${this.formatPercent(this.toNumber(group.rate))}${baseText}`;
+        } else {
+          label = `${labels.vat} (${this.formatPercent(this.toNumber(group.rate))})`;
+        }
         return `<tr>
             <th>${this.escape(label)}</th>
             <td>${this.formatCurrency(this.toNumber(group.tax))}</td>
@@ -670,7 +682,7 @@ table.line-items {
       return this.escape(text);
     }
 
-    return this.escape(new Intl.DateTimeFormat("vi-VN").format(date));
+    return this.escape(new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }).format(date));
   }
 
   private formatCurrency(value: number): string {

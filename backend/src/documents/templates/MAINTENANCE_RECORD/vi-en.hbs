@@ -3,7 +3,7 @@
   <div class="classic-header__republic-line">{{t "republic_header"}}</div>
   <div class="classic-header__motto">{{t "independence_motto"}}</div>
   <div class="classic-header__dash">-----------------</div>
-  <h1 class="classic-header__title">{{t "document_title_maintenance_record"}}</h1>
+  <h1 class="classic-header__title">{{t "document_title_maintenance"}}</h1>
   <div class="classic-header__meta">
     <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> BBBT-{{contract.contractNo}}/{{date generatedAt "year"}}
   </div>
@@ -11,7 +11,7 @@
 
 <main class="classic-body">
   <p><strong>
-    <span class="lang-vi">{{t "maintenance_statement" date=(date maintenanceDate "long") contractNo=contract.contractNo}}</span>
+    <span class="lang-vi">{{t "maintenance_statement" date=(date maintenanceDate "long-body") contractNo=contract.contractNo}}</span>
     <span class="lang-en">Today, on {{date maintenanceDate "short"}}, the parties conduct maintenance and technical support for the system under Contract No. {{contract.contractNo}}.</span>
   </strong></p>
 
@@ -51,7 +51,7 @@
     <span class="lang-vi">{{t "maintenance_items"}}</span>
     <span class="lang-en">Maintenance Items</span>
   </h3>
-  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: 1pt solid text;">
+  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: var(--doc-line-strong);">
     <thead>
       <tr style="background-color: #f3f4f6;">
         <th style="width: 40pt; text-align: center;">STT/<span class="lang-en">No.</span></th>

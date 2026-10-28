@@ -1,0 +1,838 @@
+{
+  "acceptance_confirmation": {
+    "vi": "74f1cc02ba27154b",
+    "en": "f80fdad74b1e8925"
+  },
+  "acceptance_date": {
+    "vi": "50154fb59fecf8fc",
+    "en": "ac1dd7c817e42d8f"
+  },
+  "acceptance_items": {
+    "vi": "6d43aadccba1be6e",
+    "en": "5817bcd62b029983"
+  },
+  "acceptance_recipient": {
+    "vi": "ed63124fc1d2a3ce",
+    "en": "52d00486add179dd"
+  },
+  "acceptance_sender": {
+    "vi": "0e11c982eedcbddb",
+    "en": "895ac55d9941df85"
+  },
+  "acceptance_statement": {
+    "vi": "4f30cf8abc7237d3",
+    "en": "201d5e754a32b390"
+  },
+  "addendum_statement": {
+    "vi": "66719315d27e767e",
+    "en": "d58ac5f85e79f286"
+  },
+  "address": {
+    "vi": "249de6f53e5b14bb",
+    "en": "56ef8f20955f2564"
+  },
+  "after_agreement_statement": {
+    "vi": "eb83590452ed6a50",
+    "en": "a973e4cc5d6838ce"
+  },
+  "agreement_statement": {
+    "vi": "3cd9c52a22105481",
+    "en": "ec6b70e2ed140c5a"
+  },
+  "amount": {
+    "vi": "4cbdc55bad92c29d",
+    "en": "49e96d7cdf58069c"
+  },
+  "analysis": {
+    "vi": "2abf95875ed7d609",
+    "en": "e70d8eb9050021ad"
+  },
+  "ar_confirmation": {
+    "vi": "aa999abca612e6e3",
+    "en": "0903b69ebcd1acbf"
+  },
+  "ar_contract_no": {
+    "vi": "aca835dd2d343c08",
+    "en": "6159623d9fe3d491"
+  },
+  "ar_contract_value": {
+    "vi": "312f2eabc61f0c10",
+    "en": "455765139ce97937"
+  },
+  "ar_due_date": {
+    "vi": "16ab47e4c57ba634",
+    "en": "57870fd03032bf24"
+  },
+  "ar_invoiced": {
+    "vi": "5563780acd491f71",
+    "en": "afd8524a992d9697"
+  },
+  "ar_outstanding": {
+    "vi": "b90ec6f84c4274c9",
+    "en": "e681b89952c4a88c"
+  },
+  "ar_paid": {
+    "vi": "b2b127bdbd67e924",
+    "en": "fb81b961af456e5e"
+  },
+  "ar_period": {
+    "vi": "bddfd33dd05107b0",
+    "en": "6e795d4d3cc21c5c"
+  },
+  "ar_project_name": {
+    "vi": "4f139d43300b752a",
+    "en": "9859597853197476"
+  },
+  "ar_recon_statement": {
+    "vi": "7a7ef7809b1cfb6e",
+    "en": "64613a4a8e417075"
+  },
+  "ar_total": {
+    "vi": "67280b7109c04b04",
+    "en": "c9b3c38247f744e1"
+  },
+  "article_1": {
+    "vi": "ab762ebfcd71a0c7",
+    "en": "89633f38b0bf82aa"
+  },
+  "article_10": {
+    "vi": "79332f51bd95cc5f",
+    "en": "41d1d187c514c5c6"
+  },
+  "article_11": {
+    "vi": "33d0500b4c7a0c10",
+    "en": "d21da175da7abc50"
+  },
+  "article_12": {
+    "vi": "f622bc34a8492f60",
+    "en": "c1f487817dd0e098"
+  },
+  "article_2": {
+    "vi": "35232732527a06fa",
+    "en": "9beac597ec93c811"
+  },
+  "article_3": {
+    "vi": "4b1a95be8cbbff78",
+    "en": "fab0e729d11a8373"
+  },
+  "article_4": {
+    "vi": "4be1adeda77a307f",
+    "en": "080d327a040839dc"
+  },
+  "article_5": {
+    "vi": "421f01b1b13b5136",
+    "en": "77880fd3bda9e1f2"
+  },
+  "article_6": {
+    "vi": "15ee8497998ee666",
+    "en": "88db2aabcc6cf0b8"
+  },
+  "article_7": {
+    "vi": "4aa7fbc3f62711b6",
+    "en": "335c3455bdb79946"
+  },
+  "article_8": {
+    "vi": "1b21663705d6fdbf",
+    "en": "e676f6e5770188b3"
+  },
+  "article_9": {
+    "vi": "a56cada9510a6e2d",
+    "en": "55ac13bbb415eb04"
+  },
+  "article_change_content": {
+    "vi": "f109c91fc7ee17c3",
+    "en": "f46dc20468309b5c"
+  },
+  "article_general_terms": {
+    "vi": "648a85bb6cb29a47",
+    "en": "fcc56e247dee0ef0"
+  },
+  "attachments": {
+    "vi": "3e7f51cb776bb27e",
+    "en": "634de114775082f0"
+  },
+  "attention_to": {
+    "vi": "a3cacaef8412bb73",
+    "en": "c2eb8cd9d9564314"
+  },
+  "bank_account": {
+    "vi": "0ff9e28585352713",
+    "en": "a4783e73a66eeba7"
+  },
+  "bank_account_name": {
+    "vi": "f450de5acedbb34f",
+    "en": "2242971ddf4a5a50"
+  },
+  "bank_account_no": {
+    "vi": "0ff9e28585352713",
+    "en": "a4783e73a66eeba7"
+  },
+  "bank_branch": {
+    "vi": "13b42eec9cd81425",
+    "en": "52656e8104eef3fd"
+  },
+  "bank_info": {
+    "vi": "03c6b972e231a977",
+    "en": "33fb02f7bd69f719"
+  },
+  "bank_name": {
+    "vi": "6bbc912f18427c69",
+    "en": "0f331cb6ab70e276"
+  },
+  "banking_info": {
+    "vi": "b026a211e0f85a09",
+    "en": "5b008eb8efe350ca"
+  },
+  "basis_of_law": {
+    "vi": "74729fda4a90180b",
+    "en": "f99ab164ae6f342b"
+  },
+  "buyer": {
+    "vi": "f61cb1be54cdd4ee",
+    "en": "a2a54d668c45a20d"
+  },
+  "company_info": {
+    "vi": "549544f6adce2148",
+    "en": "c1327eec10bdbce2"
+  },
+  "conclusions": {
+    "vi": "dffdb73f8b47b8cb",
+    "en": "85475ea0b415634b"
+  },
+  "confidential_info": {
+    "vi": "9e66e51d428a3e13",
+    "en": "39394dc1f2210f71"
+  },
+  "context": {
+    "vi": "d0b682991f8ee1f7",
+    "en": "a6e600a10fede40f"
+  },
+  "continues_on_next_page": {
+    "vi": "29f904f9d78fd136",
+    "en": "95ee2c774c402992"
+  },
+  "contract_no": {
+    "vi": "3a3ef2f31f8584df",
+    "en": "6159623d9fe3d491"
+  },
+  "contract_value_total": {
+    "vi": "59beeb50543902e4",
+    "en": "800c3e3adcfb60a5"
+  },
+  "current_state": {
+    "vi": "198aa69efad7b7af",
+    "en": "7e710e6ea9ebf699"
+  },
+  "customer_code": {
+    "vi": "be5da4243b3dbb44",
+    "en": "88b967fb3f03695f"
+  },
+  "customer_info": {
+    "vi": "b9d1e9a3579d0f41",
+    "en": "8258db6d14e588f6"
+  },
+  "customer_rep": {
+    "vi": "ad81a03d12cc88b8",
+    "en": "8a9e61b8882bca50"
+  },
+  "date_place": {
+    "vi": "6759450335a5fe9b",
+    "en": "b7f438109a46abe6"
+  },
+  "deliverables": {
+    "vi": "77fd5853eac92c36",
+    "en": "c7ec4b92c29ba226"
+  },
+  "deliverer": {
+    "vi": "845f06df70969b28",
+    "en": "c3e626e8a592dec4"
+  },
+  "delivery_date": {
+    "vi": "0d2ec9507db091e3",
+    "en": "0b7feacc7d41fbc0"
+  },
+  "delivery_location": {
+    "vi": "d7c49eedd6a2708b",
+    "en": "f80433ab898fdf61"
+  },
+  "delivery_recipient": {
+    "vi": "99d6c0d08f864f7e",
+    "en": "68921f0532af52a5"
+  },
+  "delivery_sender": {
+    "vi": "85141e65d768c62b",
+    "en": "006a156163480a93"
+  },
+  "delivery_statement": {
+    "vi": "31056a702f3746bf",
+    "en": "64fcb6e0d57f63e7"
+  },
+  "description": {
+    "vi": "9eca256d0e8dc458",
+    "en": "526e0087cc3f254d"
+  },
+  "doc_date": {
+    "vi": "121f22fe8d6d89b4",
+    "en": "99c40ab405926cb5"
+  },
+  "doc_number": {
+    "vi": "82d17fe6b2079b85",
+    "en": "38178a20b470cfd1"
+  },
+  "document_format": {
+    "vi": "ee32d8b4bcafb3c1",
+    "en": "2f343666aaa88c44"
+  },
+  "document_name": {
+    "vi": "ec06eb05e06115c8",
+    "en": "9fbd6b8b4e801e93"
+  },
+  "document_note": {
+    "vi": "148147159ee0d725",
+    "en": "d8da2c49df39d91d"
+  },
+  "document_title_acceptance": {
+    "vi": "13c7724a84ba7f1e",
+    "en": "a1b7140aa223ee4a"
+  },
+  "document_title_contract": {
+    "vi": "d019421a9895c853",
+    "en": "daf2003d31468712"
+  },
+  "document_title_contract_addendum": {
+    "vi": "81a2937adf2223d0",
+    "en": "0113deb2cc08ce6d"
+  },
+  "document_title_delivery": {
+    "vi": "a721495bb13f607b",
+    "en": "46060b4e57bf0291"
+  },
+  "document_title_doc_handover": {
+    "vi": "64c915fceae521f2",
+    "en": "0b642fb209120d38"
+  },
+  "document_title_installation": {
+    "vi": "a8f7f394324c5b40",
+    "en": "10911a6bdd3b9c61"
+  },
+  "document_title_maintenance": {
+    "vi": "2ae68aa7f0932f92",
+    "en": "9af811c5477064f6"
+  },
+  "document_title_nda": {
+    "vi": "6053911d4a7d6e27",
+    "en": "dd0c226b9c4776e7"
+  },
+  "document_title_partial_acceptance": {
+    "vi": "8f7071853dcac97a",
+    "en": "88533169e8680b1e"
+  },
+  "document_title_payment_receipt": {
+    "vi": "49f9bb7e20721c1d",
+    "en": "ed7add260bdfa3ca"
+  },
+  "document_title_payment_request": {
+    "vi": "f8239031181e2d2b",
+    "en": "f27da20507a1bc61"
+  },
+  "document_title_proposal": {
+    "vi": "ef9ee39a7a38112a",
+    "en": "b71fd2fb570beb0c"
+  },
+  "document_title_quotation": {
+    "vi": "35117012c2985e5e",
+    "en": "c3cf7b51b0f7ddb6"
+  },
+  "document_title_reconciliation": {
+    "vi": "b5e2d683559fad66",
+    "en": "e3044854fed811c1"
+  },
+  "document_title_survey_report": {
+    "vi": "8a2a46ed045cb23a",
+    "en": "c031d1184f7bfdaa"
+  },
+  "document_title_warranty": {
+    "vi": "8e9ef865c51c1a3e",
+    "en": "3cfb815f15a4a165"
+  },
+  "documents_handed_over": {
+    "vi": "280f0b1bf47327bb",
+    "en": "a732adab32a521a7"
+  },
+  "effective_date": {
+    "vi": "9e920ad6629addfb",
+    "en": "079ab6c8c10f906f"
+  },
+  "email": {
+    "vi": "969ccbd3cf6300ec",
+    "en": "969ccbd3cf6300ec"
+  },
+  "executive_summary": {
+    "vi": "932c53d5df1451c7",
+    "en": "53d548aa01fc3eb7"
+  },
+  "fail": {
+    "vi": "b49da8acf7d7251d",
+    "en": "09230b3dbc35635f"
+  },
+  "findings": {
+    "vi": "d41b9c7862501603",
+    "en": "e171c2ff25b55e5a"
+  },
+  "general_terms_content": {
+    "vi": "19d4026f44b6facc",
+    "en": "e7494d87d40e6287"
+  },
+  "grand_total": {
+    "vi": "67280b7109c04b04",
+    "en": "20f3f9a87a9f694b"
+  },
+  "handover_confirmation": {
+    "vi": "7f601b63c8deecbe",
+    "en": "0839a975444148fc"
+  },
+  "handover_statement": {
+    "vi": "78366d7458b3c357",
+    "en": "4429d775e48aed2a"
+  },
+  "in_words": {
+    "vi": "035bb2daa0e5bfb4",
+    "en": "f0480ee76455aa40"
+  },
+  "independence_motto": {
+    "vi": "8e46c62a028e5355",
+    "en": "38b7bc1bdac154b1"
+  },
+  "installation_confirmation": {
+    "vi": "c7a3fb739475fd62",
+    "en": "a18d960518de35d2"
+  },
+  "installation_items": {
+    "vi": "0304ab94a492c70f",
+    "en": "7d0749314b5480e4"
+  },
+  "installation_name": {
+    "vi": "73f1ac40c9a51464",
+    "en": "37893b06e1f298b7"
+  },
+  "installation_note": {
+    "vi": "148147159ee0d725",
+    "en": "d8da2c49df39d91d"
+  },
+  "installation_recipient": {
+    "vi": "d01280df8e393a33",
+    "en": "68921f0532af52a5"
+  },
+  "installation_sender": {
+    "vi": "d1aae0671b685ebc",
+    "en": "c483787203f3e05a"
+  },
+  "installation_statement": {
+    "vi": "3d26c337c381d664",
+    "en": "b070d86ca5df3ea9"
+  },
+  "installation_status": {
+    "vi": "cb31de8160c9d623",
+    "en": "920e413c7d411b61"
+  },
+  "investment_summary": {
+    "vi": "0323cb7efc9cffe8",
+    "en": "c7c8e3b9c2817f6c"
+  },
+  "items_delivered": {
+    "vi": "2ee5e4e7fc36bc00",
+    "en": "e64b33a26e8186cf"
+  },
+  "legal_preamble": {
+    "vi": "9efeb611ab81e7c5",
+    "en": "eadd0d71c87bed0f"
+  },
+  "location": {
+    "vi": "4c781313b0bba118",
+    "en": "15b61974b2707a7b"
+  },
+  "maintenance_confirmation": {
+    "vi": "c7de1ed33a6ef9e4",
+    "en": "4416234fa7fcd008"
+  },
+  "maintenance_items": {
+    "vi": "64f5e5e290171291",
+    "en": "fb7d2e1de232d12f"
+  },
+  "maintenance_name": {
+    "vi": "6a354fa02bc97849",
+    "en": "4f11239e5e2f4f7b"
+  },
+  "maintenance_note": {
+    "vi": "148147159ee0d725",
+    "en": "d8da2c49df39d91d"
+  },
+  "maintenance_statement": {
+    "vi": "00f6ebf3423995d8",
+    "en": "dd6ecefb990f6e46"
+  },
+  "maintenance_status": {
+    "vi": "91ebb7a57a058245",
+    "en": "920e413c7d411b61"
+  },
+  "methodology": {
+    "vi": "69ef9de9201e0042",
+    "en": "f26d07e6b71e4259"
+  },
+  "nda_agreement_statement": {
+    "vi": "63cf030207b5b84d",
+    "en": "e67f1724bd3cda41"
+  },
+  "nda_article_1": {
+    "vi": "5db292cc90feefc1",
+    "en": "26f6f4b155e3b843"
+  },
+  "nda_article_2": {
+    "vi": "96a659186292da87",
+    "en": "cd42a0cf253b172f"
+  },
+  "nda_article_3": {
+    "vi": "bde9f48a4bcf33a3",
+    "en": "0e2586285005a888"
+  },
+  "nda_article_4": {
+    "vi": "86dd96ad140677a6",
+    "en": "b27b4060dc8f5008"
+  },
+  "nda_duration_content": {
+    "vi": "f97f940427d3fcab",
+    "en": "508847a90da8ca04"
+  },
+  "nda_purpose_content": {
+    "vi": "b96518bd666fe172",
+    "en": "066993d6185a9551"
+  },
+  "nda_responsibility_content": {
+    "vi": "b7dcb940490b794a",
+    "en": "fbf47d7c85cc82c1"
+  },
+  "nda_scope_content": {
+    "vi": "21df43025c7d7b5a",
+    "en": "c8a24ce5a4f09b1d"
+  },
+  "next_steps": {
+    "vi": "8a25c9845d87efb6",
+    "en": "759f4c0213571add"
+  },
+  "no": {
+    "vi": "5b3c9ba441e5afdd",
+    "en": "1ea442a134b2a184"
+  },
+  "notes": {
+    "vi": "148147159ee0d725",
+    "en": "8a7525b1492fb848"
+  },
+  "opportunities": {
+    "vi": "f6f5fc7adc0e8b85",
+    "en": "1e6e878c9dc923dd"
+  },
+  "original_copies_statement": {
+    "vi": "a372e0e8d5201ba8",
+    "en": "e57e7bf313e5fc3a"
+  },
+  "page": {
+    "vi": "ebbda8118feb2bb6",
+    "en": "0a30a815d67d7dd2"
+  },
+  "partial_acceptance_confirmation": {
+    "vi": "5b3c6ba361b2e598",
+    "en": "27f9a7fc0c99d2cf"
+  },
+  "partial_acceptance_statement": {
+    "vi": "573d6dfca48c73ad",
+    "en": "e8fa93ad43689612"
+  },
+  "party_a": {
+    "vi": "197a6dd34bd74c4c",
+    "en": "4cfb692c33464c0e"
+  },
+  "party_b": {
+    "vi": "2a6db9d10c469c99",
+    "en": "536f7b55205b71c6"
+  },
+  "pass": {
+    "vi": "03955114231e47d5",
+    "en": "ebdf8cc00bc4d9ce"
+  },
+  "payment_amount": {
+    "vi": "ce6fa33286c25682",
+    "en": "cb96e59f29f9e444"
+  },
+  "payment_amount_words": {
+    "vi": "3e6208b2a6f31c15",
+    "en": "af9d048e5b97067a"
+  },
+  "payment_approver": {
+    "vi": "fbf3381e64f1d720",
+    "en": "5d99648d13ed7acb"
+  },
+  "payment_creator": {
+    "vi": "86d6da749bfe9da4",
+    "en": "86f0ff1db799bec3"
+  },
+  "payment_deadline": {
+    "vi": "82ab553b68b28f5a",
+    "en": "4caafe306a1f319e"
+  },
+  "payment_method": {
+    "vi": "ddb9810b84df6c05",
+    "en": "f89a4e17557766ec"
+  },
+  "payment_reason": {
+    "vi": "ee6c6a45a9114572",
+    "en": "c9561fa4df77620f"
+  },
+  "payment_request_content": {
+    "vi": "e7fffa1d09f7c7c2",
+    "en": "abf949a76cd97c3f"
+  },
+  "payment_terms": {
+    "vi": "74b22fd1d29e5a2f",
+    "en": "6aa2bd0b3ef2bd54"
+  },
+  "phase_accepted": {
+    "vi": "a9d1d7b5a35f35c2",
+    "en": "df305f223eaadb05"
+  },
+  "phase_name": {
+    "vi": "8ddf6fba74e725c2",
+    "en": "3356b4eb0565f412"
+  },
+  "phase_note": {
+    "vi": "148147159ee0d725",
+    "en": "d8da2c49df39d91d"
+  },
+  "phase_ratio": {
+    "vi": "e86c12075924a813",
+    "en": "1348beb03ed9067b"
+  },
+  "phase_value": {
+    "vi": "c5103e16afa910f3",
+    "en": "3162e82f9b8ee328"
+  },
+  "phone": {
+    "vi": "8185f4c9f0678818",
+    "en": "63dceb8800b2dd4a"
+  },
+  "proposed_solution": {
+    "vi": "fd35efddfa39d611",
+    "en": "aa69222b736615d8"
+  },
+  "qty": {
+    "vi": "bdb17c5ea699c12b",
+    "en": "a9be9c3e9ab66e18"
+  },
+  "quality_status": {
+    "vi": "765552e72a514b64",
+    "en": "2c767a58c28167a3"
+  },
+  "quality_status_desc": {
+    "vi": "0c3d0f9427cb5d7d",
+    "en": "61b4428ce7426914"
+  },
+  "quotation_intro": {
+    "vi": "02d8ec038c2031ce",
+    "en": "9143bf6aba6713c9"
+  },
+  "quote_no": {
+    "vi": "688ca4accadb9313",
+    "en": "a987618787c63395"
+  },
+  "receipt_amount": {
+    "vi": "4690dd87019e1ea7",
+    "en": "90a515e749d9bbcb"
+  },
+  "receipt_cashier": {
+    "vi": "68fa13cb89812dc9",
+    "en": "ae9c884ce737dbaa"
+  },
+  "receipt_confirmation": {
+    "vi": "1d39e795065a7118",
+    "en": "9091ab706e8f322c"
+  },
+  "receipt_payer": {
+    "vi": "56d23ceec6137f9c",
+    "en": "fda659acd0bc6a6a"
+  },
+  "receipt_reason": {
+    "vi": "b410b23d9f8f1dae",
+    "en": "d4e8830a71c73edf"
+  },
+  "representative": {
+    "vi": "66bcc9c7fc552750",
+    "en": "5753cbd622eb6b7e"
+  },
+  "republic_header": {
+    "vi": "21f8fd4af35d695e",
+    "en": "8c5e658224809043"
+  },
+  "scope_of_work": {
+    "vi": "e7e14f2cd4e11e88",
+    "en": "a405305ff8349670"
+  },
+  "see_attached_quote": {
+    "vi": "713354e53f023183",
+    "en": "4099864ab610af51"
+  },
+  "seller": {
+    "vi": "72c3b6d3b311c842",
+    "en": "01498fa31d5a344a"
+  },
+  "signed_by": {
+    "vi": "e1c23f60d4bd442f",
+    "en": "3bb448f9305c1fd0"
+  },
+  "signed_copies_note": {
+    "vi": "d1bcc89e895c66bf",
+    "en": "c9bb8461858d1e15"
+  },
+  "solution": {
+    "vi": "630d5b1ead1d5a24",
+    "en": "22927695994eab58"
+  },
+  "status": {
+    "vi": "cb31de8160c9d623",
+    "en": "920e413c7d411b61"
+  },
+  "strengths": {
+    "vi": "491fbc76c9b1132d",
+    "en": "b11d27f88ceb483a"
+  },
+  "subject": {
+    "vi": "76b46e4e4d128dcf",
+    "en": "78f76459d525088a"
+  },
+  "subtotal": {
+    "vi": "d115fee427f06cab",
+    "en": "8c0f2cb34079ede4"
+  },
+  "survey_date": {
+    "vi": "5789241ee712a123",
+    "en": "31ae146f11d49783"
+  },
+  "survey_objectives": {
+    "vi": "529b718ca638bbbc",
+    "en": "9ccef2a1dd2e752c"
+  },
+  "surveyor": {
+    "vi": "b1a2417d651c4a02",
+    "en": "5bc419d358ed3a48"
+  },
+  "tax_code": {
+    "vi": "1c34a1cb6c0d88d9",
+    "en": "3bdda290d4b6a788"
+  },
+  "technician": {
+    "vi": "b3cebfeec7063be5",
+    "en": "9041ccc41723dbc9"
+  },
+  "terms_and_commitments": {
+    "vi": "11a01ad60777229b",
+    "en": "8b99a0ead4b45d01"
+  },
+  "test_name": {
+    "vi": "f2af1c67b36d97eb",
+    "en": "0d93f4a6a493bc50"
+  },
+  "test_note": {
+    "vi": "148147159ee0d725",
+    "en": "d8da2c49df39d91d"
+  },
+  "test_status": {
+    "vi": "43463f466f6c06c5",
+    "en": "6e7d50e84f4731ef"
+  },
+  "threats": {
+    "vi": "7e8eb983aa7fd853",
+    "en": "0631f1283421bd4e"
+  },
+  "timeline": {
+    "vi": "2ce18bf07e07e248",
+    "en": "f05f32905d094359"
+  },
+  "title": {
+    "vi": "3b3701e47e8677c3",
+    "en": "7e8cd2056da73a7f"
+  },
+  "total": {
+    "vi": "43f5ab531069303c",
+    "en": "49e96d7cdf58069c"
+  },
+  "unit": {
+    "vi": "ad3e867c0f34573d",
+    "en": "4e545960f1bffc13"
+  },
+  "unit_price": {
+    "vi": "9f98cd340f808b13",
+    "en": "14f6248d714ca9c7"
+  },
+  "validity": {
+    "vi": "b7872d7ca23f034e",
+    "en": "9c3050e867bfd4ac"
+  },
+  "validity_period_note": {
+    "vi": "1134baa8b7084116",
+    "en": "5a27f599de5332ed"
+  },
+  "value_proposition": {
+    "vi": "cd89eb4c47ae29de",
+    "en": "8db0f700dfe01572"
+  },
+  "vat": {
+    "vi": "4885a17383f949c7",
+    "en": "4885a17383f949c7"
+  },
+  "vat_note": {
+    "vi": "cfb06cddafe284c0",
+    "en": "5fe3348aacac31d5"
+  },
+  "warranty_cert_statement": {
+    "vi": "40e0709e8114b25f",
+    "en": "64668b5e2ec7c713"
+  },
+  "warranty_conditions": {
+    "vi": "242c7168629589c1",
+    "en": "8b293b1cc023ba53"
+  },
+  "warranty_conditions_desc": {
+    "vi": "0a90c5afa33ed452",
+    "en": "b5240b4bcd495209"
+  },
+  "warranty_contact": {
+    "vi": "baf99ba0b1a02cdd",
+    "en": "97ec91f28795ff26"
+  },
+  "warranty_end_date": {
+    "vi": "104e18c5005a43aa",
+    "en": "e970951cfb6b60b1"
+  },
+  "warranty_period": {
+    "vi": "0db27bdc2454da87",
+    "en": "e7098dffb80478ce"
+  },
+  "warranty_start_date": {
+    "vi": "2cf208328a138be4",
+    "en": "4c52faad5dc6e248"
+  },
+  "weaknesses": {
+    "vi": "bbf9fb7cd803a365",
+    "en": "af393b754ae38e85"
+  },
+  "website": {
+    "vi": "b5a229ac8becc603",
+    "en": "b5a229ac8becc603"
+  },
+  "witness": {
+    "vi": "d6c58ae699a72139",
+    "en": "5464a8914419f3a1"
+  },
+  "yes": {
+    "vi": "e25427d0c2bf3ab8",
+    "en": "85a39ab345d672ff"
+  }
+}

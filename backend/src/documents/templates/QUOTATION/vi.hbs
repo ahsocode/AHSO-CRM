@@ -55,7 +55,7 @@
       </tr>
       {{#each quote.taxBreakdown}}
       <tr>
-        <td colspan="6" class="text-right">{{#if this.isKct}}Không chịu thuế (KCT){{else}}{{t "vat"}} ({{this.rateLabel}}){{/if}}</td>
+        <td colspan="6" class="text-right">{{#if this.isKct}}Không chịu thuế (KCT){{#if this.showBase}} (trên {{currency this.base}}){{/if}}{{else}}{{#if this.showBase}}VAT {{this.rateLabel}} (trên {{currency this.base}}){{else}}{{t "vat"}} ({{this.rateLabel}}){{/if}}{{/if}}</td>
         <td class="text-right">{{currency this.tax}}</td>
       </tr>
       {{else}}

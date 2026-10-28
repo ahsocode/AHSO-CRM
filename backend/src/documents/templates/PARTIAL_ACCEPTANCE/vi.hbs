@@ -8,7 +8,7 @@
 </div>
 
 <main class="classic-body">
-  <p><strong>{{t "partial_acceptance_statement" date=(date acceptanceDate "long") contractNo=contract.contractNo}}</strong></p>
+  <p><strong>{{t "partial_acceptance_statement" date=(date acceptanceDate "long-body") contractNo=contract.contractNo}}</strong></p>
 
   <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "acceptance_sender"}} ({{t "party_b"}})</h3>
   <table class="classic-parties" width="100%">
@@ -43,7 +43,7 @@
   </table>
 
   <h3 style="margin-top: 16pt;">{{t "phase_accepted"}}</h3>
-  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: 1pt solid text;">
+  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: var(--doc-line-strong);">
     <thead>
       <tr style="background-color: #f3f4f6;">
         <th style="width: 40pt; text-align: center;">STT</th>

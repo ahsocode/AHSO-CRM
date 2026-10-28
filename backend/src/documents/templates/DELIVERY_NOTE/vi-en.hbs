@@ -11,7 +11,7 @@
 
 <main class="classic-body">
   <p><strong>
-    <span class="lang-vi">{{t "delivery_statement" date=(date deliveryDate "long") contractNo=contract.contractNo}}</span>
+    <span class="lang-vi">{{t "delivery_statement" date=(date deliveryDate "long-body") contractNo=contract.contractNo}}</span>
     <span class="lang-en">Today, on {{date deliveryDate "short"}}, the parties hand over goods/documents in accordance with Economic Contract No. {{contract.contractNo}}.</span>
   </strong></p>
 
@@ -55,7 +55,7 @@
     <span class="lang-vi">{{t "items_delivered"}}</span>
     <span class="lang-en">Details of Delivered Items</span>
   </h3>
-  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: 1pt solid text;">
+  <table border="1" cellpadding="6" cellspacing="0" style="width: 100%; border-collapse: collapse; margin-top: 8pt; border: var(--doc-line-strong);">
     <thead>
       <tr style="background-color: #f3f4f6;">
         <th style="width: 40pt; text-align: center;">STT/<span class="lang-en">No.</span></th>

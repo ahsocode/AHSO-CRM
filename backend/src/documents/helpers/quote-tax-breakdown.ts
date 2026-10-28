@@ -16,6 +16,13 @@ export interface QuoteTaxBreakdownGroup {
   /** "8%" (decimals trimmed) or "KCT". */
   rateLabel: string;
   isKct: boolean;
+  /** true when the printed VAT rows must state the base ("trên …"): >1 group or any KCT group. */
+  showBase: boolean;
+}
+
+/** Base text is shown only when the quote has more than one tax group or any KCT group. */
+export function shouldShowTaxBase(groups: ReadonlyArray<{ rate?: unknown }>): boolean {
+  return groups.length > 1 || groups.some((g) => g.rate === null || g.rate === undefined);
 }
 
 function toFiniteNumber(value: unknown): number {
@@ -47,17 +54,20 @@ export function buildQuoteTaxBreakdown(
     bases.set(rate, (bases.get(rate) ?? 0) + lineTotal);
   }
 
-  return [...bases.entries()]
+  const groups = [...bases.entries()]
     .map(([rate, base]) => ({
       rate,
       base,
       tax: rate === null ? 0 : Math.round((base * rate) / 100),
       rateLabel: formatTaxRateLabel(rate),
-      isKct: rate === null
+      isKct: rate === null,
+      showBase: false
     }))
     .sort((a, b) => {
       if (a.rate === null) return 1;
       if (b.rate === null) return -1;
       return b.rate - a.rate;
     });
+  const showBase = shouldShowTaxBase(groups);
+  return groups.map((g) => ({ ...g, showBase }));
 }

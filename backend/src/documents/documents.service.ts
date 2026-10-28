@@ -16,8 +16,9 @@ import { DocumentLayoutRendererService } from "./document-layout-renderer.servic
 import { DocumentNumberService } from "./document-number.service";
 import { DocumentTemplateVariantsService } from "./document-template-variants.service";
 import { DOCUMENT_ENTITY_TYPES, type DocumentEntityType, type DocumentLanguage } from "./dto/document-type.enum";
-import type { DocumentListFilterDto } from "./dto/render-document.dto";
+import { RENDER_EXTRA_ALLOWED_KEYS, type DocumentListFilterDto } from "./dto/render-document.dto";
 import { registerHelpers } from "./helpers";
+import { buildPageMarginCss } from "./helpers/page-margin-css";
 import { I18nService } from "./i18n.service";
 import { PdfRendererService } from "./pdf-renderer.service";
 import { QuotationFlowHtmlRendererService } from "./quotation-flow-html-renderer.service";
@@ -37,6 +38,16 @@ const PARTIAL_NAMES = [
   "customer-info",
   "legal-footer"
 ] as const;
+
+/** Keep only allow-listed `extra` keys (see RENDER_EXTRA_ALLOWED_KEYS). */
+export function pickAllowedExtra(extra: Record<string, unknown> | undefined): Record<string, unknown> {
+  const picked: Record<string, unknown> = {};
+  if (!extra || typeof extra !== "object") return picked;
+  for (const key of RENDER_EXTRA_ALLOWED_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(extra, key)) picked[key] = extra[key];
+  }
+  return picked;
+}
 
 @Injectable()
 export class DocumentsService implements OnModuleInit {
@@ -381,9 +392,12 @@ ${extraCss}
     }
 
     const entityData = await loader.call(this.dataLoader, entityId);
+    // Defence in depth for audit E-07 (the DTO already rejects unknown keys): only allow-listed
+    // display flags survive, and they are spread FIRST so settings (company, bank, logo, policies,
+    // signer) and loaded business data always win.
     const context = {
+      ...pickAllowedExtra(extra),
       ...base,
-      ...(extra ?? {}),
       ...entityData,
       type,
       language,
@@ -427,7 +441,7 @@ ${extraCss}
     const entry = getTemplateEntry(type);
     const template = await this.getTemplate(entry, language);
     const body = template(context);
-    return this.wrapHtml(body, title);
+    return this.wrapHtml(body, title, buildPageMarginCss(context, language));
   }
 
   private async readStoredDocument(number: string, pdfPath?: string | null) {

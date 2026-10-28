@@ -16,6 +16,22 @@ function normalizeDescription(text: string | null | undefined): string | null | 
   return text.replace(/\s+(?=✓\s)/g, "\n");
 }
 
+/**
+ * Company profile for templates. Settings store the tax id under `taxId`
+ * (settings/dto/update-setting.dto.ts) while templates print `company.taxCode`:
+ * expose both so the seller tax id is never blank (audit E-02). Wording is unchanged.
+ */
+export function buildCompanyProfile(company: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  const profile = { ...(company ?? {}) };
+  const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const taxCode = text(profile.taxCode) || text(profile.taxId);
+  if (taxCode) {
+    profile.taxCode = taxCode;
+    if (!text(profile.taxId)) profile.taxId = taxCode;
+  }
+  return profile;
+}
+
 export interface BaseDocumentContext {
   company: Record<string, unknown>;
   policies: Record<string, unknown>;
@@ -47,7 +63,7 @@ export class DocumentDataLoaderService {
     const settings = await this.settingsService.getAllSettings();
     const logo = await this.resolveLogo(settings.logo);
     return {
-      company: settings.company ?? {},
+      company: buildCompanyProfile(settings.company),
       policies: settings.policies ?? {},
       logo,
       language,

@@ -2,17 +2,22 @@ import { capitalizeFirst, numberToVietnameseWords } from "./number-to-words";
 
 export type CurrencyMode = "default" | "short" | "words";
 
-function toNumber(value: unknown): number {
-  if (value === null || value === undefined || value === "") return 0;
-  if (typeof value === "number") return value;
-  if (typeof value === "bigint") return Number(value);
-  if (typeof value === "object" && value !== null && "toNumber" in value) {
+/** Printed for a missing amount: never "0" (audit E-06a, section 3.7). */
+export const MISSING_AMOUNT = "—";
+
+/** null / undefined / "" / non-numeric / non-finite => null (missing), never 0. */
+export function toAmount(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  let n: number;
+  if (typeof value === "number") n = value;
+  else if (typeof value === "bigint") n = Number(value);
+  else if (typeof value === "object" && "toNumber" in value) {
     // Prisma Decimal compatibility
     const converter = (value as { toNumber?: () => number }).toNumber;
-    if (typeof converter === "function") return converter.call(value);
-  }
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
+    if (typeof converter !== "function") return null;
+    n = converter.call(value);
+  } else n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 function formatDefault(n: number): string {
@@ -49,11 +54,24 @@ function trimShort(n: number): string {
   return rounded.toString().replace(".", ",");
 }
 
-function formatWords(n: number): string {
-  const integer = Math.floor(Math.abs(n));
-  const words = numberToVietnameseWords(integer);
+/**
+ * Amount in words, " đồng" appended exactly once. Rounded like the figure printed next to it
+ * (Intl rounds half away from zero) so "1.235 VND" never reads "một nghìn hai trăm ba mươi tư".
+ * Never throws: an amount outside the supported range prints the missing marker.
+ */
+export function amountInWords(value: unknown): string {
+  const n = toAmount(value);
+  if (n === null) return MISSING_AMOUNT;
+  const integer = Math.round(Math.abs(n));
+  let words: string;
+  try {
+    words = numberToVietnameseWords(integer);
+  } catch {
+    return MISSING_AMOUNT;
+  }
+  if (!words) return MISSING_AMOUNT;
   const withCurrency = `${words} đồng`;
-  return capitalizeFirst(n < 0 ? `âm ${withCurrency}` : withCurrency);
+  return capitalizeFirst(n < 0 && integer > 0 ? `âm ${withCurrency}` : withCurrency);
 }
 
 /**
@@ -61,19 +79,12 @@ function formatWords(n: number): string {
  * {{currency amount "words"}}
  */
 export function currencyHelper(value: unknown, modeArg?: unknown): string {
-  const n = toNumber(value);
   const mode: CurrencyMode =
     typeof modeArg === "string" && (modeArg === "short" || modeArg === "words")
       ? (modeArg as CurrencyMode)
       : "default";
-
-  switch (mode) {
-    case "short":
-      return formatShort(n);
-    case "words":
-      return formatWords(n);
-    case "default":
-    default:
-      return formatDefault(n);
-  }
+  if (mode === "words") return amountInWords(value);
+  const n = toAmount(value);
+  if (n === null) return MISSING_AMOUNT;
+  return mode === "short" ? formatShort(n) : formatDefault(n);
 }

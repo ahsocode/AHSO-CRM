@@ -32,6 +32,16 @@
   margin: 20mm 18mm 22mm 22mm;
 }
 
+/* Line/border tokens (audit 3.5). Page numbers + doc number live in the @page margin boxes,
+   generated per document by helpers/page-margin-css.ts. */
+:root {
+  --doc-line-hair: 0.5pt solid #d1d5db;
+  --doc-line: 0.75pt solid #d1d5db;
+  --doc-line-strong: 0.75pt solid #374151;
+  --doc-line-dashed: 0.5pt dashed #e5e7eb;
+  --doc-line-dotted: 0.75pt dotted #374151;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -69,7 +79,7 @@ table {
 
 th,
 td {
-  border: 0.5pt solid #d1d5db;
+  border: var(--doc-line-hair);
   padding: 5pt 6pt;
   vertical-align: top;
 }
@@ -78,6 +88,36 @@ th {
   background: #f3f4f6;
   font-weight: 600;
   text-align: left;
+}
+
+thead {
+  display: table-header-group;
+}
+
+tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+p {
+  orphans: 3;
+  widows: 3;
+}
+
+/* Brand-coloured table header row: th must carry the colours itself, otherwise the generic
+   th background above wins and the header text becomes white-on-grey (audit E-14). */
+.table-head--brand th {
+  background: #1e3a8a;
+  color: #ffffff;
+  text-align: center;
 }
 
 .text-right {
@@ -106,24 +146,28 @@ th {
   break-inside: avoid;
 }
 
-/* Bilingual spans — only one variant is shown per language mode. */
+/* Bilingual spans (vi-en): inline, EN after VI separated by a slash, so labels such as
+   "Số: / No.:" or "( BÊN B / PARTY B )" stay on one line (audit E-12, display only). */
 .lang-vi,
 .lang-en {
-  display: block;
+  display: inline;
 }
 
 .lang-en {
   color: #4b5563;
-  font-size: 10.5pt;
   font-style: italic;
-  margin-top: 1pt;
+}
+
+.lang-vi + .lang-en::before {
+  content: " / ";
+  font-style: normal;
 }
 
 /* Running page footer (only visible when placed in tail). */
 .page-footer {
   margin-top: 18pt;
   padding-top: 6pt;
-  border-top: 0.5pt solid #d1d5db;
+  border-top: var(--doc-line-hair);
   font-size: 9pt;
   color: #6b7280;
   display: flex;
@@ -199,7 +243,7 @@ th {
 .company-info__bank {
   margin-top: 6pt;
   padding-top: 4pt;
-  border-top: 0.5pt dashed #e5e7eb;
+  border-top: var(--doc-line-dashed);
 }
 
 .company-info__bank-heading {
@@ -215,7 +259,7 @@ th {
 .legal-footer {
   margin-top: 18pt;
   padding-top: 6pt;
-  border-top: 0.5pt solid #e5e7eb;
+  border-top: var(--doc-line-hair);
   font-size: 9pt;
   color: #6b7280;
 }

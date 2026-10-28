@@ -1,4 +1,4 @@
-import { buildQuoteTaxBreakdown } from "./quote-tax-breakdown";
+import { buildQuoteTaxBreakdown, shouldShowTaxBase } from "./quote-tax-breakdown";
 
 describe("buildQuoteTaxBreakdown", () => {
   it("groups by numeric rate, sorts desc with KCT last and rounds tax per group", () => {
@@ -35,5 +35,20 @@ describe("buildQuoteTaxBreakdown", () => {
 
   it("returns an empty list without items", () => {
     expect(buildQuoteTaxBreakdown([])).toEqual([]);
+  });
+});
+
+describe("shouldShowTaxBase", () => {
+  it("is false only for a single taxed group", () => {
+    expect(shouldShowTaxBase([{ rate: 10 }])).toBe(false);
+    expect(shouldShowTaxBase([{ rate: 8 }, { rate: 10 }])).toBe(true);
+    expect(shouldShowTaxBase([{ rate: null }])).toBe(true);
+    expect(buildQuoteTaxBreakdown([{ quantity: 1, unitPrice: 1, taxRate: 8 }])[0].showBase).toBe(false);
+    expect(
+      buildQuoteTaxBreakdown([
+        { quantity: 1, unitPrice: 1, taxRate: 8 },
+        { quantity: 1, unitPrice: 1, taxRate: null }
+      ]).every((g) => g.showBase)
+    ).toBe(true);
   });
 });

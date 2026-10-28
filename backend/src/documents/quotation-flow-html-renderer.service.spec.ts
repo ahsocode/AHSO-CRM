@@ -92,7 +92,7 @@ describe("QuotationFlowHtmlRendererService", () => {
     expect(html).not.toContain("Không chịu thuế");
   });
 
-  it("renders one VAT row per breakdown group, KCT last, summing to the grand total", () => {
+  it("renders one VAT row per breakdown group with bases, KCT last", () => {
     const multi = {
       ...context,
       quote: {
@@ -109,13 +109,61 @@ describe("QuotationFlowHtmlRendererService", () => {
     };
 
     const viHtml = service.renderBody(multi, "vi");
-    expect(viHtml).toContain("Thuế (10%)");
-    expect(viHtml).toContain("Thuế (8%)");
-    expect(viHtml.indexOf("Thuế (10%)")).toBeLessThan(viHtml.indexOf("Thuế (8%)"));
-    expect(viHtml.indexOf("Thuế (8%)")).toBeLessThan(viHtml.indexOf("Không chịu thuế (KCT)"));
+    expect(viHtml).toContain("VAT 10% (trên 100.000 đ)");
+    expect(viHtml).toContain("VAT 8% (trên 100.000 đ)");
+    expect(viHtml.indexOf("VAT 10%")).toBeLessThan(viHtml.indexOf("VAT 8%"));
+    expect(viHtml.indexOf("VAT 8%")).toBeLessThan(viHtml.indexOf("Không chịu thuế (KCT) (trên 100.000 đ)"));
 
     const enHtml = service.renderBody(multi, "vi-en");
-    expect(enHtml).toContain("VAT (10%)");
-    expect(enHtml).toContain("Non-taxable (KCT)");
+    expect(enHtml).toContain("VAT 10% (on 100.000 VND)");
+    expect(enHtml).toContain("Non-taxable (KCT) (on 100.000 VND)");
+  });
+
+  it("states the base for 8% + KCT line", () => {
+    const mixed = {
+      ...context,
+      quote: {
+        ...context.quote,
+        taxBreakdown: [
+          { rate: 8, base: 226000000, tax: 18080000 },
+          { rate: null, base: 69000000, tax: 0 }
+        ]
+      }
+    };
+    const vi = service.renderBody(mixed, "vi");
+    expect(vi).toContain("VAT 8% (trên 226.000.000 đ)");
+    expect(vi).toContain("Không chịu thuế (KCT) (trên 69.000.000 đ)");
+    expect(vi).toContain("18.080.000");
+    const en = service.renderBody(mixed, "vi-en");
+    expect(en).toContain("VAT 8% (on 226.000.000 VND)");
+    expect(en).toContain("Non-taxable (KCT) (on 69.000.000 VND)");
+  });
+
+  it("keeps the old label for a single taxed group without KCT", () => {
+    const single = {
+      ...context,
+      quote: { ...context.quote, taxBreakdown: [{ rate: 10, base: 100000000, tax: 10000000 }] }
+    };
+    const vi = service.renderBody(single, "vi");
+    expect(vi).toContain("Thuế (10%)");
+    expect(vi).not.toContain("trên");
+    expect(service.renderBody(single, "vi-en")).not.toContain("(on ");
+  });
+
+  it("mixes 8% and 10% groups with bases", () => {
+    const mixed = {
+      ...context,
+      quote: {
+        ...context.quote,
+        taxBreakdown: [
+          { rate: 10, base: 50000000, tax: 5000000 },
+          { rate: 8, base: 150000000, tax: 12000000 }
+        ]
+      }
+    };
+    const vi = service.renderBody(mixed, "vi");
+    expect(vi).toContain("VAT 10% (trên 50.000.000 đ)");
+    expect(vi).toContain("VAT 8% (trên 150.000.000 đ)");
+    expect(vi).not.toContain("Không chịu thuế");
   });
 });

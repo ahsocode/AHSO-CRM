@@ -31,7 +31,7 @@ describe("CostReportsService", () => {
   it("uses the contract source VAT and subtracts stock and direct costs before computing margin", async () => {
     prisma.contract.findFirst.mockResolvedValue({
       id: "c", contractNo: "HD-1", value: 10800000,
-      items: [{ total: 10000000, quoteItem: { quote: { taxRate: 8 } } }]
+      items: [{ total: 10000000, quoteItem: { taxRate: 8 } }]
     });
     prisma.quote.findFirst.mockResolvedValue({ id: "q-new", taxRate: 10, acceptedItemIds: [], items: [], subtotal: 20000000 });
     prisma.projectMaterialAllocation.findMany.mockResolvedValue([
@@ -41,6 +41,21 @@ describe("CostReportsService", () => {
 
     const result = await service.getCostSummary("p", user);
     expect(result).toMatchObject({ revenue: 10000000, materialCost: 300000, directCost: 2000000, grossProfit: 7700000, grossMarginPct: 77 });
+  });
+
+  it("backs net revenue out of a contract whose source lines have mixed VAT (8% + KCT)", async () => {
+    // 10,000,000 @8% -> 10,800,000 gross; 5,000,000 KCT -> 5,000,000 gross; contract value = 15,800,000
+    prisma.contract.findFirst.mockResolvedValue({
+      id: "c", contractNo: "HD-4", value: 15800000,
+      items: [
+        { total: 10000000, quoteItem: { taxRate: 8 } },
+        { total: 5000000, quoteItem: { taxRate: null } }
+      ]
+    });
+    prisma.quote.findFirst.mockResolvedValue(null);
+
+    const result = await service.getCostSummary("p", user);
+    expect(result).toMatchObject({ revenue: 15000000, revenueSource: "CONTRACT", revenueVatAssumed: false });
   });
 
   it("assumes standard VAT when a contract has no items and no accepted quote", async () => {

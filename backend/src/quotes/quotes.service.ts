@@ -7,6 +7,7 @@ import { loadBomTotals } from "../boms/bom-graph";
 import {
   buildQuoteItemsCreateInput,
   buildQuoteTotals,
+  buildStoredQuoteTaxBreakdown,
   buildTableColumnWidthsPayload,
   calculateAcceptedQuoteTotal,
   formatCurrency,
@@ -14,6 +15,7 @@ import {
   isExpiringSoon,
   mapBulkMutationResult,
   normalizeQuoteTableColumnWidths,
+  resolveQuoteItemTaxRates,
   resolveQuoteStatusPayload,
   type QuoteTableColumnWidths
 } from "./quote-helpers";
@@ -90,6 +92,12 @@ export class QuotesService {
             select: {
               items: true
             }
+          },
+          items: {
+            select: {
+              total: true,
+              taxRate: true
+            }
           }
         }
       }),
@@ -114,6 +122,7 @@ export class QuotesService {
         validUntil: quote.validUntil,
         subtotal: Number(quote.subtotal),
         taxAmount: Number(quote.taxAmount),
+        taxBreakdown: buildStoredQuoteTaxBreakdown(quote.items),
         total: Number(quote.total),
         createdAt: quote.createdAt,
         updatedAt: quote.updatedAt,
@@ -167,6 +176,7 @@ export class QuotesService {
       subtotal: Number(quote.subtotal),
       taxRate: Number(quote.taxRate),
       taxAmount: Number(quote.taxAmount),
+      taxBreakdown: buildStoredQuoteTaxBreakdown(quote.items),
       total: Number(quote.total),
       tableColumnWidths: normalizeQuoteTableColumnWidths(quote.tableColumnWidths),
       terms: quote.terms,
@@ -221,6 +231,7 @@ export class QuotesService {
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         total: Number(item.total),
+        taxRate: item.taxRate === null ? null : Number(item.taxRate),
         bomId: item.bomId,
         bom: item.bomId ? costing.boms.get(item.bomId) ?? null : null,
         costEstimate: costing.byItem.get(item.id) ?? null
@@ -260,7 +271,8 @@ export class QuotesService {
 
       const quoteNo = await this.generateNextQuoteNo(tx);
       const version = (nextVersion._max.version ?? 0) + 1;
-      const totals = buildQuoteTotals(dto.items, dto.taxRate);
+      const items = resolveQuoteItemTaxRates(dto.items, dto.taxRate);
+      const totals = buildQuoteTotals(items, dto.taxRate);
 
       const quote = await tx.quote.create({
         data: {
@@ -287,7 +299,7 @@ export class QuotesService {
           projectId: dto.projectId,
           createdById: user.sub,
           items: {
-            create: buildQuoteItemsCreateInput(dto.items)
+            create: buildQuoteItemsCreateInput(items)
           }
         },
         select: {
@@ -316,7 +328,8 @@ export class QuotesService {
 
       await this.assertBomsBelongToProject(tx, quote.projectId, dto.items);
 
-      const totals = buildQuoteTotals(dto.items, dto.taxRate);
+      const items = resolveQuoteItemTaxRates(dto.items, dto.taxRate);
+      const totals = buildQuoteTotals(items, dto.taxRate);
       const updatedQuote = await tx.quote.update({
         where: {
           id
@@ -335,7 +348,7 @@ export class QuotesService {
           ...resolveQuoteStatusPayload(quote, dto.status),
           items: {
             deleteMany: {},
-            create: buildQuoteItemsCreateInput(dto.items)
+            create: buildQuoteItemsCreateInput(items)
           }
         },
         select: {
@@ -387,6 +400,8 @@ export class QuotesService {
         unit: item.unit ?? undefined,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
+        // Copy each line's own VAT (null = KCT stays KCT); never re-apply the quote default
+        taxRate: item.taxRate === null ? null : Number(item.taxRate),
         bomId: item.bomId
       }));
       const totals = buildQuoteTotals(itemInputs, Number(quote.taxRate));
@@ -550,7 +565,7 @@ export class QuotesService {
       });
 
       const projectQuoteTotal = dto.status === "ACCEPTED"
-        ? calculateAcceptedQuoteTotal(quote.items, quote.taxRate, resolvedAcceptedItemIds, quote.total)
+        ? calculateAcceptedQuoteTotal(quote.items, resolvedAcceptedItemIds, quote.total)
         : Number(quote.total);
 
       await this.syncProjectStatusForQuote(tx, quote.projectId, quote.project.status, dto.status, projectQuoteTotal);

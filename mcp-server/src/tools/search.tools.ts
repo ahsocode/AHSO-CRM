@@ -124,6 +124,11 @@ export const searchTools: McpTool[] = [
         notes: { type: "string", description: "Ghi chú thêm (tuỳ chọn)" },
         itemName: { type: "string", description: "Tên hạng mục đầu tiên (tuỳ chọn, mặc định 'Hạng mục báo giá')" },
         itemPrice: { type: "number", description: "Đơn giá hạng mục đầu tiên (tuỳ chọn)" },
+        taxRate: { type: "number", description: "VAT mặc định cho dòng mới, % (0, 5, 8, 10; mặc định 10)" },
+        itemTaxRate: {
+          type: ["number", "null"],
+          description: "VAT của hạng mục đầu tiên, %: 0, 5, 8, 10; null = KCT (không chịu thuế). Bỏ trống = dùng taxRate mặc định",
+        },
       },
       required: ["projectId"],
     },
@@ -145,13 +150,14 @@ export const searchTools: McpTool[] = [
         name: (args["itemName"] as string) || "Hạng mục báo giá",
         quantity: 1,
         unitPrice: (args["itemPrice"] as number) ?? 0,
+        ...("itemTaxRate" in args ? { taxRate: args["itemTaxRate"] as number | null } : {}),
       };
 
       const payload: Record<string, unknown> = {
         projectId: args["projectId"],
         validUntil: validUntil.toISOString(),
         status: "DRAFT",
-        taxRate: 10,
+        taxRate: (args["taxRate"] as number | undefined) ?? 10,
         items: [firstItem],
       };
       if (args["notes"]) payload["internalNote"] = args["notes"];

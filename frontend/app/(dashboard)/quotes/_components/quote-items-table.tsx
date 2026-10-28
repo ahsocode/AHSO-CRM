@@ -24,14 +24,22 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import {
+  formatVatGroupLabel,
+  optionValueToVatRate,
+  vatOptionsFor,
+  vatRateToOptionValue,
+  type VatBreakdownGroup
+} from "@/lib/vat";
 import type { BomListItem } from "@/types/bom";
 import { createEmptyQuoteItem, type QuoteFormValues } from "./form-schemas";
 import { MaterialPickerButton } from "./material-picker-button";
 
 const ROW_GRID =
-  "grid grid-cols-[20px_28px_minmax(0,1fr)_64px_64px_112px_112px_32px] items-center gap-1.5";
+  "grid grid-cols-[20px_28px_minmax(0,1fr)_64px_64px_112px_88px_112px_32px] items-center gap-1.5";
 
 const NUMBER_INPUT_CLASS =
   "h-9 px-2 text-right tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
@@ -70,8 +78,9 @@ export function QuoteItemsTable({
   isEditable,
   items,
   subtotal,
-  taxRate,
-  taxAmount,
+  defaultTaxRate,
+  taxBreakdown,
+  taxAmount: _taxAmount,
   grandTotal,
   boms,
   onAttachBom
@@ -81,7 +90,8 @@ export function QuoteItemsTable({
   isEditable: boolean;
   items: QuoteFormValues["items"];
   subtotal: number;
-  taxRate: number;
+  defaultTaxRate: number;
+  taxBreakdown: VatBreakdownGroup[];
   taxAmount: number;
   grandTotal: number;
   boms: BomListItem[];
@@ -120,7 +130,7 @@ export function QuoteItemsTable({
   }
 
   function appendRow() {
-    append(createEmptyQuoteItem());
+    append(createEmptyQuoteItem(defaultTaxRate));
     setPendingFocusIndex(fields.length);
   }
 
@@ -144,6 +154,7 @@ export function QuoteItemsTable({
           <span>ĐVT</span>
           <span className="text-right">SL</span>
           <span className="text-right">Đơn giá</span>
+          <span>VAT</span>
           <span className="text-right">Thành tiền</span>
           <span />
         </div>
@@ -249,6 +260,25 @@ export function QuoteItemsTable({
                           })}
                         />
 
+                        <Select
+                          aria-label={`VAT dòng ${index + 1}`}
+                          disabled={!isEditable}
+                          className="h-9 px-1.5 text-sm"
+                          value={vatRateToOptionValue(items[index]?.taxRate === undefined ? defaultTaxRate : items[index]?.taxRate)}
+                          onChange={(event) =>
+                            form.setValue(`items.${index}.taxRate`, optionValueToVatRate(event.target.value), {
+                              shouldDirty: true,
+                              shouldValidate: true
+                            })
+                          }
+                        >
+                          {vatOptionsFor([items[index]?.taxRate === undefined ? defaultTaxRate : items[index]?.taxRate]).map((option) => (
+                            <option key={option.label} value={vatRateToOptionValue(option.value)}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </Select>
+
                         <div className="text-right text-sm font-semibold tabular-nums text-text-primary">
                           <CurrencyDisplay amount={rowTotal} />
                         </div>
@@ -332,12 +362,26 @@ export function QuoteItemsTable({
               <CurrencyDisplay amount={subtotal} />
             </span>
           </div>
-          <div className="flex items-center justify-between text-text-secondary">
-            <span>VAT {taxRate}%</span>
-            <span className="tabular-nums text-text-primary">
-              <CurrencyDisplay amount={taxAmount} />
-            </span>
-          </div>
+          {taxBreakdown.length === 0 ? (
+            <div className="flex items-center justify-between text-text-secondary">
+              <span>VAT</span>
+              <span className="tabular-nums text-text-primary">
+                <CurrencyDisplay amount={0} />
+              </span>
+            </div>
+          ) : (
+            taxBreakdown.map((group) => (
+              <div
+                key={group.rate === null ? "kct" : group.rate}
+                className="flex items-center justify-between text-text-secondary"
+              >
+                <span>{formatVatGroupLabel(group.rate)}</span>
+                <span className="tabular-nums text-text-primary">
+                  <CurrencyDisplay amount={group.tax} />
+                </span>
+              </div>
+            ))
+          )}
           <div className="flex items-center justify-between font-bold text-text-primary">
             <span>Tổng cộng</span>
             <span className="tabular-nums">

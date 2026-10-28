@@ -167,7 +167,8 @@ describe("QuotesService", () => {
               unit: undefined,
               quantity: 2,
               unitPrice: 100,
-              total: 200
+              total: 200,
+              taxRate: 10
             },
             {
               order: 2,
@@ -176,7 +177,8 @@ describe("QuotesService", () => {
               unit: undefined,
               quantity: 1,
               unitPrice: 50,
-              total: 50
+              total: 50,
+              taxRate: 10
             }
           ]
         }
@@ -210,11 +212,13 @@ describe("QuotesService", () => {
       items: [
         {
           id: "quote-item-1",
-          total: 100
+          total: 100,
+          taxRate: 10
         },
         {
           id: "quote-item-2",
-          total: 150
+          total: 150,
+          taxRate: 10
         }
       ],
       project: {
@@ -286,11 +290,13 @@ describe("QuotesService", () => {
       items: [
         {
           id: "quote-item-1",
-          total: 100
+          total: 100,
+          taxRate: 10
         },
         {
           id: "quote-item-2",
-          total: 500
+          total: 500,
+          taxRate: 10
         }
       ],
       project: {
@@ -393,8 +399,8 @@ describe("QuotesService", () => {
           customer: { id: "c", name: "C", shortName: null, taxCode: null, address: null, status: "ACTIVE", assignedTo: null, contacts: [] }
         },
         items: [
-          { id: "i1", order: 1, name: "Máy", description: null, unit: null, quantity: 2, unitPrice: 1000, total: 2000, bomId: "bom-9" },
-          { id: "i2", order: 2, name: "Dịch vụ", description: null, unit: null, quantity: 1, unitPrice: 1000, total: 1000, bomId: null }
+          { id: "i1", order: 1, name: "Máy", description: null, unit: null, quantity: 2, unitPrice: 1000, total: 2000, taxRate: 10, bomId: "bom-9" },
+          { id: "i2", order: 2, name: "Dịch vụ", description: null, unit: null, quantity: 1, unitPrice: 1000, total: 1000, taxRate: 10, bomId: null }
         ]
       };
       jest.spyOn(service as unknown as { findAccessibleQuote: () => Promise<unknown> }, "findAccessibleQuote").mockResolvedValue(quoteRow);
@@ -424,12 +430,122 @@ describe("QuotesService", () => {
         acceptedItemIds: [], createdAt: new Date(), updatedAt: new Date(), createdBy: null,
         project: { id: "p", code: "P", name: "P", status: "QUOTING", estimatedValue: 0, contract: null,
           customer: { id: "c", name: "C", shortName: null, taxCode: null, address: null, status: "ACTIVE", assignedTo: null, contacts: [] } },
-        items: [{ id: "i1", order: 1, name: "Máy", description: null, unit: null, quantity: 1, unitPrice: 0, total: 0, bomId: "bom-9" }]
+        items: [{ id: "i1", order: 1, name: "Máy", description: null, unit: null, quantity: 1, unitPrice: 0, total: 0, taxRate: 10, bomId: "bom-9" }]
       });
 
       const detail = await service.findOne("q1", limited);
       expect(detail.costEstimate).toBeNull();
       expect(detail.items[0].costEstimate).toBeNull();
+    });
+  });
+
+  describe("per-line VAT", () => {
+    // Hand-computed: 10% group 2_500_010 -> 250_001; 8% group 999_999 + 1_000_001 = 2_000_000 -> 160_000;
+    // 0% group 700_000 -> 0; KCT 500_000 -> 0. Subtotal 5_700_010, VAT 410_001, total 6_110_011.
+    const mixedItems = [
+      { name: "Dòng 8%", quantity: 3, unitPrice: 333_333, taxRate: 8 },
+      { name: "Dòng mặc định", quantity: 2, unitPrice: 1_250_005 },
+      { name: "Dòng KCT", quantity: 1, unitPrice: 500_000, taxRate: null },
+      { name: "Dòng 0%", quantity: 1, unitPrice: 700_000, taxRate: 0 },
+      { name: "Dòng 8.00%", quantity: 1, unitPrice: 1_000_001, taxRate: 8.0 }
+    ];
+
+    it("create persists resolved line rates and grouped totals", async () => {
+      tx.project.findFirst.mockResolvedValue({ id: "project-1", status: "QUOTING" });
+      tx.quote.aggregate.mockResolvedValue({ _max: { version: 0 } });
+      tx.quote.findFirst.mockResolvedValue(null);
+      tx.quote.create.mockResolvedValue({ id: "q1", quoteNo: "BG-1" });
+
+      await service.create({ projectId: "project-1", status: "DRAFT", taxRate: 10, items: mixedItems }, user);
+
+      const data = tx.quote.create.mock.calls[0][0].data;
+      expect(data).toEqual(expect.objectContaining({ subtotal: 5_700_010, taxRate: 10, taxAmount: 410_001, total: 6_110_011 }));
+      expect(data.items.create.map((item: { taxRate: number | null }) => item.taxRate)).toEqual([8, 10, null, 0, 8]);
+    });
+
+    it("update persists resolved line rates (omitted = quote default) and grouped totals", async () => {
+      tx.quote.findFirst.mockResolvedValue({
+        id: "q1", projectId: "project-1", status: "DRAFT", sentAt: null, acceptedAt: null,
+        items: [], project: { id: "project-1", status: "QUOTING", contract: null }
+      });
+      tx.quote.update.mockResolvedValue({ id: "q1", quoteNo: "BG-1" });
+
+      await service.update("q1", { projectId: "project-1", status: "DRAFT", taxRate: 5, items: [
+        { name: "Mặc định 5%", quantity: 1, unitPrice: 1_010 },
+        { name: "KCT", quantity: 1, unitPrice: 990, taxRate: null }
+      ] }, user);
+
+      const data = tx.quote.update.mock.calls[0][0].data;
+      // 5% of 1_010 = 50.5 -> 51 (half-up); KCT adds nothing
+      expect(data).toEqual(expect.objectContaining({ subtotal: 2_000, taxRate: 5, taxAmount: 51, total: 2_051 }));
+      expect(data.items.create.map((item: { taxRate: number | null }) => item.taxRate)).toEqual([5, null]);
+    });
+
+    it("duplicate copies each line's rate instead of re-applying the quote default", async () => {
+      tx.quote.findFirst
+        .mockResolvedValueOnce({
+          id: "q1", projectId: "project-1", taxRate: 10, validUntil: null, tableColumnWidths: null,
+          terms: null, deliveryTerms: null, internalNote: null,
+          items: [
+            { name: "8%", description: null, unit: null, quantity: 1, unitPrice: 1_000, total: 1_000, taxRate: 8, bomId: null },
+            { name: "KCT", description: null, unit: null, quantity: 1, unitPrice: 500, total: 500, taxRate: null, bomId: null }
+          ],
+          project: { id: "project-1", status: "QUOTING", contract: null }
+        })
+        .mockResolvedValueOnce(null);
+      tx.quote.aggregate.mockResolvedValue({ _max: { version: 1 } });
+      tx.quote.create.mockResolvedValue({ id: "q2", quoteNo: "BG-2", version: 2 });
+
+      await service.duplicate("q1", user);
+
+      const data = tx.quote.create.mock.calls[0][0].data;
+      // Old single-rate logic would give 1_500 * 10% = 150 tax / 1_650 total.
+      expect(data).toEqual(expect.objectContaining({ subtotal: 1_500, taxAmount: 80, total: 1_580 }));
+      expect(data.items.create.map((item: { taxRate: number | null }) => item.taxRate)).toEqual([8, null]);
+    });
+
+    it("accepted subset total uses each accepted line's own rate", async () => {
+      tx.quote.findFirst.mockResolvedValue({
+        id: "quote-1", status: "SENT", sentAt: null, acceptedAt: null, total: 1_954, taxRate: 10, projectId: "project-1",
+        items: [
+          { id: "i1", total: 1_000, taxRate: 10 },
+          { id: "i2", total: 500, taxRate: null },
+          { id: "i3", total: 300, taxRate: 8 }
+        ],
+        project: { status: "NEGOTIATING", contract: null }
+      });
+      tx.quote.update.mockResolvedValue({ id: "quote-1", status: "ACCEPTED", sentAt: new Date(), acceptedAt: new Date() });
+
+      await service.updateStatus("quote-1", { status: "ACCEPTED", acceptedItemIds: ["i2", "i3"] }, user);
+
+      // 500 (KCT) + 300 + 24 = 824; the quote-level 10% would wrongly give 880.
+      expect(tx.project.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ estimatedValue: 824 })
+      }));
+    });
+
+    it("findOne returns line rates (KCT as null) and the tax breakdown", async () => {
+      jest.spyOn(service as unknown as { findAccessibleQuote: () => Promise<unknown> }, "findAccessibleQuote").mockResolvedValue({
+        id: "q1", quoteNo: "BG-1", version: 1, status: "DRAFT", validUntil: null, subtotal: 2_200, taxRate: 10, taxAmount: 180, total: 2_380,
+        tableColumnWidths: null, terms: null, deliveryTerms: null, internalNote: null, sentAt: null, acceptedAt: null,
+        acceptedItemIds: [], createdAt: new Date(), updatedAt: new Date(), createdBy: null,
+        project: { id: "p", code: "P", name: "P", status: "QUOTING", estimatedValue: 0, contract: null,
+          customer: { id: "c", name: "C", shortName: null, taxCode: null, address: null, status: "ACTIVE", assignedTo: null, contacts: [] } },
+        items: [
+          { id: "i1", order: 1, name: "KCT", description: null, unit: null, quantity: 1, unitPrice: 200, total: 200, taxRate: null, bomId: null },
+          { id: "i2", order: 2, name: "8%", description: null, unit: null, quantity: 1, unitPrice: 1_000, total: 1_000, taxRate: 8, bomId: null },
+          { id: "i3", order: 3, name: "10%", description: null, unit: null, quantity: 1, unitPrice: 1_000, total: 1_000, taxRate: 10, bomId: null }
+        ]
+      });
+
+      const detail = await service.findOne("q1", { ...user, role: "STAFF" as never, permissions: ["quotes.view"] });
+
+      expect(detail.items.map((item) => item.taxRate)).toEqual([null, 8, 10]);
+      expect(detail.taxBreakdown).toEqual([
+        { rate: 10, base: 1_000, tax: 100 },
+        { rate: 8, base: 1_000, tax: 80 },
+        { rate: null, base: 200, tax: 0 }
+      ]);
     });
   });
 });

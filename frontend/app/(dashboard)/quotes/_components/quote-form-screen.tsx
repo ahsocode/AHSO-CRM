@@ -32,6 +32,7 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { BOM_STATUS_LABELS, QUOTE_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime, formatVND } from "@/lib/format";
 import { QuoteStatus } from "@/lib/types";
+import { computeQuoteTotals, formatVatGroupLabel, vatOptionsFor } from "@/lib/vat";
 import { cn } from "@/lib/utils";
 import {
   defaultQuoteTableColumnWidths,
@@ -121,7 +122,8 @@ export function QuoteFormScreen({
           unit: item.unit ?? "",
           bomId: item.bomId ?? null,
           quantity: item.quantity,
-          unitPrice: item.unitPrice
+          unitPrice: item.unitPrice,
+          taxRate: item.taxRate === undefined ? quoteQuery.data.taxRate : item.taxRate
         }))
       });
     }
@@ -145,12 +147,10 @@ export function QuoteFormScreen({
   const watchedTableColumnWidths = form.watch("tableColumnWidths") ?? defaultQuoteTableColumnWidths;
   const selectedProjectQuery = useProject(selectedProjectId || "");
   const selectedProject = selectedProjectQuery.data;
-  const subtotal = watchedItems.reduce(
-    (sum, item) => sum + Math.round((Number(item.quantity) || 0) * (Number(item.unitPrice) || 0)),
-    0
-  );
-  const taxAmount = Math.round((subtotal * (Number(watchedTaxRate) || 0)) / 100);
-  const grandTotal = subtotal + taxAmount;
+  const defaultTaxRate = Number(watchedTaxRate) || 0;
+  const totals = computeQuoteTotals(watchedItems, defaultTaxRate);
+  const { subtotal, taxAmount, total: grandTotal, breakdown: taxBreakdown } = totals;
+  const defaultTaxOptions = vatOptionsFor([defaultTaxRate]).filter((option) => option.value !== null);
   const activeMutation = mode === "create" ? createQuoteMutation : updateQuoteMutation;
   const activeErrorMessage = activeMutation.isError
     ? getApiErrorMessage(
@@ -225,7 +225,14 @@ export function QuoteFormScreen({
 
       <form
         className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]"
-        onSubmit={form.handleSubmit((values) => {
+        onSubmit={form.handleSubmit((formValues) => {
+          const values = {
+            ...formValues,
+            items: formValues.items.map((item) => ({
+              ...item,
+              taxRate: item.taxRate === undefined ? formValues.taxRate : item.taxRate
+            }))
+          };
           if (mode === "edit" && quoteId) {
             updateQuoteMutation.mutate(values, {
               onSuccess: (quote) => {
@@ -283,17 +290,22 @@ export function QuoteFormScreen({
               </Field>
 
               <Field>
-                <Label htmlFor="taxRate">Thuế suất (%)</Label>
-                <Input
+                <Label htmlFor="taxRate">VAT mặc định cho dòng mới</Label>
+                <Select
                   id="taxRate"
-                  min={0}
-                  step="0.01"
-                  type="number"
                   disabled={!isEditableQuote}
-                  {...form.register("taxRate", {
-                    setValueAs: (value) => (value === "" ? 0 : Number(value))
-                  })}
-                />
+                  value={String(defaultTaxRate)}
+                  onChange={(event) =>
+                    form.setValue("taxRate", Number(event.target.value), { shouldDirty: true, shouldValidate: true })
+                  }
+                >
+                  {defaultTaxOptions.map((option) => (
+                    <option key={option.label} value={String(option.value)}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-text-secondary">Chỉ áp dụng cho dòng thêm mới; các dòng hiện có giữ nguyên VAT riêng.</p>
                 <ErrorText message={form.formState.errors.taxRate?.message} />
               </Field>
 
@@ -326,7 +338,13 @@ export function QuoteFormScreen({
                     deliveryTerms: form.getValues("deliveryTerms")
                   })}
                   onApply={(template) => {
-                    itemsFieldArray.replace(template.items);
+                    // undefined = template saved before per-line VAT; null is KCT and must stay KCT.
+                    itemsFieldArray.replace(
+                      template.items.map((item) => ({
+                        ...item,
+                        taxRate: item.taxRate === undefined ? defaultTaxRate : item.taxRate
+                      }))
+                    );
                     if (template.terms) {
                       form.setValue("terms", template.terms, { shouldDirty: true });
                     }
@@ -344,7 +362,8 @@ export function QuoteFormScreen({
                 isEditable={isEditableQuote}
                 items={watchedItems}
                 subtotal={subtotal}
-                taxRate={Number(watchedTaxRate) || 0}
+                defaultTaxRate={defaultTaxRate}
+                taxBreakdown={taxBreakdown}
                 taxAmount={taxAmount}
                 grandTotal={grandTotal}
                 boms={projectBomsQuery.data ?? []}
@@ -472,7 +491,17 @@ export function QuoteFormScreen({
             </CardHeader>
             <CardContent className="space-y-0">
               <InfoRow label="Tạm tính" value={<CurrencyDisplay amount={subtotal} />} />
-              <InfoRow label={`VAT ${watchedTaxRate}%`} value={<CurrencyDisplay amount={taxAmount} />} />
+              {taxBreakdown.length === 0 ? (
+                <InfoRow label="VAT" value={<CurrencyDisplay amount={0} />} />
+              ) : (
+                taxBreakdown.map((group) => (
+                  <InfoRow
+                    key={group.rate === null ? "kct" : group.rate}
+                    label={formatVatGroupLabel(group.rate)}
+                    value={<CurrencyDisplay amount={group.tax} />}
+                  />
+                ))
+              )}
               <InfoRow label="Tổng cộng" value={<CurrencyDisplay amount={grandTotal} />} emphasized />
               <InfoRow label="Số dòng" value={`${watchedItems.length}`} />
             </CardContent>

@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { EmailService } from "../email/email.service";
@@ -21,6 +21,11 @@ describe("ContractsService", () => {
     contract: {
       findUnique: jest.Mock;
       findFirst: jest.Mock;
+      update: jest.Mock;
+    };
+    milestone: {
+      findFirst: jest.Mock;
+      create: jest.Mock;
     };
     payment: {
       create: jest.Mock;
@@ -75,7 +80,12 @@ describe("ContractsService", () => {
     prisma = {
       contract: {
         findUnique: jest.fn(),
-        findFirst: jest.fn()
+        findFirst: jest.fn(),
+        update: jest.fn()
+      },
+      milestone: {
+        findFirst: jest.fn(),
+        create: jest.fn()
       },
       payment: {
         create: jest.fn()
@@ -124,7 +134,8 @@ describe("ContractsService", () => {
               unit: "Bộ",
               quantity: 1,
               unitPrice: 5_000_000,
-              total: 5_000_000
+              total: 5_000_000,
+              taxRate: 0
             }
           ]
         }
@@ -239,7 +250,8 @@ describe("ContractsService", () => {
               unit: "Bộ",
               quantity: 1,
               unitPrice: 100,
-              total: 100
+              total: 100,
+              taxRate: 10
             },
             {
               id: "quote-item-2",
@@ -249,7 +261,8 @@ describe("ContractsService", () => {
               unit: "Bộ",
               quantity: 1,
               unitPrice: 500,
-              total: 500
+              total: 500,
+              taxRate: 10
             }
           ]
         }
@@ -532,5 +545,96 @@ describe("ContractsService", () => {
 
     expect(tx.payment.create).not.toHaveBeenCalled();
     expect(domainEvents.emit).not.toHaveBeenCalledWith("payment.received", expect.anything());
+  });
+
+  it("takes the per-contract advisory lock before reading the paid total", async () => {
+    tx.contract.findFirst.mockResolvedValue({
+      id: "contract-1",
+      projectId: "project-1",
+      value: 10_000_000,
+      payments: [{ amount: 8_000_000 }]
+    });
+
+    await expect(
+      service.createPayment("contract-1", { amount: 3_000_000, paidAt: new Date("2026-04-25T00:00:00.000Z") }, user)
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(tx.$executeRaw).toHaveBeenCalledTimes(1);
+    const [sqlParts, lockKey] = tx.$executeRaw.mock.calls[0] as [TemplateStringsArray, string];
+    expect(sqlParts.join("?")).toContain("pg_advisory_xact_lock(hashtext(");
+    expect(lockKey).toBe("contract_payment_contract-1");
+    expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      tx.contract.findFirst.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("only accepts payments for contracts that are not soft-deleted", async () => {
+    tx.contract.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.createPayment("contract-deleted", { amount: 1_000_000, paidAt: new Date("2026-04-25T00:00:00.000Z") }, user)
+    ).rejects.toThrow(new NotFoundException("Không tìm thấy hợp đồng"));
+
+    expect(tx.contract.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "contract-deleted", deletedAt: null })
+      })
+    );
+    expect(tx.payment.create).not.toHaveBeenCalled();
+    expect(domainEvents.emit).not.toHaveBeenCalled();
+  });
+
+  it("hides soft-deleted contracts from detail and delete lookups", async () => {
+    prisma.contract.findFirst.mockResolvedValue(null);
+
+    await expect(service.findOne("contract-deleted", user)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.remove("contract-deleted", user)).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.contract.findFirst).toHaveBeenCalledTimes(2);
+    for (const [args] of prisma.contract.findFirst.mock.calls as Array<[{ where: Record<string, unknown> }]>) {
+      expect(args.where).toMatchObject({ id: "contract-deleted", deletedAt: null });
+    }
+    expect(prisma.contract.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects milestones on soft-deleted contracts", async () => {
+    prisma.contract.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.createMilestone("contract-deleted", { name: "Đợt 1", status: "PENDING" } as never, user)
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.contract.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) })
+    );
+    expect(prisma.milestone.create).not.toHaveBeenCalled();
+  });
+
+  it("does not update milestones whose contract is soft-deleted", async () => {
+    prisma.milestone.findFirst.mockResolvedValue(null);
+
+    await expect(service.updateMilestone("milestone-1", { name: "x" } as never, user)).rejects.toBeInstanceOf(
+      NotFoundException
+    );
+
+    expect(prisma.milestone.findFirst).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: "milestone-1",
+        contract: expect.objectContaining({ deletedAt: null })
+      })
+    });
+  });
+
+  it("rejects updating a soft-deleted contract", async () => {
+    tx.contract.findFirst.mockResolvedValue(null);
+
+    await expect(service.update("contract-deleted", { notes: "x" } as never, user)).rejects.toBeInstanceOf(
+      NotFoundException
+    );
+
+    expect(tx.contract.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ deletedAt: null }) })
+    );
+    expect(tx.contract.update).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import { PrismaService } from "../common/prisma.service";
 import { SettingsService } from "../settings/settings.service";
 import { UploadService } from "../upload/upload.service";
 import type { DocumentLanguage } from "./dto/document-type.enum";
+import { buildQuoteTaxBreakdown } from "./helpers/quote-tax-breakdown";
 
 // Mirror of frontend normalizeItemDescription — converts inline ✓ bullet
 // markers stored without newlines ("✓ A ✓ B") into newline-separated form
@@ -178,6 +179,17 @@ export class DocumentDataLoaderService {
     if (contract) {
       const linkedQuote = contract.project.quotes[0] || null;
       const contractItems = this.resolveContractScopeItems(contract.items, linkedQuote?.items ?? []);
+      // The contract may cover only some quote lines: print VAT for those lines only,
+      // using each source quote line's own rate (not the whole quote's breakdown).
+      const sourceRates = new Map((linkedQuote?.items ?? []).map((item) => [item.id, item.taxRate]));
+      const breakdownLines =
+        contract.items.length > 0
+          ? contract.items.map((item) => ({
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              taxRate: item.quoteItemId && sourceRates.has(item.quoteItemId) ? sourceRates.get(item.quoteItemId) : undefined
+            }))
+          : (linkedQuote?.items ?? []);
 
       return {
         contract: {
@@ -193,6 +205,7 @@ export class DocumentDataLoaderService {
               subtotal: Number(linkedQuote.subtotal),
               taxRate: Number(linkedQuote.taxRate),
               taxAmount: Number(linkedQuote.taxAmount),
+              taxBreakdown: buildQuoteTaxBreakdown(breakdownLines, linkedQuote.taxRate),
               total: Number(linkedQuote.total),
               items: contractItems
             }
@@ -264,6 +277,7 @@ export class DocumentDataLoaderService {
         subtotal: Number(quote.subtotal),
         taxRate: Number(quote.taxRate),
         taxAmount: Number(quote.taxAmount),
+        taxBreakdown: buildQuoteTaxBreakdown(quote.items, quote.taxRate),
         total: Number(quote.total),
         items: quoteItems
       },
@@ -318,6 +332,7 @@ export class DocumentDataLoaderService {
         subtotal: Number(quote.subtotal),
         taxRate: Number(quote.taxRate),
         taxAmount: Number(quote.taxAmount),
+        taxBreakdown: buildQuoteTaxBreakdown(quote.items, quote.taxRate),
         total: Number(quote.total),
         tableColumnWidths: quote.tableColumnWidths
       },

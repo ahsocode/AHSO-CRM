@@ -252,6 +252,7 @@ async function main() {
         create: [
           {
             order: 1,
+            taxRate: 10,
             name: "Tủ điều khiển trung tâm",
             quantity: 1,
             unit: "Bộ",
@@ -260,6 +261,7 @@ async function main() {
           },
           {
             order: 2,
+            taxRate: 10,
             name: "Phần mềm SCADA",
             quantity: 1,
             unit: "Gói",
@@ -290,6 +292,7 @@ async function main() {
         create: [
           {
             order: 1,
+            taxRate: 10,
             name: "PLC Siemens S7-1500",
             quantity: 2,
             unit: "Bộ",
@@ -298,6 +301,7 @@ async function main() {
           },
           {
             order: 2,
+            taxRate: 10,
             name: "Tích hợp hệ thống",
             quantity: 1,
             unit: "Gói",
@@ -329,6 +333,7 @@ async function main() {
         create: [
           {
             order: 1,
+            taxRate: 10,
             name: "Thiết bị đo năng lượng",
             quantity: 8,
             unit: "Cái",
@@ -337,6 +342,7 @@ async function main() {
           },
           {
             order: 2,
+            taxRate: 10,
             name: "Dịch vụ tích hợp",
             quantity: 1,
             unit: "Gói",

@@ -17,6 +17,7 @@ import { resolveAssetUrl } from "@/lib/auth";
 import { formatDate, normalizeItemDescription } from "@/lib/format";
 import type { QuoteDetail, QuoteTableColumnWidths } from "@/lib/types";
 import { cn, downloadBlob } from "@/lib/utils";
+import { computeQuoteTotals, formatVatGroupLabel } from "@/lib/vat";
 
 const EDITABLE_QUOTE_STATUSES = ["DRAFT", "REJECTED"] as const;
 
@@ -122,7 +123,8 @@ function buildQuoteUpdatePayload(quote: QuoteDetail, tableColumnWidths: QuoteTab
       description: item.description ?? "",
       unit: item.unit ?? "",
       quantity: item.quantity,
-      unitPrice: item.unitPrice
+      unitPrice: item.unitPrice,
+      taxRate: item.taxRate
     }))
   };
 }
@@ -476,7 +478,13 @@ export function QuotePreviewClient({ quoteId }: { quoteId: string }) {
           <section className="mt-6 flex justify-end">
             <div className="w-full max-w-[320px] space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
               <SummaryRow label="Tạm tính" value={<CurrencyDisplay amount={quote.subtotal} />} />
-              <SummaryRow label={`VAT (${quote.taxRate}%)`} value={<CurrencyDisplay amount={quote.taxAmount} />} />
+              {(quote.taxBreakdown ?? computeQuoteTotals(quote.items, quote.taxRate).breakdown).map((group) => (
+                <SummaryRow
+                  key={group.rate === null ? "kct" : group.rate}
+                  label={formatVatGroupLabel(group.rate)}
+                  value={<CurrencyDisplay amount={group.tax} />}
+                />
+              ))}
               <SummaryRow
                 emphasized
                 label="Tổng cộng"

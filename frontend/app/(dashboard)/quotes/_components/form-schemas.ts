@@ -27,7 +27,9 @@ export const quoteItemFormSchema = z.object({
   unit: optionalString(40),
   bomId: z.string().trim().min(1).nullable().optional(),
   quantity: z.coerce.number().positive("Số lượng phải lớn hơn 0").max(1_000_000),
-  unitPrice: z.coerce.number().min(0, "Đơn giá không được âm").max(999_999_999_999)
+  unitPrice: z.coerce.number().min(0, "Đơn giá không được âm").max(999_999_999_999),
+  /** null = KCT; undefined = dùng VAT mặc định của báo giá */
+  taxRate: z.number().min(0, "Thuế suất phải từ 0%").max(100, "Thuế suất tối đa 100%").nullable().optional()
 });
 
 export const defaultQuoteTableColumnWidths = {
@@ -62,12 +64,13 @@ export const quoteFormSchema = z.object({
 
 export type QuoteFormValues = z.infer<typeof quoteFormSchema>;
 
-export const createEmptyQuoteItem = (): QuoteFormValues["items"][number] => ({
+export const createEmptyQuoteItem = (defaultTaxRate = 10): QuoteFormValues["items"][number] => ({
   name: "",
   description: "",
   unit: "",
   quantity: 1,
-  unitPrice: 0
+  unitPrice: 0,
+  taxRate: defaultTaxRate
 });
 
 const defaultValidUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

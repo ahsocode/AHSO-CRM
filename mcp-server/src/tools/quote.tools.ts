@@ -2,6 +2,15 @@ import { getApiClient, extractData, extractMeta } from "../auth/api-client.js";
 import { formatVND, formatDate, truncate } from "../formatters/common.formatter.js";
 import type { McpTool } from "./index.js";
 
+function rateText(rate: number | string): string {
+  return `${Number(rate)}%`;
+}
+
+function rateSuffix(rate: number | string | null | undefined): string {
+  if (rate === undefined) return "";
+  return rate === null ? " [KCT]" : ` [VAT ${rateText(rate)}]`;
+}
+
 const QUOTE_STATUS_LABEL: Record<string, string> = {
   DRAFT: "📝 Bản nháp",
   SENT: "📤 Đã gửi",
@@ -85,7 +94,14 @@ export const quoteTools: McpTool[] = [
       out += `📅 Ngày tạo: ${formatDate(q.createdAt)}`;
       if (q.sentAt) out += ` | Đã gửi: ${formatDate(q.sentAt)}`;
       out += `\n💰 **Tổng tiền: ${formatVND(q.total)}**`;
-      if (q.vatRate) out += ` (VAT ${q.vatRate}%)`;
+      if (q.taxBreakdown?.length) {
+        for (const g of q.taxBreakdown) {
+          const label = g.rate == null ? "Không chịu thuế (KCT)" : `VAT ${rateText(g.rate)}`;
+          out += `\n🧾 ${label}: ${formatVND(g.base)} → thuế ${formatVND(g.tax)}`;
+        }
+      } else if (q.taxRate != null) {
+        out += ` (VAT ${rateText(q.taxRate)})`;
+      }
       out += "\n";
 
       if (q.items?.length) {
@@ -94,7 +110,7 @@ export const quoteTools: McpTool[] = [
           .slice(0, 10)
           .map(
             (item, i) =>
-              `  ${i + 1}. ${item.name} — ${item.qty} ${item.unit ?? ""} × ${formatVND(item.unitPrice)} = ${formatVND(item.total)}`
+              `  ${i + 1}. ${item.name} — ${item.qty} ${item.unit ?? ""} × ${formatVND(item.unitPrice)} = ${formatVND(item.total)}${rateSuffix(item.taxRate)}`
           )
           .join("\n");
         if (q.items.length > 10) out += `\n  ... và ${q.items.length - 10} dòng khác`;
@@ -127,6 +143,12 @@ export const quoteTools: McpTool[] = [
               unitPrice: { type: "number", description: "Đơn giá VND (bắt buộc, >= 0)" },
               unit: { type: "string", description: "Đơn vị: cái, bộ, m, kg... (tuỳ chọn)" },
               description: { type: "string", description: "Mô tả chi tiết (tuỳ chọn)" },
+              taxRate: {
+                type: ["number", "null"],
+                minimum: 0,
+                maximum: 100,
+                description: "VAT riêng của dòng: 0-100 (vd 8, 10); null = KCT (không chịu thuế); bỏ trống = lấy mức VAT mặc định của báo giá",
+              },
             },
             required: ["name", "quantity", "unitPrice"],
           },
@@ -157,6 +179,7 @@ export const quoteTools: McpTool[] = [
         unitPrice: number;
         unit?: string;
         description?: string;
+        taxRate?: number | null;
       }>;
 
       if (!items?.length) {
@@ -293,6 +316,7 @@ interface QuoteDetail {
   total?: number | string;
   taxRate?: number;
   vatRate?: number;
+  taxBreakdown?: Array<{ rate: number | string | null; base: number | string; tax: number | string }>;
   validUntil?: string;
   terms?: string;
   deliveryTerms?: string;
@@ -308,5 +332,6 @@ interface QuoteDetail {
     unit?: string;
     unitPrice: number | string;
     total: number | string;
+    taxRate?: number | string | null;
   }>;
 }

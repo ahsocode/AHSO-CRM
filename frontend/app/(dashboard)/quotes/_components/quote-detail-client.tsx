@@ -28,6 +28,7 @@ import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatRelativeTime, normalizeItemDescription } from "@/lib/format";
 import type { DocumentTemplateVariant, QuoteDetail, QuoteStatus, QuoteTableColumnWidths } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { computeQuoteTotals, summarizeVatBreakdown } from "@/lib/vat";
 import { QuoteCostEstimate } from "./quote-cost-estimate";
 
 const EDITABLE_QUOTE_STATUSES: QuoteStatus[] = ["DRAFT", "REJECTED"];
@@ -48,7 +49,8 @@ function buildQuoteUpdatePayload(quote: QuoteDetail, tableColumnWidths: QuoteTab
       unit: item.unit ?? "",
       bomId: item.bomId ?? null,
       quantity: item.quantity,
-      unitPrice: item.unitPrice
+      unitPrice: item.unitPrice,
+      taxRate: item.taxRate
     }))
   };
 }
@@ -326,7 +328,7 @@ export function QuoteDetailClient({ quoteId }: { quoteId: string }) {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Tạm tính" value={<CurrencyDisplay amount={quote.subtotal} />} />
-        <MetricCard label={`VAT ${quote.taxRate}%`} value={<CurrencyDisplay amount={quote.taxAmount} />} />
+        <MetricCard label={summarizeVatBreakdown(quote.taxBreakdown ?? computeQuoteTotals(quote.items, quote.taxRate).breakdown)} value={<CurrencyDisplay amount={quote.taxAmount} />} />
         <MetricCard label="Tổng cộng" value={<CurrencyDisplay amount={quote.total} />} />
         <MetricCard label="Số hạng mục" value={`${quote.itemCount}`} />
       </div>

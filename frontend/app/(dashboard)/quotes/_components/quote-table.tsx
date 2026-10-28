@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate, formatRelativeTime } from "@/lib/format";
 import { QuoteListItem, QuoteListMeta } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { summarizeVatBreakdown } from "@/lib/vat";
 
 export function QuoteTable({
   items,
@@ -226,7 +227,7 @@ export function QuoteTable({
                         <CurrencyDisplay amount={quote.subtotal} short />
                         {" + "}
                         <CurrencyDisplay amount={quote.taxAmount} short />
-                        {" VAT"}
+                        {` ${quote.taxBreakdown ? summarizeVatBreakdown(quote.taxBreakdown) : "VAT"}`}
                       </p>
                     </td>
 

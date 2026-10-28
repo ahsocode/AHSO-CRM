@@ -1,6 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 import type { MilestoneStatus, Prisma } from "@prisma/client";
-import { decimalToNumber, sumDecimal } from "../common/utils/decimal";
+import { calculateStoredItemsTotal } from "../quotes/quote-helpers";
 
 export function formatNumber(value: number) {
     return new Intl.NumberFormat("vi-VN", {
@@ -46,8 +46,8 @@ export function mapMilestone(milestone: {
   };
 }
 
-export function resolveSelectedQuoteItems(
-  quoteItems: Array<{
+export function resolveSelectedQuoteItems<
+  T extends {
     id: string;
     order: number;
     name: string;
@@ -56,9 +56,8 @@ export function resolveSelectedQuoteItems(
     quantity: Prisma.Decimal;
     unitPrice: Prisma.Decimal;
     total: Prisma.Decimal;
-  }>,
-  selectedItemIds?: string[]
-) {
+  }
+>(quoteItems: T[], selectedItemIds?: string[]): T[] {
   if (quoteItems.length === 0) {
     throw new BadRequestException("Báo giá nguồn chưa có hạng mục để chốt hợp đồng");
   }
@@ -84,16 +83,14 @@ export function resolveSelectedQuoteItems(
   return selectedItems;
 }
 
+// Same per-line VAT grouping as the quote itself (group-level rounding, KCT = no tax).
 export function calculateContractValueFromQuoteItems(
   quoteItems: Array<{
     total: Prisma.Decimal;
-  }>,
-  taxRate: Prisma.Decimal
+    taxRate: Prisma.Decimal | null;
+  }>
 ) {
-  const subtotal = sumDecimal(quoteItems.map((item) => item.total));
-  const taxAmount = subtotal.mul(taxRate).div(100).round();
-
-  return decimalToNumber(subtotal.plus(taxAmount));
+  return calculateStoredItemsTotal(quoteItems);
 }
 
 export function mapContractItem(item: {

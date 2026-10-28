@@ -30,7 +30,7 @@ export class CostReportsService {
         where: { projectId, deletedAt: null },
         select: {
           id: true, contractNo: true, value: true,
-          items: { select: { total: true, quoteItem: { select: { quote: { select: { taxRate: true } } } } } }
+          items: { select: { total: true, quoteItem: { select: { taxRate: true } } } }
         }
       }),
       this.prisma.quote.findFirst({
@@ -67,12 +67,13 @@ export class CostReportsService {
     let revenueVatAssumed = false;
     const fallbackTaxRate = acceptedQuote ? new Decimal(acceptedQuote.taxRate) : new Decimal(DEFAULT_VAT_RATE);
     if (contract) {
-      // A later accepted quote may use a different VAT rate from the contract's source items.
+      // Source lines may use different VAT rates (and differ from a later accepted quote).
       const netItems = contract.items.reduce((sum, item) => sum.plus(item.total), new Decimal(0));
       const grossItems = contract.items.reduce((sum, item) => {
-        const sourceRate = item.quoteItem?.quote.taxRate;
-        if (sourceRate === undefined && !acceptedQuote) revenueVatAssumed = true;
-        const rate = sourceRate ?? fallbackTaxRate;
+        // Each source line carries its own VAT rate (null = KCT, counted as 0%).
+        const sourceItem = item.quoteItem;
+        if (!sourceItem && !acceptedQuote) revenueVatAssumed = true;
+        const rate = sourceItem ? (sourceItem.taxRate ?? 0) : fallbackTaxRate;
         return sum.plus(new Decimal(item.total).mul(new Decimal(rate).div(100).plus(1)));
       }, new Decimal(0));
       if (!(netItems.gt(0) && grossItems.gt(0)) && !acceptedQuote) revenueVatAssumed = true;

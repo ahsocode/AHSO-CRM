@@ -189,6 +189,10 @@ jobs:
             $COMPOSE up -d postgres redis
             echo "[deploy] Waiting for postgres to be ready..."
             timeout 90 bash -c "until $COMPOSE exec -T postgres pg_isready -U \${POSTGRES_USER:-ahso} -d \${POSTGRES_DB:-ahso_crm} 2>/dev/null; do sleep 3; done"
+            # Stop the old backend first: 20261028100000_quote_item_tax_rate gives NULL a meaning
+            # (KCT). An old container still serving would write NULL line rates after the backfill.
+            echo "[deploy] Stopping old backend before migrating..."
+            $COMPOSE stop backend || true
             echo "[deploy] Running Prisma migrations..."
             $COMPOSE run --rm --no-deps backend npm run prisma:deploy
 

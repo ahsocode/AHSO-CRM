@@ -184,7 +184,7 @@ export class ContractsService {
         ? resolveSelectedQuoteItems(selectedSourceQuote.items, dto.sourceQuoteItemIds)
         : [];
       const resolvedContractValue = selectedSourceQuote
-        ? calculateContractValueFromQuoteItems(selectedQuoteItems, selectedSourceQuote.taxRate)
+        ? calculateContractValueFromQuoteItems(selectedQuoteItems)
         : dto.value;
 
       if (resolvedContractValue <= 0) {
@@ -446,8 +446,14 @@ export class ContractsService {
 
   async createPayment(contractId: string, dto: CreatePaymentDto, user: JwtUser) {
     const { payment, projectId } = await this.prisma.$transaction(async (tx) => {
+      // Serialize payments per contract: without this lock two concurrent requests
+      // (double click, client retry) both read the same paid total under Read Committed
+      // and can jointly overpay the contract. Must run BEFORE reading payments.
+      // Any other code path that creates payments for a contract must take the same key.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`contract_payment_${contractId}`}))`;
+
       const contract = await tx.contract.findFirst({
-        where: { id: contractId, project: buildAccessibleProjectWhere(user) },
+        where: { id: contractId, deletedAt: null, project: buildAccessibleProjectWhere(user) },
         select: {
           id: true,
           projectId: true,
@@ -532,6 +538,7 @@ export class ContractsService {
     const contract = await this.prisma.contract.findFirst({
       where: {
         id,
+        deletedAt: null,
         project: buildAccessibleProjectWhere(user)
       },
       include: {
@@ -615,6 +622,7 @@ export class ContractsService {
     const contract = await this.prisma.contract.findFirst({
       where: {
         id,
+        deletedAt: null,
         project: buildAccessibleProjectWhere(user)
       },
       select: {
@@ -644,6 +652,7 @@ export class ContractsService {
     const contract = await tx.contract.findFirst({
       where: {
         id,
+        deletedAt: null,
         project: buildAccessibleProjectWhere(user)
       },
       select: {
@@ -703,7 +712,8 @@ export class ContractsService {
                 unit: true,
                 quantity: true,
                 unitPrice: true,
-                total: true
+                total: true,
+                taxRate: true
               },
               orderBy: [{ order: "asc" }]
             }
@@ -725,6 +735,7 @@ export class ContractsService {
       where: {
         id,
         contract: {
+          deletedAt: null,
           project: buildAccessibleProjectWhere(user)
         }
       }
@@ -741,6 +752,8 @@ export class ContractsService {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('contract_number'))`;
     const year = new Date().getFullYear();
     const prefix = `HD-${year}-`;
+    // Intentionally NOT filtering deletedAt: soft-deleted contracts still own their
+    // contractNo (unique column), so they must count when computing the next sequence.
     const latestContract = await tx.contract.findFirst({
       where: {
         contractNo: {
@@ -835,6 +848,8 @@ export class ContractsService {
     }
   }
 
+  // Internal loader for notification/event context. Callers have already resolved the
+  // contract through an access-checked, non-deleted lookup, so no deletedAt filter here.
   private async loadContractNotificationContext(contractId: string) {
     const contract = await this.prisma.contract.findUnique({
       where: {

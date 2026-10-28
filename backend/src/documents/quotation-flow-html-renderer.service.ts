@@ -75,8 +75,7 @@ export class QuotationFlowHtmlRendererService {
     const projectName = this.toText(project.name) || this.toText(quote.projectName) || "";
     const customerName = this.toText(customer.name) || labels.customer;
     const subtotal = this.toNumber(quote.subtotal);
-    const taxRate = this.toNumber(quote.taxRate);
-    const taxAmount = this.toNumber(quote.taxAmount);
+    const taxRows = this.renderTaxRows(quote, labels, language);
     const grandTotal = this.toNumber(quote.total);
 
     return `
@@ -147,10 +146,7 @@ export class QuotationFlowHtmlRendererService {
             <th>${labels.subtotal}</th>
             <td>${this.formatCurrency(subtotal)}</td>
           </tr>
-          <tr>
-            <th>${labels.vat}${Number.isFinite(taxRate) ? ` (${this.formatPercent(taxRate)})` : ""}</th>
-            <td>${this.formatCurrency(taxAmount)}</td>
-          </tr>
+          ${taxRows}
           <tr class="summary-total">
             <th>${labels.grandTotal}</th>
             <td>${this.formatCurrency(grandTotal)}</td>
@@ -173,6 +169,38 @@ export class QuotationFlowHtmlRendererService {
     </div>
   </section>
 </article>`;
+  }
+
+  private renderTaxRows(
+    quote: Record<string, RecordValue>,
+    labels: QuotationLabels,
+    language: DocumentLanguage
+  ): string {
+    const groups = Array.isArray(quote.taxBreakdown) ? (quote.taxBreakdown as unknown[]) : [];
+    if (groups.length === 0) {
+      // Legacy / preview data without per-line breakdown: single VAT row as before
+      const taxRate = this.toNumber(quote.taxRate);
+      return `<tr>
+            <th>${labels.vat}${Number.isFinite(taxRate) ? ` (${this.formatPercent(taxRate)})` : ""}</th>
+            <td>${this.formatCurrency(this.toNumber(quote.taxAmount))}</td>
+          </tr>`;
+    }
+
+    return groups
+      .map((raw) => {
+        const group = this.asRecord(raw);
+        const isKct = group.rate === null || group.rate === undefined;
+        const label = isKct
+          ? language === "vi-en"
+            ? "Không chịu thuế (KCT) / Non-taxable (KCT)"
+            : "Không chịu thuế (KCT)"
+          : `${labels.vat} (${this.formatPercent(this.toNumber(group.rate))})`;
+        return `<tr>
+            <th>${this.escape(label)}</th>
+            <td>${this.formatCurrency(this.toNumber(group.tax))}</td>
+          </tr>`;
+      })
+      .join("\n          ");
   }
 
   getCss(): string {

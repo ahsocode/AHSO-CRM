@@ -1051,6 +1051,7 @@ export interface QuoteListItem {
   subtotal: number;
   taxAmount: number;
   total: number;
+  taxBreakdown?: QuoteTaxBreakdownGroup[];
   createdAt: string;
   updatedAt: string;
   sentAt?: string | null;
@@ -1116,6 +1117,8 @@ export interface QuoteDetailItem {
   unit?: string | null;
   quantity: number;
   unitPrice: number;
+  /** VAT của dòng: null = KCT (không chịu thuế), 0 = thuế suất 0% */
+  taxRate: number | null;
   total: number;
   /** BOM of the same project (internal cost breakdown) */
   bomId?: string | null;
@@ -1133,6 +1136,13 @@ export interface QuoteTableColumnWidths {
   total: number;
 }
 
+export interface QuoteTaxBreakdownGroup {
+  /** null = KCT */
+  rate: number | null;
+  base: number;
+  tax: number;
+}
+
 export interface QuoteDetail {
   id: string;
   quoteNo: string;
@@ -1140,9 +1150,11 @@ export interface QuoteDetail {
   status: QuoteStatus;
   validUntil?: string | null;
   subtotal: number;
+  /** Mức VAT mặc định cho dòng mới (không dùng để tính tổng) */
   taxRate: number;
   taxAmount: number;
   total: number;
+  taxBreakdown: QuoteTaxBreakdownGroup[];
   tableColumnWidths?: QuoteTableColumnWidths | null;
   terms?: string | null;
   deliveryTerms?: string | null;
@@ -1166,6 +1178,8 @@ export interface QuoteCreateItemInput {
   unit?: string;
   quantity: number;
   unitPrice: number;
+  /** null = KCT; bỏ trống = lấy VAT mặc định của báo giá */
+  taxRate?: number | null;
   /** Link a BOM of the same project (null clears it) */
   bomId?: string | null;
 }

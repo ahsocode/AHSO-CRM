@@ -29,6 +29,7 @@ import { CONTRACT_STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime, formatVND } from "@/lib/format";
 import { ContractStatus, CustomFieldValues } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { computeQuoteTotals } from "@/lib/vat";
 import { ContractFileUploader } from "./contract-file-uploader";
 import { ErrorText, Field, Label } from "./form-primitives";
 import {
@@ -139,9 +140,8 @@ export function ContractFormScreen({
     const selectedIds = new Set(selectedQuoteItemIds);
     return items.filter((item) => selectedIds.has(item.id));
   }, [selectedQuoteItemIds, selectedSourceQuoteDetail?.items]);
-  const selectedQuoteSubtotal = selectedQuoteItems.reduce((sum, item) => sum + item.total, 0);
   const selectedQuoteTotal = selectedSourceQuoteDetail
-    ? Math.round(selectedQuoteSubtotal + (selectedQuoteSubtotal * selectedSourceQuoteDetail.taxRate) / 100)
+    ? computeQuoteTotals(selectedQuoteItems, selectedSourceQuoteDetail.taxRate).total
     : 0;
   const selectedQuoteHasItems = (selectedSourceQuoteDetail?.items.length ?? 0) > 0;
   const hasInvalidQuoteScope =

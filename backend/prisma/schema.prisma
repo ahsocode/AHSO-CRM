@@ -291,6 +291,7 @@ model Quote {
   status            QuoteStatus        @default(DRAFT)
   validUntil        DateTime?
   subtotal          Decimal            @default(0) @db.Decimal(15, 0)
+  // Default VAT rate for new lines. Totals use QuoteItem.taxRate, never this column.
   taxRate           Decimal            @default(10) @db.Decimal(5, 2)
   taxAmount         Decimal            @default(0) @db.Decimal(15, 0)
   total             Decimal            @default(0) @db.Decimal(15, 0)
@@ -326,6 +327,9 @@ model QuoteItem {
   quantity      Decimal        @db.Decimal(10, 2)
   unitPrice     Decimal        @db.Decimal(15, 0)
   total         Decimal        @db.Decimal(15, 0)
+  // VAT rate of this line in percent. NULL = KCT (không chịu thuế); 0 = thuế suất 0%.
+  // Quote.taxRate is only the default offered for new lines.
+  taxRate       Decimal?       @db.Decimal(5, 2)
   quote         Quote          @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   quoteId       String
   material      Material?      @relation(fields: [materialId], references: [id])

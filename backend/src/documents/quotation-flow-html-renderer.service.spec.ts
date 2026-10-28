@@ -84,4 +84,38 @@ describe("QuotationFlowHtmlRendererService", () => {
     expect(css).toContain("display: table-header-group");
     expect(css).toContain("break-inside: avoid");
   });
+
+  it("keeps a single VAT row for legacy quotes without taxBreakdown", () => {
+    const html = service.renderBody(context, "vi");
+
+    expect(html).toContain("Thuế (8%)");
+    expect(html).not.toContain("Không chịu thuế");
+  });
+
+  it("renders one VAT row per breakdown group, KCT last, summing to the grand total", () => {
+    const multi = {
+      ...context,
+      quote: {
+        ...context.quote,
+        subtotal: 300000,
+        taxAmount: 18000,
+        total: 318000,
+        taxBreakdown: [
+          { rate: 10, base: 100000, tax: 10000 },
+          { rate: 8, base: 100000, tax: 8000 },
+          { rate: null, base: 100000, tax: 0 }
+        ]
+      }
+    };
+
+    const viHtml = service.renderBody(multi, "vi");
+    expect(viHtml).toContain("Thuế (10%)");
+    expect(viHtml).toContain("Thuế (8%)");
+    expect(viHtml.indexOf("Thuế (10%)")).toBeLessThan(viHtml.indexOf("Thuế (8%)"));
+    expect(viHtml.indexOf("Thuế (8%)")).toBeLessThan(viHtml.indexOf("Không chịu thuế (KCT)"));
+
+    const enHtml = service.renderBody(multi, "vi-en");
+    expect(enHtml).toContain("VAT (10%)");
+    expect(enHtml).toContain("Non-taxable (KCT)");
+  });
 });

@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma.service';
 import { JwtUser, isStaff } from '../auth/auth.types';
+import { scopeCustomerWhereToUser } from '../common/scoping/customer-scope';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { ActivityFilterDto } from './dto/activity-filter.dto';
@@ -19,10 +20,24 @@ export class ActivitiesService {
       deletedAt: null,
     };
 
-    // For STAFF users, we need to check customer assignment
-    // This is handled in the service methods (findOne, create, update)
-    // For list view, ADMIN and MANAGER see all, STAFF sees all they have access to
-    // ADMIN and MANAGER can see all activities
+    // Row-level scope: ADMIN/MANAGER see every activity. A STAFF user only sees
+    // activities that findOne/update/remove/restore also allow (see isInStaffScope):
+    //  - linked to a customer assigned to them, or
+    //  - not linked to a customer but linked to a project of a customer assigned to them, or
+    //  - linked to neither customer nor project and created by themselves.
+    // Added via AND so it composes with the search OR and with any caller filter
+    // (e.g. filters.userId / filters.customerId can only narrow, never widen, the scope).
+    if (isStaff(user)) {
+      where.AND = [
+        {
+          OR: [
+            { customer: scopeCustomerWhereToUser({}, user) },
+            { customerId: null, project: { customer: scopeCustomerWhereToUser({}, user) } },
+            { customerId: null, projectId: null, userId: user.sub },
+          ],
+        },
+      ];
+    }
 
     if (filters.type) {
       where.type = filters.type;
@@ -69,6 +84,31 @@ export class ActivitiesService {
         not: null
       }
     };
+  }
+
+  // Single source of truth for per-record STAFF access; mirrors the OR in buildWhere:
+  // customer assigned to the user, else project of such a customer, else own unattached item.
+  private async isInStaffScope(
+    activity: { customerId: string | null; projectId: string | null; userId: string },
+    user: JwtUser,
+  ): Promise<boolean> {
+    if (activity.customerId) {
+      const customer = await this.prisma.customer.findUnique({
+        where: { id: activity.customerId },
+        select: { assignedToId: true },
+      });
+      return customer?.assignedToId === user.sub;
+    }
+
+    if (activity.projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: activity.projectId },
+        select: { customer: { select: { assignedToId: true } } },
+      });
+      return project?.customer?.assignedToId === user.sub;
+    }
+
+    return activity.userId === user.sub;
   }
 
   async findAll(filters: ActivityFilterDto, user: JwtUser) {
@@ -200,14 +240,9 @@ export class ActivitiesService {
       throw new NotFoundException('Hoạt động không tồn tại');
     }
 
-    // Role-based access check
-    if (isStaff(user) && activity.customer?.id) {
-      const customer = await this.prisma.customer.findUnique({
-        where: { id: activity.customer.id },
-      });
-      if (!customer || customer.assignedToId !== user.sub) {
-        throw new ForbiddenException('Bạn không có quyền truy cập hoạt động này');
-      }
+    // Role-based access check (same rule as the STAFF scope in buildWhere)
+    if (isStaff(user) && !(await this.isInStaffScope(activity, user))) {
+      throw new ForbiddenException('Bạn không có quyền truy cập hoạt động này');
     }
 
     return activity;
@@ -381,7 +416,7 @@ export class ActivitiesService {
       throw new BadRequestException('Hoạt động chưa bị xóa');
     }
 
-    if (isStaff(user) && activity.customer?.assignedToId !== user.sub) {
+    if (isStaff(user) && !(await this.isInStaffScope(activity, user))) {
       throw new ForbiddenException('Bạn không có quyền khôi phục hoạt động này');
     }
 

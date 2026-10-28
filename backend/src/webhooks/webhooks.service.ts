@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { createHmac, randomBytes } from "crypto";
 import { PrismaService } from "../common/prisma.service";
 import { CreateWebhookDto, WebhookEventName } from "./dto/create-webhook.dto";
 import { UpdateWebhookDto } from "./dto/update-webhook.dto";
 import { WebhookLogFilterDto } from "./dto/webhook-log-filter.dto";
+import { checkWebhookTarget, checkWebhookUrl } from "./webhook-url-guard";
 
 const RETRY_DELAYS_MS = [1_000, 4_000, 16_000] as const;
+const DELIVERY_TIMEOUT_MS = 10_000;
+// Response bodies are stored in webhookLog and readable by ADMIN; cap them so a webhook
+// cannot be used to exfiltrate large responses from the target.
+export const MAX_LOGGED_RESPONSE_CHARS = 2_000;
 
 @Injectable()
 export class WebhooksService {
@@ -20,6 +25,8 @@ export class WebhooksService {
   }
 
   async create(input: CreateWebhookDto, createdBy: string) {
+    this.assertSafeUrl(input.url);
+
     return this.prisma.webhook.create({
       data: {
         url: input.url,
@@ -33,6 +40,9 @@ export class WebhooksService {
 
   async update(id: string, input: UpdateWebhookDto) {
     await this.ensureWebhookExists(id);
+    if (input.url !== undefined) {
+      this.assertSafeUrl(input.url);
+    }
 
     return this.prisma.webhook.update({
       where: {
@@ -117,6 +127,19 @@ export class WebhooksService {
     let delivered = false;
 
     for (const delay of RETRY_DELAYS_MS) {
+      // Re-validated on every attempt: DNS answers may change between retries.
+      const target = await checkWebhookTarget(url);
+      if (!target.ok) {
+        lastStatusCode = null;
+        lastResponseText = this.truncateResponse(`Webhook bị chặn: ${target.reason}`);
+        if (target.blocked) {
+          // Policy violation: retrying cannot succeed.
+          break;
+        }
+        await this.delay(delay);
+        continue;
+      }
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -125,7 +148,10 @@ export class WebhooksService {
           "X-Webhook-Id": webhookId,
           "X-Signature": signature
         },
-        body
+        body,
+        // Never follow redirects: a public endpoint could bounce us to an internal address.
+        redirect: "manual",
+        signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS)
       }).catch((error: unknown) => ({
         ok: false,
         status: 0,
@@ -134,9 +160,19 @@ export class WebhooksService {
       }));
 
       lastStatusCode = "status" in response ? response.status : 0;
-      lastResponseText = "text" in response ? await response.text() : "Không nhận được phản hồi";
+      const isRedirect = lastStatusCode >= 300 && lastStatusCode < 400;
+      if (isRedirect) {
+        lastResponseText = `Endpoint trả về chuyển hướng (HTTP ${lastStatusCode}); webhook không đi theo chuyển hướng`;
+      } else {
+        const rawText = "text" in response
+          ? await response.text().catch((error: unknown) =>
+              error instanceof Error ? error.message : "Không đọc được phản hồi"
+            )
+          : "Không nhận được phản hồi";
+        lastResponseText = this.truncateResponse(rawText);
+      }
 
-      if ("ok" in response && response.ok) {
+      if (!isRedirect && "ok" in response && response.ok) {
         delivered = true;
         break;
       }
@@ -170,6 +206,17 @@ export class WebhooksService {
             }
       })
     ]);
+  }
+
+  private assertSafeUrl(url: string) {
+    const verdict = checkWebhookUrl(url);
+    if (!verdict.ok) {
+      throw new BadRequestException(verdict.reason);
+    }
+  }
+
+  private truncateResponse(text: string) {
+    return text.length > MAX_LOGGED_RESPONSE_CHARS ? text.slice(0, MAX_LOGGED_RESPONSE_CHARS) : text;
   }
 
   private signPayload(secret: string, body: string) {

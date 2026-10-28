@@ -17,7 +17,7 @@ import { SetupPasswordDto } from "./dto/setup-password.dto";
 import { UpdateSignatureDto } from "./dto/update-signature.dto";
 import { ImapService } from "./imap.service";
 import { MailboxSyncService } from "./mailbox-sync.service";
-import { FolderInfo, MailboxAddress } from "./mailbox.types";
+import { FolderInfo } from "./mailbox.types";
 import { repairEmailText, repairMailboxAddressName } from "./mojibake.util";
 
 type ResolvedEmailAttachment = {

@@ -506,7 +506,7 @@ export class ReportsService {
     );
   }
 
-  async getFunnel(filters: ReportFilterDto, user: JwtUser) {
+  async getFunnel(_filters: ReportFilterDto, user: JwtUser) {
     const projects = await this.prisma.project.findMany({
       where: buildProjectWhere(user),
       select: {

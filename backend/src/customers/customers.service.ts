@@ -1,6 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import { RoleValue } from "../common/constants/role.constants";
 import { PrismaService } from "../common/prisma.service";
 import { projectProgressPercent } from "../common/utils/project-progress";
 import { buildCustomerCodePrefix } from "../common/utils/vietnamese";

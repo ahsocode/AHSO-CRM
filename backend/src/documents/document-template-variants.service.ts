@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException
 } from "@nestjs/common";
-import { DocumentTemplateStatus, DocumentType, Prisma } from "@prisma/client";
+import { DocumentType, Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { DocumentDataLoaderService } from "./document-data-loader.service";

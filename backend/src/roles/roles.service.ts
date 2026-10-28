@@ -9,8 +9,6 @@ import { PrismaService } from "src/common/prisma.service";
 import { CreateRoleInput } from "./dto/create-role.dto";
 import { UpdateRoleInput } from "./dto/update-role.dto";
 
-const SYSTEM_ROLES = ["ADMIN", "MANAGER", "STAFF"];
-
 @Injectable()
 export class RolesService {
   constructor(private prisma: PrismaService) {}

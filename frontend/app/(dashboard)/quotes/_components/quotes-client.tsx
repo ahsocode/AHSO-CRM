@@ -1,4 +1,5 @@
 "use client";
+import type { Route } from "next";
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -78,7 +79,7 @@ export function QuotesClient() {
     (size: number) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("pageSize", String(size));
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      router.replace(`${pathname}?${params.toString()}` as Route, { scroll: false });
     },
     [pathname, router, searchParams]
   );

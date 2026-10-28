@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import type { Route } from "next";
 import { Loader2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -53,7 +54,7 @@ export function FormActions({
     >
       <div className="flex flex-wrap items-center gap-2">
         {cancelHref ? (
-          <Link href={cancelHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }), TOUCH)}>
+          <Link href={cancelHref as Route} className={cn(buttonVariants({ variant: "outline", size: "lg" }), TOUCH)}>
             {cancelLabel}
           </Link>
         ) : hasCancel ? (

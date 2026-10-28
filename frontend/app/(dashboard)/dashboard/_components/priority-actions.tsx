@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { AppIcon } from "@/components/shared/app-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -44,7 +45,7 @@ export function PriorityActions({
               return (
                 <li key={`${item.kind}-${item.id}`} className="even:bg-bg-subtle/70 rounded-lg">
                   <Link
-                    href={getActionItemHref(item)}
+                    href={getActionItemHref(item) as Route}
                     className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     <span className="inline-flex w-[104px] shrink-0 items-center gap-1.5 rounded-lg bg-primary-bg px-1.5 py-1 text-xs font-semibold text-primary">

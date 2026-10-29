@@ -320,9 +320,9 @@ test.describe("Báo giá", () => {
     const price1 = rowInput(page, "price", 1);
     await price1.fill("1250000");
 
-    // 1.250.000 + 10% VAT = 1.375.000, shown in full (no "tr" abbreviation).
+    // 1.250.000 + 8% VAT (default since 2026) = 1.350.000, shown in full (no "tr" abbreviation).
     const summary = page.getByTestId("quote-summary");
-    await expect(summary).toContainText("1.375.000");
+    await expect(summary).toContainText("1.350.000");
     await expect(summary).not.toContainText(/\d\s?tr\b/);
 
     // Enter in the last row's unit price appends a row and focuses its name input.

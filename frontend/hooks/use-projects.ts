@@ -538,3 +538,23 @@ function updateKanbanSnapshot(
     })
   };
 }
+
+export interface ProjectDocumentReadiness {
+  type: DocumentTemplateType;
+  label: string;
+  entity: "project" | "contract" | "quote" | "payment" | "customer";
+  entityId: string | null;
+  readiness: "ready" | "missing";
+  missingFields: Array<{field: string; message: string}>;
+  generated: {id: string; createdAt: string; downloadUrl: string} | null;
+}
+
+export function useProjectDocumentReadiness(projectId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["projects", projectId, "document-readiness"], enabled,
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<ProjectDocumentReadiness[]>>(`/projects/${projectId}/document-readiness`);
+      return response.data.data;
+    }
+  });
+}

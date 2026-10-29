@@ -3,13 +3,17 @@ import {
   InternalServerErrorException,
   Logger,
   NotFoundException,
-  OnModuleInit
+  OnModuleInit,
+  HttpException,
+  UnprocessableEntityException
 } from "@nestjs/common";
-import { DocumentType, Prisma } from "@prisma/client";
+import { BusinessDocumentType, DocumentType, Prisma } from "@prisma/client";
 import { readFile } from "fs/promises";
 import Handlebars from "handlebars";
 import { join } from "path";
 import { JwtUser, isStaff } from "../auth/auth.types";
+import { scopeCustomerWhereToUser } from "../common/scoping/customer-scope";
+import { DOCUMENT_SOURCE_SCHEMAS, type MissingDocumentField } from "./document-requirements";
 import { PrismaService } from "../common/prisma.service";
 import { DocumentDataLoaderService } from "./document-data-loader.service";
 import { DocumentLayoutRendererService } from "./document-layout-renderer.service";
@@ -181,7 +185,8 @@ ${extraCss}
     languageInput: string | undefined,
     templateVariantId: string | undefined,
     extra: Record<string, unknown> | undefined,
-    user: JwtUser
+    user: JwtUser,
+    projectId?: string
   ) {
     await this.ensureInitialized();
     const language = this.resolveLanguage(languageInput);
@@ -190,6 +195,13 @@ ${extraCss}
     const customerId = this.extractCustomerId(context);
     const renderEntityType = this.extractDocumentEntityType(context, entry.entityType);
     const renderEntityId = this.extractDocumentEntityId(context, entityId);
+    const links = await this.resolveBusinessDocumentLinks(context, projectId, user);
+    const generationKey = [type, renderEntityType, renderEntityId, language, links.projectId ?? ""].join(":");
+    const previous = await this.prisma.document.findFirst({
+      where: { type, entityType: renderEntityType, entityId: renderEntityId, language },
+      orderBy: { version: "desc" }, select: { version: true }
+    });
+    const version = (previous?.version ?? 0) + 1;
 
     let createdDocumentNumber: string | null = null;
     let createdDocumentId: string | null = null;
@@ -199,7 +211,7 @@ ${extraCss}
     await this.documentNumbers.reserveWithRetry(
       type,
       customerCode,
-      1,
+      version,
       async (number) => {
         const html = await this.renderHtml(
           type,
@@ -215,7 +227,7 @@ ${extraCss}
           data: {
             type,
             number,
-            version: 1,
+            version,
             language,
             entityType: renderEntityType,
             entityId: renderEntityId,
@@ -233,11 +245,22 @@ ${extraCss}
             subfolder: "documents"
           });
 
-          await this.prisma.document.update({
-            where: { id: document.id },
-            data: {
-              pdfPath: storedPdf.url
-            }
+          // The stored PDF and its business-list entry become visible together.
+          await this.prisma.$transaction(async tx => {
+            await tx.document.update({ where: { id: document.id }, data: { pdfPath: storedPdf.url } });
+            const data = {
+              type: type === "SURVEY_REPORT" ? BusinessDocumentType.OTHER : type as BusinessDocumentType,
+              source: "GENERATED" as const, status: "DRAFT" as const, title: entry.label,
+              documentNo: number, documentDate: createdAt, fileUrl: storedPdf.url,
+              filename: `${number}.pdf`, mimeType: "application/pdf", size: pdfBuffer.byteLength,
+              ...links, generatedDocumentId: document.id,
+              ...(type === "SURVEY_REPORT" ? { notes: "Báo cáo khảo sát (SURVEY_REPORT)" } : {})
+            };
+            await tx.businessDocument.upsert({
+              where: { generationKey },
+              create: { ...data, generationKey, createdById: user.sub },
+              update: data
+            });
           });
 
           createdDocumentNumber = number;
@@ -276,6 +299,8 @@ ${extraCss}
       },
       select: {
         id: true,
+        type: true,
+        entityId: true,
         number: true,
         pdfPath: true
       }
@@ -285,6 +310,7 @@ ${extraCss}
       throw new NotFoundException("Không tìm thấy tài liệu đã render.");
     }
 
+    await this.assertEntityAccess(document.type, document.entityId, user);
     return this.readStoredDocument(document.number, document.pdfPath);
   }
 
@@ -296,12 +322,21 @@ ${extraCss}
   ) {
     const language = this.resolveLanguage(languageInput);
     const entry = getTemplateEntry(type);
+    await this.assertEntityAccess(type, entityId, user);
+    let canonicalEntityId = entityId;
+    let canonicalEntityType = entry.entityType;
+    if (type === "PAYMENT_RECEIPT") {
+      const payment = await this.prisma.payment.findFirst({
+        where: { OR: [{ id: entityId }, { contractId: entityId }] }, orderBy: [{ paidAt: "desc" }, { id: "desc" }], select: { id: true }
+      });
+      if (payment) { canonicalEntityId = payment.id; canonicalEntityType = "payment"; }
+    }
 
     const document = await this.prisma.document.findFirst({
       where: {
         type,
-        entityType: entry.entityType,
-        entityId,
+        entityType: canonicalEntityType,
+        entityId: canonicalEntityId,
         language,
         ...this.buildDocumentAccessWhere(user)
       },
@@ -380,6 +415,7 @@ ${extraCss}
     extra?: Record<string, unknown>
   ) {
     const entry = getTemplateEntry(type);
+    await this.assertEntityAccess(type, entityId, user);
     const base = await this.dataLoader.loadBaseContext(user, language);
     const loader = (
       this.dataLoader as unknown as Record<string, (id: string) => Promise<Record<string, unknown>>>
@@ -401,7 +437,8 @@ ${extraCss}
       ...entityData,
       type,
       language,
-      entityId
+      entityId,
+      docNumber: "Bản xem trước"
     };
     await this.assertContextAccess(context, user);
 
@@ -472,8 +509,7 @@ ${extraCss}
 
     return {
       customer: {
-        deletedAt: null,
-        assignedToId: user.sub
+        ...scopeCustomerWhereToUser({ deletedAt: null }, user)
       }
     };
   }
@@ -507,8 +543,7 @@ ${extraCss}
     const customer = await this.prisma.customer.findFirst({
       where: {
         id: customerId,
-        deletedAt: null,
-        assignedToId: user.sub
+        ...scopeCustomerWhereToUser({ deletedAt: null }, user)
       },
       select: { id: true }
     });
@@ -516,6 +551,76 @@ ${extraCss}
     if (!customer) {
       throw new NotFoundException("Không tìm thấy dữ liệu tài liệu trong phạm vi phụ trách.");
     }
+  }
+
+  private async resolveBusinessDocumentLinks(context: Record<string, unknown>, requestedProjectId: string | undefined, user: JwtUser) {
+    const record = (value: unknown) => value && typeof value === "object" ? value as Record<string, unknown> : {};
+    const id = (value: unknown) => typeof value === "string" && value.length ? value : null;
+    const project = record(context.project);
+    const quote = record(context.quote ?? context.linkedQuote);
+    const contract = record(context.contract);
+    const payment = record(context.payment);
+    const customerId = this.extractCustomerId(context);
+    const actualProjectId = id(project.id) ?? id(contract.projectId) ?? id(quote.projectId) ?? id(payment.projectId);
+    if (requestedProjectId && actualProjectId && requestedProjectId !== actualProjectId) throw new NotFoundException("Tài liệu không thuộc dự án này.");
+    const projectId = actualProjectId ?? requestedProjectId ?? null;
+    if (projectId) {
+      const accessible = await this.prisma.project.findFirst({
+        where: { id: projectId, deletedAt: null, customerId: customerId ?? undefined, customer: scopeCustomerWhereToUser({deletedAt: null}, user) }, select: { id: true }
+      });
+      if (!accessible) throw new NotFoundException("Không tìm thấy dự án trong phạm vi phụ trách.");
+    }
+    return { projectId, customerId, contractId: id(contract.id), quoteId: id(payment.quoteId) ?? id(quote.id), paymentId: id(payment.id) };
+  }
+
+  async getReadiness(type: DocumentType, entityId: string, user: JwtUser) {
+    try {
+      await this.buildRenderContext(type, entityId, "vi", user);
+      return { readiness: "ready" as const, missingFields: [] as MissingDocumentField[] };
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() === 422) {
+        const response = error.getResponse() as { errors: MissingDocumentField[] };
+        return { readiness: "missing" as const, missingFields: response.errors };
+      }
+      throw error;
+    }
+  }
+
+  async getSourceData(type: DocumentType, entityId: string, user: JwtUser) {
+    await this.assertEntityAccess(type, entityId, user);
+    const record = await this.prisma.documentSourceData.findUnique({ where: { type_entityId: { type, entityId } } });
+    return record?.data ?? {};
+  }
+
+  async saveSourceData(type: DocumentType, entityId: string, data: Record<string, unknown>, user: JwtUser) {
+    await this.assertEntityAccess(type, entityId, user);
+    const schema = DOCUMENT_SOURCE_SCHEMAS[type as keyof typeof DOCUMENT_SOURCE_SCHEMAS];
+    if (!schema) throw new UnprocessableEntityException({ statusCode: 422, message: "Loại tài liệu này dùng dữ liệu nghiệp vụ có sẵn.", errors: [{ field: "type", message: "Không nhận dữ liệu nguồn bổ sung cho loại này." }] });
+    const result = schema.safeParse(data);
+    if (!result.success) throw new UnprocessableEntityException({ statusCode: 422, message: "Dữ liệu nguồn chưa đầy đủ.", errors: result.error.issues.map(issue => ({ field: issue.path.join("."), message: issue.message })) });
+    await this.prisma.documentSourceData.upsert({
+      where: { type_entityId: { type, entityId } },
+      create: { type, entityId, data: result.data as Prisma.InputJsonValue, recordedById: user.sub },
+      update: { data: result.data as Prisma.InputJsonValue, recordedById: user.sub }
+    });
+    return this.getReadiness(type, entityId, user);
+  }
+
+  private async assertEntityAccess(type: DocumentType, entityId: string, user: JwtUser) {
+    const entry = getTemplateEntry(type);
+    const customerWhere = scopeCustomerWhereToUser({ deletedAt: null }, user);
+    let entity: { id: string } | null = null;
+    if (type === "PAYMENT_RECEIPT") {
+      entity = await this.prisma.payment.findFirst({ where: { id: entityId, project: { deletedAt: null, customer: customerWhere } }, select: { id: true } });
+      if (entity) return;
+    }
+    switch (entry.entityType) {
+      case "customer": entity = await this.prisma.customer.findFirst({ where: { id: entityId, ...customerWhere }, select: { id: true } }); break;
+      case "project": entity = await this.prisma.project.findFirst({ where: { id: entityId, deletedAt: null, customer: customerWhere }, select: { id: true } }); break;
+      case "quote": entity = await this.prisma.quote.findFirst({ where: { id: entityId, deletedAt: null, project: { deletedAt: null, customer: customerWhere } }, select: { id: true } }); break;
+      case "contract": entity = await this.prisma.contract.findFirst({ where: { id: entityId, deletedAt: null, project: { deletedAt: null, customer: customerWhere } }, select: { id: true } }); break;
+    }
+    if (!entity) throw new NotFoundException("Không tìm thấy dữ liệu tài liệu trong phạm vi phụ trách.");
   }
 
   private extractCustomerCode(data: Record<string, unknown>): string | null {

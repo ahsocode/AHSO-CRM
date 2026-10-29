@@ -571,6 +571,7 @@ model BusinessDocument {
   payment             Payment?               @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   paymentId           String?
   generatedDocument   Document?              @relation(fields: [generatedDocumentId], references: [id], onDelete: SetNull)
+  generationKey       String?                @unique
   generatedDocumentId String?
   parent              BusinessDocument?      @relation("BusinessDocumentLineage", fields: [parentId], references: [id], onDelete: SetNull)
   parentId            String?
@@ -1541,4 +1542,17 @@ model PolicyItem {
   updatedAt DateTime       @updatedAt
 
   @@index([type, sortOrder])
+}
+
+// Validated, explicitly recorded operational evidence used by document loaders.
+model DocumentSourceData {
+  id          String       @id @default(cuid())
+  type        DocumentType
+  entityId    String
+  data        Json
+  recordedById String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([type, entityId])
 }

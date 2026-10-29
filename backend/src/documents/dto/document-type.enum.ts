@@ -12,10 +12,11 @@ export const DOCUMENT_TYPES = Object.values(PrismaDocumentType) as PrismaDocumen
 export type DocumentLanguage = "vi" | "vi-en";
 export const DOCUMENT_LANGUAGES: DocumentLanguage[] = ["vi", "vi-en"];
 
-export type DocumentEntityType = "quote" | "contract" | "customer" | "project";
+export type DocumentEntityType = "quote" | "contract" | "customer" | "project" | "payment";
 export const DOCUMENT_ENTITY_TYPES: DocumentEntityType[] = [
   "quote",
   "contract",
   "customer",
-  "project"
+  "project",
+  "payment"
 ];

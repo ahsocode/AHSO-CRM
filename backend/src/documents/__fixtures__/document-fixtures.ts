@@ -6,7 +6,7 @@
  * settings, uploads, PDF). No jest APIs here so `scripts/render-docs` can reuse it.
  */
 import { Prisma } from "@prisma/client";
-import type { DocumentType } from "@prisma/client";
+import type { DocumentType, Payment } from "@prisma/client";
 import type { JwtUser } from "../../auth/auth.types";
 import type { PrismaService } from "../../common/prisma.service";
 import type { SettingsService } from "../../settings/settings.service";
@@ -123,7 +123,7 @@ function milestones(variant: FixtureVariant) {
     ];
   }
   return [
-    { id: "ms-1", name: "Tạm ứng 30%", description: null, dueDate: at("2026-10-24T05:00:00.000Z"), completedAt: at("2026-10-22T03:00:00.000Z"), status: "DONE", paymentAmount: dec(26523000), notes: null, projectId: "proj-orion", contractId: "contract-orion", createdAt: at("2026-10-01T02:00:00.000Z") },
+    { id: "ms-1", name: "Tạm ứng 30%", description: null, dueDate: at("2026-10-24T05:00:00.000Z"), completedAt: FIXTURE_NOW, status: "ACCEPTED", paymentAmount: dec(26523000), notes: null, projectId: "proj-orion", contractId: "contract-orion", createdAt: at("2026-10-01T02:00:00.000Z") },
     { id: "ms-2", name: "Giao hàng 60%", description: null, dueDate: at("2026-11-14T05:00:00.000Z"), completedAt: null, status: "PENDING", paymentAmount: dec(53046000), notes: null, projectId: "proj-orion", contractId: "contract-orion", createdAt: at("2026-10-01T02:00:00.000Z") },
     { id: "ms-3", name: "Nghiệm thu 10%", description: null, dueDate: at("2026-12-14T05:00:00.000Z"), completedAt: null, status: "PENDING", paymentAmount: dec(8841000), notes: null, projectId: "proj-orion", contractId: "contract-orion", createdAt: at("2026-10-01T02:00:00.000Z") }
   ];
@@ -141,7 +141,7 @@ function project(variant: FixtureVariant) {
     estimatedValue: dec(90000000),
     startDate: variant === "full" ? at("2026-11-02T05:00:00.000Z") : null,
     expectedEndDate: variant === "full" ? at("2026-12-14T05:00:00.000Z") : null,
-    completedAt: null,
+    completedAt: FIXTURE_NOW,
     salesInvoiceDate: null,
     notes: null,
     deletedAt: null,
@@ -230,7 +230,7 @@ function contractRow(variant: FixtureVariant) {
     updatedAt: at("2026-10-16T02:00:00.000Z"),
     deletedAt: null,
     items,
-    milestones: milestones(variant),
+    milestones: variant === "full" ? milestones("full") : [...milestones("minimal"), ...milestones("full")],
     project: {
       ...project(variant),
       customer: customer(variant),
@@ -262,6 +262,22 @@ function surveyRow() {
   };
 }
 
+/** Explicit evidence for HTML layout tests; missing-source behavior is tested separately. */
+export function operationalFixture(type: DocumentType): Record<string, unknown> {
+  const date = FIXTURE_NOW.toISOString();
+  const result = [{ name: "Hạng mục được ghi nhận", status: "Đạt", note: "Kết quả kiểm tra thực tế" }];
+  const data: Partial<Record<DocumentType, Record<string, unknown>>> = {
+    CONTRACT_ADDENDUM: { modifications: [{ content: "Gia hạn thời gian thực hiện hợp đồng thêm 30 ngày." }, { content: "Thay đổi hình thức thanh toán từ tiền mặt sang chuyển khoản." }], addendumDate: date },
+    DOC_HANDOVER: { handedOverDocs: [{ name: "Hướng dẫn đã bàn giao", format: "PDF", note: "Có trong biên bản" }], handoverDate: date },
+    INSTALLATION_REPORT: { installations: [{ ...result[0], status: "Hoàn thành" }], installationDate: date },
+    ACCEPTANCE_REPORT: { testResults: result, acceptanceDate: date, conclusion: "ACCEPTED" },
+    MAINTENANCE_RECORD: { issues: result, maintenanceDate: date, technician: "Kỹ thuật viên trong fixture" },
+    DELIVERY_NOTE: { deliveredItems: [{ name: "Thiết bị đã giao", quantity: 1, unit: "bộ" }], deliveryDate: date, conditionConfirmed: true },
+    AR_RECONCILIATION: { invoices: [{ contractId: "contract-orion", amount: 88410000, reference: "HĐĐT-001" }] }
+  };
+  return data[type] ?? {};
+}
+
 /** Plain-object Prisma stand-in: returns fixture rows, records nothing, never touches a DB. */
 export function createFixturePrisma(variant: FixtureVariant) {
   const full = variant === "full";
@@ -269,9 +285,11 @@ export function createFixturePrisma(variant: FixtureVariant) {
   return {
     documents,
     contract: {
+      findFirst: async () => ({ id: "contract-orion" }),
       findUnique: async ({ where }: { where: { id: string } }) => (where.id === "contract-orion" ? contractRow(variant) : null)
     },
     quote: {
+      findFirst: async () => ({ id: "quote-orion" }),
       findUnique: async ({ where }: { where: { id: string } }) => {
         const row = where.id === "quote-orion" ? quoteRow(variant) : where.id === "quote-single" ? singleRateQuoteRow() : null;
         if (!row) return null;
@@ -294,6 +312,7 @@ export function createFixturePrisma(variant: FixtureVariant) {
       findFirst: async () => ({ id: "cust-orion" })
     },
     project: {
+      findFirst: async () => ({ id: "proj-orion" }),
       findUnique: async ({ where }: { where: { id: string } }) => {
         if (where.id !== "proj-orion") return null;
         return {
@@ -304,14 +323,14 @@ export function createFixturePrisma(variant: FixtureVariant) {
         };
       }
     },
+    documentSourceData: { findUnique: async ({ where }: { where: { type_entityId: { type: DocumentType } } }) => ({ data: operationalFixture(where.type_entityId.type) }) },
     survey: {
-      findFirst: async () => (full ? surveyRow() : null)
+      findFirst: async () => surveyRow()
     },
     payment: {
-      findFirst: async () =>
-        full
-          ? { id: "pay-1", amount: dec(26523000), paidAt: at("2026-10-22T03:00:00.000Z"), method: "Chuyển khoản", reference: "FT2629512345", notes: "Tạm ứng 30% HĐ HD-2026-012", projectId: "proj-orion", contractId: "contract-orion", quoteId: null, createdAt: at("2026-10-22T03:00:00.000Z") }
-          : null,
+      findUnique: async () => null,
+      findFirst: async (): Promise<Payment | null> =>
+        ({ id: "pay-1", amount: dec(26523000), paidAt: at("2026-10-22T03:00:00.000Z"), method: "Chuyển khoản", reference: "FT2629512345", notes: "Tạm ứng 30% HĐ HD-2026-012", projectId: "proj-orion", contractId: "contract-orion", quoteId: null, createdAt: at("2026-10-22T03:00:00.000Z") }),
       groupBy: async () => (full ? [{ contractId: "contract-orion", _sum: { amount: dec(26523000) } }] : [])
     },
     document: {
@@ -321,8 +340,11 @@ export function createFixturePrisma(variant: FixtureVariant) {
         return row;
       },
       update: async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => ({ id: where.id, ...data }),
-      delete: async () => undefined
-    }
+      delete: async () => undefined,
+      findFirst: async () => null
+    },
+    businessDocument: { upsert: async () => ({ id: "business-fixture" }) },
+    $transaction: async <T>(run: (tx: unknown) => Promise<T>): Promise<T> => run({ businessDocument: { upsert: async () => ({ id: "business-fixture" }) }, document: { update: async () => ({}) } })
   };
 }
 
@@ -353,8 +375,8 @@ export async function createRenderHarness(
   const company = overrides.company ?? companySettings(variant);
   const logo = overrides.logo !== undefined ? overrides.logo : variant === "full" ? LOGO_DATA_URL : null;
   const settings = {
-    getAllSettings: async () => ({ company, policies: variant === "full" ? POLICIES : {}, logo }),
-    getCompanyInfo: async () => company
+    getAllSettings: async () => ({ company, policies: POLICIES, logo }),
+    getCompanyInfo: async () => ({ ...company, contactName: company.contactName ?? "Người thu tiền trong fixture" })
   };
   const upload = {
     readFileAsDataUrl: async () => null,

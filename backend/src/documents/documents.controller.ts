@@ -36,6 +36,8 @@ import {
   UpdateDocumentTemplateVariantDto
 } from "./dto/document-template.dto";
 import {
+  documentSourceDataSchema,
+  DocumentSourceDataDto,
   DocumentListFilterDto,
   documentListFilterSchema,
   previewQuerySchema,
@@ -203,6 +205,25 @@ export class DocumentsController {
     response.send(html);
   }
 
+  @RequirePermissions("documents.view")
+  @ApiOperation({ summary: "GET /api/documents/:type/:entityId/source-data" })
+  @Get(":type/:entityId/source-data")
+  getSourceData(@Param("type") type: DocumentType, @Param("entityId") entityId: string, @CurrentUser() user: JwtUser) {
+    return this.documentsService.getSourceData(type, entityId, user);
+  }
+
+  @RequirePermissions("documents.create")
+  @ApiOperation({ summary: "POST /api/documents/:type/:entityId/source-data" })
+  @Post(":type/:entityId/source-data")
+  saveSourceData(
+    @Param("type") type: DocumentType,
+    @Param("entityId") entityId: string,
+    @Body(new ZodValidationPipe(documentSourceDataSchema)) body: DocumentSourceDataDto,
+    @CurrentUser() user: JwtUser
+  ) {
+    return this.documentsService.saveSourceData(type, entityId, body.data, user);
+  }
+
   @RequirePermissions("documents.create")
   @ApiOperation({ summary: "POST /api/documents/:type/:entityId/render" })
   @Post(":type/:entityId/render")
@@ -218,7 +239,8 @@ export class DocumentsController {
       body.language,
       body.templateVariantId,
       body.extra,
-      user
+      user,
+      body.projectId
     );
     return {
       documentId: result.documentId,

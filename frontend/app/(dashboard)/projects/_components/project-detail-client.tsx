@@ -32,12 +32,16 @@ import {
   useCreateProjectPayment,
   useProject,
   useProjectDocuments,
+  useProjectDocumentReadiness,
   useProjectOverview360,
   useProjectTimeline,
   useUpdateProjectDocumentPlan,
   useUpdateProjectStatus
 } from "@/hooks/use-projects";
 import { useAddSurveyNote, useCreateSurvey, useProjectSurveys, useUploadSurveyMedia } from "@/hooks/use-surveys";
+import { useAuth } from "@/hooks/use-auth";
+import { DocumentGenerationTable } from "./project-detail/document-generation-table";
+import { getDocumentErrorMessage } from "./project-detail/document-errors";
 import { toast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-client";
 import { formatDate, formatDateTime, formatVNDShort } from "@/lib/format";
@@ -939,6 +943,11 @@ function SurveysPanel({ projectId, customerId }: { projectId: string; customerId
 function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof useProject>["data"]> }) {
   const projectId = project.id;
   const customerId = project.customer.id;
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("documents.create");
+  const canEditPlan = hasPermission("projects.edit");
+  const readinessQuery = useProjectDocumentReadiness(projectId, hasPermission("documents.view"));
+  const [generationResults, setGenerationResults] = useState<Array<{type: string; status: string; reason: string}>>([]);
   const documentsQuery = useProjectDocuments(projectId);
   const createDocument = useCreateBusinessDocument(projectId);
   const uploadDocument = useUploadBusinessDocumentFile(projectId);
@@ -984,13 +993,11 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
   });
 
   const businessDocuments = documentsQuery.data?.businessDocuments ?? [];
-  const generatedDocuments = documentsQuery.data?.generatedDocuments ?? [];
+  const generatedDocuments = (documentsQuery.data?.generatedDocuments ?? []).filter(document => document.pdfPath && document.renderedAt);
   const savedPlanTypes = documentsQuery.data?.documentPlan?.requiredTypes ?? [];
   const savedPlanKey = [...savedPlanTypes].sort().join("|");
   const selectedPlanKey = [...selectedPlanTypes].sort().join("|");
   const hasUnsavedPlanChanges = savedPlanKey !== selectedPlanKey;
-  const latestQuote = project.quotes[0] ?? null;
-  const acceptedQuote = project.quotes.find((quote) => quote.status === "ACCEPTED") ?? null;
   const generatedDocumentsByType = generatedDocuments.reduce<Record<string, GeneratedProjectDocument[]>>((acc, document) => {
     acc[document.type] = [...(acc[document.type] ?? []), document];
     return acc;
@@ -1023,42 +1030,11 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
   }, [savedPlanKey]);
 
   function getSystemDocumentSourceInfo(document: (typeof PROJECT_GENERATED_DOCUMENTS)[number]) {
-    if (document.entity === "project") {
-      return {
-        sourceLabel: `Dự án ${project.code}`,
-        canGenerate: true,
-        missingReason: ""
-      };
-    }
-
-    if (document.entity === "customer") {
-      return {
-        sourceLabel: `Khách hàng ${project.customer.name}`,
-        canGenerate: true,
-        missingReason: ""
-      };
-    }
-
-    if (document.entity === "quote") {
-      return {
-        sourceLabel: acceptedQuote ? `Báo giá ${acceptedQuote.quoteNo} · v${acceptedQuote.version}` : "Chưa có báo giá đã chấp nhận",
-        canGenerate: Boolean(acceptedQuote),
-        missingReason: "Cần có báo giá đã chấp nhận trước khi sinh tài liệu này."
-      };
-    }
-
-    if (project.contract) {
-      return {
-        sourceLabel: `Hợp đồng ${project.contract.contractNo}`,
-        canGenerate: true,
-        missingReason: ""
-      };
-    }
-
+    const row = readinessQuery.data?.find(item => item.type === document.type);
     return {
-      sourceLabel: acceptedQuote ? `Báo giá ${acceptedQuote.quoteNo} · tham chiếu` : "Chưa có hợp đồng hoặc báo giá đã chấp nhận",
-      canGenerate: Boolean(acceptedQuote),
-      missingReason: "Cần có hợp đồng hoặc báo giá đã chấp nhận trước khi sinh tài liệu này."
+      sourceLabel: row?.entityId ? "Dữ liệu nghiệp vụ của dự án" : "Chưa có thực thể nguồn",
+      canGenerate: row?.readiness === "ready",
+      missingReason: row ? row.missingFields.map(field => field.message).join(" ") : "Đang kiểm tra dữ liệu…"
     };
   }
 
@@ -1091,15 +1067,20 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
 
     try {
       const result = await generateDocumentPlan.mutateAsync({ mode: "missing" });
-      await documentsQuery.refetch();
+      setGenerationResults([
+        ...result.generated.map(item => ({type: item.type, status: "Đã tạo", reason: item.number})),
+        ...result.skipped.map(item => ({type: item.type, status: "Bỏ qua", reason: item.reason})),
+        ...result.failed.map(item => ({type: item.type, status: "Lỗi", reason: item.reason}))
+      ]);
+      await Promise.all([documentsQuery.refetch(), readinessQuery.refetch()]);
       toast({
-        title: "Đã sinh tài liệu theo cấu hình",
+        title: "Đã kiểm tra bộ tài liệu theo cấu hình",
         description: `${result.generated.length} tạo mới, ${result.skipped.length} bỏ qua, ${result.failed.length} lỗi.`
       });
     } catch (error) {
       toast({
         title: "Không sinh được bộ tài liệu",
-        description: getApiErrorMessage(error, "Vui lòng kiểm tra cấu hình hồ sơ và quyền tạo tài liệu."),
+        description: getDocumentErrorMessage(error),
         variant: "destructive"
       });
     }
@@ -1183,9 +1164,9 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
               Gom PO, bản đã ký, biên bản, hóa đơn và tệp khách gửi vào cùng một danh mục để bàn giao dự án không bị đứt mạch.
             </p>
           </div>
-          <Button type="button" onClick={() => setShowCreateForm((current) => !current)}>
+          {canCreate ? <Button type="button" onClick={() => setShowCreateForm((current) => !current)}>
             {showCreateForm ? "Ẩn form thêm tài liệu" : "Thêm tài liệu"}
-          </Button>
+          </Button> : null}
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-4">
           <DocumentStat label="Tổng tài liệu" value={businessDocuments.length} />
@@ -1289,6 +1270,11 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
         </Card>
       ) : null}
 
+      <DocumentGenerationTable projectId={projectId} />
+      {generationResults.length ? <div role="status" className="space-y-2 rounded-2xl bg-bg-subtle p-4">
+        <p className="font-semibold">Kết quả sinh tài liệu</p>
+        <ul className="space-y-1 text-sm">{generationResults.map(item => <li key={item.type}>{PROJECT_GENERATED_DOCUMENTS.find(doc => doc.type === item.type)?.label ?? item.type}: {item.status} — {item.reason}</li>)}</ul>
+      </div> : null}
       <div className="space-y-6">
         <Card className="border-0 bg-bg-card">
           <CardHeader className="mb-0 gap-2 md:flex-row md:items-start md:justify-between">
@@ -1433,12 +1419,12 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                 <Button
                   type="button"
                   variant="outline"
-                  disabled={!hasUnsavedPlanChanges || updateDocumentPlan.isPending}
+                  disabled={!canEditPlan || !hasUnsavedPlanChanges || updateDocumentPlan.isPending}
                   onClick={handleSaveDocumentPlan}
                 >
                   {updateDocumentPlan.isPending ? "Đang lưu..." : "Lưu cấu hình"}
                 </Button>
-                <Button
+                {canCreate ? <Button
                   type="button"
                   disabled={
                     selectedPlanTypes.length === 0 ||
@@ -1448,7 +1434,7 @@ function DocumentsPanel({ project }: { project: NonNullable<ReturnType<typeof us
                   onClick={handleGenerateDocumentPlan}
                 >
                   {generateDocumentPlan.isPending ? "Đang sinh..." : "Sinh tài liệu còn thiếu"}
-                </Button>
+                </Button> : null}
               </div>
             </div>
           </CardContent>

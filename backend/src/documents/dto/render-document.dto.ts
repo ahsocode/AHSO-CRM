@@ -19,6 +19,7 @@ export type RenderExtraDto = z.infer<typeof renderExtraSchema>;
 
 export const renderDocumentSchema = z.object({
   language: z.enum(["vi", "vi-en"]).optional(),
+  projectId: z.string().cuid().optional(),
   templateVariantId: z.string().trim().min(1).optional(),
   extra: renderExtraSchema.optional()
 });
@@ -42,3 +43,8 @@ export const previewQuerySchema = z.object({
 });
 
 export type PreviewQueryDto = z.infer<typeof previewQuerySchema>;
+
+export const documentSourceDataSchema = z.object({
+  data: z.record(z.unknown()).refine(data => JSON.stringify(data).length <= 100000, "Dữ liệu nguồn quá dài")
+}).strict();
+export type DocumentSourceDataDto = z.infer<typeof documentSourceDataSchema>;

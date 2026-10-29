@@ -21,6 +21,10 @@ describe("DocumentsService", () => {
 
   let service: DocumentsService;
   let prisma: {
+    $transaction: jest.Mock;
+    businessDocument: { upsert: jest.Mock };
+    quote: { findFirst: jest.Mock };
+    project: { findFirst: jest.Mock };
     document: {
       create: jest.Mock;
       update: jest.Mock;
@@ -41,6 +45,10 @@ describe("DocumentsService", () => {
 
   beforeEach(() => {
     prisma = {
+      $transaction: jest.fn(async fn => fn(prisma)),
+      businessDocument: { upsert: jest.fn() },
+      project: { findFirst: jest.fn().mockResolvedValue({id: "project-1"}) },
+      quote: { findFirst: jest.fn().mockResolvedValue({id: "quote-404"}) },
       document: {
         create: jest.fn(),
         update: jest.fn(),
@@ -143,9 +151,38 @@ describe("DocumentsService", () => {
     });
   });
 
+  it("links rerenders to one business document with the canonical entities", async () => {
+    prisma.document.create.mockResolvedValue({id: "document-1"});
+    const linked = new Map<string, unknown>();
+    prisma.businessDocument.upsert.mockImplementation(({where, create, update}) => {
+      linked.set(where.generationKey, linked.has(where.generationKey) ? update : create);
+      return {id: "business-1"};
+    });
+    await service.renderPdf("QUOTATION", "quote-1", "vi", undefined, undefined, user);
+    await service.renderPdf("QUOTATION", "quote-1", "vi", undefined, undefined, user);
+    expect(linked.size).toBe(1);
+    expect([...linked.values()][0]).toMatchObject({customerId: "customer-1", generatedDocumentId: "document-1", source: "GENERATED", status: "DRAFT"});
+    expect(prisma.businessDocument.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it("records every canonical business link and increments the PDF version", async () => {
+    (service as any).buildRenderContext.mockResolvedValueOnce({
+      entry: { entityType: "contract", label: "Phiếu thu" }, title: "Phiếu thu",
+      context: { customer: {id: "customer-1"}, project: {id:"project-1"}, contract:{id:"contract-1", projectId:"project-1"}, linkedQuote:{id:"quote-1"}, payment:{id:"payment-1", quoteId:"quote-1"}, documentEntityType:"payment", documentEntityId:"payment-1" }
+    });
+    prisma.document.findFirst.mockResolvedValue({version: 2});
+    prisma.document.create.mockResolvedValue({id:"document-3"});
+    await service.renderPdf("PAYMENT_RECEIPT", "payment-1", "vi", undefined, undefined, user, "project-1");
+    expect(prisma.businessDocument.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({customerId:"customer-1", projectId:"project-1", contractId:"contract-1", quoteId:"quote-1", paymentId:"payment-1", generatedDocumentId:"document-3"})
+    }));
+    expect(prisma.document.create).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({entityType:"payment", entityId:"payment-1", version:3})}));
+  });
+
   it("downloads an existing document by id without creating a new record", async () => {
     prisma.document.findFirst.mockResolvedValue({
       id: "document-1",
+      type: "QUOTATION", entityId: "quote-1",
       number: "BG-2026-AHSO-001-v1",
       pdfPath: "/uploads/documents/generated.pdf"
     });

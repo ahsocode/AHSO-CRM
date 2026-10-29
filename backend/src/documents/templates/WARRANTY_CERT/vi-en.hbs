@@ -8,7 +8,7 @@
 <div style="text-align: center; margin-bottom: 40pt;">
   <h1 style="font-size: 24pt; font-weight: 700; text-transform: uppercase; color: #1e3a8a; margin-bottom: 8pt;">{{t "document_title_warranty"}}</h1>
   <div style="font-size: 12pt; color: #4b5563;">
-    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> BH-{{contract.contractNo}}/{{date generatedAt "year"}}
+    <span class="lang-vi">Số:</span><span class="lang-en">No.:</span> {{docNumber}}
   </div>
 </div>
 
@@ -74,7 +74,7 @@
         {{warrantyPeriodMonths}} <span class="lang-vi">THÁNG</span><span class="lang-en">MONTHS</span>
       </span>
     </p>
-    <p><strong><span class="lang-vi">{{t "warranty_start_date"}}:</span><span class="lang-en">Start Date:</span></strong> {{date contract.expectedEndDate "long"}}</p>
+    <p><strong><span class="lang-vi">{{t "warranty_start_date"}}:</span><span class="lang-en">Start Date:</span></strong> {{date warrantyDate "long"}}</p>
     <p><strong><span class="lang-vi">{{t "warranty_end_date"}}:</span><span class="lang-en">End Date:</span></strong> {{date warrantyEndDate "long"}}</p>
   </div>
 

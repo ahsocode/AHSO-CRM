@@ -4,13 +4,13 @@
   <div class="classic-header__motto">{{t "independence_motto"}}</div>
   <div class="classic-header__dash">-----------------</div>
   <h1 class="classic-header__title">{{t "document_title_contract_addendum"}}</h1>
-  <div class="classic-header__meta">{{t "doc_number"}}: {{contract.contractNo}}/PL-{{date generatedAt "year"}}</div>
+  <div class="classic-header__meta">{{t "doc_number"}}: {{docNumber}}</div>
 </div>
 
 <main class="classic-body">
-  <p style="text-indent: 0;"><strong>{{t "addendum_statement" contractNo=contract.contractNo date=(date contract.createdAt "short")}}</strong></p>
+  <p style="text-indent: 0;"><strong>{{t "addendum_statement" contractNo=contract.contractNo date=(date contract.signDate "short")}}</strong></p>
   
-  <p><strong>{{t "agreement_statement" date=(date generatedAt "long-body") location=company.address}}</strong></p>
+  <p><strong>{{t "agreement_statement" date=(date addendumDate "long-body") location=company.address}}</strong></p>
 
   <h3 style="margin-top: 12pt; text-transform: uppercase;">{{t "party_a"}}</h3>
   <table class="classic-parties" width="100%">

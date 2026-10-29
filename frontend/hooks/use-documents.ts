@@ -45,6 +45,7 @@ export interface DocumentFilters {
 
 export interface RenderDocumentPayload {
   language: "vi" | "vi-en";
+  projectId?: string;
   templateVariantId?: string;
   extra?: Record<string, unknown>;
 }
@@ -386,6 +387,50 @@ export function useDeleteDocumentTemplateVariant(id?: string) {
         queryClient.invalidateQueries({ queryKey: variantListKey() }),
         queryClient.invalidateQueries({ queryKey: ["documents", "template-variant"] })
       ]);
+    }
+  });
+}
+
+export function useDocumentSourceData(type: string, entityId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["documents", "source-data", type, entityId], enabled,
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<Record<string, unknown>>>(`/documents/${type}/${entityId}/source-data`);
+      return response.data.data;
+    }
+  });
+}
+
+export function useSaveDocumentSourceData(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({type, entityId, data}: {type: string; entityId: string; data: Record<string, unknown>}) => {
+      await apiClient.post(`/documents/${type}/${entityId}/source-data`, {data});
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({queryKey:["projects", projectId]}),
+        queryClient.invalidateQueries({queryKey:["documents", "source-data"]})
+      ]);
+    }
+  });
+}
+
+/** Invoice evidence can reference any contract of this customer; paginate instead of silently capping the selector. */
+export function useDocumentSourceContracts(customerId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["documents", "source-contracts", customerId], enabled,
+    queryFn: async ({signal}) => {
+      const items: Array<{id: string; contractNo: string}> = [];
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const response = await apiClient.get<ApiResponse<Array<{id: string; contractNo: string}>>>("/contracts", {params:{customerId, page, limit:100, includeCancelled:true}, signal});
+        items.push(...response.data.data);
+        totalPages = Number(response.data.meta?.totalPages ?? 1);
+        page += 1;
+      } while (page <= totalPages);
+      return items;
     }
   });
 }

@@ -17,6 +17,7 @@ import {
 import { buildDeletedWhere, buildWhere } from "./project-where";
 import { DEFAULT_PROJECT_ORDER_BY, TERMINAL_PROJECT_STATUSES, buildExplicitOrderBy, planGroupedPage } from "./project-order";
 import { CustomFieldsService } from "../custom-fields/custom-fields.service";
+import { TEMPLATE_REGISTRY } from "../documents/template-registry";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
@@ -1074,7 +1075,6 @@ export class ProjectsService {
 
     const entityIds = [
       id,
-      ...(projectLinks?.customerId ? [projectLinks.customerId] : []),
       ...(projectLinks?.quotes.map((quote) => quote.id) ?? []),
       ...(projectLinks?.contract ? [projectLinks.contract.id] : []),
       ...(projectLinks?.payments.map((payment) => payment.id) ?? [])
@@ -1083,9 +1083,7 @@ export class ProjectsService {
     const generatedDocuments = entityIds.length
       ? await this.prisma.document.findMany({
           where: {
-            entityId: {
-              in: entityIds
-            }
+            OR: [{ entityId: { in: entityIds } }, { businessDocuments: { some: { projectId: id } } }]
           },
           include: {
             createdBy: {
@@ -1119,6 +1117,23 @@ export class ProjectsService {
         createdBy: document.createdBy
       }))
     };
+  }
+
+  async getDocumentReadiness(id: string, user: JwtUser) {
+    const project = await this.getProjectDocumentSources(id, user);
+    return Promise.all(Object.values(TEMPLATE_REGISTRY).map(async entry => {
+      const source = this.resolveProjectDocumentSource(project, entry.type);
+      const state = source.entityId
+        ? await this.documentsService.getReadiness(entry.type, source.entityId, user)
+        : { readiness: "missing" as const, missingFields: [{ field: `${entry.entityType}.id`, message: source.missingReason }] };
+      const generated = source.entityId ? await this.prisma.document.findFirst({
+        where: { type: entry.type, entityId: source.entityId, language: "vi", pdfPath: { not: null },
+          ...(source.entityType === "customer" ? { businessDocuments: { some: { projectId: id } } } : {}) },
+        orderBy: [{ renderedAt: "desc" }, { createdAt: "desc" }], select: { id: true, createdAt: true }
+      }) : null;
+      return { type: entry.type, label: entry.label, entity: source.entityType, entityId: source.entityId,
+        ...state, generated: generated ? { ...generated, downloadUrl: `/api/documents/${generated.id}/download` } : null };
+    }));
   }
 
   async updateDocumentPlan(id: string, dto: UpdateProjectDocumentPlanDto, user: JwtUser) {
@@ -1196,7 +1211,9 @@ export class ProjectsService {
             type: requirement.type,
             entityType: source.entityType,
             entityId: source.entityId,
-            language: "vi"
+            language: "vi",
+            pdfPath: { not: null },
+            ...(source.entityType === "customer" ? { businessDocuments: { some: { projectId: id } } } : {})
           },
           orderBy: [{ renderedAt: "desc" }, { createdAt: "desc" }],
           select: {
@@ -1217,13 +1234,19 @@ export class ProjectsService {
       }
 
       try {
+        const readiness = await this.documentsService.getReadiness(requirement.type, source.entityId, user);
+        if (readiness.readiness === "missing") {
+          skipped.push({ type: requirement.type, reason: readiness.missingFields.map(field => field.message).join(" ") });
+          continue;
+        }
         const result = await this.documentsService.renderPdf(
           requirement.type,
           source.entityId,
           "vi",
           undefined,
           undefined,
-          user
+          user,
+          id
         );
 
         generated.push({
@@ -1243,7 +1266,12 @@ export class ProjectsService {
     return {
       generated,
       skipped,
-      failed
+      failed,
+      results: [
+        ...generated.map(item => ({ type: item.type, status: "created" as const, reason: "Đã tạo tài liệu." })),
+        ...skipped.map(item => ({ type: item.type, status: "skipped" as const, reason: item.reason })),
+        ...failed.map(item => ({ type: item.type, status: "skipped" as const, reason: item.reason }))
+      ]
     };
   }
 
@@ -2419,9 +2447,10 @@ export class ProjectsService {
             id: true
           }
         },
+        payments: { where: { contractId: { not: null } }, orderBy: [{ paidAt: "desc" }, { id: "desc" }], take: 1, select: { id: true } },
         quotes: {
-          where: { status: "ACCEPTED", deletedAt: null },
-          orderBy: [{ acceptedAt: "desc" }, { createdAt: "desc" }, { version: "desc" }],
+          where: { status: { in: ["DRAFT", "SENT", "ACCEPTED"] }, deletedAt: null },
+          orderBy: [{ createdAt: "desc" }, { version: "desc" }],
           take: 1,
           select: {
             id: true
@@ -2443,10 +2472,15 @@ export class ProjectsService {
       customerId: string;
       contract: { id: string } | null;
       quotes: Array<{ id: string }>;
+      payments?: Array<{ id: string }>;
     },
     type: DocumentType
   ) {
     const entity = PROJECT_DOCUMENT_ENTITY[type];
+    if (type === "PAYMENT_RECEIPT") return {
+      entityType: "payment", entityId: project.payments?.[0]?.id ?? null,
+      missingReason: "Chưa có khoản thanh toán gắn với hợp đồng thực tế."
+    };
 
     if (entity === "project") {
       return {
@@ -2474,9 +2508,9 @@ export class ProjectsService {
 
     if (!project.contract?.id) {
       return {
-        entityType: "quote",
-        entityId: project.quotes[0]?.id ?? null,
-        missingReason: "Dự án chưa có hợp đồng hoặc báo giá để sinh tài liệu loại này."
+        entityType: "contract",
+        entityId: null,
+        missingReason: "Dự án chưa có hợp đồng thực tế để sinh tài liệu loại này."
       };
     }
 

@@ -96,11 +96,18 @@ export class ProjectsController {
     return this.projectsService.getTimeline(id, user);
   }
 
-  @RequirePermissions("projects.view")
+  @RequirePermissions("projects.view", "documents.view")
   @ApiOperation({ summary: "GET /api/projects/:id/documents" })
   @Get(":id/documents")
   getDocuments(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.projectsService.getDocuments(id, user);
+  }
+
+  @RequirePermissions("projects.view", "documents.view")
+  @ApiOperation({ summary: "GET /api/projects/:id/document-readiness" })
+  @Get(":id/document-readiness")
+  getDocumentReadiness(@Param("id") id: string, @CurrentUser() user: JwtUser) {
+    return this.projectsService.getDocumentReadiness(id, user);
   }
 
   @RequirePermissions("projects.edit")

@@ -16,6 +16,8 @@ import { RequirePermissions } from "src/common/decorators/permissions.decorator"
 import { ZodValidationPipe } from "src/common/pipes/zod-validation.pipe";
 import { PermissionsGuard } from "src/common/guards/permissions.guard";
 import { RolesGuard } from "src/common/guards/roles.guard";
+import { JwtUser } from "src/auth/auth.types";
+import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { RolesService } from "./roles.service";
 import { CreateRoleSchema, CreateRoleInput } from "./dto/create-role.dto";
 import { UpdateRoleSchema, UpdateRoleInput } from "./dto/update-role.dto";
@@ -63,9 +65,10 @@ export class RolesController {
   @RequirePermissions("roles.create")
   async create(
     @Body(new ZodValidationPipe(CreateRoleSchema))
-    input: CreateRoleInput
+    input: CreateRoleInput,
+    @CurrentUser() actor: JwtUser
   ) {
-    return this.rolesService.create(input);
+    return this.rolesService.create(input, actor);
   }
 
   /**
@@ -79,9 +82,10 @@ export class RolesController {
   async update(
     @Param("id") id: string,
     @Body(new ZodValidationPipe(UpdateRoleSchema))
-    input: UpdateRoleInput
+    input: UpdateRoleInput,
+    @CurrentUser() actor: JwtUser
   ) {
-    return this.rolesService.update(id, input);
+    return this.rolesService.update(id, input, actor);
   }
 
   /**

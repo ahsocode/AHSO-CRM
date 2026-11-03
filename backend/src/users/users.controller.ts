@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { JwtUser } from "../auth/auth.types";
 import { ROLE_VALUES } from "../common/constants/role.constants";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
@@ -26,8 +28,8 @@ export class UsersController {
   @ApiOperation({ summary: "POST /api/users" })
   @Post()
   @Roles(ROLE_VALUES[0], ROLE_VALUES[1])
-  create(@Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  create(@Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserDto, @CurrentUser() actor: JwtUser) {
+    return this.usersService.create(dto, actor);
   }
 
   @ApiOperation({ summary: "PATCH /api/users/:id" })
@@ -35,8 +37,9 @@ export class UsersController {
   @Roles(ROLE_VALUES[0], ROLE_VALUES[1])
   update(
     @Param("id") id: string,
-    @Body(new ZodValidationPipe(updateUserSchema)) dto: UpdateUserDto
+    @Body(new ZodValidationPipe(updateUserSchema)) dto: UpdateUserDto,
+    @CurrentUser() actor: JwtUser
   ) {
-    return this.usersService.update(id, dto);
+    return this.usersService.update(id, dto, actor);
   }
 }

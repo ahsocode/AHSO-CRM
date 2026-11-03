@@ -732,4 +732,30 @@ test.describe("QA thủ công — hồi quy", () => {
     const detailAsStaff = await request.get(`${API_URL}/roles/role_admin`, { headers: authHeaders(staffToken) });
     expect(detailAsStaff.status()).toBe(403);
   });
+
+  test("[Bảo mật] manager cannot escalate to ADMIN", async ({ request }) => {
+    // Bug: PATCH /users/:id accepted any roleId from a MANAGER, including their own account.
+    const managerLogin = await request.post(`${API_URL}/auth/login`, {
+      data: {
+        email: process.env.E2E_MANAGER_EMAIL ?? "manager@ahso.vn", // qa-static: not-ui
+        password: process.env.E2E_MANAGER_PASSWORD ?? process.env.E2E_ADMIN_PASSWORD ?? "AHSO123!" // qa-static: not-ui
+      }
+    });
+    expect(managerLogin.ok(), await managerLogin.text()).toBeTruthy();
+    const managerToken = unwrap<{ accessToken: string }>(await managerLogin.json()).accessToken;
+    const managerId = getUserIdFromAccessToken(managerToken);
+    const headers = authHeaders(managerToken);
+
+    const selfPromote = await request.patch(`${API_URL}/users/${managerId}`, { headers, data: { roleId: "role_admin" } });
+    expect(selfPromote.status()).toBe(403);
+
+    const createAdmin = await request.post(`${API_URL}/users`, {
+      headers,
+      data: { email: `qa-escalate-${Date.now()}@ahso.vn`, name: "QA leo quyền", password: "QaEscalate123!", roleId: "role_admin" } // qa-static: not-ui
+    });
+    expect(createAdmin.status()).toBe(403);
+
+    const users = unwrap<Array<{ id: string; role: string }>>(await (await request.get(`${API_URL}/users`, { headers })).json());
+    expect(users.find((u) => u.id === managerId)?.role).toBe("MANAGER");
+  });
 });

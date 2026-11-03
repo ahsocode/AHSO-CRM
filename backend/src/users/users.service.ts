@@ -1,6 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { AuthUserCache } from "../auth/auth-user-cache";
+import { isAdmin, JwtUser } from "../auth/auth.types";
+import { assertCanGrant } from "../auth/privilege-escalation";
 import { EmailService } from "../email/email.service";
 import { PrismaService } from "../common/prisma.service";
 import { CreateUserDto } from "./dto/create-user.dto";
@@ -36,7 +38,7 @@ export class UsersService {
     }));
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, actor: JwtUser) {
     const [existingUser, role] = await Promise.all([
       this.prisma.user.findUnique({
         where: {
@@ -52,7 +54,8 @@ export class UsersService {
         },
         select: {
           id: true,
-          name: true
+          name: true,
+          permissions: { select: { resource: true, action: true } }
         }
       })
     ]);
@@ -64,6 +67,8 @@ export class UsersService {
     if (!role) {
       throw new NotFoundException("Không tìm thấy vai trò được chọn");
     }
+
+    assertCanGrant(actor, { roleName: role.name, permissions: role.permissions });
 
     const hashedPassword = await bcrypt.hash(dto.password, 12);
     const user = await this.prisma.user.create({
@@ -99,29 +104,58 @@ export class UsersService {
     };
   }
 
-  async update(id: string, dto: UpdateUserDto) {
+  async update(id: string, dto: UpdateUserDto, actor: JwtUser) {
     const user = await this.prisma.user.findUnique({
       where: {
         id
-      }
+      },
+      include: { role: { select: { name: true } } }
     });
 
     if (!user) {
       throw new NotFoundException("Không tìm thấy người dùng");
     }
 
-    if (dto.roleId) {
+    const changesRole = dto.roleId !== undefined && dto.roleId !== user.roleId;
+    const deactivates = dto.isActive === false && user.isActive;
+    const targetIsAdmin = user.role?.name === "ADMIN";
+
+    if (user.id === actor.sub && (changesRole || deactivates)) {
+      throw new ForbiddenException("Không thể tự thay đổi vai trò hoặc khóa tài khoản của chính mình");
+    }
+
+    if (targetIsAdmin && !isAdmin(actor)) {
+      throw new ForbiddenException("Chỉ quản trị viên mới được chỉnh sửa tài khoản quản trị");
+    }
+
+    let nextRoleName = user.role?.name ?? null;
+    if (changesRole && dto.roleId) {
       const role = await this.prisma.userRole.findUnique({
         where: {
           id: dto.roleId
         },
         select: {
-          id: true
+          id: true,
+          name: true,
+          permissions: { select: { resource: true, action: true } }
         }
       });
 
       if (!role) {
         throw new NotFoundException("Không tìm thấy vai trò được chọn");
+      }
+
+      assertCanGrant(actor, { roleName: role.name, permissions: role.permissions });
+      nextRoleName = role.name;
+    }
+
+    // Never leave the system without an active administrator.
+    if (targetIsAdmin && user.isActive && (deactivates || nextRoleName !== "ADMIN")) {
+      const otherActiveAdmins = await this.prisma.user.count({
+        where: { id: { not: user.id }, isActive: true, role: { name: "ADMIN" } }
+      });
+      if (otherActiveAdmins === 0) {
+        throw new BadRequestException("Phải còn ít nhất một quản trị viên đang hoạt động");
       }
     }
 

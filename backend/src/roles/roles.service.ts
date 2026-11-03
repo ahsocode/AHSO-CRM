@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { AuthUserCache } from "src/auth/auth-user-cache";
+import { JwtUser } from "src/auth/auth.types";
+import { assertCanGrant } from "src/auth/privilege-escalation";
 import { PrismaService } from "src/common/prisma.service";
 import { CreateRoleInput } from "./dto/create-role.dto";
 import { UpdateRoleInput } from "./dto/update-role.dto";
@@ -88,7 +90,8 @@ export class RolesService {
   /**
    * Create a custom role
    */
-  async create(input: CreateRoleInput) {
+  async create(input: CreateRoleInput, actor: JwtUser) {
+    await this.assertCanGrantPermissions(actor, input.name, input.permissionIds);
     // Check if role name already exists
     const existing = await this.prisma.userRole.findUnique({
       where: { name: input.name },
@@ -128,8 +131,9 @@ export class RolesService {
   /**
    * Update a role (cannot update system roles)
    */
-  async update(id: string, input: UpdateRoleInput) {
+  async update(id: string, input: UpdateRoleInput, actor: JwtUser) {
     const role = await this.findById(id);
+    await this.assertCanGrantPermissions(actor, input.name ?? role.name, input.permissionIds);
 
     if (role.isSystem) {
       throw new ForbiddenException(
@@ -287,5 +291,18 @@ export class RolesService {
         (p) => p.resource === req.resource && p.action === req.action
       )
     );
+  }
+
+  /** Non-admins cannot create/extend a role with permissions they do not hold. */
+  private async assertCanGrantPermissions(actor: JwtUser, roleName: string | undefined, permissionIds?: string[]) {
+    if (!permissionIds || permissionIds.length === 0) {
+      assertCanGrant(actor, { roleName, permissions: [] });
+      return;
+    }
+    const permissions = await this.prisma.permission.findMany({
+      where: { id: { in: permissionIds } },
+      select: { resource: true, action: true }
+    });
+    assertCanGrant(actor, { roleName, permissions });
   }
 }

@@ -437,7 +437,9 @@ export class BomsService {
         where: {
           materialId: { in: materialIds },
           remainingQuantity: { gt: 0 },
-          purchaseInvoiceDate: { lte: invoiceDayEnd(dto.salesInvoiceDate) }
+          purchaseInvoiceDate: { lte: invoiceDayEnd(dto.salesInvoiceDate) },
+          // Lots tagged with another project are never suggested.
+          OR: [{ projectId: null }, { projectId }]
         },
         orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
         select: {

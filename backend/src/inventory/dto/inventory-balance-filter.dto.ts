@@ -16,6 +16,7 @@ const coerceBoolean = z.preprocess((val) => {
 export const inventoryBalanceFilterSchema = paginationSchema.extend({
   warehouseId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   materialId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
+  projectId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   lowStockOnly: coerceBoolean,
 });
 

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ACCOUNTING_CLASSES } from "../material-accounting-class";
 import { paginationSchema } from "../../common/dto/pagination.dto";
 
 const emptyToUndefined = (value: unknown) => {
@@ -18,6 +19,7 @@ export const materialFilterSchema = paginationSchema.extend({
   categoryId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   supplierId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
   kind: z.preprocess(emptyToUndefined, z.enum(["STOCK", "SERVICE", "PRODUCT"]).optional()),
+  accountingClass: z.preprocess(emptyToUndefined, z.enum(ACCOUNTING_CLASSES).optional()),
   isActive: coerceBoolean,
   lowStockOnly: coerceBoolean,
 });

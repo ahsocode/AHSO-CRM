@@ -158,7 +158,7 @@ export class StockIssuesService {
 
       for (const item of issue.items) {
         const qty = new Decimal(item.quantity);
-        await this.consumeStockLots(tx, issue.warehouseId, item.materialId, qty, issue.date);
+        await this.consumeStockLots(tx, issue.warehouseId, item.materialId, qty, issue.date, issue.projectId ?? null);
         await this.inventoryBalance.adjustBalance(tx, issue.warehouseId, item.materialId, qty.negated());
       }
 
@@ -233,8 +233,10 @@ export class StockIssuesService {
     warehouseId: string,
     materialId: string,
     quantity: Decimal,
-    issueDate: Date
+    issueDate: Date,
+    projectId: string | null = null
   ) {
-    await this.inventoryBalance.consumeStockLots(tx, warehouseId, materialId, quantity, issueDate);
+    // Issue for a project: its own lots first, then common lots. Not for a project: common lots only.
+    await this.inventoryBalance.consumeStockLots(tx, warehouseId, materialId, quantity, issueDate, { projectId });
   }
 }

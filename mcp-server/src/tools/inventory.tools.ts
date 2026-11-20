@@ -8,6 +8,18 @@ const STOCK_DOC_STATUS_LABEL: Record<string, string> = {
   CANCELLED: "❌ Đã huỷ"
 };
 
+const INVOICE_INPUT_PROPERTIES = {
+  purchaseInvoiceNo: { type: "string", description: "Tuỳ chọn. Số hóa đơn dạng tự do (cũ). Nếu bỏ trống mà có invoiceNumber, hệ thống tự ghép ký hiệu-số." },
+  invoiceSeries: { type: "string", description: "Tuỳ chọn. Ký hiệu hóa đơn, VD C26TAA" },
+  invoiceNumber: { type: "string", description: "Tuỳ chọn. Số hóa đơn, VD 0000123" },
+  invoiceDate: { type: "string", description: "Tuỳ chọn. Ngày hóa đơn (ISO date); dùng làm ngày hóa đơn mua của lô nhập" },
+  sellerTaxCode: { type: "string", description: "Tuỳ chọn. MST người bán; bỏ trống thì lấy MST của nhà cung cấp" },
+  invoiceFileRef: { type: "string", description: "Tuỳ chọn. Đường dẫn/tham chiếu file hóa đơn" },
+  invoiceLookupCode: { type: "string", description: "Tuỳ chọn. Mã tra cứu hóa đơn điện tử" },
+  invoiceType: { type: "string", enum: ["NORMAL", "REPLACEMENT", "ADJUSTMENT"], description: "Tuỳ chọn. Loại hóa đơn: gốc / thay thế / điều chỉnh. Mặc định NORMAL" },
+  relatedInvoiceRef: { type: "string", description: "Tuỳ chọn. Hóa đơn liên quan (khi thay thế/điều chỉnh)" }
+};
+
 export const inventoryTools: McpTool[] = [
   {
     name: "list_warehouses",
@@ -189,6 +201,11 @@ export const inventoryTools: McpTool[] = [
       properties: {
         warehouseId: { type: "string", description: "ID kho" },
         materialId: { type: "string", description: "ID vật tư" },
+        projectId: {
+          type: "string",
+          description:
+            "Tuỳ chọn. Chỉ tính tồn thuộc các lô nhập đã gắn dự án này (tổng số lượng còn lại của lô). Bỏ trống = toàn bộ tồn kho như cũ."
+        },
         lowStockOnly: { type: "boolean", description: "Chỉ hiển thị tồn dưới min" },
         limit: { type: "number", description: "Số kết quả tối đa, mặc định 10" }
       },
@@ -202,6 +219,7 @@ export const inventoryTools: McpTool[] = [
       };
       if (args["warehouseId"]) params["warehouseId"] = args["warehouseId"];
       if (args["materialId"]) params["materialId"] = args["materialId"];
+      if (args["projectId"]) params["projectId"] = args["projectId"];
       if (args["lowStockOnly"] !== undefined) params["lowStockOnly"] = args["lowStockOnly"];
 
       const res = await client.get<unknown>("/inventory/balances", { params });
@@ -233,19 +251,19 @@ export const inventoryTools: McpTool[] = [
         warehouseId: { type: "string", description: "ID kho" },
         supplierId: { type: "string", description: "ID nhà cung cấp" },
         status: { type: "string", enum: ["DRAFT", "CONFIRMED", "CANCELLED"], description: "Trạng thái phiếu" },
+        invoiceNumber: { type: "string", description: "Tuỳ chọn. Lọc theo số hóa đơn (chứa chuỗi này)" },
+        invoiceSeries: { type: "string", description: "Tuỳ chọn. Lọc theo ký hiệu hóa đơn" },
+        sellerTaxCode: { type: "string", description: "Tuỳ chọn. Lọc theo MST người bán" },
+        invoiceDateFrom: { type: "string", description: "Tuỳ chọn. Ngày hóa đơn từ (ISO date)" },
+        invoiceDateTo: { type: "string", description: "Tuỳ chọn. Ngày hóa đơn đến (ISO date)" },
+        hasInvoice: { type: "boolean", description: "Tuỳ chọn. true = đã có số hóa đơn, false = chưa có" },
         limit: { type: "number", description: "Số kết quả tối đa, mặc định 10" }
       },
       required: []
     },
     async handler(args) {
       const client = getApiClient();
-      const params: Record<string, unknown> = {
-        page: 1,
-        limit: args["limit"] ?? 10
-      };
-      if (args["warehouseId"]) params["warehouseId"] = args["warehouseId"];
-      if (args["supplierId"]) params["supplierId"] = args["supplierId"];
-      if (args["status"]) params["status"] = args["status"];
+      const params = buildReceiptListParams(args);
 
       const res = await client.get<unknown>("/stock-receipts", { params });
       const items = extractData<StockReceiptListItem[]>(res.data);
@@ -257,7 +275,8 @@ export const inventoryTools: McpTool[] = [
         const status = STOCK_DOC_STATUS_LABEL[receipt.status ?? ""] ?? receipt.status ?? "—";
         return (
           `${index + 1}. 📥 **${receipt.receiptNo}** ${status} | ID: \`${receipt.id}\`\n` +
-          `   Kho: ${receipt.warehouse?.name ?? "—"} | NCC: ${receipt.supplier?.name ?? "—"} | ${formatVND(receipt.totalAmount)} | ${formatDate(receipt.date)}`
+          `   Kho: ${receipt.warehouse?.name ?? "—"} | NCC: ${receipt.supplier?.name ?? "—"} | ${formatVND(receipt.totalAmount)} | ${formatDate(receipt.date)}` +
+          invoiceSuffix(receipt)
         );
       });
 
@@ -287,13 +306,15 @@ export const inventoryTools: McpTool[] = [
       out += `Kho: ${receipt.warehouse?.name ?? "—"} | ID kho: \`${receipt.warehouse?.id ?? receipt.warehouseId}\`\n`;
       if (receipt.supplier) out += `NCC: ${receipt.supplier.name} | ID NCC: \`${receipt.supplier.id}\`\n`;
       if (receipt.confirmedAt) out += `Xác nhận: ${formatDateTime(receipt.confirmedAt)}\n`;
+      out += formatInvoiceBlock(receipt);
 
       if (receipt.items?.length) {
         out += `\n📦 **Vật tư nhập:**\n`;
         out += receipt.items
           .map((item, index) => (
             `  ${index + 1}. ${item.material?.name ?? "—"} | ID vật tư: \`${item.materialId}\` | ` +
-            `${item.quantity} ${item.material?.unit ?? ""} × ${formatVND(item.unitPrice)} = ${formatVND(item.total)}`
+            `${item.quantity} ${item.material?.unit ?? ""} × ${formatVND(item.unitPrice)} = ${formatVND(item.total)}` +
+            (item.project ? ` | Dự án: ${item.project.name} (\`${item.project.id}\`)` : "")
           ))
           .join("\n");
       }
@@ -305,7 +326,9 @@ export const inventoryTools: McpTool[] = [
   {
     name: "create_stock_receipt",
     description:
-      "Tạo phiếu nhập kho nháp từ danh sách vật tư. Tồn kho chỉ tăng sau khi gọi confirm_stock_receipt.",
+      "Tạo phiếu nhập kho nháp từ danh sách vật tư. Tồn kho chỉ tăng sau khi gọi confirm_stock_receipt. " +
+      "Có thể kèm hóa đơn mua (invoiceSeries, invoiceNumber, invoiceDate, sellerTaxCode…): cùng MST + ký hiệu + số hóa đơn đã có trên phiếu khác (chưa hủy) sẽ bị từ chối kèm ID phiếu cũ. " +
+      "NCC loại Dịch vụ/Chi phí không được nhập kho. Mỗi dòng có thể gắn projectId (hàng mua riêng cho dự án).",
     inputSchema: {
       type: "object",
       properties: {
@@ -313,6 +336,7 @@ export const inventoryTools: McpTool[] = [
         supplierId: { type: "string", description: "ID nhà cung cấp" },
         date: { type: "string", description: "Ngày nhập, ISO date/datetime. Nếu thiếu dùng hôm nay." },
         notes: { type: "string", description: "Ghi chú phiếu nhập" },
+        ...INVOICE_INPUT_PROPERTIES,
         items: {
           type: "array",
           description: "Danh sách vật tư nhập",
@@ -321,7 +345,12 @@ export const inventoryTools: McpTool[] = [
             properties: {
               materialId: { type: "string", description: "ID vật tư" },
               quantity: { type: "number", description: "Số lượng nhập" },
-              unitPrice: { type: "number", description: "Đơn giá nhập VND" }
+              unitPrice: { type: "number", description: "Đơn giá nhập VND" },
+              projectId: {
+                type: "string",
+                description:
+                  "Tuỳ chọn. ID dự án nếu hàng này mua riêng cho dự án đó; lô nhập sẽ gắn dự án, khi xuất cho dự án khác sẽ không bị lấy nhầm."
+              }
             },
             required: ["materialId", "quantity", "unitPrice"]
           }
@@ -338,14 +367,132 @@ export const inventoryTools: McpTool[] = [
       };
       if (args["supplierId"]) payload["supplierId"] = args["supplierId"];
       if (args["notes"]) payload["notes"] = args["notes"];
+      Object.assign(payload, pickInvoiceFields(args));
 
       const createRes = await client.post<unknown>("/stock-receipts", payload);
-      const created = extractData<{ id: string; receiptNo: string }>(createRes.data);
+      const created = extractData<{ id: string; receiptNo: string; warnings?: string[] }>(createRes.data);
 
       return (
         `✅ Đã tạo phiếu nhập kho nháp **${created.receiptNo}**\n` +
         `ID: \`${created.id}\`\n` +
+        formatWarnings(created.warnings) +
         `💡 Dùng confirm_stock_receipt để xác nhận và cập nhật tồn kho.`
+      );
+    }
+  },
+
+  {
+    name: "find_receipt_by_invoice",
+    description:
+      "Tìm phiếu nhập kho theo thông tin hóa đơn mua (số, ký hiệu, MST người bán). " +
+      "Dùng khi: 'Hóa đơn 0000123 đã nhập chưa?', 'Phiếu nhập nào đang giữ hóa đơn này?'. Cần ít nhất một tham số.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        invoiceNumber: { type: "string", description: "Số hóa đơn" },
+        invoiceSeries: { type: "string", description: "Ký hiệu hóa đơn" },
+        sellerTaxCode: { type: "string", description: "MST người bán" },
+        invoiceDateFrom: { type: "string", description: "Ngày hóa đơn từ (ISO date)" },
+        invoiceDateTo: { type: "string", description: "Ngày hóa đơn đến (ISO date)" },
+        limit: { type: "number", description: "Số kết quả tối đa, mặc định 10" }
+      },
+      required: []
+    },
+    async handler(args) {
+      const keys = ["invoiceNumber", "invoiceSeries", "sellerTaxCode", "invoiceDateFrom", "invoiceDateTo"];
+      if (!keys.some((key) => args[key])) {
+        return "⚠️ Cần truyền ít nhất một trong: invoiceNumber, invoiceSeries, sellerTaxCode, invoiceDateFrom, invoiceDateTo.";
+      }
+      const client = getApiClient();
+      const params = buildReceiptListParams(args);
+      const res = await client.get<unknown>("/stock-receipts", { params });
+      const items = extractData<StockReceiptListItem[]>(res.data);
+
+      if (!items.length) return "📭 Không có phiếu nhập nào mang hóa đơn này.";
+
+      const lines = items.map((receipt, index) => {
+        const status = STOCK_DOC_STATUS_LABEL[receipt.status ?? ""] ?? receipt.status ?? "—";
+        return (
+          `${index + 1}. 📥 **${receipt.receiptNo}** ${status} | ID: \`${receipt.id}\`\n` +
+          `   NCC: ${receipt.supplier?.name ?? "—"} | ${formatVND(receipt.totalAmount)} | ${formatDate(receipt.date)}` +
+          invoiceSuffix(receipt)
+        );
+      });
+      return `🧾 **Phiếu nhập theo hóa đơn** (${items.length}):\n\n${lines.join("\n\n")}`;
+    }
+  },
+
+  {
+    name: "update_receipt_invoice",
+    description:
+      "Bổ sung/sửa thông tin hóa đơn mua của một phiếu nhập — kể cả phiếu đã xác nhận. CHỈ sửa hóa đơn, không đụng dòng hàng, số lượng, đơn giá hay tồn kho. " +
+      "Trùng (MST + ký hiệu + số) với phiếu khác sẽ bị từ chối kèm ID phiếu cũ. Đổi ngày hóa đơn của phiếu đã xác nhận chỉ được khi các lô chưa bị xuất/chuyển.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        receiptId: { type: "string", description: "ID phiếu nhập kho" },
+        ...INVOICE_INPUT_PROPERTIES
+      },
+      required: ["receiptId"]
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const res = await client.patch<unknown>(
+        `/stock-receipts/${args["receiptId"] as string}/invoice`,
+        pickInvoiceFields(args)
+      );
+      const receipt = extractData<{ id: string; receiptNo: string; lotsUpdated?: number } & InvoiceFields>(res.data);
+
+      return (
+        `✅ Đã cập nhật hóa đơn cho phiếu **${receipt.receiptNo}**\nID: \`${receipt.id}\`\n` +
+        formatInvoiceBlock(receipt) +
+        (receipt.lotsUpdated ? `Đã đồng bộ ${receipt.lotsUpdated} lô nhập.` : "")
+      ).trimEnd();
+    }
+  },
+
+  {
+    name: "bulk_set_receipt_invoices",
+    description:
+      "Nhập hàng loạt hóa đơn cho nhiều phiếu nhập cũ. Mỗi dòng xử lý độc lập: dòng lỗi/trùng không làm dừng cả lô; kết quả trả về theo từng dòng (UPDATED / DUPLICATE / NOT_FOUND / ERROR). Tối đa 500 dòng.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          description: "Mỗi dòng cần receiptId hoặc receiptNo (VD PN-2026-005) cùng thông tin hóa đơn",
+          items: {
+            type: "object",
+            properties: {
+              receiptId: { type: "string", description: "ID phiếu nhập" },
+              receiptNo: { type: "string", description: "Số phiếu nhập, dùng khi không có ID" },
+              ...INVOICE_INPUT_PROPERTIES
+            }
+          }
+        }
+      },
+      required: ["items"]
+    },
+    async handler(args) {
+      const client = getApiClient();
+      const rows = ((args["items"] as Array<Record<string, unknown>>) ?? []).map((row) => ({
+        ...(row["receiptId"] ? { receiptId: row["receiptId"] } : {}),
+        ...(row["receiptNo"] ? { receiptNo: row["receiptNo"] } : {}),
+        ...pickInvoiceFields(row)
+      }));
+      const res = await client.post<unknown>("/stock-receipts/invoices/bulk", { items: rows });
+      const out = extractData<BulkInvoiceResult>(res.data);
+
+      const ICON: Record<string, string> = { UPDATED: "✅", DUPLICATE: "⚠️", NOT_FOUND: "❓", ERROR: "❌" };
+      const lines = out.results.map((row) => {
+        const ref = row.receiptNo ?? row.receiptId ?? `dòng ${row.index + 1}`;
+        const dup = row.existingReceiptId ? ` (đang ở ${row.existingReceiptNo ?? "—"} | ID: \`${row.existingReceiptId}\`)` : "";
+        return `${ICON[row.status] ?? "•"} #${row.index + 1} ${ref}: ${row.message}${dup}`;
+      });
+      const sum = out.summary;
+      return (
+        `🧾 **Kết quả nhập hóa đơn hàng loạt:** ${sum.updated}/${sum.total} cập nhật, ${sum.duplicate} trùng, ${sum.notFound} không tìm thấy, ${sum.error} lỗi\n\n` +
+        lines.join("\n")
       );
     }
   },
@@ -364,9 +511,12 @@ export const inventoryTools: McpTool[] = [
     async handler(args) {
       const client = getApiClient();
       const res = await client.post<unknown>(`/stock-receipts/${args["receiptId"] as string}/confirm`);
-      const receipt = extractData<{ id: string; receiptNo: string; status: string }>(res.data);
+      const receipt = extractData<{ id: string; receiptNo: string; status: string; warnings?: string[] }>(res.data);
 
-      return `✅ Đã xác nhận phiếu nhập **${receipt.receiptNo}**\nID: \`${receipt.id}\` | Trạng thái: ${receipt.status}`;
+      return (
+        `✅ Đã xác nhận phiếu nhập **${receipt.receiptNo}**\nID: \`${receipt.id}\` | Trạng thái: ${receipt.status}` +
+        (receipt.warnings?.length ? `\n${formatWarnings(receipt.warnings).trimEnd()}` : "")
+      );
     }
   },
 
@@ -890,6 +1040,79 @@ export const inventoryTools: McpTool[] = [
   }
 ];
 
+// ---- Purchase invoice helpers (shared by receipt tools) ----
+
+const INVOICE_FIELD_NAMES = [
+  "purchaseInvoiceNo",
+  "invoiceSeries",
+  "invoiceNumber",
+  "invoiceDate",
+  "sellerTaxCode",
+  "invoiceFileRef",
+  "invoiceLookupCode",
+  "invoiceType",
+  "relatedInvoiceRef"
+];
+
+function pickInvoiceFields(args: Record<string, unknown>) {
+  const payload: Record<string, unknown> = {};
+  for (const field of INVOICE_FIELD_NAMES) {
+    if (args[field] !== undefined && args[field] !== null) payload[field] = args[field];
+  }
+  return payload;
+}
+
+function buildReceiptListParams(args: Record<string, unknown>) {
+  const params: Record<string, unknown> = { page: 1, limit: args["limit"] ?? 10 };
+  const fields = [
+    "warehouseId",
+    "supplierId",
+    "status",
+    "invoiceNumber",
+    "invoiceSeries",
+    "sellerTaxCode",
+    "invoiceDateFrom",
+    "invoiceDateTo"
+  ];
+  for (const field of fields) {
+    if (args[field]) params[field] = args[field];
+  }
+  if (args["hasInvoice"] !== undefined) params["hasInvoice"] = args["hasInvoice"];
+  return params;
+}
+
+function invoiceSuffix(receipt: InvoiceFields): string {
+  const no = receipt.invoiceNumber
+    ? `${receipt.invoiceSeries ? `${receipt.invoiceSeries}-` : ""}${receipt.invoiceNumber}`
+    : receipt.purchaseInvoiceNo;
+  return no ? `\n   🧾 HĐ: ${no}${receipt.invoiceDate ? ` (${formatDate(receipt.invoiceDate)})` : ""}` : "";
+}
+
+function formatInvoiceBlock(receipt: InvoiceFields): string {
+  const lines: string[] = [];
+  if (receipt.invoiceNumber || receipt.invoiceSeries) {
+    lines.push(
+      `🧾 Hóa đơn: ${receipt.invoiceSeries ?? "—"} / ${receipt.invoiceNumber ?? "—"}` +
+        (receipt.invoiceDate ? ` | Ngày HĐ: ${formatDate(receipt.invoiceDate)}` : "")
+    );
+  } else if (receipt.purchaseInvoiceNo) {
+    lines.push(`🧾 Số hóa đơn (nhập tay): ${receipt.purchaseInvoiceNo}`);
+  } else {
+    lines.push("🧾 Hóa đơn: chưa có");
+  }
+  if (receipt.sellerTaxCode) lines.push(`MST người bán: ${receipt.sellerTaxCode}`);
+  if (receipt.invoiceType && receipt.invoiceType !== "NORMAL") {
+    lines.push(`Loại HĐ: ${receipt.invoiceType}${receipt.relatedInvoiceRef ? ` (liên quan: ${receipt.relatedInvoiceRef})` : ""}`);
+  }
+  if (receipt.invoiceLookupCode) lines.push(`Mã tra cứu: ${receipt.invoiceLookupCode}`);
+  if (receipt.invoiceFileRef) lines.push(`File: ${receipt.invoiceFileRef}`);
+  return lines.join("\n") + "\n";
+}
+
+function formatWarnings(warnings: string[] | undefined): string {
+  return warnings?.length ? `⚠️ Cảnh báo: ${warnings.join("; ")}\n` : "";
+}
+
 function buildWarehousePayload(args: Record<string, unknown>) {
   const payload: Record<string, unknown> = {};
   const fields = ["code", "name", "address", "managerId", "isActive"];
@@ -936,7 +1159,32 @@ interface InventoryBalanceItem {
   material?: { id: string; code: string; name: string; unit: string } | null;
 }
 
-interface StockReceiptListItem {
+interface InvoiceFields {
+  purchaseInvoiceNo?: string | null;
+  invoiceSeries?: string | null;
+  invoiceNumber?: string | null;
+  invoiceDate?: string | null;
+  sellerTaxCode?: string | null;
+  invoiceFileRef?: string | null;
+  invoiceLookupCode?: string | null;
+  invoiceType?: string | null;
+  relatedInvoiceRef?: string | null;
+}
+
+interface BulkInvoiceResult {
+  results: Array<{
+    index: number;
+    receiptId: string | null;
+    receiptNo: string | null;
+    status: string;
+    message: string;
+    existingReceiptId?: string;
+    existingReceiptNo?: string;
+  }>;
+  summary: { total: number; updated: number; duplicate: number; notFound: number; error: number };
+}
+
+interface StockReceiptListItem extends InvoiceFields {
   id: string;
   receiptNo: string;
   status: string;
@@ -954,6 +1202,7 @@ interface StockReceiptDetail extends StockReceiptListItem {
     quantity: number;
     unitPrice: number;
     total: number;
+    project?: { id: string; name: string } | null;
     material?: { id: string; code: string; name: string; unit: string } | null;
   }>;
 }

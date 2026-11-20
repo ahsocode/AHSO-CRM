@@ -6,6 +6,7 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { BulkSupplierTypeDto, bulkSupplierTypeSchema } from "./dto/bulk-supplier-type.dto";
 import { BulkSupplierDto, bulkSupplierSchema } from "./dto/bulk-supplier.dto";
 import { CreateSupplierDto, createSupplierSchema } from "./dto/create-supplier.dto";
 import { SupplierFilterDto, supplierFilterSchema } from "./dto/supplier-filter.dto";
@@ -36,6 +37,14 @@ export class SuppliersController {
     return this.service.findAllSelect(user);
   }
 
+  // Read-only proposal of suppliers that look like EXPENSE payees; never changes data.
+  @RequirePermissions("suppliers.view")
+  @ApiOperation({ summary: "GET /api/suppliers/suggest-expense — review list only" })
+  @Get("suggest-expense")
+  suggestExpense() {
+    return this.service.suggestExpenseSuppliers();
+  }
+
   // Must stay declared BEFORE @Get(":id") or "export" is captured as an id.
   @RequirePermissions("suppliers.view")
   @ApiOperation({ summary: "GET /api/suppliers/export — all rows matching filters (Excel)" })
@@ -59,6 +68,17 @@ export class SuppliersController {
     @CurrentUser() user: JwtUser,
   ) {
     return this.service.create(dto, user);
+  }
+
+  // Must stay declared BEFORE @Patch(":id") or "bulk-type" is captured as an id.
+  @RequirePermissions("suppliers.edit")
+  @ApiOperation({ summary: "PATCH /api/suppliers/bulk-type — set supplierType for many suppliers, per-row result" })
+  @Patch("bulk-type")
+  bulkType(
+    @Body(new ZodValidationPipe(bulkSupplierTypeSchema)) dto: BulkSupplierTypeDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.bulkUpdateType(dto, user);
   }
 
   @RequirePermissions("suppliers.edit")

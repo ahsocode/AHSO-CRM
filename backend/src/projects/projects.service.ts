@@ -1605,7 +1605,9 @@ export class ProjectsService {
     const lots = await this.prisma.stockLot.findMany({
       where: {
         remainingQuantity: { gt: 0 },
-        purchaseInvoiceDate: { lte: invoiceDayEnd(salesInvoiceDate) }
+        purchaseInvoiceDate: { lte: invoiceDayEnd(salesInvoiceDate) },
+        // Lots tagged with another project are never eligible.
+        OR: [{ projectId: null }, { projectId: id }]
       },
       orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
       take: dto.limit ?? 200,
@@ -1782,7 +1784,8 @@ export class ProjectsService {
         materialId: true,
         purchaseInvoiceDate: true,
         remainingQuantity: true,
-        unitPrice: true
+        unitPrice: true,
+        projectId: true
       }
     });
     const lotById = new Map(lots.map((lot) => [lot.id, lot]));
@@ -1800,6 +1803,9 @@ export class ProjectsService {
       const lot = lotById.get(item.stockLotId);
       if (!lot) {
         throw new BadRequestException("Lô nhập không tồn tại hoặc không còn hợp lệ");
+      }
+      if (lot.projectId && lot.projectId !== projectId) {
+        throw new BadRequestException("Lô nhập thuộc dự án khác, không thể phân bổ cho dự án này");
       }
       if (lot.purchaseInvoiceDate.getTime() > invoiceDayEnd(dto.salesInvoiceDate).getTime()) {
         throw new BadRequestException("Không thể phân bổ lô nhập sau ngày hóa đơn bán ra");

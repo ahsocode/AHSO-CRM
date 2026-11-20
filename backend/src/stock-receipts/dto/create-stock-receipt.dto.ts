@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { invoiceFieldsShape } from "./invoice-fields.dto";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") return value;
@@ -13,6 +14,8 @@ export const stockReceiptItemSchema = z.object({
   materialId: z.string().trim().min(1, "Vật tư là bắt buộc"),
   quantity: z.coerce.number().positive("Số lượng phải lớn hơn 0"),
   unitPrice: z.coerce.number().min(0, "Đơn giá không được âm"),
+  // Project the goods are bought for (copied to StockLot.projectId on confirm).
+  projectId: z.preprocess(emptyToUndefined, z.string().trim().min(1).optional()),
 });
 
 export const createStockReceiptSchema = z.object({
@@ -21,6 +24,7 @@ export const createStockReceiptSchema = z.object({
   date: z.coerce.date(),
   purchaseInvoiceNo: optionalString(100),
   notes: optionalString(2000),
+  ...invoiceFieldsShape,
   items: z
     .array(stockReceiptItemSchema)
     .min(1, "Phải có ít nhất 1 vật tư")

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SUPPLIER_TYPES } from "./bulk-supplier-type.dto";
 
 /**
  * Update semantics differ from create:
@@ -30,6 +31,7 @@ export const updateSupplierSchema = z.object({
   ),
   contactName: clearableString(100),
   notes: clearableString(2000),
+  supplierType: z.enum(SUPPLIER_TYPES).optional(),
   isActive: z.boolean().optional(),
 });
 

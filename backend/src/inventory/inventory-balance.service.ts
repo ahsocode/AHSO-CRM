@@ -116,6 +116,10 @@ export class InventoryBalanceService {
     const limit = filters.limit ?? 10;
     const skip = (page - 1) * limit;
 
+    if (filters.projectId) {
+      return this.findProjectLotBalances(filters, page, limit);
+    }
+
     const where: Prisma.StockBalanceWhereInput = {};
 
     if (filters.warehouseId) where.warehouseId = filters.warehouseId;
@@ -236,6 +240,68 @@ export class InventoryBalanceService {
     };
   }
 
+  /**
+   * Stock that belongs to lots tagged with a project: sum of lot.remainingQuantity per warehouse/material.
+   * Value uses Material.costPrice like every other balance view. lowStockOnly does not apply here.
+   */
+  private async findProjectLotBalances(filters: InventoryBalanceFilterDto, page: number, limit: number) {
+    const groups = await this.prisma.stockLot.groupBy({
+      by: ["warehouseId", "materialId"],
+      where: {
+        projectId: filters.projectId,
+        remainingQuantity: { gt: 0 },
+        ...(filters.warehouseId ? { warehouseId: filters.warehouseId } : {}),
+        ...(filters.materialId ? { materialId: filters.materialId } : {}),
+      },
+      _sum: { remainingQuantity: true },
+      orderBy: [{ warehouseId: "asc" }, { materialId: "asc" }],
+    });
+
+    const total = groups.length;
+    const pageGroups = groups.slice((page - 1) * limit, page * limit);
+    const [warehouses, materials] = await Promise.all([
+      this.prisma.warehouse.findMany({
+        where: { id: { in: [...new Set(pageGroups.map((g) => g.warehouseId))] } },
+        select: { id: true, name: true, code: true },
+      }),
+      this.prisma.material.findMany({
+        where: { id: { in: [...new Set(pageGroups.map((g) => g.materialId))] } },
+        select: { id: true, name: true, code: true, unit: true, minStock: true, costPrice: true },
+      }),
+    ]);
+    const warehouseById = new Map(warehouses.map((w) => [w.id, w]));
+    const materialById = new Map(materials.map((m) => [m.id, m]));
+
+    const items = pageGroups.flatMap((group) => {
+      const material = materialById.get(group.materialId);
+      const warehouse = warehouseById.get(group.warehouseId);
+      if (!material || !warehouse) return [];
+      const quantity = toDecimal(group._sum.remainingQuantity ?? 0);
+      return [
+        {
+          id: `${group.warehouseId}:${group.materialId}:${filters.projectId}`,
+          warehouseId: group.warehouseId,
+          warehouse,
+          materialId: group.materialId,
+          material: {
+            ...material,
+            minStock: material.minStock !== null ? decimalToNumber(material.minStock) : null,
+            costPrice: decimalToNumber(material.costPrice),
+          },
+          projectId: filters.projectId,
+          quantity: decimalToNumber(quantity),
+          value: decimalToNumber(quantity.mul(toDecimal(material.costPrice)).toDecimalPlaces(0)),
+          isLowStock: false,
+        },
+      ];
+    });
+
+    return {
+      items,
+      meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
+  }
+
   async getSummary() {
     const [balances, lowStockMaterials, draftReceipts, draftIssues, draftTransfers, draftCounts, warehouseCount] =
       await this.prisma.$transaction([
@@ -274,24 +340,42 @@ export class InventoryBalanceService {
   // Shared FIFO lot consumption used by stock-issues, stock-counts, and projects.
   // Deducts `quantity` from the oldest eligible lots (purchaseInvoiceDate <= referenceDate)
   // in the given warehouse. Throws BadRequestException if stock is insufficient.
+  //
+  // `options.projectId` selects lots by project (backward compatible - omit it for the old behaviour):
+  //   - omitted / undefined: any lot (legacy behaviour, used by callers that are not project aware)
+  //   - null:                only common lots (projectId IS NULL) - an issue that is not for a project
+  //   - "<id>":              lots of that project first (FIFO inside the group), then common lots;
+  //                          lots tagged with ANOTHER project are never touched
   async consumeStockLots(
     tx: Prisma.TransactionClient,
     warehouseId: string,
     materialId: string,
     quantity: Decimal,
-    referenceDate: Date
+    referenceDate: Date,
+    options?: { projectId?: string | null }
   ): Promise<void> {
+    const projectId = options?.projectId;
+    let projectScope: Prisma.StockLotWhereInput = {};
+    if (projectId === null) projectScope = { projectId: null };
+    else if (projectId !== undefined) projectScope = { OR: [{ projectId }, { projectId: null }] };
+
     let remaining = quantity;
     const lots = await tx.stockLot.findMany({
       where: {
         warehouseId,
         materialId,
         remainingQuantity: { gt: 0 },
-        purchaseInvoiceDate: { lte: referenceDate }
+        purchaseInvoiceDate: { lte: referenceDate },
+        ...projectScope
       },
       orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
-      select: { id: true, remainingQuantity: true }
+      select: { id: true, remainingQuantity: true, projectId: true }
     });
+
+    // Array.prototype.sort is stable, so FIFO order is preserved inside each group.
+    if (typeof projectId === "string") {
+      lots.sort((a, b) => Number(b.projectId === projectId) - Number(a.projectId === projectId));
+    }
 
     for (const lot of lots) {
       if (remaining.lessThanOrEqualTo(0)) break;
@@ -310,7 +394,11 @@ export class InventoryBalanceService {
     }
 
     if (remaining.greaterThan(0)) {
-      throw new BadRequestException("Không tìm thấy đủ lô nhập hợp lệ để trừ tồn kho");
+      throw new BadRequestException(
+        projectId === undefined
+          ? "Không tìm thấy đủ lô nhập hợp lệ để trừ tồn kho"
+          : "Không tìm thấy đủ lô nhập hợp lệ để trừ tồn kho (lô gắn dự án khác không được dùng)"
+      );
     }
   }
 }

@@ -50,3 +50,25 @@ describe("HttpExceptionFilter", () => {
     });
   });
 });
+
+describe("HttpExceptionFilter - duplicate invoice conflict", () => {
+  it("passes existingReceiptId / existingReceiptNo through on a 409", () => {
+    const { ConflictException } = require("@nestjs/common");
+    const filter = new HttpExceptionFilter();
+    const { host, response } = createHost();
+
+    filter.catch(
+      new ConflictException({ message: "Hóa đơn đã tồn tại", existingReceiptId: "r1", existingReceiptNo: "PN-2026-001" }),
+      host
+    );
+
+    expect(response.status).toHaveBeenCalledWith(409);
+    expect(response.json).toHaveBeenCalledWith({
+      statusCode: 409,
+      message: "Hóa đơn đã tồn tại",
+      errors: ["Hóa đơn đã tồn tại"],
+      existingReceiptId: "r1",
+      existingReceiptNo: "PN-2026-001"
+    });
+  });
+});

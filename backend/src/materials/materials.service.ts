@@ -1,11 +1,13 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { MaterialKind, type Prisma } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
+import { BulkMaterialClassDto } from "./dto/bulk-material-class.dto";
 import { CreateMaterialDto } from "./dto/create-material.dto";
 import { MaterialFilterDto } from "./dto/material-filter.dto";
 import { UpdateMaterialDto } from "./dto/update-material.dto";
 import { UpsertMaterialSuppliersDto } from "./dto/upsert-material-supplier.dto";
+import { type AccountingClassValue, resolveAccountingClass } from "./material-accounting-class";
 
 @Injectable()
 export class MaterialsService {
@@ -28,7 +30,7 @@ export class MaterialsService {
       const totalStock = m.stockBalances.reduce((sum, b) => sum + Number(b.quantity), 0);
       const isLowStock = m.minStock !== null && totalStock < Number(m.minStock);
       return {
-        id: m.id, code: m.code, name: m.name, unit: m.unit, kind: m.kind,
+        id: m.id, code: m.code, name: m.name, unit: m.unit, kind: m.kind, accountingClass: m.accountingClass,
         salePrice: Number(m.salePrice), costPrice: Number(m.costPrice),
         minStock: m.minStock !== null ? Number(m.minStock) : null,
         categoryId: m.categoryId, category: m.category, isActive: m.isActive,
@@ -74,7 +76,7 @@ export class MaterialsService {
       where,
       take: 300,
       orderBy: { name: "asc" },
-      select: { id: true, code: true, name: true, unit: true, kind: true, salePrice: true },
+      select: { id: true, code: true, name: true, unit: true, kind: true, accountingClass: true, salePrice: true },
     });
     return items.map((m) => ({ ...m, salePrice: Number(m.salePrice) }));
   }
@@ -112,13 +114,16 @@ export class MaterialsService {
   }
 
   async create(dto: CreateMaterialDto, _user: JwtUser) {
+    const kind = dto.kind ?? "STOCK";
+    const accountingClass = resolveAccountingClass(kind, dto.accountingClass);
     return this.prisma.$transaction(async (tx) => {
       const material = await tx.material.create({
         data: {
           code: dto.code,
           name: dto.name,
           unit: dto.unit,
-          kind: dto.kind ?? "STOCK",
+          kind,
+          accountingClass,
           salePrice: dto.salePrice ?? 0,
           costPrice: dto.costPrice ?? 0,
           minStock: dto.minStock,
@@ -150,9 +155,18 @@ export class MaterialsService {
     const material = await this.prisma.material.findFirst({ where: { id, deletedAt: null } });
     if (!material) throw new NotFoundException("Không tìm thấy vật tư");
 
+    // Re-validate kind <-> accountingClass whenever either one is touched.
+    let accountingClassPatch: { accountingClass: AccountingClassValue | null } | undefined;
+    if (dto.kind !== undefined || dto.accountingClass !== undefined) {
+      accountingClassPatch = {
+        accountingClass: resolveAccountingClass(dto.kind ?? material.kind, dto.accountingClass, material.accountingClass),
+      };
+    }
+
     return this.prisma.material.update({
       where: { id },
       data: {
+        ...accountingClassPatch,
         ...(dto.code !== undefined && { code: dto.code }),
         ...(dto.name !== undefined && { name: dto.name }),
         ...(dto.unit !== undefined && { unit: dto.unit }),
@@ -222,6 +236,10 @@ export class MaterialsService {
       where.kind = filters.kind;
     }
 
+    if (filters.accountingClass) {
+      where.accountingClass = filters.accountingClass;
+    }
+
     if (filters.isActive !== undefined) {
       where.isActive = filters.isActive;
     }
@@ -233,6 +251,59 @@ export class MaterialsService {
     // lowStockOnly filtering is done post-query since it requires computed totalStock
 
     return where;
+  }
+
+  /** Per-row result; a kind<->accountingClass violation fails only that row. */
+  async bulkUpdateClasses(dto: BulkMaterialClassDto, _user: JwtUser) {
+    const ids = [...new Set(dto.items.map((row) => row.materialId))];
+    const materials = await this.prisma.material.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      select: { id: true, code: true, kind: true, accountingClass: true },
+    });
+    const byId = new Map(materials.map((material) => [material.id, material]));
+
+    const results: Array<{
+      index: number;
+      materialId: string;
+      code?: string;
+      status: "UPDATED" | "UNCHANGED" | "NOT_FOUND" | "ERROR";
+      message: string;
+      from?: string | null;
+      to?: string | null;
+    }> = [];
+
+    for (const [index, row] of dto.items.entries()) {
+      const material = byId.get(row.materialId);
+      if (!material) {
+        results.push({ index, materialId: row.materialId, status: "NOT_FOUND", message: "Không tìm thấy vật tư" });
+        continue;
+      }
+      try {
+        const target = resolveAccountingClass(material.kind, row.accountingClass, material.accountingClass);
+        if (target === material.accountingClass) {
+          results.push({ index, materialId: row.materialId, code: material.code, status: "UNCHANGED", message: "Nhóm hạch toán không đổi", from: target, to: target });
+          continue;
+        }
+        await this.prisma.material.update({ where: { id: material.id }, data: { accountingClass: target } });
+        results.push({ index, materialId: row.materialId, code: material.code, status: "UPDATED", message: "Đã cập nhật", from: material.accountingClass, to: target });
+        material.accountingClass = target;
+      } catch (error) {
+        const message = error instanceof BadRequestException ? error.message : "Không cập nhật được";
+        results.push({ index, materialId: row.materialId, code: material.code, status: "ERROR", message });
+      }
+    }
+
+    const count = (status: string) => results.filter((r) => r.status === status).length;
+    return {
+      results,
+      summary: {
+        total: results.length,
+        updated: count("UPDATED"),
+        unchanged: count("UNCHANGED"),
+        notFound: count("NOT_FOUND"),
+        error: count("ERROR"),
+      },
+    };
   }
 
   async bulkExport(ids: string[]) {

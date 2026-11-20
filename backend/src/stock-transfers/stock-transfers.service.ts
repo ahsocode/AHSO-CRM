@@ -265,7 +265,8 @@ export class StockTransfersService {
         purchaseInvoiceDate: true,
         purchaseInvoiceNo: true,
         remainingQuantity: true,
-        unitPrice: true
+        unitPrice: true,
+        projectId: true
       }
     });
 
@@ -297,7 +298,8 @@ export class StockTransfersService {
           purchaseInvoiceNo: lot.purchaseInvoiceNo,
           receivedQuantity: moveQuantity,
           remainingQuantity: moveQuantity,
-          unitPrice: lot.unitPrice
+          unitPrice: lot.unitPrice,
+          projectId: lot.projectId ?? undefined
         }
       });
 

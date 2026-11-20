@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SUPPLIER_TYPES } from "./bulk-supplier-type.dto";
 
 const emptyToUndefined = (value: unknown) => {
   if (typeof value !== "string") return value;
@@ -21,6 +22,7 @@ export const createSupplierSchema = z.object({
   ),
   contactName: optionalString(100),
   notes: optionalString(2000),
+  supplierType: z.enum(SUPPLIER_TYPES).optional(),
   isActive: z.boolean().default(true),
 });
 

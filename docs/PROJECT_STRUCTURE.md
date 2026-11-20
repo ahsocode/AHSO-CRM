@@ -118,7 +118,11 @@ Luật chuyển trạng thái:
 | `StockTransfer` / `StockTransferItem` | Chuyển kho |
 | `StockCount` / `StockCountItem` | Kiểm kê, điều chỉnh lệch |
 | `ProjectMaterialAllocation` / `ProjectMaterialAllocationItem` | Phân bổ lô vật tư vào dự án — nhiều đợt / dự án, mỗi đợt = 1 hóa đơn bán (`salesInvoiceNo`); item có thể gắn `bomLineId` |
-| `Material.kind` (`MaterialKind`) | STOCK hàng tồn kho · SERVICE dịch vụ/phần mềm · PRODUCT thành phẩm (máy) |
+| `Material.kind` (`MaterialKind`) | Có qua kho hay không: STOCK hàng tồn kho · SERVICE dịch vụ/phần mềm (không qua kho) · PRODUCT thành phẩm (máy) |
+| `Material.accountingClass` (`AccountingClass`, nullable) | Hạch toán tài khoản nào: RAW_MATERIAL TK152 · TOOL 153 · MERCHANDISE 156 · FINISHED_GOOD 155 · CONSUMABLE_COMMON. SERVICE ⇒ null; STOCK mặc định RAW_MATERIAL; PRODUCT mặc định FINISHED_GOOD (service chặn tổ hợp sai) |
+| `Supplier.supplierType` (`SupplierType`) | GOODS (mặc định) · SERVICE · EXPENSE · OTHER. SERVICE/EXPENSE bị chặn khi nhập kho; OTHER cho phép kèm cảnh báo |
+| `StockReceipt.invoice*` / `sellerTaxCode` / `invoiceType` (`InvoiceType`) | Hóa đơn mua có cấu trúc; unique index một phần `StockReceipt_invoice_active_key` (MST+ký hiệu+số, bỏ qua phiếu CANCELLED/đã xóa) tạo bằng SQL thô trong migration `20261120090000_inventory_invoice_supplier_type` |
+| `StockReceiptItem.projectId` → `StockLot.projectId` | Hàng mua riêng cho dự án; `consumeStockLots(..., { projectId })` ưu tiên lô của dự án rồi lô chung, không bao giờ lấy lô dự án khác. Xem `docs/INVENTORY_TOOLS.md` |
 | `Bom` / `BomLine` | Định mức vật tư: BOM dự án (dự toán) hoặc mẫu máy (MODEL, có phiên bản); dòng có thể là BOM con. `QuoteItem.bomId` → giá vốn dự kiến nội bộ |
 | `ProjectCost` | Chi phí trực tiếp không qua kho (phần mềm, gia công, nhân công…), cùng quy tắc ngày hóa đơn |
 

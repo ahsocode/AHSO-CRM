@@ -6,6 +6,12 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import {
+  BulkReceiptInvoicesDto,
+  UpdateReceiptInvoiceDto,
+  bulkReceiptInvoicesSchema,
+  updateReceiptInvoiceSchema,
+} from "./dto/invoice-fields.dto";
 import { CreateStockReceiptDto, createStockReceiptSchema } from "./dto/create-stock-receipt.dto";
 import { StockReceiptFilterDto, stockReceiptFilterSchema } from "./dto/stock-receipt-filter.dto";
 import { UpdateStockReceiptDto, updateStockReceiptSchema } from "./dto/update-stock-receipt.dto";
@@ -43,6 +49,28 @@ export class StockReceiptsController {
     @CurrentUser() user: JwtUser,
   ) {
     return this.service.create(dto, user);
+  }
+
+  // Declared before the ":id" routes so "invoices" is never captured as an id.
+  @RequirePermissions("inventory.edit")
+  @ApiOperation({ summary: "POST /api/stock-receipts/invoices/bulk — back-fill invoices, per-row result" })
+  @Post("invoices/bulk")
+  bulkInvoices(
+    @Body(new ZodValidationPipe(bulkReceiptInvoicesSchema)) dto: BulkReceiptInvoicesDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.bulkUpdateInvoices(dto, user);
+  }
+
+  @RequirePermissions("inventory.edit")
+  @ApiOperation({ summary: "PATCH /api/stock-receipts/:id/invoice — edit invoice info only (any non-cancelled status)" })
+  @Patch(":id/invoice")
+  updateInvoice(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateReceiptInvoiceSchema)) dto: UpdateReceiptInvoiceDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.updateInvoice(id, dto, user);
   }
 
   @RequirePermissions("inventory.edit")

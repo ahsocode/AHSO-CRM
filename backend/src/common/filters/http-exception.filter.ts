@@ -32,7 +32,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
         return;
       }
 
-      const payload = exceptionResponse as { message?: string | string[]; errors?: string[]; statusCode?: number };
+      const payload = exceptionResponse as {
+        message?: string | string[];
+        errors?: string[];
+        statusCode?: number;
+        existingReceiptId?: string;
+        existingReceiptNo?: string;
+      };
       const message = this.translateMessage(
         Array.isArray(payload.message) ? payload.message[0] : payload.message ?? DEFAULT_HTTP_ERROR_MESSAGE
       );
@@ -41,7 +47,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       response.status(statusCode).json({
         statusCode,
         message,
-        errors: errors.map((error) => this.translateMessage(error))
+        errors: errors.map((error) => this.translateMessage(error)),
+        // Duplicate purchase invoice (409): tell the client which receipt already holds it.
+        ...(payload.existingReceiptId
+          ? { existingReceiptId: payload.existingReceiptId, existingReceiptNo: payload.existingReceiptNo }
+          : {})
       });
       return;
     }

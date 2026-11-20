@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SUPPLIER_TYPES } from "./bulk-supplier-type.dto";
 import { paginationSchema } from "../../common/dto/pagination.dto";
 
 const emptyToUndefined = (value: unknown) => {
@@ -8,6 +9,7 @@ const emptyToUndefined = (value: unknown) => {
 };
 
 export const supplierFilterSchema = paginationSchema.extend({
+  supplierType: z.preprocess(emptyToUndefined, z.enum(SUPPLIER_TYPES).optional()),
   search: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
   isActive: z.preprocess(
     (val) => {

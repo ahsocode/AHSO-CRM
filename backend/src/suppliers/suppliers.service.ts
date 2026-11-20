@@ -3,11 +3,23 @@ import type { Prisma, Supplier } from "@prisma/client";
 import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { decimalToNumber } from "../common/utils/decimal";
+import { BulkSupplierTypeDto } from "./dto/bulk-supplier-type.dto";
 import { CreateSupplierDto } from "./dto/create-supplier.dto";
 import { SupplierFilterDto } from "./dto/supplier-filter.dto";
 import { UpdateSupplierDto } from "./dto/update-supplier.dto";
 
 const RECENT_RECEIPTS_LIMIT = 10;
+
+// Name fragments (lower-case) that usually indicate a service/expense payee rather than a goods supplier.
+export const EXPENSE_SUPPLIER_KEYWORDS = [
+  "grab", "be group", "xanh sm", "taxi", "xăng", "petrolimex", "pv oil", "nhà hàng", "quán ăn", "cafe", "cà phê",
+  "khách sạn", "vnpt", "viettel", "mobifone", "vinaphone", "fpt telecom", "điện lực", "cấp nước", "bảo hiểm", "vận chuyển",
+];
+
+export function matchExpenseKeyword(name: string): string | null {
+  const lower = name.toLowerCase();
+  return EXPENSE_SUPPLIER_KEYWORDS.find((keyword) => lower.includes(keyword)) ?? null;
+}
 const EXPORT_MAX_ROWS = 5000;
 
 @Injectable()
@@ -34,6 +46,7 @@ export class SuppliersService {
           code: true,
           name: true,
           taxCode: true,
+          supplierType: true,
           phone: true,
           email: true,
           contactName: true,
@@ -158,6 +171,7 @@ export class SuppliersService {
         email: dto.email,
         contactName: dto.contactName,
         notes: dto.notes,
+        supplierType: dto.supplierType ?? "GOODS",
         isActive: dto.isActive ?? true,
       },
       select: { id: true, code: true, name: true },
@@ -186,6 +200,7 @@ export class SuppliersService {
         ...(dto.email !== undefined && { email: dto.email }),
         ...(dto.contactName !== undefined && { contactName: dto.contactName }),
         ...(dto.notes !== undefined && { notes: dto.notes }),
+        ...(dto.supplierType !== undefined && { supplierType: dto.supplierType }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
       select: { id: true, code: true, name: true },
@@ -204,6 +219,80 @@ export class SuppliersService {
     });
 
     return { success: true, id };
+  }
+
+  /** Per-row result; unknown ids are reported, never abort the batch. */
+  async bulkUpdateType(dto: BulkSupplierTypeDto, _user: JwtUser) {
+    const ids = [...new Set(dto.items.map((row) => row.supplierId))];
+    const suppliers = await this.prisma.supplier.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      select: { id: true, code: true, name: true, supplierType: true },
+    });
+    const byId = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+
+    const results: Array<{
+      index: number;
+      supplierId: string;
+      status: "UPDATED" | "UNCHANGED" | "NOT_FOUND" | "ERROR";
+      message: string;
+      from?: string;
+      to?: string;
+    }> = [];
+
+    for (const [index, row] of dto.items.entries()) {
+      const supplier = byId.get(row.supplierId);
+      if (!supplier) {
+        results.push({ index, supplierId: row.supplierId, status: "NOT_FOUND", message: "Không tìm thấy nhà cung cấp" });
+        continue;
+      }
+      if (supplier.supplierType === row.supplierType) {
+        results.push({ index, supplierId: row.supplierId, status: "UNCHANGED", message: "Loại NCC không đổi", from: supplier.supplierType, to: row.supplierType });
+        continue;
+      }
+      const from = supplier.supplierType;
+      try {
+        await this.prisma.supplier.update({ where: { id: supplier.id }, data: { supplierType: row.supplierType } });
+        supplier.supplierType = row.supplierType;
+        results.push({
+          index,
+          supplierId: row.supplierId,
+          status: "UPDATED",
+          message: `Đã đổi loại NCC ${supplier.name}`,
+          from,
+          to: row.supplierType,
+        });
+      } catch {
+        results.push({ index, supplierId: row.supplierId, status: "ERROR", message: "Không cập nhật được" });
+      }
+    }
+
+    const count = (status: string) => results.filter((r) => r.status === status).length;
+    return {
+      results,
+      summary: {
+        total: results.length,
+        updated: count("UPDATED"),
+        unchanged: count("UNCHANGED"),
+        notFound: count("NOT_FOUND"),
+        error: count("ERROR"),
+      },
+    };
+  }
+
+  /**
+   * Heuristic list of suppliers that probably are NOT goods suppliers (taxi, fuel, restaurants,
+   * telecom...). READ-ONLY: it only proposes EXPENSE for review; nothing is changed automatically.
+   */
+  async suggestExpenseSuppliers() {
+    const suppliers = await this.prisma.supplier.findMany({
+      where: { deletedAt: null, supplierType: "GOODS" },
+      select: { id: true, code: true, name: true, taxCode: true },
+      orderBy: { name: "asc" },
+    });
+    return suppliers
+      .map((supplier) => ({ ...supplier, matchedKeyword: matchExpenseKeyword(supplier.name) }))
+      .filter((row) => row.matchedKeyword !== null)
+      .map((row) => ({ ...row, suggestedType: "EXPENSE" as const }));
   }
 
   async bulkExport(ids: string[]) {
@@ -269,6 +358,10 @@ export class SuppliersService {
 
     if (filters.isActive !== undefined) {
       where.isActive = filters.isActive;
+    }
+
+    if (filters.supplierType) {
+      where.supplierType = filters.supplierType;
     }
 
     return where;

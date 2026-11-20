@@ -6,6 +6,7 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { BulkMaterialClassDto, bulkMaterialClassSchema } from "./dto/bulk-material-class.dto";
 import { CreateMaterialDto, createMaterialSchema } from "./dto/create-material.dto";
 import { MaterialFilterDto, materialFilterSchema } from "./dto/material-filter.dto";
 import { UpdateMaterialDto, updateMaterialSchema } from "./dto/update-material.dto";
@@ -55,6 +56,17 @@ export class MaterialsController {
     @CurrentUser() user: JwtUser,
   ) {
     return this.service.create(dto, user);
+  }
+
+  // Must stay declared BEFORE @Patch(":id") or "bulk-classes" is captured as an id.
+  @RequirePermissions("materials.edit")
+  @ApiOperation({ summary: "PATCH /api/materials/bulk-classes — set accountingClass for many materials, per-row result" })
+  @Patch("bulk-classes")
+  bulkClasses(
+    @Body(new ZodValidationPipe(bulkMaterialClassSchema)) dto: BulkMaterialClassDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.bulkUpdateClasses(dto, user);
   }
 
   @RequirePermissions("materials.edit")

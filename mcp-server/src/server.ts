@@ -127,7 +127,10 @@ export function createServer(): Server {
 function formatToolError(toolName: string, error: unknown): string {
   if (error instanceof Error) {
     const axiosError = error as {
-      response?: { status?: number; data?: { message?: string; statusCode?: number } };
+      response?: {
+        status?: number;
+        data?: { message?: string; statusCode?: number; existingReceiptId?: string; existingReceiptNo?: string };
+      };
       code?: string;
     };
 
@@ -138,6 +141,9 @@ function formatToolError(toolName: string, error: unknown): string {
       if (status === 401) return `🔐 Lỗi xác thực: Vui lòng kiểm tra CRM_EMAIL và CRM_PASSWORD trong .env`;
       if (status === 403) return `🚫 Không có quyền thực hiện thao tác này. Service account cần permission phù hợp.`;
       if (status === 404) return `❌ Không tìm thấy dữ liệu. Vui lòng kiểm tra lại ID.`;
+      if (status === 409 && axiosError.response.data?.existingReceiptId) {
+        return `⚠️ ${msg}\nPhiếu đã có: ${axiosError.response.data.existingReceiptNo ?? "—"} | ID: \`${axiosError.response.data.existingReceiptId}\``;
+      }
       if (status === 422 || status === 400) return `⚠️ Dữ liệu không hợp lệ: ${msg}`;
       if (status && status >= 500) return `🔥 Lỗi server CRM (${status}). Vui lòng thử lại sau.`;
       return `❌ Lỗi API [${status}]: ${msg}`;

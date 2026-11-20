@@ -526,6 +526,8 @@ async function main() {
     { id: "perm_inventory_create", resource: "inventory", action: "create" },
     { id: "perm_inventory_edit", resource: "inventory", action: "edit" },
     { id: "perm_inventory_delete", resource: "inventory", action: "delete" },
+    { id: "perm_inventory_approve", resource: "inventory", action: "approve" },
+    { id: "perm_inventory_view_cost", resource: "inventory", action: "view_cost" },
     { id: "perm_ai_use", resource: "ai", action: "use" },
     { id: "perm_ai_manage_agents", resource: "ai", action: "manage_agents" },
     { id: "perm_ai_view_usage", resource: "ai", action: "view_usage" },

@@ -123,6 +123,13 @@ Luật chuyển trạng thái:
 | `Supplier.supplierType` (`SupplierType`) | GOODS (mặc định) · SERVICE · EXPENSE · OTHER. SERVICE/EXPENSE bị chặn khi nhập kho; OTHER cho phép kèm cảnh báo |
 | `StockReceipt.invoice*` / `sellerTaxCode` / `invoiceType` (`InvoiceType`) | Hóa đơn mua có cấu trúc; unique index một phần `StockReceipt_invoice_active_key` (MST+ký hiệu+số, bỏ qua phiếu CANCELLED/đã xóa) tạo bằng SQL thô trong migration `20261120090000_inventory_invoice_supplier_type` |
 | `StockReceiptItem.projectId` → `StockLot.projectId` | Hàng mua riêng cho dự án; `consumeStockLots(..., { projectId })` ưu tiên lô của dự án rồi lô chung, không bao giờ lấy lô dự án khác. Xem `docs/INVENTORY_TOOLS.md` |
+| `ApiToken` / `PeriodLockHistory` / `InventoryCostingConfig` | Tài khoản máy có scope (lưu hash), lịch sử khóa kỳ, cấu hình phương pháp giá vốn theo năm tài chính. Migration `20261121090000_inventory_controls_and_costing_schema` |
+| `MaterialAlias` / `ReceiptPendingLine` | Ánh xạ tên hàng NCC → vật tư; dòng hóa đơn chưa khớp chờ xử lý (StockReceiptItem.materialId vẫn bắt buộc) |
+| `StockIssueLotConsumption` | Lô và giá đã tiêu hao theo từng dòng phiếu xuất; cơ sở để hủy phiếu và đảo đúng lô |
+| `SalesInvoice` / `CommonCostAllocation(Line)` | Hóa đơn bán gắn dự án; phân bổ vật tư dùng chung. `Project.costRecognitionStatus` (DELIVERED chốt giá vốn) |
+| `ProjectCost.projectId` (nullable) | Dòng chi phí từ hóa đơn chưa gán dự án; có `invoice*`, `receiptId`, unique index một phần theo MST+ký hiệu+số+dòng |
+| `AuditLog` | Bất biến: trigger DB chặn UPDATE/DELETE/TRUNCATE |
+| Helper `backend/src/inventory/inventory-controls.ts` | `assertPeriodOpen`, `getCostingMethod`, `canViewCost`, `assertCanApprove`, `maskCosts` |
 | `Bom` / `BomLine` | Định mức vật tư: BOM dự án (dự toán) hoặc mẫu máy (MODEL, có phiên bản); dòng có thể là BOM con. `QuoteItem.bomId` → giá vốn dự kiến nội bộ |
 | `ProjectCost` | Chi phí trực tiếp không qua kho (phần mềm, gia công, nhân công…), cùng quy tắc ngày hóa đơn |
 

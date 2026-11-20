@@ -103,7 +103,7 @@ export class ProjectCostsService {
         throw new BadRequestException("Chi phí đã gắn vào đợt phân bổ đã xác nhận, không thể sửa");
       }
       if (dto.supplierId !== undefined || dto.bomLineId !== undefined) {
-        await this.validateReferences(cost.projectId, dto.supplierId, dto.bomLineId);
+        await this.validateReferences(accessible.projectId, dto.supplierId, dto.bomLineId);
       }
       // R9: a cost attached to a draft allocation must not be dated after that sales invoice
       if (
@@ -155,9 +155,10 @@ export class ProjectCostsService {
       where: { id, deletedAt: null },
       select: COST_SELECT
     });
-    if (!cost) throw new NotFoundException("Không tìm thấy chi phí");
+    // Costs not yet assigned to a project (invoice intake) are managed via inventory tools, not here.
+    if (!cost || !cost.projectId) throw new NotFoundException("Không tìm thấy chi phí");
     await findAccessibleProject(this.prisma, cost.projectId, user);
-    return cost;
+    return { ...cost, projectId: cost.projectId };
   }
 
   private async validateReferences(projectId: string, supplierId?: string | null, bomLineId?: string | null) {

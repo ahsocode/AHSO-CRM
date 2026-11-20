@@ -26,7 +26,7 @@
 3. Hủy **idempotent**: hủy lần hai không hoàn tồn lần nữa (trả lỗi/kết quả cũ, không đổi số liệu).
 4. Phiếu cũ trước khi có bảng này: hiện chưa có phiếu nào; sau này nếu có phiếu thiếu lô → chặn hủy trực tiếp, hướng dẫn phiếu điều chỉnh.
 
-**Khóa sổ**: chưa có trong hệ thống → thêm cấu hình `inventory.lockedThrough` (ngày; ADMIN đặt qua API, có audit). Mọi chứng từ kho có ngày ≤ `lockedThrough` không được xác nhận/hủy/đổi ngày hóa đơn.
+**Khóa sổ**: xem §7.2 (bổ sung số 2) — cấu hình **`periodLockedUntil`** thay cho `periodLockedUntil` ở các chỗ cũ.
 
 **Nghiệm thu bổ sung**: (1) tổng `get_inventory_valuation(asOfDate)` = tổng `get_inventory_summary`; (2) với `AVERAGE`, `get_project_cost` và `get_inventory_valuation` dùng cùng `costPrice`; (3) có cảnh báo khi hóa đơn mua đứng sau ngày hóa đơn bán; (4) đổi phương pháp giữa năm bị từ chối kèm lý do; (5) tool MCP cũ chạy như trước, tham số mới đều tùy chọn.
 
@@ -70,7 +70,7 @@
   - `method` hiệu lực cho một chứng từ = bản ghi có `effectiveFrom` ≤ ngày chứng từ, mới nhất. Chưa có bản ghi nào → `AVERAGE` từ trước đến nay.
   - Năm tài chính: dương lịch (1/1–31/12), khóa `inventory.fiscalYearStartMonth` mặc định 1.
   - `PUT /inventory/costing-method` (ADMIN): `effectiveFrom` **phải là đầu năm tài chính sau năm hiện tại** (hoặc xa hơn); lần cấu hình đầu tiên (chưa có lịch sử) cho phép đặt `effectiveFrom` = đầu năm hiện tại. Đổi giữa năm → 400 "Chỉ được đổi phương pháp tính giá từ năm tài chính <năm>". `GET` trả cấu hình hiệu lực + lịch sử.
-  - Khóa `inventory.manualIssuePriceMode` ∈ {`IGNORE_WARN` (mặc định), `BLOCK`}; `inventory.lockedThrough` (ngày khóa sổ, ADMIN, có audit).
+  - Khóa `inventory.manualIssuePriceMode` ∈ {`IGNORE_WARN` (mặc định), `BLOCK`}; `periodLockedUntil` (ngày khóa sổ, ADMIN, có audit).
 - `StockIssueItem.unitPrice` tùy chọn. Khi **xác nhận** (method theo ngày phiếu):
   - `AVERAGE`: giá xuất = `Material.costPrice` lúc xác nhận; thành tiền = SL × costPrice (làm tròn 0 chữ số như hiện nay). Lô vẫn bị trừ theo FIFO **để truy vết**, **ngày hóa đơn mua > ngày hóa đơn bán chỉ cảnh báo**.
   - `FIFO`: giá xuất theo lô đã trừ (Σ SL lô × giá lô / SL), **áp cứng** ngày hóa đơn mua ≤ ngày hóa đơn bán.
@@ -98,20 +98,22 @@
 ### 2.6 P2-7 Phân bổ vật tư dùng chung
 - `allocate_common_materials(fromDate, toDate, method="BY_MAIN_MATERIAL_VALUE", mode="PREVIEW"|"CONFIRM")`: lấy phần **xuất** của vật tư `accountingClass=CONSUMABLE_COMMON` trong kỳ (phiếu xuất không gắn dự án, `reasonType` OTHER/INTERNAL_USE) chia cho các dự án theo tỷ lệ giá trị vật tư chính đã xuất cho từng dự án trong kỳ. PREVIEW không ghi gì; CONFIRM ghi một `CommonCostAllocation` (+ dòng) và tạo `ProjectCost` nhóm `OTHER` cho từng dự án; chặn chạy hai lần cùng kỳ (unique theo khoảng kỳ).
 
-### 2.7 P2-8 Audit
-Ghi `AuditService.record` (ai, lúc nào, trước/sau) khi: tạo/xác nhận/hủy phiếu nhập, xuất, sửa hóa đơn phiếu nhập, đổi `costPrice`/`accountingClass`/`supplierType`, đổi cấu hình giá xuất.
+### 2.7 Audit
+**Đã nâng lên P0 — xem §7.1.**
 
-## 3. Chia PR
+## 3. Chia PR (đã sắp lại sau bổ sung số 2)
 
-| PR | Nội dung | Model |
-|---|---|---|
-| 1 | P0-1, P0-2, P0-3 (+ tool MCP, test, tài liệu tool) | Sonnet |
-| 2 | P1-4 (cấu hình giá xuất + lịch sử + khóa năm, khóa sổ, `StockIssueLotConsumption`, hủy có đảo + điều kiện chặn, hoàn kho, đổi giá đợt phân bổ theo `AVERAGE`) | Sonnet |
-| 3 | P1-5 (báo cáo + xuất CSV/Excel + đổi nguồn vật tư cost-summary) | Sonnet |
-| 4 | P2-6, P2-7, P2-8 | Sonnet |
-| 5 | Review tổng thể (nhất là PR 2: tiền, đồng thời, idempotent), bảo mật, QA đầy đủ, hướng dẫn migrate production | Opus |
+| PR | Nội dung | Model | Trạng thái |
+|---|---|---|---|
+| 1 | P0-1/2/3: hóa đơn trên phiếu nhập, chống trùng, `supplierType`, `accountingClass`, lô gắn dự án | Sonnet | **Xong** (`483e16b`) |
+| 2 | **Kiểm soát tối thiểu (§7)**: audit bất biến, `periodLockedUntil`, quyền `inventory.approve`/`inventory.view_cost`, tài khoản máy (API token) | Sonnet | Chờ giao |
+| 3 | **Nhập kho tự động từ hóa đơn (§6)**: `MaterialAlias`, hàng đợi chờ ghép, `create_stock_receipt_from_invoice`, hóa đơn thay thế/điều chỉnh, dòng chi phí, VAT/làm tròn | Sonnet | |
+| 4 | **Giá xuất & hủy có đảo (§2.3)**: cấu hình phương pháp theo năm, `StockIssueLotConsumption`, hủy có đảo, hoàn kho, đợt phân bổ theo `AVERAGE` | Sonnet | |
+| 5 | **API báo cáo (§2.4 + §8)**: JSON đầy đủ + metadata + phân trang + lọc, `get_receipts_without_invoice`, tool tên `*_invoice_info` | Sonnet | |
+| 6 | P2-6/7: hóa đơn bán ra, `DELIVERED`, phân bổ vật tư dùng chung | Sonnet | |
+| 7 | Review tổng thể (tiền, đồng thời, idempotent, quyền, token), QA đầy đủ, hướng dẫn migrate production | Opus | |
 
-Mỗi PR: một commit rõ ràng; tsc backend/frontend + jest + `static_checks` + e2e liên quan; không push.
+PR 2 phải xong trước PR 3–6 (mọi chứng từ phải đi qua khóa kỳ + audit + quyền). Mỗi PR: một commit, tsc + jest + `static_checks` + e2e liên quan, **không push**.
 
 ## 4. Kiểm thử bắt buộc (số cụ thể)
 
@@ -157,3 +159,103 @@ Kiểm tra: tsc backend + mcp-server, jest module liên quan, static_checks (gua
 Commit: "feat(inventory): invoice fields, duplicate guard, supplier types, accounting class, project-tagged lots".
 Báo cáo ≤ 25 dòng: migration, endpoint/tool mới/sửa, cách chạy test, điểm lệch đặc tả.
 ```
+
+---
+
+# Bổ sung số 2 (20/11/2026) — tích hợp hóa đơn tự động, kiểm soát tối thiểu, API cho báo cáo
+
+> Bối cảnh: kế toán bán thời gian, **không dùng CRM**; nhận file Excel do script ngoài tạo từ dữ liệu CRM qua MCP/API. → ưu tiên API/tool ổn định; **không làm giao diện hay xuất Excel trong CRM**; **không** làm ma trận 4 vai trò.
+> Mâu thuẫn với phần trước đã xử lý: audit nâng P2 → P0 (§7.1); `periodLockedUntil` thay `inventory.lockedThrough`; xuất CSV/Excel trong CRM ở §2.4 **bỏ** (script ngoài làm); tool `update_receipt_invoice_info`/`bulk_update_receipt_invoice_info` = **bí danh** của `update_receipt_invoice`/`bulk_set_receipt_invoices` PR 1 đã có (đăng ký cả hai tên, cùng handler).
+
+## 6. Nhập kho tự động từ hóa đơn (PR 3)
+
+### 6.1 Ghép dòng hàng ↔ vật tư (`MaterialAlias`)
+- Bảng `MaterialAlias` {id, supplierId, supplierItemCode?, supplierItemName, normalizedName, materialId, unitConversion? (số: 1 đơn vị NCC = N đơn vị vật tư; kèm `supplierUnit?`), createdById, createdAt}. Unique `(supplierId, supplierItemCode)` khi có mã; ngược lại unique `(supplierId, normalizedName)`. `normalizedName` = chữ thường, bỏ dấu tiếng Việt, bỏ ký tự thừa, gộp khoảng trắng (dùng `common/utils/vietnamese.ts`).
+- `match_invoice_line(supplierId, itemCode?, itemName)`: (1) khớp alias theo mã rồi theo tên chuẩn hóa → trả `{ matched: true, materialId, unitConversion }`; (2) không khớp → `{ matched: false, suggestions: [{materialId, code, name, score, reasons[]}] }` tối đa 10, điểm 0–1: mã trùng `Material.code`/`supplierCode` (`MaterialSupplier.supplierCode`) = 1.0; độ giống tên (token overlap + chuỗi con, đã chuẩn hóa); cộng điểm cho vật tư đã có `MaterialSupplier` với chính NCC này. Tính trong ứng dụng, **không** thêm extension Postgres.
+- `save_material_alias(supplierId, supplierItemCode?, supplierItemName, materialId, unitConversion?)`: tạo hoặc cập nhật (upsert); ghi audit.
+- Quy đổi đơn vị: khi tạo dòng từ alias, `quantity = qtyHóaĐơn × unitConversion`, `unitPrice = đơnGiáHóaĐơn / unitConversion` (làm tròn 0 chữ số; chênh lệch làm tròn cộng vào `roundingDiff` của phiếu).
+
+### 6.2 Hàng đợi chờ ghép
+- Bảng `ReceiptPendingLine` {id, receiptId, lineNo, supplierItemCode?, supplierItemName, supplierUnit?, quantity, unitPrice, vatRate?, vatAmount?, projectId?, status PENDING|RESOLVED|DISCARDED, resolvedMaterialId?, resolvedAt?, resolvedById?}. Dòng không ghép được nằm ở đây, **không** tạo `StockReceiptItem`/lô/tồn.
+- **Không xác nhận được phiếu còn dòng PENDING** (400 liệt kê dòng).
+- `list_pending_match_lines(supplierId?, receiptId?, page…)`; `resolve_pending_line(lineId, materialId, saveAlias=true, unitConversion?)`: tạo `StockReceiptItem` từ dòng (áp quy đổi), đổi `RESOLVED`, lưu alias nếu `saveAlias`; chỉ khi phiếu còn DRAFT. `discard_pending_line(lineId, reason)`.
+
+### 6.3 `create_stock_receipt_from_invoice` (một lần gọi trọn gói)
+- Đầu vào: `invoice` {sellerTaxCode, series, number, date, type (NORMAL|REPLACEMENT|ADJUSTMENT), relatedInvoiceRef?, fileRef?, lookupCode?, totalExVat?, vatTotal?, grandTotal?}, `supplierId` hoặc tự tìm theo `sellerTaxCode` (không thấy → 422 "chưa có NCC", **không tự tạo NCC**), `source` (EMAIL_AUTO | MANUAL | IMPORT), `warehouseId`, `lines[]` {itemCode?, itemName, unit?, quantity, unitPrice (chưa VAT), vatRate?, materialId? (đã ghép), projectId?}.
+- Kết quả: `{ receiptId, receiptNo, created: boolean, reviewStatus, matchedLines, pendingLines, expenseLines, warnings[] }`.
+- **Mặc định an toàn**: phiếu tạo từ `EMAIL_AUTO`/`IMPORT` **luôn** `DRAFT` + `reviewStatus=PENDING_REVIEW`; **không bao giờ** xác nhận trong cùng lời gọi, kể cả tài khoản có quyền. `StockReceipt` thêm `source` (enum, default MANUAL) và `reviewStatus` (enum PENDING_REVIEW|REVIEWED, nullable; phiếu cũ null). Xác nhận phiếu có `reviewStatus=PENDING_REVIEW` cần `POST /stock-receipts/:id/review` (người có `inventory.approve`) trước hoặc cùng lúc.
+- **Idempotent**: trước khi tạo, tra `(sellerTaxCode, series, number)` (không tính phiếu CANCELLED); có → trả phiếu cũ `{created:false}` (HTTP 200), không tạo thêm, không sửa; race → bắt lỗi unique, trả phiếu thắng cuộc. Hóa đơn **bán ra của AHSO** (MST bên bán = MST AHSO `0316896939`, lấy từ cấu hình công ty, không hard-code trong code mà trong `Setting` `company.taxCode`) → trả `{ skipped: true, reason: "SALES_INVOICE" }`, không tạo gì.
+- **Hóa đơn thay thế/điều chỉnh** (`type` ≠ NORMAL, `relatedInvoiceRef` = "ký hiệu-số" hoặc id phiếu gốc): tìm phiếu gốc. Gốc **chưa CONFIRMED** (DRAFT): từ chối, hướng dẫn sửa/hủy phiếu gốc. Gốc CONFIRMED: **không sửa phiếu gốc**; tạo phiếu nháp `receiptType = ADJUSTMENT` (enum mở rộng) liên kết `adjustsReceiptId`, **tự tính chênh lệch** theo từng vật tư (SL mới − SL gốc, giá mới − giá gốc, thành tiền): dòng điều chỉnh mang `quantity` có dấu (SL < 0 = trả lại NCC, trừ tồn, cần đủ tồn) và `unitPrice`; chênh **chỉ về giá** (SL không đổi) → dòng `valueAdjustment` (không đổi tồn; khi xác nhận điều chỉnh `costPrice` = (tồnHiệnTại × costPrice + Δgiá trị) / tồnHiệnTại nếu tồn > 0, nếu tồn = 0 thì ghi nhận Δ vào giá vốn dự án đã xuất hoặc bỏ qua kèm cảnh báo — nêu rõ trong báo cáo cuối). Phiếu ADJUSTMENT cũng chỉ ở DRAFT + PENDING_REVIEW, chịu khóa kỳ (lập ở kỳ hiện tại, §7.2).
+- **Dòng chi phí / dịch vụ**: dòng thuộc NCC `supplierType` SERVICE/EXPENSE, hoặc `materialId` có `kind = SERVICE`, hoặc không phải hàng nhập kho → **không** tạo tồn; tạo `ProjectCost` (xem 6.4) có/không `projectId`. Nếu **toàn bộ** hóa đơn là chi phí → không tạo `StockReceipt`, kết quả `{ receiptId: null, expenseLineIds: [...] }`.
+- `list_pending_review_receipts(page…)`: phiếu `PENDING_REVIEW`, kèm số dòng chờ ghép, tổng tiền, `roundingDiff`, nguồn.
+
+### 6.4 Chi phí không qua kho (mở rộng `ProjectCost`)
+- `ProjectCost.projectId` **nới thành nullable** ("chi phí chưa gắn dự án" — thay đổi nới lỏng, tương thích ngược); thêm `sellerTaxCode?`, `invoiceSeries?`, `lineNo?`, `source?`, `reviewStatus?`, `receiptId?`, `vatRate?` đã có, `vatAmount?`. Unique một phần `(sellerTaxCode, invoiceSeries, invoiceNumber, lineNo)` khi đủ. Mọi chỗ đọc `ProjectCost` theo `projectId` giữ nguyên (chi phí chưa gắn dự án không xuất hiện trong báo cáo dự án cho tới khi gắn).
+- Tool `list_expense_lines(unassignedOnly?, projectId?, dateFrom?, dateTo?, page…)`, `assign_expense_to_project(costId, projectId)` (tôn trọng khóa kỳ).
+
+### 6.5 Toàn vẹn số liệu & VAT (cả PR 3)
+- Đơn giá nhập lưu **chưa VAT**; thêm vào `StockReceiptItem`: `vatRate?`, `vatAmount?`. `StockReceipt`: `totalAmount` = Σ dòng (chưa VAT, như cũ), thêm `vatTotal?`, `invoiceTotalDeclared?` (tổng ghi trên hóa đơn), `roundingDiff` (default 0) = tổng khai báo trên hóa đơn − Σ(dòng gồm cả dòng chờ ghép + chi phí, đã gồm VAT); lệch ≤ 1.000 đ chấp nhận và lưu ở `roundingDiff`, lớn hơn → thêm cảnh báo `warnings[]` (không chặn). Không bao giờ chỉnh đơn giá dòng để "cho khớp".
+
+## 7. Kiểm soát tối thiểu thay cho phân quyền đầy đủ (PR 2)
+
+### 7.1 Audit bất biến
+- Dùng `AuditService.record` + bảng `AuditLog` hiện có; thêm các cột/ghi chú: lý do (`changes.reason`), `actorType` ("USER" | "SERVICE") trong `changes.meta`, `userId` của tài khoản máy = `service:<tokenId>`.
+- **Bất biến ở tầng DB**: trigger Postgres `BEFORE UPDATE OR DELETE ON "AuditLog"` raise exception (migration SQL thô; kiểm tra mã không có chỗ nào xóa/sửa `AuditLog`, kể cả job dọn dẹp — nếu có thì chuyển thành chỉ đọc). Ghi chú: superuser DB vẫn qua mặt được, ngoài phạm vi.
+- Ghi audit **tường minh** (trước/sau, lý do) cho: tạo/sửa/xác nhận/duyệt/hủy phiếu nhập, xuất, chuyển kho, kiểm kê; sửa hóa đơn phiếu; đổi `costPrice`, `accountingClass`, `supplierType`; đổi cấu hình phương pháp giá; đặt/mở `periodLockedUntil`; tạo/thu hồi token máy; tạo/sửa/xóa alias. API `GET /audit` đã có: thêm lọc `resource`, `resourceId`, `userId`, khoảng ngày, phân trang.
+
+### 7.2 Khóa sổ theo kỳ — `periodLockedUntil`
+- Lưu trong `Setting` (khóa `inventory.periodLockedUntil`, kiểu ngày, null = chưa khóa) + bảng lịch sử `PeriodLockHistory` {id, lockedUntil (cũ→mới), changedById, reason, createdAt}. `GET/PUT /inventory/period-lock`: chỉ **ADMIN** ("Giám đốc"); `reason` ≥ 5 ký tự bắt buộc cả khi đặt lẫn mở; audit.
+- Chặn (400 có `code: "PERIOD_LOCKED"`, nêu ngày khóa + hướng dẫn "lập phiếu điều chỉnh ở kỳ hiện tại") **tạo, sửa, xác nhận, hủy** mọi chứng từ kho (nhập, xuất, chuyển, kiểm kê, điều chỉnh) có ngày ≤ `periodLockedUntil`; thêm cả **đổi ngày** sang kỳ khóa. Ngày chứng từ: `StockReceipt.date`/`invoiceDate` (lấy ngày **nhỏ hơn** làm căn cứ kiểm tra), `StockIssue.date`, v.v.
+- Bổ sung thông tin hóa đơn cho phiếu cũ trong kỳ khóa: **chỉ ADMIN**, kèm lý do, audit (§8.2).
+- Triển khai bằng **một** hàm dùng chung `assertPeriodOpen(date, actor, opts)` gọi ở mọi service kho; có test từng loại chứng từ.
+
+### 7.3 Hai mức quyền kho (dùng hệ thống quyền hiện có, **không thêm vai trò**)
+- Thêm 2 quyền vào bảng `Permission` (migration `INSERT … ON CONFLICT DO NOTHING` + cập nhật `seed.ts`): **`inventory.approve`** (xác nhận, hủy phiếu đã xác nhận, duyệt `PENDING_REVIEW`, sửa giá vật tư `costPrice`, đổi cấu hình giá xuất, thao tác bổ sung hóa đơn ngoài kỳ khóa) và **`inventory.view_cost`** (xem giá nhập, `costPrice`, giá trị tồn, giá vốn dự án, lãi gộp).
+- ADMIN ("Giám đốc") luôn có cả hai (đã bypass trong `hasPermission`). Người khác được gán bằng **vai trò tùy chỉnh** có quyền này (vai trò hệ thống MANAGER/STAFF không sửa được — đúng với thiết kế hiện tại); **không** tự động cấp cho MANAGER. Hệ quả cần ghi rõ cho Henry: sau khi triển khai **MANAGER hiện tại không còn xác nhận được phiếu kho** cho tới khi được gán vai trò có `inventory.approve`.
+- Người thường: tạo/sửa phiếu **DRAFT** và kiểm kê (`inventory.create/edit` như nay) — **không** xác nhận/hủy phiếu đã xác nhận/sửa giá vật tư.
+- **Che giá** cho người không có `inventory.view_cost`: các trường `costPrice`, `unitPrice`/`total` của phiếu và lô **do người khác lập**, giá trị tồn, giá vốn/lãi gộp dự án, `valuation` trả `null` (kèm `costVisible:false` ở metadata); người lập vẫn thấy giá trên phiếu **của mình** (cần nhập giá khi lập). Áp dụng ở lớp response mapper dùng chung, **không** sửa từng nơi lẻ; liệt kê các endpoint đã che trong báo cáo cuối. *(Giả định cần Henry xác nhận: tài khoản máy cho báo cáo có `inventory.view_cost` để script lấy được giá.)*
+- Xác nhận/hủy/sửa `costPrice`/đổi cấu hình đều kiểm tra `inventory.approve` ở **controller guard và service** (phòng gọi nội bộ).
+
+### 7.4 Tài khoản máy (API token) cho script/MCP
+- Bảng `ApiToken` {id, name, tokenHash (SHA-256 của token), tokenPrefix (8 ký tự đầu, hiển thị), scopes String[], isActive, createdById, lastUsedAt, lastUsedIp?, expiresAt?, revokedAt?, revokedById?, createdAt}. Token dạng `ahso_sa_<32 byte base64url>`, **chỉ hiển thị một lần khi tạo**, không lưu bản rõ, không ghi vào log/audit.
+- `JwtAuthGuard` nhận thêm `Authorization: Bearer ahso_sa_…`: tra hash (so sánh hằng thời gian), chặn nếu thu hồi/hết hạn, cập nhật `lastUsedAt`; tạo `JwtUser` tổng hợp `{ sub: "service:<id>", role: "SERVICE", permissions: <theo scopes> }`.
+- **Scopes cố định** (không cấu hình tự do): `inventory.read` (đọc tất cả dữ liệu kho/dự án/NCC/vật tư kèm giá = có `inventory.view_cost`), `inventory.receipt_draft` (tạo phiếu nhập nháp + dòng chờ ghép + dòng chi phí, `resolve_pending_line`), `inventory.alias_write` (tạo/sửa alias). **Không có** scope xác nhận, hủy, duyệt, sửa `costPrice`, đặt/mở khóa kỳ, quản lý token/người dùng/vai trò. Guard trả 403 mã `SERVICE_ACCOUNT_FORBIDDEN` cho mọi route ngoài danh sách trắng route theo scope (**mặc định cấm**, thêm route vào danh sách trắng một cách tường minh).
+- Quản lý token: `POST/GET /api-tokens`, `POST /api-tokens/:id/revoke` — **chỉ ADMIN**; audit. Mọi thao tác của tài khoản máy ghi audit với `actorType: "SERVICE"`.
+- MCP server: hỗ trợ biến môi trường `CRM_API_TOKEN` (ưu tiên hơn email/mật khẩu hiện tại; giữ nguyên cách cũ khi không đặt) — **không** in token ra log.
+
+## 8. API báo cáo cho script (PR 5)
+
+### 8.1 Hợp đồng chung của mọi tool/endpoint báo cáo
+`get_stock_ledger`, `get_inventory_valuation`, `get_project_cost`, `list_unallocated_receipts`, `get_receipts_without_invoice` (và `list_expense_lines`, `list_pending_review_receipts`, `list_pending_match_lines`, `get_invoice_date_warnings`):
+- Trả **JSON có cấu trúc** (số là `number`, ngày ISO 8601, không chuỗi định dạng), dạng `{ meta, data, page }`:
+  `meta` = `{ generatedAt (ISO, giờ máy chủ), asOfDate | period {from,to}, costMethod ("AVERAGE"|"FIFO", theo ngày báo cáo), periodLockedUntil, costVisible, filters (bộ lọc đã áp), schemaVersion: 1 }`; `page` = `{ limit, nextPageToken | null, total? }`.
+- **Phân trang** `limit` (mặc định 100, tối đa 1000) + `pageToken` (con trỏ mờ, ổn định theo thứ tự sắp xếp xác định — không dùng offset cho báo cáo lớn, nhưng chấp nhận `offset` cho tool cũ); **bộ lọc** khoảng ngày, kho, vật tư, dự án, NCC, trạng thái. Các `list_*` cũ giữ mặc định 10 khi không truyền gì (không đổi hành vi), thêm `limit`/`pageToken`/lọc ngày tùy chọn.
+- Từng dòng nhập có `invoiceSeries`, `invoiceNumber`, `invoiceDate`, `sellerTaxCode`; từng dòng xuất có `sourceReceiptLotId` (và `sourceReceiptId`, các trường hóa đơn nguồn) qua `StockIssueLotConsumption` (PR 4 — tới khi có, trả `null`).
+- Số tiền: số nguyên VND; số lượng: số thập phân 3 chữ số; không làm tròn ngầm ở lớp báo cáo.
+- Báo cáo **chỉ đọc** — không có tác dụng phụ.
+
+### 8.2 Bổ sung hóa đơn cho 62 phiếu cũ
+Đã có ở PR 1 (`PATCH /stock-receipts/:id/invoice`, `POST /stock-receipts/invoices/bulk`). Bổ sung ở PR 2/5: tuân thủ khóa kỳ (§7.2), ghi audit, **tuyệt đối không đổi** số lượng, đơn giá, tổng tiền (có test), thêm tool tên `update_receipt_invoice_info` / `bulk_update_receipt_invoice_info` (bí danh), và `get_receipts_without_invoice()` (JSON theo §8.1, phân trang, lọc ngày/kho/NCC).
+
+## 9. Kiểm thử bổ sung (ngoài §4)
+- **Luồng đầu–cuối** (jest tích hợp với mock Prisma hoặc e2e nếu chạy được): tạo phiếu từ hóa đơn → dòng chưa ghép vào hàng đợi → `save_material_alias` + `resolve_pending_line` → duyệt (`inventory.approve`) → xác nhận → xuất kho → báo cáo; tổng khớp ở từng bước.
+- **Idempotent**: gọi `create_stock_receipt_from_invoice` hai lần (và song song) → một phiếu; hóa đơn bán ra của AHSO bị bỏ qua; chạy lại không tạo trùng.
+- **5 hóa đơn mẫu** (Misumi, Hanna, Xanh SM, 2 hóa đơn bán ra của AHSO): 3 hóa đơn mua → đúng phiếu nháp/`PENDING_REVIEW` hoặc chi phí (Xanh SM là NCC/chi phí → không tạo tồn); 2 hóa đơn bán → `skipped`. Dùng dữ liệu giả lập (fixture tự dựng), **không** dùng dữ liệu production.
+- **Tài khoản máy**: bị 403 khi xác nhận/hủy/duyệt/sửa `costPrice`/đặt khóa kỳ/quản lý token; token thu hồi dùng lại → 401; token không lộ trong log hay response ngoài lần tạo.
+- **Khóa kỳ**: chặn tạo/sửa/xác nhận/hủy ở từng loại chứng từ có ngày ≤ khóa; đặt/mở khóa không có `reason` bị từ chối; chỉ ADMIN; có `PeriodLockHistory` + audit.
+- **Quyền**: người thường xác nhận phiếu → 403; người có `inventory.approve` (qua vai trò tùy chỉnh) → được; che giá hoạt động theo `inventory.view_cost`.
+- **Audit**: không `UPDATE`/`DELETE` được `AuditLog` (test ở DB thật nếu có; nếu không, test migration SQL tồn tại + unit test không có mã xóa).
+- **Toàn vẹn**: tổng phiếu = Σ dòng; `roundingDiff` đúng; đơn giá chưa VAT; không chỉnh giá cho khớp.
+- **Báo cáo**: có `meta.generatedAt/costMethod/periodLockedUntil`; phân trang đủ dữ liệu qua nhiều trang không trùng/thiếu; tool `list_*` cũ không truyền tham số vẫn trả 10 dòng như trước.
+
+## 10. Nghiệm thu bổ sung số 2
+1. Script gửi 5 hóa đơn mẫu → đúng như §9; chạy lại lần hai không tạo trùng.
+2. Dòng chưa ghép vào hàng đợi; sau khi lưu alias lần sau tự khớp.
+3. Tài khoản máy không xác nhận được phiếu.
+4. Báo cáo có `generatedAt`, `costMethod`, `periodLockedUntil`.
+5. `list_*` phân trang và lọc ngày.
+
+## 11. Câu hỏi còn mở (không chặn PR 2–3, cần Henry trả lời trước PR 5/7)
+1. Tài khoản máy cho script báo cáo có được thấy giá (`inventory.view_cost`) không? (Đặc tả giả định **có**.)
+2. Hóa đơn điều chỉnh **chỉ về giá** khi hàng đã xuất hết (tồn = 0): ghi nhận chênh lệch vào đâu (giá vốn dự án đã xuất / bỏ qua kèm cảnh báo)? (Đặc tả tạm: bỏ qua kèm cảnh báo.)
+3. MST công ty AHSO (`0316896939`) lưu ở cấu hình `company.taxCode` — xác nhận đúng.

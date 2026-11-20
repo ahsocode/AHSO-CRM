@@ -12,6 +12,7 @@ import {
   bulkReceiptInvoicesSchema,
   updateReceiptInvoiceSchema,
 } from "./dto/invoice-fields.dto";
+import { ReviewReceiptDto, reviewReceiptSchema } from "./dto/review-receipt.dto";
 import { CreateStockReceiptDto, createStockReceiptSchema } from "./dto/create-stock-receipt.dto";
 import { StockReceiptFilterDto, stockReceiptFilterSchema } from "./dto/stock-receipt-filter.dto";
 import { UpdateStockReceiptDto, updateStockReceiptSchema } from "./dto/update-stock-receipt.dto";
@@ -84,14 +85,25 @@ export class StockReceiptsController {
     return this.service.update(id, dto, user);
   }
 
-  @RequirePermissions("inventory.edit")
+  @RequirePermissions("inventory.approve")
   @ApiOperation({ summary: "POST /api/stock-receipts/:id/confirm" })
   @Post(":id/confirm")
   confirm(@Param("id") id: string, @CurrentUser() user: JwtUser) {
     return this.service.confirm(id, user);
   }
 
-  @RequirePermissions("inventory.edit")
+  @RequirePermissions("inventory.approve")
+  @ApiOperation({ summary: "POST /api/stock-receipts/:id/review — approve an auto-created receipt (PENDING_REVIEW -> REVIEWED)" })
+  @Post(":id/review")
+  review(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(reviewReceiptSchema)) dto: ReviewReceiptDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.service.review(id, dto.note, user);
+  }
+
+  @RequirePermissions("inventory.approve")
   @ApiOperation({ summary: "POST /api/stock-receipts/:id/cancel" })
   @Post(":id/cancel")
   cancel(@Param("id") id: string, @CurrentUser() user: JwtUser) {

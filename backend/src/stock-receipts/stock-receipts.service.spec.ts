@@ -1,6 +1,7 @@
 import { NotFoundException } from "@nestjs/common";
 import { Decimal } from "@prisma/client/runtime/library";
 import { PrismaService } from "../common/prisma.service";
+import { AuditService } from "../audit/audit.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
 import { StockReceiptsService } from "./stock-receipts.service";
 
@@ -8,6 +9,7 @@ describe("StockReceiptsService", () => {
   const user = { sub: "admin-1", email: "admin@ahso.vn", name: "Admin", role: "ADMIN" as const, permissions: [] };
 
   let service: StockReceiptsService;
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   let inventoryBalance: {
     adjustBalance: jest.Mock;
     updateAverageCostPrice: jest.Mock;
@@ -25,6 +27,8 @@ describe("StockReceiptsService", () => {
     stockLot: {
       create: jest.Mock;
     };
+    setting: { findUnique: jest.Mock };
+    projectCost: { updateMany: jest.Mock };
   };
 
   beforeEach(() => {
@@ -48,10 +52,13 @@ describe("StockReceiptsService", () => {
       stockLot: {
         create: jest.fn(),
       },
+      setting: { findUnique: jest.fn().mockResolvedValue(null) },
+      projectCost: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
     };
     service = new StockReceiptsService(
       prisma as unknown as PrismaService,
-      inventoryBalance as unknown as InventoryBalanceService
+      inventoryBalance as unknown as InventoryBalanceService,
+      audit as unknown as AuditService
     );
   });
 

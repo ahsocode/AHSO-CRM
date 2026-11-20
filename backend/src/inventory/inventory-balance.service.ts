@@ -5,6 +5,14 @@ import { PrismaService } from "../common/prisma.service";
 import { decimalToNumber, sumDecimal, toDecimal } from "../common/utils/decimal";
 import { InventoryBalanceFilterDto } from "./dto/inventory-balance-filter.dto";
 
+/** One lot slice taken by consumeStockLots (qty and price at the time of consumption). */
+export interface ConsumedLot {
+  lotId: string;
+  qty: Decimal;
+  unitPrice: Decimal;
+  purchaseInvoiceDate: Date | null;
+}
+
 @Injectable()
 export class InventoryBalanceService {
   constructor(private readonly prisma: PrismaService) {}
@@ -50,6 +58,16 @@ export class InventoryBalanceService {
       create: { warehouseId, materialId, quantity: decimalDelta },
       update: { quantity: { increment: decimalDelta } },
     });
+  }
+
+  /**
+   * Row-lock materials (SELECT ... FOR UPDATE, sorted ids to avoid deadlocks) so Material.costPrice
+   * and the stock balances read afterwards cannot change under the same transaction.
+   */
+  async lockMaterials(tx: Prisma.TransactionClient, materialIds: string[]): Promise<void> {
+    const ids = [...new Set(materialIds)].sort();
+    if (ids.length === 0) return;
+    await tx.$queryRaw`SELECT id FROM "Material" WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`;
   }
 
   async ensureSufficientStock(
@@ -340,6 +358,8 @@ export class InventoryBalanceService {
   // Shared FIFO lot consumption used by stock-issues, stock-counts, and projects.
   // Deducts `quantity` from the oldest eligible lots (purchaseInvoiceDate <= referenceDate)
   // in the given warehouse. Throws BadRequestException if stock is insufficient.
+  // Returns the lots that were consumed ({lotId, qty, unitPrice, purchaseInvoiceDate}) so callers can
+  // persist StockIssueLotConsumption rows; callers that do not need it can ignore the result.
   //
   // `options.projectId` selects lots by project (backward compatible - omit it for the old behaviour):
   //   - omitted / undefined: any lot (legacy behaviour, used by callers that are not project aware)
@@ -353,8 +373,9 @@ export class InventoryBalanceService {
     quantity: Decimal,
     referenceDate: Date,
     options?: { projectId?: string | null }
-  ): Promise<void> {
+  ): Promise<ConsumedLot[]> {
     const projectId = options?.projectId;
+    const consumed: ConsumedLot[] = [];
     let projectScope: Prisma.StockLotWhereInput = {};
     if (projectId === null) projectScope = { projectId: null };
     else if (projectId !== undefined) projectScope = { OR: [{ projectId }, { projectId: null }] };
@@ -369,7 +390,7 @@ export class InventoryBalanceService {
         ...projectScope
       },
       orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
-      select: { id: true, remainingQuantity: true, projectId: true }
+      select: { id: true, remainingQuantity: true, projectId: true, unitPrice: true, purchaseInvoiceDate: true }
     });
 
     // Array.prototype.sort is stable, so FIFO order is preserved inside each group.
@@ -391,6 +412,12 @@ export class InventoryBalanceService {
         throw new BadRequestException("Lô nhập không còn đủ tồn khi xử lý");
       }
       remaining = remaining.minus(consume);
+      consumed.push({
+        lotId: lot.id,
+        qty: consume,
+        unitPrice: toDecimal(lot.unitPrice),
+        purchaseInvoiceDate: lot.purchaseInvoiceDate ?? null
+      });
     }
 
     if (remaining.greaterThan(0)) {
@@ -400,5 +427,7 @@ export class InventoryBalanceService {
           : "Không tìm thấy đủ lô nhập hợp lệ để trừ tồn kho (lô gắn dự án khác không được dùng)"
       );
     }
+
+    return consumed;
   }
 }

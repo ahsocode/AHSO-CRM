@@ -6,6 +6,7 @@ import { RequirePermissions } from "../common/decorators/permissions.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../common/guards/permissions.guard";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { CancelStockIssueDto, cancelStockIssueSchema } from "./dto/cancel-stock-issue.dto";
 import { CreateStockIssueDto, createStockIssueSchema } from "./dto/create-stock-issue.dto";
 import { StockIssueFilterDto, stockIssueFilterSchema } from "./dto/stock-issue-filter.dto";
 import { UpdateStockIssueDto, updateStockIssueSchema } from "./dto/update-stock-issue.dto";
@@ -66,8 +67,13 @@ export class StockIssuesController {
   @RequirePermissions("inventory.edit")
   @ApiOperation({ summary: "POST /api/stock-issues/:id/cancel" })
   @Post(":id/cancel")
-  cancel(@Param("id") id: string, @CurrentUser() user: JwtUser) {
-    return this.service.cancel(id, user);
+  cancel(
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(cancelStockIssueSchema)) dto: CancelStockIssueDto,
+    @CurrentUser() user: JwtUser,
+  ) {
+    // DRAFT: inventory.edit is enough. CONFIRMED (reversal): the service additionally requires inventory.approve.
+    return this.service.cancel(id, dto, user);
   }
 
   @RequirePermissions("inventory.delete")

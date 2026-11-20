@@ -6,10 +6,11 @@ import { ProjectCostsService } from "./project-costs.service";
 describe("ProjectCostsService", () => {
   const user: JwtUser = { sub: "u", email: "a@a.vn", name: "Staff", role: "STAFF", permissions: ["projects.view", "projects.edit"] };
   const costs = { findFirst: jest.fn(), update: jest.fn() };
-  const tx = { projectCost: costs, $executeRaw: jest.fn() };
+  const project = { findFirst: jest.fn() };
+  const tx = { projectCost: { ...costs, create: jest.fn() }, project, $executeRaw: jest.fn() };
   const prisma = {
     projectCost: costs,
-    project: { findFirst: jest.fn() },
+    project,
     $transaction: jest.fn((fn: (db: typeof tx) => Promise<unknown>) => fn(tx))
   };
   const service = new ProjectCostsService(prisma as unknown as PrismaService);
@@ -23,6 +24,27 @@ describe("ProjectCostsService", () => {
     costs.update.mockReset().mockResolvedValue({ ...draftCost, bomLine: null });
     prisma.project.findFirst.mockReset().mockResolvedValue({ id: "p" });
     tx.$executeRaw.mockClear();
+    tx.projectCost.create.mockReset().mockResolvedValue({ ...draftCost, bomLine: null });
+  });
+
+  describe("DELIVERED project (cost recognised)", () => {
+    beforeEach(() => {
+      prisma.project.findFirst.mockResolvedValue({ id: "p", costRecognitionStatus: "DELIVERED" });
+    });
+    const input = { group: "OTHER" as const, description: "x", invoiceDate: new Date("2026-05-01"), amount: 1 };
+
+    it("rejects create", async () => {
+      await expect(service.create("p", input, user)).rejects.toThrow(/DELIVERED/);
+      expect(tx.projectCost.create).not.toHaveBeenCalled();
+    });
+    it("rejects update", async () => {
+      await expect(service.update("c", { amount: 5 }, user)).rejects.toThrow(/DELIVERED/);
+      expect(costs.update).not.toHaveBeenCalled();
+    });
+    it("rejects remove", async () => {
+      await expect(service.remove("c", user)).rejects.toThrow(/DELIVERED/);
+      expect(costs.update).not.toHaveBeenCalled();
+    });
   });
 
   it.each(["update", "remove"] as const)("blocks %s after an allocation was confirmed while waiting for the lock", async (method) => {

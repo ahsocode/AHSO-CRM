@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../common/prisma.service";
-import { AuditLogFilterDto } from "./dto/audit-log-filter.dto";
+import { AuditLogFilterDto, parseAuditBoundary } from "./dto/audit-log-filter.dto";
 
 interface AuditRecordInput {
   userId: string;
@@ -11,6 +11,22 @@ interface AuditRecordInput {
   changes?: unknown;
   ip?: string | null;
   userAgent?: string | null;
+}
+
+export const SERVICE_USER_PREFIX = "service:";
+
+export interface AuditEventInput {
+  userId: string;
+  action: string;
+  resource: string;
+  resourceId?: string | null;
+  changes?: {
+    before?: unknown;
+    after?: unknown;
+    reason?: string | null;
+    meta?: Record<string, unknown>;
+  };
+  ip?: string | null;
 }
 
 const AUDIT_RESOURCE_MODEL_MAP: Record<string, { delegate: string; idField?: string }> = {
@@ -48,7 +64,11 @@ const SENSITIVE_KEYS = new Set([
   "secret",
   "smtpPass",
   "twilioToken",
-  "anthropicApiKey"
+  "anthropicApiKey",
+  "tokenHash",
+  "plaintext",
+  "apiToken",
+  "bearer"
 ]);
 
 @Injectable()
@@ -63,7 +83,15 @@ export class AuditService {
       ...(filters.userId ? { userId: filters.userId } : {}),
       ...(filters.action ? { action: filters.action } : {}),
       ...(filters.resource ? { resource: filters.resource } : {}),
-      ...(filters.resourceId ? { resourceId: filters.resourceId } : {})
+      ...(filters.resourceId ? { resourceId: filters.resourceId } : {}),
+      ...(filters.from || filters.to
+        ? {
+            createdAt: {
+              ...(filters.from ? { gte: parseAuditBoundary(filters.from, false) } : {}),
+              ...(filters.to ? { lte: parseAuditBoundary(filters.to, true) } : {})
+            }
+          }
+        : {})
     };
 
     const [items, total] = await this.prisma.$transaction([
@@ -99,6 +127,35 @@ export class AuditService {
         changes: this.sanitize(input.changes) as Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined,
         ip: input.ip ?? null,
         userAgent: input.userAgent ?? null
+      }
+    });
+  }
+
+  /**
+   * Explicit business event (before/after + reason). Pass `tx` to write inside the caller's
+   * transaction so the event commits or rolls back together with the change it describes.
+   * Machine principals use userId "service:<tokenId>" and are tagged actorType SERVICE.
+   * Secrets/tokens are redacted by sanitize().
+   */
+  async recordEvent(input: AuditEventInput, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    const actorType = input.userId.startsWith(SERVICE_USER_PREFIX) ? "SERVICE" : "USER";
+    const payload = this.sanitize({
+      before: input.changes?.before,
+      after: input.changes?.after,
+      reason: input.changes?.reason,
+      meta: { ...(input.changes?.meta ?? {}), actorType }
+    });
+
+    return db.auditLog.create({
+      data: {
+        userId: input.userId,
+        action: input.action,
+        resource: input.resource,
+        resourceId: input.resourceId ?? null,
+        changes: payload as Prisma.InputJsonValue,
+        ip: input.ip ?? null,
+        userAgent: null
       }
     });
   }

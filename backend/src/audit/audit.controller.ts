@@ -10,14 +10,14 @@ import { AuditLogFilterDto, auditLogFilterSchema } from "./dto/audit-log-filter.
 
 @ApiTags("audit")
 @ApiBearerAuth("bearer")
-@Controller("audit-logs")
+@Controller(["audit-logs", "audit"])
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(ROLE_VALUES[0])
+@Roles(ROLE_VALUES[0], ROLE_VALUES[1])
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  @ApiOperation({ summary: "Lấy danh sách audit logs" })
+  @ApiOperation({ summary: "Lấy danh sách audit logs (ADMIN/MANAGER; lọc resource, resourceId, userId, action, from, to)" })
   findAll(@Query(new ZodValidationPipe(auditLogFilterSchema, "query")) filters: AuditLogFilterDto) {
     return this.auditService.findAll(filters);
   }

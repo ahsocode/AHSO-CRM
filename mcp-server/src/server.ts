@@ -22,6 +22,10 @@ import {
   supplierTools,
   materialTools,
   inventoryTools,
+  projectFinanceTools,
+  inventoryCostingTools,
+  inventoryReportsTools,
+  inventoryIntakeTools,
 } from "./tools/index.js";
 import { SYSTEM_PROMPT } from "./prompts/system.prompt.js";
 
@@ -41,6 +45,10 @@ const ALL_TOOLS: McpTool[] = [
   ...supplierTools,
   ...materialTools,
   ...inventoryTools,
+  ...projectFinanceTools,
+  ...inventoryCostingTools,
+  ...inventoryReportsTools,
+  ...inventoryIntakeTools,
 ];
 
 const TOOL_MAP = new Map<string, McpTool>(ALL_TOOLS.map((t) => [t.name, t]));

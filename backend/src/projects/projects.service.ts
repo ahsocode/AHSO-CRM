@@ -21,6 +21,8 @@ import { TEMPLATE_REGISTRY } from "../documents/template-registry";
 import { DocumentsService } from "../documents/documents.service";
 import { DomainEventsService } from "../domain-events/domain-events.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
+import { getCostingMethod } from "../inventory/inventory-controls";
+import type { Decimal } from "@prisma/client/runtime/library";
 import { CreatePaymentDto } from "../contracts/dto/create-payment.dto";
 import { DecimalLike, decimalToNumber, sumDecimal, toDecimal } from "../common/utils/decimal";
 import { generateNextStockIssueNo } from "../common/utils/document-number";
@@ -1972,6 +1974,31 @@ export class ProjectsService {
       // Revalidate R9 under the same lock as edits to costs and invoice dates.
       await this.syncAllocationCosts(tx, allocation.id, id, undefined, allocation.salesInvoiceDate);
 
+      // Costing: under AVERAGE the allocation is priced at Material.costPrice at confirm time
+      // (the chosen lot is still deducted for invoice traceability); under FIFO the lot price is kept.
+      const costingMethod = await getCostingMethod(tx, allocation.salesInvoiceDate);
+      const lotPriceByItem = new Map<string, Decimal>();
+      if (costingMethod === "AVERAGE" && allocation.items.length > 0) {
+        const materialIds = allocation.items.map((item) => item.materialId);
+        await this.inventoryBalance.lockMaterials(tx, materialIds);
+        const materials = await tx.material.findMany({
+          where: { id: { in: [...new Set(materialIds)] } },
+          select: { id: true, costPrice: true }
+        });
+        const costById = new Map(materials.map((m) => [m.id, toDecimal(m.costPrice)]));
+        for (const item of allocation.items) {
+          const costPrice = costById.get(item.materialId);
+          if (!costPrice) continue;
+          lotPriceByItem.set(item.id, toDecimal(item.stockLot?.unitPrice ?? item.unitPrice));
+          item.unitPrice = costPrice;
+          item.total = toDecimal(item.quantity).mul(costPrice).toDecimalPlaces(0);
+          await tx.projectMaterialAllocationItem.update({
+            where: { id: item.id },
+            data: { unitPrice: item.unitPrice, total: item.total }
+          });
+        }
+      }
+
       // Pass 1: validate balance sufficiency before any mutation
       for (const item of allocation.items) {
         const quantity = toDecimal(item.quantity);
@@ -2031,7 +2058,18 @@ export class ProjectsService {
                 materialId: item.materialId,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                total: item.total
+                total: item.total,
+                // Always record which lot was consumed (needed to reverse/trace the issue exactly).
+                lotConsumptions: {
+                  create: [
+                    {
+                      stockLotId: item.stockLotId,
+                      quantity: item.quantity,
+                      lotUnitPrice: lotPriceByItem.get(item.id) ?? toDecimal(item.stockLot?.unitPrice ?? item.unitPrice),
+                      invoiceDateWarning: false
+                    }
+                  ]
+                }
               }))
             }
           }

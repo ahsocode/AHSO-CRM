@@ -47,7 +47,16 @@ export class TokenManager {
     return process.env["CRM_PASSWORD"] ?? "";
   }
 
+  /** Static machine token (`ahso_sa_...`). When set it is used as the bearer; no login/refresh. */
+  private get apiToken(): string {
+    return (process.env["CRM_API_TOKEN"] ?? "").trim();
+  }
+
   async getValidAccessToken(): Promise<string> {
+    if (this.apiToken) {
+      return this.apiToken;
+    }
+
     if (!this.state) {
       if (!this.loginPromise) {
         this.loginPromise = this.login().finally(() => {
@@ -135,6 +144,7 @@ export class TokenManager {
   }
 
   getCurrentUserId(): string | null {
+    // A machine token is not a JWT and has no user id.
     if (!this.state?.accessToken) return null;
     const payload = decodeJwtPayload(this.state.accessToken);
     const sub = payload?.["sub"];

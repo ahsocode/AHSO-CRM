@@ -5,6 +5,7 @@ import { JwtUser } from "../auth/auth.types";
 import { PrismaService } from "../common/prisma.service";
 import { decimalToNumber } from "../common/utils/decimal";
 import type { CreateProjectCostDto, ProjectCostFilterDto, UpdateProjectCostDto } from "./dto/project-cost.dto";
+import { assertProjectCostOpen } from "../project-finance/cost-lock";
 import { findAccessibleProject, lockProjectFinance } from "./project-access";
 
 const COST_SELECT = {
@@ -74,21 +75,26 @@ export class ProjectCostsService {
     await findAccessibleProject(this.prisma, projectId, user);
     await this.validateReferences(projectId, dto.supplierId, dto.bomLineId);
 
-    const created = await this.prisma.projectCost.create({
-      data: {
-        projectId,
-        group: dto.group,
-        description: dto.description,
-        supplierId: dto.supplierId ?? null,
-        invoiceNo: dto.invoiceNo ?? null,
-        invoiceDate: dto.invoiceDate,
-        amount: Math.round(dto.amount),
-        vatRate: dto.vatRate ?? null,
-        bomLineId: dto.bomLineId ?? null,
-        notes: dto.notes ?? null,
-        createdById: user.sub
-      },
-      select: COST_SELECT
+    const created = await this.prisma.$transaction(async (tx) => {
+      await lockProjectFinance(tx, projectId);
+      // Costs are frozen once the project's cost has been recognised (DELIVERED)
+      await assertProjectCostOpen(tx, projectId);
+      return tx.projectCost.create({
+        data: {
+          projectId,
+          group: dto.group,
+          description: dto.description,
+          supplierId: dto.supplierId ?? null,
+          invoiceNo: dto.invoiceNo ?? null,
+          invoiceDate: dto.invoiceDate,
+          amount: Math.round(dto.amount),
+          vatRate: dto.vatRate ?? null,
+          bomLineId: dto.bomLineId ?? null,
+          notes: dto.notes ?? null,
+          createdById: user.sub
+        },
+        select: COST_SELECT
+      });
     });
     return mapProjectCost(created);
   }
@@ -97,6 +103,7 @@ export class ProjectCostsService {
     const accessible = await this.findAccessibleCost(id, user);
     return this.prisma.$transaction(async (tx) => {
       await lockProjectFinance(tx, accessible.projectId);
+      await assertProjectCostOpen(tx, accessible.projectId);
       const cost = await tx.projectCost.findFirst({ where: { id, deletedAt: null }, select: COST_SELECT });
       if (!cost) throw new NotFoundException("Không tìm thấy chi phí");
       if (cost.allocation?.status === "CONFIRMED") {
@@ -137,6 +144,7 @@ export class ProjectCostsService {
     const accessible = await this.findAccessibleCost(id, user);
     return this.prisma.$transaction(async (tx) => {
       await lockProjectFinance(tx, accessible.projectId);
+      await assertProjectCostOpen(tx, accessible.projectId);
       const cost = await tx.projectCost.findFirst({ where: { id, deletedAt: null }, select: COST_SELECT });
       if (!cost) throw new NotFoundException("Không tìm thấy chi phí");
       if (cost.allocation?.status === "CONFIRMED") {

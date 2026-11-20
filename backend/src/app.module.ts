@@ -44,10 +44,15 @@ import { validateEnv } from "./common/config/env.validation";
 import { SuppliersModule } from "./suppliers/suppliers.module";
 import { MaterialsModule } from "./materials/materials.module";
 import { InventoryModule } from "./inventory/inventory.module";
+import { InventoryReportsModule } from "./inventory-reports/inventory-reports.module";
+import { InventoryControlsModule } from "./inventory-controls/inventory-controls.module";
+import { ApiTokensModule } from "./api-tokens/api-tokens.module";
 import { StockReceiptsModule } from "./stock-receipts/stock-receipts.module";
+import { InvoiceIntakeModule } from "./invoice-intake/invoice-intake.module";
 import { StockIssuesModule } from "./stock-issues/stock-issues.module";
 import { StockTransfersModule } from "./stock-transfers/stock-transfers.module";
 import { StockCountsModule } from "./stock-counts/stock-counts.module";
+import { ProjectFinanceModule } from "./project-finance/project-finance.module";
 
 @Module({
   imports: [
@@ -106,10 +111,15 @@ import { StockCountsModule } from "./stock-counts/stock-counts.module";
     SuppliersModule,
     MaterialsModule,
     InventoryModule,
+    InventoryReportsModule,
+    InventoryControlsModule,
+    ApiTokensModule,
     StockReceiptsModule,
+    InvoiceIntakeModule,
     StockIssuesModule,
     StockTransfersModule,
-    StockCountsModule
+    StockCountsModule,
+    ProjectFinanceModule
   ],
   providers: [
     {

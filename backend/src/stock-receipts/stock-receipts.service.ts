@@ -3,12 +3,15 @@ import {
   ConflictException,
   HttpException,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { JwtUser } from "../auth/auth.types";
+import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../common/prisma.service";
+import { assertCanApprove, assertPeriodOpen } from "../inventory/inventory-controls";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
 import { CreateStockReceiptDto } from "./dto/create-stock-receipt.dto";
 import type {
@@ -44,9 +47,12 @@ const SUPPLIER_TYPE_LABEL: Record<string, string> = {
 
 @Injectable()
 export class StockReceiptsService {
+  private readonly logger = new Logger(StockReceiptsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly inventoryBalance: InventoryBalanceService
+    private readonly inventoryBalance: InventoryBalanceService,
+    private readonly audit: AuditService
   ) {}
 
   async findAll(filters: StockReceiptFilterDto, _user: JwtUser) {
@@ -212,13 +218,47 @@ export class StockReceiptsService {
     }
   }
 
-  async confirm(id: string, _user: JwtUser) {
-    return this.prisma.$transaction(async (tx) => {
+  async confirm(id: string, user: JwtUser) {
+    assertCanApprove(user);
+    const confirmed = await this.prisma.$transaction(async (tx) => {
       const receipt = await tx.stockReceipt.findFirst({
         where: { id, status: "DRAFT", deletedAt: null },
-        include: { items: true, supplier: { select: { name: true, supplierType: true } } },
+        include: {
+          items: true,
+          supplier: { select: { name: true, supplierType: true } },
+          _count: { select: { pendingLines: { where: { status: "PENDING" } } } },
+        },
       });
       if (!receipt) throw new NotFoundException("Không tìm thấy phiếu nhập hoặc phiếu không ở trạng thái nháp");
+
+      // Gate 1: automatic/imported receipts must be reviewed first.
+      if (receipt.reviewStatus === "PENDING_REVIEW") {
+        throw new BadRequestException(
+          "Phiếu nhập từ hóa đơn tự động đang chờ duyệt. Hãy duyệt phiếu (POST /stock-receipts/:id/review) trước khi xác nhận."
+        );
+      }
+      // Gate 2: unmatched invoice lines must be resolved or discarded.
+      const pendingCount = receipt._count?.pendingLines ?? 0;
+      if (pendingCount > 0) {
+        const lines = await tx.receiptPendingLine.findMany({
+          where: { receiptId: id, status: "PENDING" },
+          select: { lineNo: true, supplierItemName: true },
+          orderBy: { lineNo: "asc" },
+        });
+        throw new BadRequestException(
+          `Còn ${pendingCount} dòng hóa đơn chưa ghép vật tư: ` +
+            lines.map((l) => `#${l.lineNo} ${l.supplierItemName}`).join("; ")
+        );
+      }
+      // Gate 3: purchase / adjustment receipts need invoice info (returns from project do not).
+      const needsInvoice = receipt.receiptType === "PURCHASE" || receipt.receiptType === "ADJUSTMENT";
+      if (needsInvoice && !receipt.invoiceNumber && !receipt.purchaseInvoiceNo) {
+        throw new BadRequestException("Phiếu nhập thiếu thông tin hóa đơn (số hóa đơn), hãy bổ sung trước khi xác nhận");
+      }
+      // Gate 4: accounting period (earlier of receipt date and invoice date).
+      const docDate =
+        receipt.invoiceDate && receipt.invoiceDate.getTime() < receipt.date.getTime() ? receipt.invoiceDate : receipt.date;
+      await assertPeriodOpen(tx, docDate, "phiếu nhập");
 
       // Supplier type may have been changed after the draft was created.
       const warnings: string[] = [];
@@ -230,6 +270,11 @@ export class StockReceiptsService {
       for (const item of receipt.items) {
         const qty = new Decimal(item.quantity);
         const price = new Decimal(item.unitPrice);
+        if (receipt.receiptType === "ADJUSTMENT") {
+          const warning = await this.applyAdjustmentItem(tx, receipt.warehouseId, item, qty, price);
+          if (warning) warnings.push(warning);
+          continue;
+        }
         await this.inventoryBalance.adjustBalance(tx, receipt.warehouseId, item.materialId, qty);
         await this.inventoryBalance.updateAverageCostPrice(tx, item.materialId, qty, price);
         await tx.stockLot.create({
@@ -248,13 +293,114 @@ export class StockReceiptsService {
         });
       }
 
-      const confirmed = await tx.stockReceipt.update({
+      const result = await tx.stockReceipt.update({
         where: { id },
         data: { status: "CONFIRMED", confirmedAt: new Date() },
         select: { id: true, receiptNo: true, status: true, confirmedAt: true },
       });
-      return warnings.length > 0 ? { ...confirmed, warnings } : confirmed;
+      return warnings.length > 0 ? { ...result, warnings } : result;
     });
+    await this.recordAudit(user, "confirm", id, { status: "CONFIRMED", receiptNo: confirmed.receiptNo });
+    return confirmed;
+  }
+
+  /**
+   * Applies one line of an ADJUSTMENT receipt:
+   *  - quantity > 0: extra goods (normal receipt line with a lot)
+   *  - quantity < 0: goods returned to the supplier (needs stock; lots reduced FIFO)
+   *  - quantity = 0 with valueAdjustment: price-only change, moves Material.costPrice by delta / stock
+   */
+  private async applyAdjustmentItem(
+    tx: Prisma.TransactionClient,
+    warehouseId: string,
+    item: { id: string; materialId: string; valueAdjustment: Decimal | null; projectId: string | null },
+    qty: Decimal,
+    price: Decimal
+  ): Promise<string | null> {
+    if (qty.isZero()) {
+      if (!item.valueAdjustment) return null;
+      const balances = await tx.stockBalance.findMany({ where: { materialId: item.materialId }, select: { quantity: true } });
+      const stock = balances.reduce((sum, b) => sum.plus(b.quantity), new Decimal(0));
+      if (!stock.greaterThan(0)) {
+        return "Tồn kho bằng 0 nên chênh lệch giá trị của một dòng điều chỉnh không được ghi nhận vào giá vốn (cần xử lý thủ công)";
+      }
+      const material = await tx.material.findUnique({ where: { id: item.materialId }, select: { costPrice: true } });
+      if (!material) return null;
+      const next = new Decimal(material.costPrice).mul(stock).plus(item.valueAdjustment).div(stock).toDecimalPlaces(0);
+      await tx.material.update({ where: { id: item.materialId }, data: { costPrice: Decimal.max(next, new Decimal(0)) } });
+      return null;
+    }
+
+    if (qty.greaterThan(0)) {
+      await this.inventoryBalance.adjustBalance(tx, warehouseId, item.materialId, qty);
+      await this.inventoryBalance.updateAverageCostPrice(tx, item.materialId, qty, price);
+      const receipt = await tx.stockReceiptItem.findUnique({
+        where: { id: item.id },
+        select: { receipt: { select: { invoiceDate: true, date: true, purchaseInvoiceNo: true } } },
+      });
+      await tx.stockLot.create({
+        data: {
+          stockReceiptItemId: item.id,
+          warehouseId,
+          materialId: item.materialId,
+          purchaseInvoiceDate: receipt?.receipt.invoiceDate ?? receipt?.receipt.date ?? new Date(),
+          purchaseInvoiceNo: receipt?.receipt.purchaseInvoiceNo ?? null,
+          receivedQuantity: qty,
+          remainingQuantity: qty,
+          unitPrice: price,
+          projectId: item.projectId ?? undefined
+        }
+      });
+      return null;
+    }
+
+    // Negative: return to supplier
+    const needed = qty.abs();
+    await this.inventoryBalance.ensureSufficientStock(tx, warehouseId, item.materialId, needed);
+    await this.inventoryBalance.adjustBalance(tx, warehouseId, item.materialId, qty);
+    const lots = await tx.stockLot.findMany({
+      where: { warehouseId, materialId: item.materialId, remainingQuantity: { gt: 0 } },
+      orderBy: [{ purchaseInvoiceDate: "asc" }, { createdAt: "asc" }],
+    });
+    let left = needed;
+    for (const lot of lots) {
+      if (left.lessThanOrEqualTo(0)) break;
+      const take = Decimal.min(left, new Decimal(lot.remainingQuantity));
+      await tx.stockLot.update({ where: { id: lot.id }, data: { remainingQuantity: { decrement: take } } });
+      left = left.minus(take);
+    }
+    return null;
+  }
+
+  /** POST /stock-receipts/:id/review — approver signs off an automatically created receipt. */
+  async review(id: string, note: string | undefined, user: JwtUser) {
+    assertCanApprove(user);
+    const result = await this.prisma.$transaction(async (tx) => {
+      const receipt = await tx.stockReceipt.findFirst({
+        where: { id, deletedAt: null },
+        select: { id: true, receiptNo: true, status: true, reviewStatus: true },
+      });
+      if (!receipt) throw new NotFoundException("Không tìm thấy phiếu nhập");
+      if (receipt.status === "CANCELLED") throw new BadRequestException("Phiếu nhập đã hủy, không thể duyệt");
+      if (receipt.reviewStatus === "REVIEWED") throw new ConflictException("Phiếu nhập đã được duyệt trước đó");
+      if (receipt.reviewStatus !== "PENDING_REVIEW") {
+        throw new BadRequestException("Phiếu nhập này không thuộc diện chờ duyệt");
+      }
+      const reviewedAt = new Date();
+      const claimed = await tx.stockReceipt.updateMany({
+        where: { id, reviewStatus: "PENDING_REVIEW" },
+        data: { reviewStatus: "REVIEWED", reviewedById: user.sub, reviewedAt },
+      });
+      if (claimed.count !== 1) throw new ConflictException("Phiếu nhập vừa được duyệt bởi người khác");
+      // Expense lines created from the same invoice are signed off together.
+      await tx.projectCost.updateMany({
+        where: { receiptId: id, reviewStatus: "PENDING_REVIEW" },
+        data: { reviewStatus: "REVIEWED" },
+      });
+      return { id: receipt.id, receiptNo: receipt.receiptNo, reviewStatus: "REVIEWED" as const, reviewedAt };
+    });
+    await this.recordAudit(user, "review", id, { before: { reviewStatus: "PENDING_REVIEW" }, after: { reviewStatus: "REVIEWED" }, note: note ?? null });
+    return result;
   }
 
   /**
@@ -407,17 +553,37 @@ export class StockReceiptsService {
     }
   }
 
-  async cancel(id: string, _user: JwtUser) {
+  async cancel(id: string, user: JwtUser) {
+    assertCanApprove(user);
     const receipt = await this.prisma.stockReceipt.findFirst({
       where: { id, status: "DRAFT", deletedAt: null },
     });
     if (!receipt) throw new NotFoundException("Không tìm thấy phiếu nhập hoặc phiếu không ở trạng thái nháp");
+    await assertPeriodOpen(this.prisma, receipt.date, "phiếu nhập");
 
-    return this.prisma.stockReceipt.update({
-      where: { id },
-      data: { status: "CANCELLED" },
-      select: { id: true, receiptNo: true, status: true },
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.stockReceipt.update({
+        where: { id },
+        data: { status: "CANCELLED" },
+        select: { id: true, receiptNo: true, status: true },
+      });
+      // Expense lines created from this invoice go away with it (so the invoice can be re-submitted).
+      await tx.projectCost.updateMany({
+        where: { receiptId: id, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      return updated;
     });
+    await this.recordAudit(user, "cancel", id, { before: { status: "DRAFT" }, after: { status: "CANCELLED" } });
+    return result;
+  }
+
+  private async recordAudit(user: JwtUser, action: string, resourceId: string, changes: unknown) {
+    try {
+      await this.audit.record({ userId: user.sub, action, resource: "stock-receipts", resourceId, changes });
+    } catch (error) {
+      this.logger.warn(`Không ghi được audit ${action}: ${(error as Error).message}`);
+    }
   }
 
   async remove(id: string, _user: JwtUser) {

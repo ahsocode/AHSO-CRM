@@ -1,3 +1,4 @@
+import { ConflictException } from "@nestjs/common";
 import { BadRequestException, UnauthorizedException } from "@nestjs/common";
 import { HttpExceptionFilter } from "./http-exception.filter";
 
@@ -53,7 +54,6 @@ describe("HttpExceptionFilter", () => {
 
 describe("HttpExceptionFilter - duplicate invoice conflict", () => {
   it("passes existingReceiptId / existingReceiptNo through on a 409", () => {
-    const { ConflictException } = require("@nestjs/common");
     const filter = new HttpExceptionFilter();
     const { host, response } = createHost();
 

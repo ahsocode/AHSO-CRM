@@ -630,6 +630,11 @@ export const inventoryTools: McpTool[] = [
         warehouseId: { type: "string", description: "ID kho xuất" },
         projectId: { type: "string", description: "ID dự án liên quan nếu có" },
         date: { type: "string", description: "Ngày xuất, ISO date/datetime. Nếu thiếu dùng hôm nay." },
+        reasonType: {
+          type: "string",
+          enum: ["PROJECT", "INTERNAL_USE", "WARRANTY", "LOSS_DAMAGE", "SAMPLE", "OTHER"],
+          description: "Tuỳ chọn. Loại lý do xuất: dự án / dùng nội bộ / bảo hành / hao hụt / mẫu / khác. Mặc định PROJECT nếu có projectId, ngược lại OTHER. Loại khác PROJECT không cần projectId."
+        },
         reason: { type: "string", description: "Lý do xuất kho" },
         notes: { type: "string", description: "Ghi chú phiếu xuất" },
         items: {
@@ -640,9 +645,9 @@ export const inventoryTools: McpTool[] = [
             properties: {
               materialId: { type: "string", description: "ID vật tư" },
               quantity: { type: "number", description: "Số lượng xuất" },
-              unitPrice: { type: "number", description: "Đơn giá xuất VND" }
+              unitPrice: { type: "number", description: "Tuỳ chọn, thường KHÔNG nên truyền. Giá xuất do hệ thống tự tính khi xác nhận (bình quân gia quyền hoặc FIFO theo cấu hình); giá truyền tay bị bỏ qua kèm cảnh báo hoặc bị từ chối tuỳ cấu hình." }
             },
-            required: ["materialId", "quantity", "unitPrice"]
+            required: ["materialId", "quantity"]
           }
         }
       },
@@ -656,15 +661,17 @@ export const inventoryTools: McpTool[] = [
         items: args["items"]
       };
       if (args["projectId"]) payload["projectId"] = args["projectId"];
+      if (args["reasonType"]) payload["reasonType"] = args["reasonType"];
       if (args["reason"]) payload["reason"] = args["reason"];
       if (args["notes"]) payload["notes"] = args["notes"];
 
       const res = await client.post<unknown>("/stock-issues", payload);
-      const issue = extractData<{ id: string; issueNo: string }>(res.data);
+      const issue = extractData<{ id: string; issueNo: string; warnings?: string[] }>(res.data);
+      const warnings = issue.warnings?.length ? `\n⚠️ ${issue.warnings.join("\n⚠️ ")}` : "";
 
       return (
         `✅ Đã tạo phiếu xuất kho nháp **${issue.issueNo}**\n` +
-        `ID: \`${issue.id}\`\n` +
+        `ID: \`${issue.id}\`${warnings}\n` +
         `💡 Dùng confirm_stock_issue để xác nhận và cập nhật tồn kho.`
       );
     }
@@ -684,29 +691,41 @@ export const inventoryTools: McpTool[] = [
     async handler(args) {
       const client = getApiClient();
       const res = await client.post<unknown>(`/stock-issues/${args["issueId"] as string}/confirm`);
-      const issue = extractData<{ id: string; issueNo: string; status: string }>(res.data);
+      const issue = extractData<{ id: string; issueNo: string; status: string; costingMethod?: string; totalAmount?: number; warnings?: string[] }>(res.data);
+      const priced = issue.costingMethod ? `\nGiá xuất: ${issue.costingMethod} | Tổng: ${formatVND(issue.totalAmount)}` : "";
+      const warnings = issue.warnings?.length ? `\n⚠️ ${issue.warnings.join("\n⚠️ ")}` : "";
 
-      return `✅ Đã xác nhận phiếu xuất **${issue.issueNo}**\nID: \`${issue.id}\` | Trạng thái: ${issue.status}`;
+      return `✅ Đã xác nhận phiếu xuất **${issue.issueNo}**\nID: \`${issue.id}\` | Trạng thái: ${issue.status}${priced}${warnings}`;
     }
   },
 
   {
     name: "cancel_stock_issue",
     description:
-      "Huỷ phiếu xuất kho DRAFT. Chỉ dùng khi user yêu cầu huỷ rõ ràng.",
+      "Huỷ phiếu xuất kho. Phiếu DRAFT: huỷ như cũ. Phiếu đã CONFIRMED: cần `reason` (>= 5 ký tự) và quyền duyệt kho; " +
+      "hệ thống hoàn tồn đúng lô, đúng giá lúc xuất bằng phiếu hoàn kho tự sinh, tính lại giá bình quân, ghi audit. " +
+      "Huỷ lần hai không hoàn thêm. Bị chặn khi kỳ đã khóa sổ, dự án đã bàn giao hoặc phiếu thiếu dữ liệu lô (khi đó lập phiếu hoàn kho ở kỳ hiện tại). " +
+      "Chỉ dùng khi user yêu cầu huỷ rõ ràng.",
     inputSchema: {
       type: "object",
       properties: {
-        issueId: { type: "string", description: "ID phiếu xuất kho" }
+        issueId: { type: "string", description: "ID phiếu xuất kho" },
+        reason: { type: "string", description: "Tuỳ chọn với phiếu nháp; BẮT BUỘC (>= 5 ký tự) với phiếu đã xác nhận" }
       },
       required: ["issueId"]
     },
     async handler(args) {
       const client = getApiClient();
-      const res = await client.post<unknown>(`/stock-issues/${args["issueId"] as string}/cancel`);
-      const issue = extractData<{ id: string; issueNo: string; status: string }>(res.data);
+      const body: Record<string, unknown> = {};
+      if (args["reason"]) body["reason"] = args["reason"];
+      const res = await client.post<unknown>(`/stock-issues/${args["issueId"] as string}/cancel`, body);
+      const issue = extractData<{ id: string; issueNo: string; status: string; alreadyCancelled?: boolean; returnReceiptNo?: string | null }>(res.data);
 
-      return `✅ Đã huỷ phiếu xuất **${issue.issueNo}**\nID: \`${issue.id}\``;
+      if (issue.alreadyCancelled) {
+        return `ℹ️ Phiếu xuất **${issue.issueNo}** đã được huỷ trước đó, không thay đổi gì.\nID: \`${issue.id}\``;
+      }
+      const reversal = issue.returnReceiptNo ? `\n↩️ Đã hoàn kho đúng lô qua phiếu **${issue.returnReceiptNo}**` : "";
+      return `✅ Đã huỷ phiếu xuất **${issue.issueNo}**\nID: \`${issue.id}\`${reversal}`;
     }
   },
 

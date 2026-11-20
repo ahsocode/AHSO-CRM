@@ -13,7 +13,7 @@ describe("ProjectsService material allocations (multi-allocation)", () => {
   let service: ProjectsService;
   let tx: Record<string, Record<string, jest.Mock> | jest.Mock>;
   let prisma: Record<string, unknown>;
-  let inventoryBalance: { adjustBalance: jest.Mock; ensureSufficientStock: jest.Mock };
+  let inventoryBalance: { adjustBalance: jest.Mock; ensureSufficientStock: jest.Mock; lockMaterials: jest.Mock };
 
   const emptyAllocation = (overrides: Record<string, unknown> = {}) => ({
     id: "alloc-2",
@@ -60,14 +60,18 @@ describe("ProjectsService material allocations (multi-allocation)", () => {
         findUniqueOrThrow: jest.fn().mockResolvedValue(emptyAllocation())
       },
       stockIssue: { create: jest.fn() },
-      project: { update: jest.fn() }
+      project: { update: jest.fn() },
+      // costing: no config row = AVERAGE, priced at Material.costPrice at confirm
+      inventoryCostingConfig: { findFirst: jest.fn().mockResolvedValue(null) },
+      material: { findMany: jest.fn().mockResolvedValue([{ id: "mat-1", costPrice: 1200 }]) },
+      projectMaterialAllocationItem: { update: jest.fn().mockResolvedValue({}) }
     };
     prisma = {
       ...tx,
       $transaction: jest.fn((fn: (client: unknown) => Promise<unknown>) => fn(tx)),
       project: { findFirst: jest.fn().mockResolvedValue({ id: "p1", status: "DELIVERING" }) }
     };
-    inventoryBalance = { adjustBalance: jest.fn(), ensureSufficientStock: jest.fn() };
+    inventoryBalance = { adjustBalance: jest.fn(), ensureSufficientStock: jest.fn(), lockMaterials: jest.fn() };
     service = new ProjectsService(
       prisma as unknown as PrismaService,
       {} as CustomFieldsService,
@@ -183,6 +187,41 @@ describe("ProjectsService material allocations (multi-allocation)", () => {
     expect(inventoryBalance.adjustBalance).toHaveBeenCalled();
     expect((tx.stockIssue as Record<string, jest.Mock>).create).toHaveBeenCalledTimes(1);
     expect(result.status).toBe("CONFIRMED");
+
+    // AVERAGE: allocation line and issue line are priced at costPrice (1.200), the lot price (1.000) is kept for traceability
+    const issueData = (tx.stockIssue as Record<string, jest.Mock>).create.mock.calls[0][0].data;
+    const line = issueData.items.create[0];
+    expect(Number(line.unitPrice)).toBe(1200);
+    expect(Number(line.total)).toBe(4800);
+    expect(Number(issueData.totalAmount)).toBe(4800);
+    expect(line.lotConsumptions.create[0]).toMatchObject({ stockLotId: "lot-1" });
+    expect(Number(line.lotConsumptions.create[0].lotUnitPrice)).toBe(1000);
+    expect((tx.projectMaterialAllocationItem as Record<string, jest.Mock>).update).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the lot price under FIFO", async () => {
+    (tx.inventoryCostingConfig as Record<string, jest.Mock>).findFirst.mockResolvedValue({ method: "FIFO" });
+    (tx.projectMaterialAllocation as Record<string, jest.Mock>).findFirst
+      .mockResolvedValueOnce({ id: "alloc-2", projectId: "p1", status: "DRAFT" })
+      .mockResolvedValueOnce({
+        id: "alloc-2",
+        projectId: "p1",
+        salesInvoiceDate: salesDate,
+        notes: null,
+        project: { id: "p1" },
+        items: [
+          { id: "ai-1", stockLotId: "lot-1", warehouseId: "wh-1", materialId: "mat-1", quantity: 4, unitPrice: 1000, total: 4000, material: { name: "Cáp" } }
+        ]
+      });
+    (tx.projectMaterialAllocation as Record<string, jest.Mock>).update.mockResolvedValue(emptyAllocation({ status: "CONFIRMED" }));
+    (tx.stockIssue as Record<string, jest.Mock>).create.mockResolvedValue({});
+    (tx.stockIssue as Record<string, jest.Mock>).findFirst = jest.fn().mockResolvedValue(null);
+
+    await service.confirmMaterialAllocationById("alloc-2", user);
+
+    const line = (tx.stockIssue as Record<string, jest.Mock>).create.mock.calls[0][0].data.items.create[0];
+    expect(Number(line.unitPrice)).toBe(1000);
+    expect((tx.projectMaterialAllocationItem as Record<string, jest.Mock>).update).not.toHaveBeenCalled();
   });
 
   it("rechecks cost invoice dates at confirmation before deducting stock", async () => {

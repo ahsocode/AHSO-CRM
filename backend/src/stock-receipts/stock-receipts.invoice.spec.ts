@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import { Decimal } from "@prisma/client/runtime/library";
 import { PrismaService } from "../common/prisma.service";
+import { AuditService } from "../audit/audit.service";
 import { InventoryBalanceService } from "../inventory/inventory-balance.service";
 import { StockReceiptsService } from "./stock-receipts.service";
 import { bulkReceiptInvoicesSchema } from "./dto/invoice-fields.dto";
@@ -17,6 +18,7 @@ describe("StockReceiptsService - invoice, supplier type, project lots", () => {
   const invoice = { sellerTaxCode: "0312345678", invoiceSeries: "C26TAA", invoiceNumber: "0000123" };
 
   let service: StockReceiptsService;
+  const audit = { record: jest.fn().mockResolvedValue(undefined) };
   let inventoryBalance: { adjustBalance: Mock; updateAverageCostPrice: Mock };
   let prisma: {
     $transaction: Mock;
@@ -25,6 +27,7 @@ describe("StockReceiptsService - invoice, supplier type, project lots", () => {
     supplier: { findFirst: Mock };
     project: { findMany: Mock };
     stockLot: { create: Mock; findMany: Mock; updateMany: Mock };
+    setting: { findUnique: Mock };
   };
 
   beforeEach(() => {
@@ -43,6 +46,7 @@ describe("StockReceiptsService - invoice, supplier type, project lots", () => {
         count: jest.fn(),
       },
       supplier: { findFirst: jest.fn() },
+      setting: { findUnique: jest.fn().mockResolvedValue(null) },
       project: { findMany: jest.fn().mockResolvedValue([]) },
       stockLot: {
         create: jest.fn(),
@@ -55,7 +59,8 @@ describe("StockReceiptsService - invoice, supplier type, project lots", () => {
     );
     service = new StockReceiptsService(
       prisma as unknown as PrismaService,
-      inventoryBalance as unknown as InventoryBalanceService
+      inventoryBalance as unknown as InventoryBalanceService,
+      audit as unknown as AuditService
     );
   });
 

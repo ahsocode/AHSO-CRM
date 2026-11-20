@@ -22,6 +22,7 @@ export const costGroupSchema = z.enum([
   "LABOR",
   "OUTSOURCE",
   "SHIPPING",
+  "TRAVEL",
   "OTHER"
 ]);
 

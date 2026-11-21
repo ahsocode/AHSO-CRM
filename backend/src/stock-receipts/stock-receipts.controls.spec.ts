@@ -93,9 +93,11 @@ describe("StockReceiptsService - confirm / cancel / review controls", () => {
       await expect(service.confirm("r1", admin)).rejects.toThrow(/#3 Bulong M8/);
     });
 
-    it("rejects a purchase receipt without invoice info", async () => {
-      prisma.stockReceipt.findFirst.mockResolvedValue(draft({ invoiceNumber: null, purchaseInvoiceNo: null }));
-      await expect(service.confirm("r1", admin)).rejects.toThrow(/thiếu thông tin hóa đơn/);
+    it("confirms a manual purchase receipt without invoice info but warns", async () => {
+      prisma.stockReceipt.findFirst.mockResolvedValue(draft({ invoiceNumber: null, purchaseInvoiceNo: null, reviewStatus: null }));
+      const result = (await service.confirm("r1", admin)) as { warnings?: string[] };
+      expect(balance.adjustBalance).toHaveBeenCalled();
+      expect(result.warnings?.join(" ")).toMatch(/chưa có thông tin hóa đơn/);
     });
 
     it("rejects when the period is locked (uses the earlier of receipt/invoice date)", async () => {

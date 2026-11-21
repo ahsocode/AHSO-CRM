@@ -250,11 +250,6 @@ export class StockReceiptsService {
             lines.map((l) => `#${l.lineNo} ${l.supplierItemName}`).join("; ")
         );
       }
-      // Gate 3: purchase / adjustment receipts need invoice info (returns from project do not).
-      const needsInvoice = receipt.receiptType === "PURCHASE" || receipt.receiptType === "ADJUSTMENT";
-      if (needsInvoice && !receipt.invoiceNumber && !receipt.purchaseInvoiceNo) {
-        throw new BadRequestException("Phiếu nhập thiếu thông tin hóa đơn (số hóa đơn), hãy bổ sung trước khi xác nhận");
-      }
       // Gate 4: accounting period (earlier of receipt date and invoice date).
       const docDate =
         receipt.invoiceDate && receipt.invoiceDate.getTime() < receipt.date.getTime() ? receipt.invoiceDate : receipt.date;
@@ -262,6 +257,11 @@ export class StockReceiptsService {
 
       // Supplier type may have been changed after the draft was created.
       const warnings: string[] = [];
+      // Missing invoice info is a warning, not a block: manual/legacy receipts stay confirmable.
+      // Completeness is tracked via get_receipts_without_invoice (rollout gate before issuing).
+      if ((receipt.receiptType === "PURCHASE" || receipt.receiptType === "ADJUSTMENT") && !receipt.invoiceNumber && !receipt.purchaseInvoiceNo) {
+        warnings.push("Phiếu nhập chưa có thông tin hóa đơn (số hóa đơn), hãy bổ sung sau");
+      }
       if (receipt.supplier) {
         const message = this.checkSupplierType(receipt.supplier.supplierType, receipt.supplier.name);
         if (message) warnings.push(message);

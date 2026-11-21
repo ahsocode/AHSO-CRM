@@ -212,10 +212,11 @@ test.describe("Giá vốn dự án", () => {
       expect(sheet.getCell("A1").value).toBe(`Bảng kê giá vốn hóa đơn bán số ${invoiceNo}`);
       expect(sheet.getCell("B7").value).toBe(material.code);
       expect(sheet.getCell("E7").value).toBe(3);
-      expect(sheet.getCell("G7").value).toBe(300000);
+      // AVERAGE costing: issue price = Material.costPrice = (3×100k + 10×200k) / 13 = 176.923 → 3 × 176.923
+      expect(sheet.getCell("G7").value).toBe(530769);
       const costSheetRows = sheet.getSheetValues().flatMap((row) => Array.isArray(row) ? [row] : []);
       expect(costSheetRows.some((row) => row[3] === costDescription && row[7] === 2000000)).toBeTruthy();
-      expect(sheet.lastRow?.getCell(7).value).toBe(2300000);
+      expect(sheet.lastRow?.getCell(7).value).toBe(2530769);
 
       await page.getByRole("tab", { name: "Chi phí & lãi gộp", exact: true }).click(); // qa-static: not-ui — label comes from the project tab configuration.
       await expect(costRow).toContainText("Đã khóa theo đợt phân bổ đã xác nhận");
@@ -226,10 +227,10 @@ test.describe("Giá vốn dự án", () => {
         expect(await response.text()).toContain("Chi phí đã gắn vào đợt phân bổ đã xác nhận");
       }
       await expect(page.getByTestId("summary-revenue")).toContainText("10.000.000");
-      await expect(page.getByTestId("summary-material-cost")).toContainText("300.000");
+      await expect(page.getByTestId("summary-material-cost")).toContainText("530.769");
       await expect(page.getByTestId("summary-direct-cost")).toContainText("2.000.000");
-      await expect(page.getByTestId("summary-gross-profit")).toContainText("7.700.000");
-      await expect(page.getByTestId("summary-gross-margin")).toContainText("77%");
+      await expect(page.getByTestId("summary-gross-profit")).toContainText("7.469.231");
+      await expect(page.getByTestId("summary-gross-margin")).toContainText("74,7%");
       const softwareGroup = page.getByTestId("variance-group-SOFTWARE");
       await expect(softwareGroup.locator("td").last()).toHaveClass(/text-danger/);
       await softwareGroup.getByRole("button").click();
@@ -250,9 +251,9 @@ test.describe("Giá vốn dự án", () => {
       await secondBatch.getByRole("button", { name: "Xác nhận xuất kho", exact: true }).click();
       await expect(secondBatch).toHaveAttribute("data-status", "CONFIRMED");
       await page.getByRole("tab", { name: "Chi phí & lãi gộp", exact: true }).click(); // qa-static: not-ui — label comes from the project tab configuration.
-      await expect(page.getByTestId("summary-material-cost")).toContainText("700.000");
-      await expect(page.getByTestId("summary-gross-profit")).toContainText("7.300.000");
-      await expect(page.getByTestId("summary-gross-margin")).toContainText("73%");
+      await expect(page.getByTestId("summary-material-cost")).toContainText("884.615");
+      await expect(page.getByTestId("summary-gross-profit")).toContainText("7.115.385");
+      await expect(page.getByTestId("summary-gross-margin")).toContainText("71,2%");
     } finally {
       // Confirmed inventory movements remain as audit history; remove the CRM fixtures first.
       for (const path of cleanup) {

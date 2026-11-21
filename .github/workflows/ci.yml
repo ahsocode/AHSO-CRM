@@ -70,7 +70,8 @@ jobs:
   # E2E only runs on main — it's the slowest job (~10 min) and isn't worth
   # running on every feature branch push
   e2e:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest is now 26.04, which Playwright 1.59 cannot install browsers on.
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main'
     needs: [backend, frontend]
     env:
